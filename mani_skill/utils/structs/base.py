@@ -131,7 +131,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         where N is the number of environments, and 3 is the dimension of the impulse vector itself,
         representing x, y, and z direction of impulse.
         """
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             self.px.gpu_query_contact_body_impulses(self._body_force_query)
             return self._body_force_query.cuda_impulses.torch().clone()
         else:
@@ -205,7 +205,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
 
     @property
     def angular_velocity(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
             if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
                 return self._body_data[self._body_data_index, 7:10]
@@ -225,7 +225,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
                 for x in self._bodies
             ]
         )
-        return Pose.create(common.to_tensor(raw_poses))
+        return Pose.create(common.to_tensor(raw_poses), device=self.device)
 
     # @cmass_local_pose.setter
     # def cmass_local_pose(self, arg1: sapien.pysapien.Pose) -> None:
@@ -260,7 +260,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
 
     @property
     def linear_velocity(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
             if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
                 return self._body_data[self._body_data_index, 10:13]
@@ -275,12 +275,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @mass.setter
     @before_gpu_init
     def mass(self, arg1: float) -> None:
-        if physx.is_gpu_enabled():
-            raise NotImplementedError(
-                "Setting mass is not supported on GPU sim at the moment."
-            )
-        else:
-            self._bodies[0].mass = arg1
+        for body in self._bodies:
+            body.set_mass(arg1)
 
     # @property
     # def max_contact_impulse(self) -> float:
@@ -321,31 +317,45 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         return self.linear_velocity
 
     # NOTE (fxiang): Cannot lock after gpu setup
-    # def get_locked_motion_axes(self) -> list[bool]: ...
+    def get_locked_motion_axes(self) -> Array:
+        return self.locked_motion_axes
 
     # def put_to_sleep(self) -> None: ...
     def set_angular_velocity(self, arg0: Array):
+        """
+        Set the angular velocity of the dynamic rigid body.
+        Args:
+            arg0: The angular velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same angular velocity to all managed bodies.
+        """
         self.angular_velocity = arg0
 
     # def set_kinematic(self, arg0: bool) -> None: ...
     # def set_kinematic_target(self, arg0: sapien.pysapien.Pose) -> None: ...
     def set_linear_velocity(self, arg0: Array):
+        """
+        Set the linear velocity of the dynamic rigid body.
+        Args:
+            arg0: The linear velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same linear velocity to all managed bodies.
+        """
         self.linear_velocity = arg0
 
-    # def set_locked_motion_axes(self, axes: list[bool]) -> None:
-    #     """
-    #     set some motion axes of the dynamic rigid body to be locked
-    #     Args:
-    #         axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
-    #               The order is linear X, Y, Z followed by angular X, Y, Z.
+    def set_locked_motion_axes(self, axes: Array) -> None:
+        """
+        Set some motion axes of the dynamic rigid body to be locked
+        Args:
+            axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
+                  The order is linear X, Y, Z followed by angular X, Y, Z. If given a single list of length 6, it will be applied to all managed bodies.
+                  If given a a batch of shape (N, 6), you can modify the N managed bodies each in batch.
 
-    #     Example:
-    #         set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
-    #     """
+        Example:
+            set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
+        """
+        self.locked_motion_axes = axes
+
     # def wake_up(self) -> None: ...
     @property
     def angular_velocity(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
             if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
                 return self._body_data[self._body_data_index, 7:10]
@@ -355,8 +365,8 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @angular_velocity.setter
     def angular_velocity(self, arg1: Array):
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
                 self._body_data_index[self.scene._reset_mask[self._scene_idxs]], 10:13
             ] = arg1
@@ -368,14 +378,14 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @property
     def gpu_index(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return [b.gpu_index for b in self._bodies]
         else:
             raise AttributeError("GPU index is not supported when gpu is not enabled")
 
     @property
     def gpu_pose_index(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return [b.gpu_pose_index for b in self._bodies]
         else:
             raise AttributeError(
@@ -385,7 +395,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @property
     @before_gpu_init
     def is_sleeping(self):
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             return [b.is_sleeping for b in self._bodies]
         else:
             return [self._bodies[0].is_sleeping]
@@ -416,7 +426,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     #     pass
     @property
     def linear_velocity(self) -> torch.Tensor:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             # NOTE (stao): Currently physx has a bug that sapien inherits where link bodies on the GPU put linear/angular velocities in the wrong order...
             if isinstance(self._objs[0], physx.PhysxArticulationLinkComponent):
                 return self._body_data[self._body_data_index, 10:13]
@@ -426,8 +436,8 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):
-        if physx.is_gpu_enabled():
-            arg1 = common.to_tensor(arg1)
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
                 self._body_data_index[self.scene._reset_mask[self._scene_idxs]], 7:10
             ] = arg1
@@ -437,11 +447,25 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
                 arg1 = arg1[0]
             self._bodies[0].linear_velocity = arg1
 
-    # @property
-    # def locked_motion_axes(self) -> list[bool]:
-    #     """
-    #     :type: list[bool]
-    #     """
+    @property
+    def locked_motion_axes(self) -> Array:
+        """
+        :type: list[bool]
+        """
+        return torch.tensor(
+            [body.locked_motion_axes for body in self._bodies], device=self.device
+        )
+
+    @locked_motion_axes.setter
+    @before_gpu_init
+    def locked_motion_axes(self, arg1: Array) -> None:
+        arg1 = common.to_tensor(arg1, device=self.device)
+        if arg1.shape[0] == 6:
+            for body in self._bodies:
+                body.set_locked_motion_axes(arg1.cpu().tolist())
+        else:
+            for i, body in enumerate(self._bodies):
+                body.set_locked_motion_axes(arg1[i].cpu().tolist())
 
 
 @dataclass

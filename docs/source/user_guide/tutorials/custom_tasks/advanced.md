@@ -2,27 +2,6 @@
 
 This page covers nearly every feature useful for task building in ManiSkill. If you haven't already it is recommended to get a better understanding of how GPU simulation generally works described on [this page](../../concepts/gpu_simulation.md). It can provide some good context for various terminology and ideas presented in this advanced features tutorial.
 
-## Custom/Extra State
-
-Reproducibility is generally important in task building. A common example is when trying to replay a trajectory that someone else generated, if that trajectory file is missing important state variables necessary for reconstructing the exact same initial task state, the trajectory likely would not replay correctly.
-
-By default, `env.get_state_dict()` returns a state dictionary containing the entirety of simulation state, which consists of the poses and velocities of each actor and additionally qpos/qvel values of articulations.
-
-In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would be your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
-
-```python
-class MyCustomTask(BaseEnv):
-    # ...
-    def get_state_dict(self):
-        state_dict = super().get_state_dict()
-        state_dict["height"] = self.height
-    def set_state_dict(self, state_dict):
-        super().set_state_dict(state_dict)
-        self.height = state_dict["height"]
-```
-
-Now recorded trajectories of your task will include the height as part of the environment state and so you can replay the trajectory with just environment states perfectly in the sense that the robot path is the same and the evaluation/reward metrics output the same at each time step.
-
 ## Contact Forces on the GPU/CPU
 
 ### Pair-wise Contact Forces
@@ -138,6 +117,54 @@ class MyCustomTask(BaseEnv):
         link.joint # a merged joint object
         link.joint.qpos # shape (N, 1)
         link.joint.qvel # shape (N, 1)
+```
+
+
+## Custom/Extra State
+
+Reproducibility is generally important in task building. A common example is when trying to replay a trajectory that someone else generated, if that trajectory file is missing important state variables necessary for reconstructing the exact same initial task state, the trajectory likely would not replay correctly.
+
+By default, `env.get_state_dict()` returns a state dictionary containing the entirety of simulation state of actors and articulations in the state dict registry. Actor state is a flat `13` dimensional composed of 3D position, 4D quaternion, 3D linear velocity, and 3D angular velocity. Articulation state is a flat `13 + 2 * DOF` dimensional vector, with 13 dimensions corresponding to the root link's pose and velocities like actors, and the next `DOF` dimensions corresponding to the active joint positions and the last `DOF` dimensions corresponding to the active joint velocities.
+
+By default, anytime an actor or articulation is built, it is automatically added to the state dict registry which can be viewed via `env.scene.state_dict_registry`.
+
+### Handling Custom States
+
+In your own task you can define additional state data such as a eg `height` for a task like LiftCube which indicates how high the cube must be lifted for success. This would be your own variable and not included in `env.get_state_dict()` so to include it you can add the following two functions to your task class
+
+```python
+class MyCustomTask(BaseEnv):
+    # ...
+    def get_state_dict(self):
+        state_dict = super().get_state_dict()
+        state_dict["height"] = self.height
+    def set_state_dict(self, state_dict):
+        super().set_state_dict(state_dict)
+        self.height = state_dict["height"]
+```
+
+Now recorded trajectories of your task will include the height as part of the environment state and so you can replay the trajectory with just environment states perfectly in the sense that the robot path is the same and the evaluation/reward metrics output the same at each time step.
+
+### Handling Heterogeneous Simulation States
+
+Many tasks like OpenCabinetDrawer-v1 and PegInsertionSide-v1 support heterogeneous simulation where each environment has a different object/geometry/dof. For these tasks often times during scene loading you run a for loop to create each different object in each parallel environment. However in doing so you have to give them each a different name which causes inconsistenency in the environment state as now the number of environments changes the shape of the state dictionary. To handle this you need to remove the per-environment actor/articulation from the state dictionary registry and add in the merged version. See sections on how to use [scene masks](#scene-masks) and [merging](#merging) for information on how to build heterogeneous simulated environments.
+
+```python
+class MyCustomTask(BaseEnv):
+    # ...
+    def _load_scene(options):
+        # ... 
+        for i in range(self.num_envs):
+            # build your object ...
+            name = f"object_{i}"
+            object_i = builder.build(name=name)
+            self.remove_from_state_dict_registry(object_i)
+
+        self.object = Actor.merge(objects, name="object") 
+        # or if its articulation you use Articulation.merge
+        self.register_to_state_dict_registry(self.object)
+        # note that some tasks merge links, but links do not need to be registered to the state dict registry, they are
+        # automatically included with merged articulations
 ```
 
 
@@ -365,3 +392,7 @@ what GPU data to fetch (which is more efficient than fetching all of it)
 As all objects added to a sub-scene are also in the one physx scene containing all sub-scenes, plane collisions work differently since they extend to infinity. As a result, a plane collision spawned in two or more sub-scenes with the same poses will create a lot of collision issues and increase GPU memory requirements.
 
 However as a user you don't need to worry about adding a plane collision in each sub-scene as ManiSkill automatically only adds one plane collision per given pose.
+
+## Dynamically Updating Simulation Properties
+
+See the page on [domain randomization](../domain_randomization.md) for more information on modifying various simulation (visual/physical) properties on the fly.

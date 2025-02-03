@@ -27,10 +27,14 @@ def find_max_episode_steps_value(env):
     elif isinstance(cur, ManiSkillVectorEnv):
         cur = env._env
     while cur is not None:
-        if hasattr(cur, "max_episode_steps"):
-            return cur.max_episode_steps
-        if hasattr(cur, "_max_episode_steps"):
-            return cur._max_episode_steps
+        try:
+            return cur.get_wrapper_attr("max_episode_steps")
+        except AttributeError:
+            pass
+        try:
+            return cur.get_wrapper_attr("_max_episode_steps")
+        except AttributeError:
+            pass
         if cur.spec is not None and cur.spec.max_episode_steps is not None:
             return cur.spec.max_episode_steps
         if hasattr(cur, "env"):
@@ -40,7 +44,9 @@ def find_max_episode_steps_value(env):
     return None
 
 
-def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
+def extract_scalars_from_info(
+    info: dict, blacklist=(), batch_size=1
+) -> Dict[str, float]:
     """Recursively extract scalar metrics from an info dict returned by env.step.
 
     Args:
@@ -67,9 +73,14 @@ def extract_scalars_from_info(info: dict, blacklist=()) -> Dict[str, float]:
 
         # Things that are scalar-like will have an np.size of 1.
         # Strings also have an np.size of 1, so explicitly ban those
-        elif np.size(v) == 1 and not isinstance(v, str):
+        elif batch_size == 1 and np.size(v) == 1 and not isinstance(v, str):
             try:
                 ret[k] = float(v)
+            except:
+                pass
+        elif batch_size > 1 and np.size(v) == batch_size and not isinstance(v, str):
+            try:
+                ret[k] = [float(v_i) for v_i in v]
             except:
                 pass
     return ret

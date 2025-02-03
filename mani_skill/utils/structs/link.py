@@ -194,12 +194,30 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 cg[group] = (cg[group] & ~(1 << bit_idx)) | (bit << bit_idx)
                 cs.set_collision_groups(cg)
 
+    def set_collision_group(self, group: int, value):
+        for body in self._bodies:
+            for cs in body.get_collision_shapes():
+                cg = cs.get_collision_groups()
+                cg[group] = value
+                cs.set_collision_groups(cg)
+
+    @cached_property
+    def per_scene_id(self) -> torch.Tensor:
+        """
+        Returns a int32 torch tensor of the link level segmentation ID for each managed link object.
+        """
+        return torch.tensor(
+            [obj.entity.per_scene_id for obj in self._objs],
+            dtype=torch.int32,
+            device=self.device,
+        )
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
     # -------------------------------------------------------------------------- #
     @property
     def pose(self) -> Pose:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             raw_pose = self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7]
             if self.scene.parallel_in_single_scene:
                 new_xyzs = raw_pose[:, :3] - self.scene.scene_offsets[self._scene_idxs]
@@ -213,7 +231,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
-        if physx.is_gpu_enabled():
+        if self.scene.gpu_sim_enabled:
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1, device=self.device)
             if self.scene.parallel_in_single_scene:
@@ -235,7 +253,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 for obj in self._objs:
                     obj.pose = arg1
             else:
-                if len(arg1.shape) == 2:
+                if isinstance(arg1, Pose) and len(arg1.shape) == 2:
                     for i, obj in enumerate(self._objs):
                         obj.pose = arg1[i].sp
                 else:

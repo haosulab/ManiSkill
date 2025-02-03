@@ -1,10 +1,14 @@
 
+from collections import defaultdict
 from dataclasses import dataclass
 import os
 import random
 import time
 from typing import Optional
 
+import tqdm
+
+from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
@@ -33,46 +37,64 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL"
+    wandb_project_name: str = "ManiSkill"
     """the wandb's project name"""
-    wandb_entity: str = None
+    wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
-    evaluate: bool = False
-    """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
-    checkpoint: str = None
-    """path to a pretrained checkpoint file to start evaluation/training from"""
+    wandb_group: str = "SAC"
+    """the group of the run for wandb"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
+    save_trajectory: bool = False
+    """whether to save trajectory data into the `videos` folder"""
     save_model: bool = True
-    """whether to save the model checkpoints"""
-
-    # Env specific arguments
-    env_id: str = "PushCube-v1"
-    """the environment id of the task"""
-    num_envs: int = 16
-    """the number of parallel environments"""
-    num_eval_envs: int = 8
-    """the number of parallel evaluation environments"""
-    num_eval_steps: int = 50
-    """the number of steps to take in evaluation environments"""
+    """whether to save model into the `runs/{run_name}` folder"""
+    evaluate: bool = False
+    """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
+    checkpoint: Optional[str] = None
+    """path to a pretrained checkpoint file to start evaluation/training from"""
     log_freq: int = 1_000
     """logging frequency in terms of environment steps"""
-    eval_freq: int = 100_000
-    """evaluation frequency in terms of environment steps"""
+
+    # Environment specific arguments
+    env_id: str = "PickCube-v1"
+    """the id of the environment"""
+    env_vectorization: str = "gpu"
+    """the type of environment vectorization to use"""
+    num_envs: int = 16
+    """the number of parallel environments"""
+    num_eval_envs: int = 16
+    """the number of parallel evaluation environments"""
+    partial_reset: bool = False
+    """whether to let parallel environments reset upon termination instead of truncation"""
+    eval_partial_reset: bool = False
+    """whether to let parallel evaluation environments reset upon termination instead of truncation"""
+    num_steps: int = 50
+    """the number of steps to run in each environment per policy rollout"""
+    num_eval_steps: int = 50
+    """the number of steps to run in each evaluation environment during evaluation"""
+    reconfiguration_freq: Optional[int] = None
+    """how often to reconfigure the environment during training"""
+    eval_reconfiguration_freq: Optional[int] = 1
+    """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
+    eval_freq: int = 25
+    """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
-    """frequency to save training videos in terms of environment steps"""
+    """frequency to save training videos in terms of iterations"""
+    control_mode: Optional[str] = "pd_joint_delta_pos"
+    """the control mode to use for the environment"""
 
     # Algorithm specific arguments
     total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
     buffer_size: int = 1_000_000
     """the replay memory buffer size"""
-    buffer_device: str = "cpu"
+    buffer_device: str = "cuda"
     """where the replay buffer is stored. Can be 'cpu' or 'cuda' for GPU"""
     gamma: float = 0.8
     """the discount factor gamma"""
     tau: float = 0.01
-    """target smoothing coefficient (default: 0.005)"""
+    """target smoothing coefficient"""
     batch_size: int = 1024
     """the batch size of sample from the replay memory"""
     learning_starts: int = 4_000
@@ -119,13 +141,14 @@ class ReplayBuffer:
         self.num_envs = num_envs
         self.storage_device = storage_device
         self.sample_device = sample_device
-        self.obs = torch.zeros((buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.next_obs = torch.zeros((buffer_size, num_envs) + env.single_observation_space.shape).to(storage_device)
-        self.actions = torch.zeros((buffer_size, num_envs) + env.single_action_space.shape).to(storage_device)
-        self.logprobs = torch.zeros((buffer_size, num_envs)).to(storage_device)
-        self.rewards = torch.zeros((buffer_size, num_envs)).to(storage_device)
-        self.dones = torch.zeros((buffer_size, num_envs)).to(storage_device)
-        self.values = torch.zeros((buffer_size, num_envs)).to(storage_device)
+        self.per_env_buffer_size = buffer_size // num_envs
+        self.obs = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.next_obs = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_observation_space.shape).to(storage_device)
+        self.actions = torch.zeros((self.per_env_buffer_size, self.num_envs) + env.single_action_space.shape).to(storage_device)
+        self.logprobs = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        self.rewards = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        self.dones = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
+        self.values = torch.zeros((self.per_env_buffer_size, self.num_envs)).to(storage_device)
 
     def add(self, obs: torch.Tensor, next_obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor):
         if self.storage_device == torch.device("cpu"):
@@ -143,12 +166,12 @@ class ReplayBuffer:
         self.dones[self.pos] = done
 
         self.pos += 1
-        if self.pos == self.buffer_size:
+        if self.pos == self.per_env_buffer_size:
             self.full = True
             self.pos = 0
     def sample(self, batch_size: int):
         if self.full:
-            batch_inds = torch.randint(0, self.buffer_size, size=(batch_size, ))
+            batch_inds = torch.randint(0, self.per_env_buffer_size, size=(batch_size, ))
         else:
             batch_inds = torch.randint(0, self.pos, size=(batch_size, ))
         env_inds = torch.randint(0, self.num_envs, size=(batch_size, ))
@@ -236,6 +259,17 @@ class Actor(nn.Module):
         self.action_bias = self.action_bias.to(device)
         return super().to(device)
 
+class Logger:
+    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
+        self.writer = tensorboard
+        self.log_wandb = log_wandb
+    def add_scalar(self, tag, scalar_value, step):
+        if self.log_wandb:
+            wandb.log({tag: scalar_value}, step=step)
+        self.writer.add_scalar(tag, scalar_value, step)
+    def close(self):
+        self.writer.close()
+
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.grad_steps_per_iteration = int(args.training_freq * args.utd)
@@ -246,29 +280,6 @@ if __name__ == "__main__":
     else:
         run_name = args.exp_name
 
-    writer = None
-    if not args.evaluate:
-        print("Running training")
-        if args.track:
-            import wandb
-
-            wandb.init(
-                project=args.wandb_project_name,
-                entity=args.wandb_entity,
-                sync_tensorboard=True,
-                config=vars(args),
-                name=run_name,
-                monitor_gym=True,
-                save_code=True,
-            )
-        writer = SummaryWriter(f"runs/{run_name}")
-        writer.add_text(
-            "hyperparameters",
-            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-        )
-    else:
-        print("Running evaluation")
-
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -277,26 +288,55 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # env setup
-    env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode="rgb_array", sim_backend="gpu")
-    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, **env_kwargs)
+    ####### Environment setup #######
+    env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="gpu")
+    if args.control_mode is not None:
+        env_kwargs["control_mode"] = args.control_mode
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, human_render_camera_configs=dict(shader_pack="default"), **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
-    if args.capture_video:
+    if args.capture_video or args.save_trajectory:
         eval_output_dir = f"runs/{run_name}/videos"
         if args.evaluate:
             eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
-        print(f"Saving eval videos to {eval_output_dir}")
+        print(f"Saving eval trajectories/videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.save_trajectory, save_video=args.capture_video, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
+    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
+    max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
+    logger = None
+    if not args.evaluate:
+        print("Running training")
+        if args.track:
+            import wandb
+            config = vars(args)
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=False)
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=False,
+                config=config,
+                name=run_name,
+                save_code=True,
+                group=args.wandb_group,
+                tags=["sac", "walltime_efficient"]
+            )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        )
+        logger = Logger(log_wandb=args.track, tensorboard=writer)
+    else:
+        print("Running evaluation")
 
     max_action = float(envs.single_action_space.high[0])
 
@@ -342,48 +382,42 @@ if __name__ == "__main__":
     learning_has_started = False
 
     global_steps_per_iteration = args.num_envs * (args.steps_per_env)
+    pbar = tqdm.tqdm(range(args.total_timesteps))
+    cumulative_times = defaultdict(float)
 
     while global_step < args.total_timesteps:
-        print(f"Global Step: {global_step}")
         if args.eval_freq > 0 and (global_step - args.training_freq) // args.eval_freq < global_step // args.eval_freq:
             # evaluate
             actor.eval()
-            print("Evaluating")
-            eval_envs.reset()
-            returns = []
-            eps_lens = []
-            successes = []
-            failures = []
+            stime = time.perf_counter()
+            eval_obs, _ = eval_envs.reset()
+            eval_metrics = defaultdict(list)
+            num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(actor.get_eval_action(eval_obs))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(actor.get_eval_action(eval_obs))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
-                        eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
-                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
-                        if "success" in eval_infos:
-                            successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
-                        if "fail" in eval_infos:
-                            failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
-            print(f"Evaluated {args.num_eval_steps * args.num_eval_envs} steps resulting in {len(eps_lens)} episodes")
-            if len(successes) > 0:
-                successes = np.concatenate(successes)
-                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
-                print(f"eval_success_rate={successes.mean()}")
-            if len(failures) > 0:
-                failures = np.concatenate(failures)
-                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
-                print(f"eval_fail_rate={failures.mean()}")
-
-            print(f"eval_episodic_return={returns.mean()}")
-            if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
-            actor.train()
+                        num_episodes += mask.sum()
+                        for k, v in eval_infos["final_info"]["episode"].items():
+                            eval_metrics[k].append(v)
+            eval_metrics_mean = {}
+            for k, v in eval_metrics.items():
+                mean = torch.stack(v).float().mean()
+                eval_metrics_mean[k] = mean
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
+            pbar.set_description(
+                f"success_once: {eval_metrics_mean['success_once']:.2f}, "
+                f"return: {eval_metrics_mean['return']:.2f}"
+            )
+            if logger is not None:
+                eval_time = time.perf_counter() - stime
+                cumulative_times["eval_time"] += eval_time
+                logger.add_scalar("time/eval_time", eval_time, global_step)
             if args.evaluate:
                 break
+            actor.train()
 
             if args.save_model:
                 model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
@@ -396,7 +430,7 @@ if __name__ == "__main__":
                 print(f"model saved to {model_path}")
 
         # Collect samples from environemnts
-        rollout_time = time.time()
+        rollout_time = time.perf_counter()
         for local_step in range(args.steps_per_env):
             global_step += 1 * args.num_envs
 
@@ -406,38 +440,40 @@ if __name__ == "__main__":
             else:
                 actions, _, _ = actor.get_action(obs)
                 actions = actions.detach()
-                # actions = actions.detach().cpu().numpy()
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
             real_next_obs = next_obs.clone()
-            if args.bootstrap_at_done == 'always':
-                next_done = torch.zeros_like(terminations).to(torch.float32)
+            if args.bootstrap_at_done == 'never':
+                need_final_obs = torch.ones_like(terminations, dtype=torch.bool)
+                stop_bootstrap = truncations | terminations # always stop bootstrap when episode ends
             else:
-                next_done = (terminations | truncations).to(torch.float32)
+                if args.bootstrap_at_done == 'always':
+                    need_final_obs = truncations | terminations # always need final obs when episode ends
+                    stop_bootstrap = torch.zeros_like(terminations, dtype=torch.bool) # never stop bootstrap
+                else: # bootstrap at truncated
+                    need_final_obs = truncations & (~terminations) # only need final obs when truncated and not terminated
+                    stop_bootstrap = terminations # only stop bootstrap when terminated, don't stop when truncated
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
-                real_next_obs[done_mask] = infos["final_observation"][done_mask]
-                episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
-                if "success" in final_info:
-                    writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
-                if "fail" in final_info:
-                    writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
-                writer.add_scalar("charts/episodic_return", episodic_return, global_step)
-                writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
+                real_next_obs[need_final_obs] = infos["final_observation"][need_final_obs]
+                for k, v in final_info["episode"].items():
+                    logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
-            rb.add(obs, real_next_obs, actions, rewards, next_done)
+            rb.add(obs, real_next_obs, actions, rewards, stop_bootstrap)
 
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
-        rollout_time = time.time() - rollout_time
+        rollout_time = time.perf_counter() - rollout_time
+        cumulative_times["rollout_time"] += rollout_time
+        pbar.update(args.num_envs * args.steps_per_env)
 
         # ALGO LOGIC: training.
         if global_step < args.learning_starts:
             continue
 
-        update_time = time.time()
+        update_time = time.perf_counter()
         learning_has_started = True
         for local_update in range(args.grad_steps_per_iteration):
             global_update += 1
@@ -494,22 +530,26 @@ if __name__ == "__main__":
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
                 for param, target_param in zip(qf2.parameters(), qf2_target.parameters()):
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
-        update_time = time.time() - update_time
+        update_time = time.perf_counter() - update_time
+        cumulative_times["update_time"] += update_time
 
         # Log training-related data
         if (global_step - args.training_freq) // args.log_freq < global_step // args.log_freq:
-            writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
-            writer.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
-            writer.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
-            writer.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
-            writer.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
-            writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
-            writer.add_scalar("losses/alpha", alpha, global_step)
-            writer.add_scalar("charts/update_time", update_time, global_step)
-            writer.add_scalar("charts/rollout_time", rollout_time, global_step)
-            writer.add_scalar("charts/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            logger.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
+            logger.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
+            logger.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
+            logger.add_scalar("losses/qf2_loss", qf2_loss.item(), global_step)
+            logger.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, global_step)
+            logger.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
+            logger.add_scalar("losses/alpha", alpha, global_step)
+            logger.add_scalar("time/update_time", update_time, global_step)
+            logger.add_scalar("time/rollout_time", rollout_time, global_step)
+            logger.add_scalar("time/rollout_fps", global_steps_per_iteration / rollout_time, global_step)
+            for k, v in cumulative_times.items():
+                logger.add_scalar(f"time/total_{k}", v, global_step)
+            logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
             if args.autotune:
-                writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
+                logger.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
 
     if not args.evaluate and args.save_model:
         model_path = f"runs/{run_name}/final_ckpt.pt"

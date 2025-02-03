@@ -110,6 +110,7 @@ def from_pd_joint_pos_to_ee(
     ori_env.agent.robot.links_map[arm_controller.ee_link.name]
     ee_link: Link = arm_controller.ee_link
     pos_only = arm_controller.config.frame == "root_translation"
+    use_target = arm_controller.config.use_target == True
     pin_model = ori_controller.articulation.create_pinocchio_model()
     info = {}
 
@@ -142,9 +143,22 @@ def from_pd_joint_pos_to_ee(
         for _ in range(4):
             delta_q = [1, 0, 0, 0]
             if "root_translation" in arm_controller.config.frame:
-                delta_position = target_ee_pose_pin.p - ee_link.pose.p
+                if use_target:
+                    delta_position = (
+                        target_ee_pose_pin.p
+                        - arm_controller._target_pose.p
+                        - arm_controller.articulation.pose.p
+                    )
+                else:
+                    delta_position = target_ee_pose_pin.p - ee_link.pose.p
             if "root_aligned_body_rotation" in arm_controller.config.frame:
-                delta_q = (ee_link.pose.sp * target_ee_pose_pin.sp.inv()).q
+                if use_target:
+                    delta_q = (
+                        arm_controller._target_pose.sp * target_ee_pose_pin.sp.inv()
+                    ).q
+                else:
+                    delta_q = (ee_link.pose.sp * target_ee_pose_pin.sp.inv()).q
+
             delta_pose = sapien.Pose(delta_position.cpu().numpy()[0], delta_q)
 
             arm_action = delta_pose_to_pd_ee_delta(

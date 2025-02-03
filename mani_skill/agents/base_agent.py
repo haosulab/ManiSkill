@@ -17,7 +17,9 @@ from mani_skill.agents.controllers.pd_joint_pos import (
 )
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import assets, download_asset, sapien_utils
+from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs import Actor, Array, Articulation
+from mani_skill.utils.structs.pose import Pose
 
 from .controllers.base_controller import (
     BaseController,
@@ -51,6 +53,8 @@ class BaseAgent:
         control_mode (str | None): uid of controller to use
         fix_root_link (bool): whether to fix the robot root link
         agent_idx (str | None): an index for this agent in a multi-agent task setup If None, the task should be single-agent
+        initial_pose (sapien.Pose | Pose | None): the initial pose of the robot. Important to set for GPU simulation to ensure robot
+        does not collide with other objects in the scene during GPU initialization which occurs before `env._initialize_episode` is called
     """
 
     uid: str
@@ -81,6 +85,7 @@ class BaseAgent:
         control_freq: int,
         control_mode: Optional[str] = None,
         agent_idx: Optional[str] = None,
+        initial_pose: Optional[Union[sapien.Pose, Pose]] = None,
     ):
         self.scene = scene
         self._control_freq = control_freq
@@ -93,7 +98,7 @@ class BaseAgent:
         self.sensors: Dict[str, BaseSensor] = dict()
         """The sensors that come with the robot."""
 
-        self._load_articulation()
+        self._load_articulation(initial_pose)
         self._after_loading_articulation()
 
         # Controller
@@ -141,7 +146,9 @@ class BaseAgent:
     def device(self):
         return self.scene.device
 
-    def _load_articulation(self):
+    def _load_articulation(
+        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+    ):
         """
         Loads the robot articulation
         """
@@ -185,7 +192,9 @@ class BaseAgent:
                     f"Exiting as assets for robot {self.uid} are not found. Check that this agent is properly registered with the appropriate download asset ids"
                 )
                 exit()
-        self.robot: Articulation = loader.load(asset_path)
+        builder = loader.parse(asset_path)["articulation_builders"][0]
+        builder.initial_pose = initial_pose
+        self.robot = builder.build()
         assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
 
         # Cache robot link names
@@ -238,8 +247,15 @@ class BaseAgent:
             self.controllers[control_mode].set_drive_property()
             if balance_passive_force:
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
-                for link in self.robot.links:
-                    link.disable_gravity = True
+                if not self.scene._gpu_sim_initialized:
+                    for link in self.robot.links:
+                        link.disable_gravity = True
+                else:
+                    for link in self.robot.links:
+                        if link.disable_gravity.all() != True:
+                            logger.warning(
+                                f"Attemped to set control mode and disable gravity for the links of {self.robot}. However the GPU sim has already initialized with the links having gravity enabled so this will not work."
+                            )
 
     @property
     def controller(self) -> BaseController:
@@ -278,7 +294,7 @@ class BaseAgent:
         Set the agent's action which is to be executed in the next environment timestep.
         This is essentially a wrapper around the controller's set_action method.
         """
-        if not physx.is_gpu_enabled():
+        if not self.scene.gpu_sim_enabled:
             if np.isnan(action).any():
                 raise ValueError("Action cannot be NaN. Environment received:", action)
         self.controller.set_action(action)

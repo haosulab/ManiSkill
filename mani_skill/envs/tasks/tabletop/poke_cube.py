@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+import sapien
 import torch
 from transforms3d.euler import euler2quat
 
@@ -18,6 +19,22 @@ from mani_skill.utils.structs.pose import Pose
 
 @register_env("PokeCube-v1", max_episode_steps=50)
 class PokeCubeEnv(BaseEnv):
+    """
+    **Task Description:**
+    A simple task where the objective is to poke a red cube with a peg and push it to a target goal position.
+
+    **Randomizations:**
+    - the peg's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat along it's length on the table
+    - the cube's x-coordinate is fixed to peg's x-coordinate + peg half-length (0.12) + 0.1 and y-coordinate is randomized in range [-0.1, 0.1]. It is placed flat on the table
+    - the cube's z-axis rotation is randomized in range [-$\pi$/ 6, $\pi$ / 6]
+    - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.05 + goal_radius, 0]
+
+    **Success Conditions:**
+    - the cube's xy position is within goal_radius (default 0.05) of the target's xy position by euclidean distance
+    - the robot is static
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 
@@ -40,6 +57,9 @@ class PokeCubeEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.2, 0.2, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -52,6 +72,7 @@ class PokeCubeEnv(BaseEnv):
             color=[1, 0, 0, 1],
             name="cube",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[1, 0, self.cube_half_size]),
         )
 
         self.peg = actors.build_twocolor_peg(
@@ -62,6 +83,7 @@ class PokeCubeEnv(BaseEnv):
             color_2=np.array([12, 42, 160, 255]) / 255,
             name="peg",
             body_type="dynamic",
+            initial_pose=sapien.Pose(p=[0, 0, self.peg_half_width]),
         )
 
         self.goal_region = actors.build_red_white_target(
@@ -71,9 +93,12 @@ class PokeCubeEnv(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(),
         )
 
-        self.peg_head_offsets = Pose.create_from_pq(p=[self.peg_half_length, 0, 0])
+        self.peg_head_offsets = Pose.create_from_pq(
+            p=[self.peg_half_length, 0, 0], device=self.device
+        )
 
     @property
     def peg_head_pos(self):
@@ -155,9 +180,10 @@ class PokeCubeEnv(BaseEnv):
 
         is_peg_cube_fit = torch.logical_and(is_peg_cube_aligned, is_peg_cube_close)
         is_peg_grasped = self.agent.is_grasping(self.peg)
-        close_to_table = torch.abs(self.peg.pose.p[:, 2] - self.peg_half_width) < 0.005
+        is_robot_static = self.agent.is_static(0.2)
         return {
-            "success": is_cube_placed & is_peg_cube_fit & close_to_table,
+            "success": is_cube_placed & is_robot_static,
+            "is_cube_placed": is_cube_placed,
             "is_peg_cube_fit": is_peg_cube_fit,
             "is_peg_grasped": is_peg_grasped,
             "angle_diff": angle_diff,
@@ -189,11 +215,16 @@ class PokeCubeEnv(BaseEnv):
         is_peg_cube_fit = info["is_peg_cube_fit"] * is_peg_grasped
         reward[is_peg_cube_fit] = (7 + place_reward)[is_peg_cube_fit]
 
-        reward[info["success"]] = 9
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        reward[info["is_cube_placed"]] += static_reward[info["is_cube_placed"]]
+
+        reward[info["success"]] = 10
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        max_reward = 9.0
+        max_reward = 10.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
