@@ -6,9 +6,9 @@
 All ManiSkill tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
 In general, the observation is organized as a dictionary (with an observation space of `gym.spaces.Dict`).
 
-There are two raw observations modes: `state_dict` (privileged states) and `sensor_data` (raw sensor data like visual data without postprocessing). `state` is a flat version of `state_dict`. `rgb+depth`, `rgb+depth+segmentation` (or any combination of `rgb`, `depth`, `segmentation`), and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data.
+There are three raw observations modes: `state_dict` (privileged states), `sensor_data` (raw sensor data like visual data without postprocessing) and `state+sensor_data` for both. `state` is a flat version of `state_dict`. `rgb+depth`, `rgb+depth+segmentation` (or any combination of `rgb`, `depth`, `segmentation`), and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data. `state+rgb` would return privileged states and visual data, you can mix and match the different modalities however you like.
 
-The details here show the unbatched shapes. In general there is always a batch dimension unless you are using CPU simulation. Moreover, we annotate what dtype some values are, where some have both a torch and numpy dtype depending on whether you are using GPU or CPU simulation respectively.
+The details here show the unbatched shapes. In general returned data always has a batch dimension unless you are using CPU simulation and returned as torch tensors. Moreover, we annotate what dtype some values are.
 
 ### state_dict
 
