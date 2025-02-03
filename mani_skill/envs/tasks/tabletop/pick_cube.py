@@ -19,10 +19,10 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import SimConfig
+from mani_skill.utils.structs.types import SceneConfig, SimConfig
 
 
-@register_env("PickCube-v1", max_episode_steps=50)
+@register_env("PickCube-v1", max_episode_steps=100)
 class PickCubeEnv(BaseEnv):
     """
     **Task Description:**
@@ -50,7 +50,9 @@ class PickCubeEnv(BaseEnv):
     cube_half_size = 0.02
     goal_thresh = 0.025
 
-    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(
+        self, *args, robot_uids="xarm6_robotiq", robot_init_qpos_noise=0.02, **kwargs
+    ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
@@ -59,6 +61,14 @@ class PickCubeEnv(BaseEnv):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
+    # def default_sim_config(self):
+    #     return SimConfig(
+    #         sim_freq=500,
+    #         control_freq=100,
+    #         scene_config=SceneConfig(
+    #             solver_position_iterations=30, solver_velocity_iterations=2
+    #         )
+    #     )
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
@@ -151,7 +161,7 @@ class PickCubeEnv(BaseEnv):
         reward += place_reward * is_grasped
 
         static_reward = 1 - torch.tanh(
-            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-6], axis=1)
         )
         reward += static_reward * info["is_obj_placed"]
 

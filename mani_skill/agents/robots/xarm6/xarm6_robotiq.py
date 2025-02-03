@@ -1,23 +1,24 @@
 from copy import deepcopy
 
+import numpy as np
+import sapien.core as sapien
 import torch
 
-from mani_skill import PACKAGE_ASSET_DIR
+from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
-import numpy as np
-import sapien.core as sapien
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
+
 
 @register_agent()
 class XArm6Robotiq(BaseAgent):
     uid = "xarm6_robotiq"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
     # mjcf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_with_gripper.xml"
-    
+
     disable_self_collisions = False
 
     urdf_config = dict(
@@ -37,8 +38,21 @@ class XArm6Robotiq(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             qpos=np.array(
-                [1.56280772e-03, -1.10912404e+00, -9.71343926e-02, 1.52969832e-04, 1.20606723e+00, 1.66234924e-03,
-                0, 0, 0, 0, 0, 0]),
+                [
+                    1.56280772e-03,
+                    -1.10912404e00,
+                    -9.71343926e-02,
+                    1.52969832e-04,
+                    1.20606723e00,
+                    1.66234924e-03,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            ),
             pose=sapien.Pose([0, 0, 0]),
         ),
         zeros=Keyframe(
@@ -46,27 +60,27 @@ class XArm6Robotiq(BaseAgent):
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j1=Keyframe(
-            qpos=np.array([np.pi/2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            qpos=np.array([np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j2=Keyframe(
-            qpos=np.array([0, np.pi/2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            qpos=np.array([0, np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j3=Keyframe(
-            qpos=np.array([0, 0, np.pi/2, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            qpos=np.array([0, 0, np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j4=Keyframe(
-            qpos=np.array([0, 0, 0, np.pi/2, 0, 0, 0, 0, 0, 0, 0, 0]),
+            qpos=np.array([0, 0, 0, np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j5=Keyframe(
-            qpos=np.array([0, 0, 0, 0, np.pi/2, 0, 0, 0, 0, 0, 0, 0]),
+            qpos=np.array([0, 0, 0, 0, np.pi / 2, 0, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j6=Keyframe(
-            qpos=np.array([0, 0, 0, 0, 0, np.pi/2]),
+            qpos=np.array([0, 0, 0, 0, 0, np.pi / 2]),
             pose=sapien.Pose([0, 0, 0]),
         ),
     )
@@ -80,23 +94,21 @@ class XArm6Robotiq(BaseAgent):
         "joint6",
     ]
 
-    arm_stiffness = 1000
-    arm_damping = [50, 50, 50, 50, 50, 50]
-    # arm_damping = [0.1, 0.1, 0.1, 0.1, 0.01, 0.01]
-    arm_friction = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    arm_stiffness = 1e4
+    arm_damping = 1e3
+    arm_friction = 0.1
     arm_force_limit = 100
 
     gripper_stiffness = 1e5
-    gripper_damping = 1e3
+    gripper_damping = 2000
     gripper_force_limit = 0.1
-    gripper_friction = 0.05
-
+    gripper_friction = 1
+    disable_self_collisions = True
     ee_link_name = "eef"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    
     @property
     def _controller_configs(self):
         # -------------------------------------------------------------------------- #
@@ -204,7 +216,7 @@ class XArm6Robotiq(BaseAgent):
         # -------------------------------------------------------------------------- #
         # Gripper
         # -------------------------------------------------------------------------- #
-        
+
         # Define a passive controller config to simply "turn off" other joints from being controlled and set their properties (damping/friction) to 0.
         # These joints are controlled passively by the mimic controller later on.
         passive_finger_joint_names = [
@@ -219,7 +231,7 @@ class XArm6Robotiq(BaseAgent):
             damping=0,
             friction=0,
         )
-        
+
         finger_joint_names = ["left_outer_knuckle_joint", "right_outer_knuckle_joint"]
 
         # Use a mimic controller config to define one action to control both fingers
@@ -236,8 +248,8 @@ class XArm6Robotiq(BaseAgent):
 
         finger_mimic_pd_joint_delta_pos = PDJointPosMimicControllerConfig(
             joint_names=finger_joint_names,
-            lower=-0.1,
-            upper=0.1,
+            lower=-0.15,
+            upper=0.15,
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
@@ -248,66 +260,65 @@ class XArm6Robotiq(BaseAgent):
 
         controller_configs = dict(
             pd_joint_delta_pos=dict(
-                arm=arm_pd_joint_delta_pos, 
-                gripper_active=finger_mimic_pd_joint_delta_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_joint_delta_pos,
+                gripper_active=finger_mimic_pd_joint_delta_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_joint_pos=dict(
-                arm=arm_pd_joint_pos, 
-                gripper_active=finger_mimic_pd_joint_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_joint_pos,
+                gripper_active=finger_mimic_pd_joint_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_ee_delta_pos=dict(
-                arm=arm_pd_ee_delta_pos, 
-                gripper_active=finger_mimic_pd_joint_delta_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_ee_delta_pos,
+                gripper_active=finger_mimic_pd_joint_delta_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_ee_delta_pose=dict(
-                arm=arm_pd_ee_delta_pose, 
-                gripper_active=finger_mimic_pd_joint_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_ee_delta_pose,
+                gripper_active=finger_mimic_pd_joint_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_ee_pose=dict(
-                arm=arm_pd_ee_pose, 
-                gripper_active=finger_mimic_pd_joint_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_ee_pose,
+                gripper_active=finger_mimic_pd_joint_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_joint_target_delta_pos=dict(
-                arm=arm_pd_joint_target_delta_pos, 
-                gripper_active=finger_mimic_pd_joint_delta_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_joint_target_delta_pos,
+                gripper_active=finger_mimic_pd_joint_delta_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_ee_target_delta_pos=dict(
-                arm=arm_pd_ee_target_delta_pos, 
-                gripper_active=finger_mimic_pd_joint_delta_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_ee_target_delta_pos,
+                gripper_active=finger_mimic_pd_joint_delta_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_ee_target_delta_pose=dict(
-                arm=arm_pd_ee_target_delta_pose, 
-                gripper_active=finger_mimic_pd_joint_delta_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_ee_target_delta_pose,
+                gripper_active=finger_mimic_pd_joint_delta_pos,
+                gripper_passive=passive_finger_joints,
             ),
             # Caution to use the following controllers
             pd_joint_vel=dict(
-                arm=arm_pd_joint_vel, 
-                gripper_active=finger_mimic_pd_joint_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_joint_vel,
+                gripper_active=finger_mimic_pd_joint_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_joint_pos_vel=dict(
-                arm=arm_pd_joint_pos_vel, 
-                gripper_active=finger_mimic_pd_joint_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_joint_pos_vel,
+                gripper_active=finger_mimic_pd_joint_pos,
+                gripper_passive=passive_finger_joints,
             ),
             pd_joint_delta_pos_vel=dict(
-                arm=arm_pd_joint_delta_pos_vel, 
-                gripper_active=finger_mimic_pd_joint_delta_pos, 
-                gripper_passive=passive_finger_joints
+                arm=arm_pd_joint_delta_pos_vel,
+                gripper_active=finger_mimic_pd_joint_delta_pos,
+                gripper_passive=passive_finger_joints,
             ),
         )
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
-
 
     def _after_loading_articulation(self):
         outer_finger = self.robot.active_joints_map["right_inner_finger_joint"]
@@ -341,18 +352,16 @@ class XArm6Robotiq(BaseAgent):
         left_drive.set_limit_y(0, 0)
         left_drive.set_limit_z(0, 0)
 
-
     def _after_init(self):
         self.finger1_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "left_inner_finger"
+            self.robot.get_links(), "left_inner_finger_pad"
         )
         self.finger2_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "right_inner_finger"
+            self.robot.get_links(), "right_inner_finger_pad"
         )
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
-
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         l_contact_forces = self.scene.get_pairwise_contact_forces(
@@ -365,7 +374,7 @@ class XArm6Robotiq(BaseAgent):
         rforce = torch.linalg.norm(r_contact_forces, axis=1)
 
         ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
-        rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
+        rdirection = self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
         langle = common.compute_angle_between(ldirection, l_contact_forces)
         rangle = common.compute_angle_between(rdirection, r_contact_forces)
         lflag = torch.logical_and(
@@ -376,9 +385,8 @@ class XArm6Robotiq(BaseAgent):
         )
         return torch.logical_and(lflag, rflag)
 
-
     def is_static(self, threshold: float = 0.2):
-        qvel = self.robot.get_qvel()[..., :-1]
+        qvel = self.robot.get_qvel()[..., :-6]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
 
