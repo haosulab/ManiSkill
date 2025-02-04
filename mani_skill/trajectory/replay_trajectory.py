@@ -482,13 +482,24 @@ def main(args: Args):
 
     ### Checks and setting up env kwargs ###
     # First we determine how to setup the environment to replay demonstrations and raise relevant warnings to the user
-    if ori_env_kwargs["sim_backend"] != args.sim_backend and args.use_env_states:
+    if (
+        "sim_backend" in ori_env_kwargs
+        and ori_env_kwargs["sim_backend"] != args.sim_backend
+        and args.use_env_states
+    ):
         logger.warning(
             f"Warning: Using different backend ({args.sim_backend}) than the original used to collect the trajectory data "
             f"({ori_env_kwargs['sim_backend']}). This may cause replay failures due to "
             f"differences in simulation/physics engine backend. Use the same backend by passing -b {ori_env_kwargs['sim_backend']} "
             f"or replay by environment states by passing --use-env-states instead."
         )
+    if args.sim_backend is None:
+        # try to guess which sim backend to use
+        if "sim_backend" not in ori_env_kwargs:
+            args.sim_backend = "physx_cpu"
+        else:
+            args.sim_backend = ori_env_kwargs["sim_backend"]
+
     ori_env_kwargs["sim_backend"] = args.sim_backend
     env_kwargs["sim_backend"] = args.sim_backend
 
