@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
+import copy
 from gymnasium.vector import VectorEnv
 
 from mani_skill.utils.structs.types import Array
@@ -143,8 +144,8 @@ class ManiSkillVectorEnv(VectorEnv):
         if dones.any() and self.auto_reset:
             final_obs = obs
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
+            infos["final_info"] = copy.deepcopy(infos)
             obs, _ = self.reset(options=dict(env_idx=env_idx))
-            infos["final_info"] = infos.copy()
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs
             # NOTE (stao): that adding masks like below is a bit redundant and not necessary
