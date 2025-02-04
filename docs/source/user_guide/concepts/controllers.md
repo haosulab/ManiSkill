@@ -94,7 +94,7 @@ keyframe qpos of rest panda modified to kf.qpos[-4] += 0.5
 robot pose modified to sapien.Pose([-0.302144, -3.72529e-09, -5.96046e-08], [0.984722, 9.31323e-10, -1.50322e-08, -0.174137])
 -->
 
-For rotation in this controller, the user specifies a delta X, Y, and Z axis rotation (in radians if not normalized) indicating how far to rotate in all those dimensions. They are processed as XYZ euler angles and converted to a quaternion internally. Inverse kinematics is then used to determine the required joint actions to achieve the desired rotation.
+For rotation in this controller, the user specifies a delta X, Y, and Z axis rotation (in radians if not normalized) indicating how far to rotate in all those dimensions. They are processed as XYZ Euler angles and converted to a quaternion internally. Inverse kinematics is then used to determine the required joint actions to achieve the desired rotation.
 
 ManiSkill implements two types of rotation based control that are generally the most intuitive to understand and commonly used in real-world robots, which is rotation under one orientation aligned/positioned at another frame. In particular there are two rotation frames supported: root aligned body and body aligned body. A aligned B means rotation in the frame with the same orientation as frame A and same position as frame B. Both frames are shown below by setting the corresponding dimension in the action to > 0 and the rest to 0.
 
@@ -126,7 +126,7 @@ To help detail how controllers work in detail, below we explain with formulae ho
 
 ### Terminology
 
-- fixed joint: a joint that can not be controlled. The degree of freedom (DoF) is 0.
+- fixed joint: a joint that cannot be controlled. The degree of freedom (DoF) is 0.
 - `qpos` ( $q$ ): controllable joint positions
 - `qvel` ( $\dot{q}$ ): controllable joint velocities
 - target joint position ( $\bar{q}$ ): target position of the motor which drives the joint

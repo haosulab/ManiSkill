@@ -207,6 +207,8 @@ class RecordEpisode(gym.Wrapper):
         record_reward: whether to record the reward in the trajectory data
         record_env_state: whether to record the environment state in the trajectory data
         video_fps (int): The FPS of the video to generate if save_video is True
+        render_substeps (bool): Whether to render substeps for video. This is captures an image of the environment after each physics step. This runs slower but generates more image frames
+            per environment step which when coupled with a higher video FPS can yield a smoother video.
         avoid_overwriting_video (bool): If true, the wrapper will iterate over possible video names to avoid overwriting existing videos in the output directory. Useful for resuming training runs.
         source_type (Optional[str]): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
         source_desc (Optional[str]): A longer description describing how the demonstrations are collected
@@ -227,6 +229,7 @@ class RecordEpisode(gym.Wrapper):
         record_reward: bool = True,
         record_env_state: bool = True,
         video_fps: int = 30,
+        render_substeps: bool = False,
         avoid_overwriting_video: bool = False,
         source_type: Optional[str] = None,
         source_desc: Optional[str] = None,
@@ -303,6 +306,19 @@ class RecordEpisode(gym.Wrapper):
             else:
                 break
 
+        self.render_substeps = render_substeps
+        if self.render_substeps:
+            _original_after_simulation_step = self.base_env._after_simulation_step
+
+            def wrapped_after_simulation_step():
+                _original_after_simulation_step()
+                if self.save_video:
+                    if self.base_env.gpu_sim_enabled:
+                        self.base_env.scene._gpu_fetch_all()
+                    self.render_images.append(self.capture_image())
+
+            self.base_env._after_simulation_step = wrapped_after_simulation_step
+
     @property
     def num_envs(self):
         return self.base_env.num_envs
@@ -320,9 +336,22 @@ class RecordEpisode(gym.Wrapper):
         else:
             return self._save_video
 
-    def capture_image(self):
+    def capture_image(self, infos=None):
         img = self.env.render()
         img = common.to_numpy(img)
+        if len(img.shape) == 3:
+            img = img[None]
+        if infos is not None:
+            for i in range(len(img)):
+                info_item = {
+                    k: v if np.size(v) == 1 else v[i] for k, v in infos.items()
+                }
+                img[i] = put_info_on_image(img[i], info_item)
+        if len(img.shape) > 3:
+            if len(img) == 1:
+                img = img[0]
+            else:
+                img = tile_images(img, nrows=self.video_nrows)
         return img
 
     def reset(
@@ -486,21 +515,23 @@ class RecordEpisode(gym.Wrapper):
                 )
             else:
                 self._trajectory_buffer.fail = None
-            self._last_info = common.to_numpy(info)
 
         if self.save_video:
             self._video_steps += 1
-            image = self.capture_image()
-
             if self.info_on_video:
-                scalar_info = gym_utils.extract_scalars_from_info(common.to_numpy(info))
-                if isinstance(rew, torch.Tensor) and len(rew.shape) > 1:
-                    rew = rew[0]
-                rew = float(common.to_numpy(rew))
-                extra_texts = [
-                    f"reward: {rew:.3f}",
-                ]
-                image = put_info_on_image(image, scalar_info, extras=extra_texts)
+                scalar_info = gym_utils.extract_scalars_from_info(
+                    common.to_numpy(info), batch_size=self.num_envs
+                )
+                scalar_info["reward"] = common.to_numpy(rew)
+                if np.size(scalar_info["reward"]) > 1:
+                    scalar_info["reward"] = [
+                        float(rew) for rew in scalar_info["reward"]
+                    ]
+                else:
+                    scalar_info["reward"] = float(scalar_info["reward"])
+                image = self.capture_image(scalar_info)
+            else:
+                image = self.capture_image()
 
             self.render_images.append(image)
             if (

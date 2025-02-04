@@ -19,7 +19,7 @@ def _load_scene(self, options):
         id=f"ycb:{model_id}",
     )
     # choose a reasonable initial pose that doesn't intersect other objects
-    builder.inital_pose = sapien.Pose(p=[0, 0, 0.5])
+    builder.initial_pose = sapien.Pose(p=[0, 0, 0.5])
     builder.build(name="object")
 ```
 
@@ -32,11 +32,11 @@ def _load_scene(self, options):
     builder = self.scene.create_actor_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_actors.html)
+Then you can use the standard SAPIEN API for creating actors, a tutorial of which can be found on the [SAPIEN actors tutorial documentation](https://sapien-sim.github.io/docs/user_guide/getting_started/create_actors.html#create-an-actor-with-actorbuilder)
 
 ## Loading Articulations
 
-There are several ways to load articulations as detailed below.
+There are several ways to load articulations as detailed below as well as some limitations to be aware of
 
 ### Loading from Existing Datasets
 
@@ -64,7 +64,7 @@ def _load_scene(self, options):
     builder = self.scene.create_articulation_builder()
 ```
 
-Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien.ucsd.edu/docs/latest/tutorial/basic/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
+Then you can use the standard SAPIEN API for creating articulations, a tutorial of which can be found on the [SAPIEN articulation tutorial documentation](https://sapien-sim.github.io/docs/user_guide/getting_started/create_articulations.html). You essentially just need to define what the links and joints are and how they connect. Links are created like Actors and can have visual and collision shapes added via the python API.
 
 ### Using the URDF Loader
 
@@ -113,6 +113,22 @@ def _load_scene(self, options):
     builder.build(name="my_articulation")
 ```
 
+### Articulation Limitations
+
+For the physx simulation backend, any single articulation can have a maximum of 64 links. More complex articulated objects will either need to be simplified by merging links together. Most of the time this is readily possible by inspecting the URDF and fusing together links held together by fixed joints. The less fixed joints and links there are, the better the simulation will run in terms of accuracy and speed.
+
+## Using the MJCF Loader
+
+If your actor/articulation is defined with a MJCF file, you can use a MJCF loader to load that articulation and make modifications as needed. It works the exact same as the [URDF loader](./loading_objects.md#using-the-urdf-loader). Note that however not all properties in MJCF/Mujoco are supported in SAPIEN/ManiSkill at this moment, so you should always verify your articulation/actors are loaded correctly from the MJCF. 
+
+```python
+def _load_scene(self, options):
+    loader = scene.create_mjcf_loader()
+    builders = loader.parse(str(mjcf_path))
+    articulation_builders = builders["articulation_builders"]
+    actor_builders = builders["actor_builders"]
+```
+
 ## Reconfiguring and Optimization
 
 In general loading is always quite slow, especially on the GPU so by default, ManiSkill reconfigures just once. Any call to `env.reset()` will not trigger a reconfiguration unless you call `env.reset(seed=seed, options=dict(reconfigure=True))` (seed is not needed but recommended if you are reconfiguring for reproducibility). 
@@ -149,6 +165,6 @@ class PickSingleYCBEnv(BaseEnv):
         )
 ```
 
-A `reconfiguration_freq` value of 1 means every during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
+A `reconfiguration_freq` value of 1 means during every reset we reconfigure. A `reconfiguration_freq` of `k` means every `k` resets we reconfigure. A `reconfiguration_freq` of 0 (the default) means we never reconfigure again.
 
 In general one use case of setting a positive `reconfiguration_freq` value is for when you want to simulate a task in parallel where each parallel environment is working with a different object/articulation and there are way more object variants than number of parallel environments. For machine learning / RL workflows, setting `reconfiguration_freq` to e.g. 10 ensures every 10 resets the objects being simulated on are randomized which can diversify the data collected for online training while keeping simulation fast by reconfiguring infrequently.

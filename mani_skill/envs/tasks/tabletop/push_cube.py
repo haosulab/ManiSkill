@@ -37,21 +37,18 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 @register_env("PushCube-v1", max_episode_steps=50)
 class PushCubeEnv(BaseEnv):
     """
-    Task Description
-    ----------------
+    **Task Description:**
     A simple task where the objective is to push and move a cube to a goal region in front of it
 
-    Randomizations
-    --------------
+    **Randomizations:**
     - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
     - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
 
-    Success Conditions
-    ------------------
+    **Success Conditions:**
     - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
-
-    Visualization: https://maniskill.readthedocs.io/en/latest/tasks/index.html#pushcube-v1
     """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushCube-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
 
@@ -134,6 +131,7 @@ class PushCubeEnv(BaseEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
+            initial_pose=sapien.Pose(p=[0, 0, 1e-3]),
         )
 
         # optionally you can automatically hide some Actors from view by appending to the self._hidden_objects list. When visual observations
@@ -160,7 +158,7 @@ class PushCubeEnv(BaseEnv):
             q = [1, 0, 0, 0]
             # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
             # is not batched, Pose.create_from_pq will automatically batch p or q accordingly
-            # furthermore, notice how here we do not even using env_idx as a variable to say set the pose for objects in desired
+            # furthermore, notice how here we do not even use env_idx as a variable to say set the pose for objects in desired
             # environments. This is because internally any calls to set data on the GPU buffer (e.g. set_pose, set_linear_velocity etc.)
             # automatically are masked so that you can only set data on objects in environments that are meant to be initialized
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
@@ -180,13 +178,14 @@ class PushCubeEnv(BaseEnv):
 
     def evaluate(self):
         # success is achieved when the cube's xy position on the table is within the
-        # goal region's area (a circle centered at the goal region's xy position)
+        # goal region's area (a circle centered at the goal region's xy position) and
+        # the cube is still on the surface
         is_obj_placed = (
             torch.linalg.norm(
                 self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
             < self.goal_radius
-        )
+        ) & (self.obj.pose.p[..., 2] < self.cube_half_size + 5e-3)
 
         return {
             "success": is_obj_placed,

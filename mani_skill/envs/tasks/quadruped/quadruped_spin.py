@@ -127,6 +127,18 @@ class QuadrupedSpinEnv(BaseEnv):
 
 @register_env("AnymalC-Spin-v1", max_episode_steps=200)
 class AnymalCSpinEnv(QuadrupedSpinEnv):
+    """
+    **Task Description:**
+    Control the AnymalC robot to spin around in place as fast as possible and is rewarded by its angular velocity.
+
+    **Randomizations:**
+    - Robot is initialized in a stable rest/standing position
+
+    **Fail Conditions:**
+    - If the robot has fallen over, which is considered True when the main body (the center part) hits the ground
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/AnymalC-Spin-v1_rt.mp4"
     _UNDESIRED_CONTACT_LINK_NAMES = ["LF_KFE", "RF_KFE", "LH_KFE", "RH_KFE"]
 
     def __init__(self, *args, robot_uids="anymal_c", **kwargs):
