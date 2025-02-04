@@ -60,7 +60,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     robot_motor_color = [0.05, 0.05, 0.05]  # RGB
     base_camera_pos = [robot_x_offset + 0.40, 0 + 0.265, 0.1725]
     camera_target = [robot_x_offset + 0.2, 0, 0]
-    camera_fov = 52 * (np.pi / 180)
+    camera_fov = 53 * (np.pi / 180)
 
     # debug camera position points - appear if debug in rgb_overlay_mode, useful in camera alignment
     alignment_dots = [

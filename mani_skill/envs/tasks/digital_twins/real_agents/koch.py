@@ -75,29 +75,21 @@ class MS3RealKoch(BaseRealAgent):
                 "Moving to initial keyframe, ensure robot is in rest position and press Enter"
             )
             input()
-            for _ in tqdm(range(int(3 * freq))):
+            for _ in tqdm(range(int(5 * freq))):
                 start_loop_t = time.perf_counter()
                 delta_step = (qpos - target_pos).clip(
                     min=-max_rad_per_step, max=max_rad_per_step
                 )
+                if np.linalg.norm(delta_step) <= 1e-4:
+                    print("converged to init pose")
+                    break
                 target_pos += delta_step
                 self.send_qpos(target_pos)
                 dt_s = time.perf_counter() - start_loop_t
                 busy_wait(1 / freq - dt_s)
 
-            max_rad_per_step = 0.005
-            target_pos = self.qpos  # target control
-            print("round 2")
-            for _ in tqdm(range(int(3 * freq))):
-                start_loop_t = time.perf_counter()
-                delta_step = (qpos - self.qpos).clip(
-                    min=-max_rad_per_step, max=max_rad_per_step
-                )
-                target_pos += delta_step
-                self.send_qpos(target_pos)
-                dt_s = time.perf_counter() - start_loop_t
-                busy_wait(1 / freq - dt_s)
-            time.sleep(0.1)
+            print("Press Enter to make first eval")
+            input()
 
     # TODO (xhin): test multi-camera setup
     def render(self):
