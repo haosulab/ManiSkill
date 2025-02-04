@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import numpy as np
+import sapien.core as sapien
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
@@ -7,9 +9,6 @@ from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
-import numpy as np
-import sapien.core as sapien
-
 from mani_skill.utils import sapien_utils
 
 
@@ -18,12 +17,18 @@ class XArm6NoGripper(BaseAgent):
     uid = "xarm6_nogripper"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_nogripper.urdf"
 
-    disable_self_collisions = False
-
     keyframes = dict(
         rest=Keyframe(
             qpos=np.array(
-                [1.56280772e-03, -1.10912404e+00, -9.71343926e-02, 1.52969832e-04, 1.20606723e+00, 1.66234924e-03]),
+                [
+                    1.56280772e-03,
+                    -1.10912404e00,
+                    -9.71343926e-02,
+                    1.52969832e-04,
+                    1.20606723e00,
+                    1.66234924e-03,
+                ]
+            ),
             pose=sapien.Pose([0, 0, 0]),
         ),
         zeros=Keyframe(
@@ -31,27 +36,27 @@ class XArm6NoGripper(BaseAgent):
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j1=Keyframe(
-            qpos=np.array([np.pi/2, 0, 0, 0, 0, 0]),
+            qpos=np.array([np.pi / 2, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j2=Keyframe(
-            qpos=np.array([0, np.pi/2, 0, 0, 0, 0]),
+            qpos=np.array([0, np.pi / 2, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j3=Keyframe(
-            qpos=np.array([0, 0, np.pi/2, 0, 0, 0]),
+            qpos=np.array([0, 0, np.pi / 2, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j4=Keyframe(
-            qpos=np.array([0, 0, 0, np.pi/2, 0, 0]),
+            qpos=np.array([0, 0, 0, np.pi / 2, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j5=Keyframe(
-                qpos=np.array([0, 0, 0, 0, np.pi/2, 0]),
+            qpos=np.array([0, 0, 0, 0, np.pi / 2, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j6=Keyframe(
-            qpos=np.array([0, 0, 0, 0, 0, np.pi/2]),
+            qpos=np.array([0, 0, 0, 0, 0, np.pi / 2]),
             pose=sapien.Pose([0, 0, 0]),
         ),
     )
@@ -75,16 +80,14 @@ class XArm6NoGripper(BaseAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
     def _after_init(self):
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
 
     def is_static(self, threshold: float = 0.2):
-        qvel = self.robot.get_qvel()[..., :-1]
+        qvel = self.robot.get_qvel()
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
-
 
     @property
     def _controller_configs(self):
@@ -206,7 +209,11 @@ class XArm6NoGripper(BaseAgent):
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
-    
+
+
+@register_agent()
+class XArm6NoGripperWristCamera(XArm6NoGripper):
+    uid = "xarm6_nogripper_wristcam"
 
     @property
     def _sensor_configs(self):
@@ -222,4 +229,3 @@ class XArm6NoGripper(BaseAgent):
                 mount=self.robot.links_map["camera_link"],
             )
         ]
-    

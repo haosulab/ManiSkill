@@ -13,13 +13,10 @@ from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
 
-@register_agent()
+@register_agent(asset_download_ids=["xarm6"])
 class XArm6Robotiq(BaseAgent):
     uid = "xarm6_robotiq"
     urdf_path = f"{ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
-    # mjcf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_with_gripper.xml"
-
-    disable_self_collisions = False
 
     urdf_config = dict(
         _materials=dict(
@@ -103,7 +100,6 @@ class XArm6Robotiq(BaseAgent):
     gripper_damping = 2000
     gripper_force_limit = 0.1
     gripper_friction = 1
-    disable_self_collisions = True
     ee_link_name = "eef"
 
     def __init__(self, *args, **kwargs):
@@ -352,6 +348,28 @@ class XArm6Robotiq(BaseAgent):
         left_drive.set_limit_y(0, 0)
         left_drive.set_limit_z(0, 0)
 
+        # disable impossible collisions here instead of just using the SRDF as there are too many
+        # and using the SRDF will cause the robot to assign too many collision groups
+
+        # disable all collisions between gripper related links
+        gripper_links = [
+            "right_inner_knuckle",
+            "right_outer_knuckle",
+            "left_inner_knuckle",
+            "left_outer_knuckle",
+            "right_inner_finger_pad",
+            "left_inner_finger_pad",
+            "right_outer_finger",
+            "left_outer_finger",
+            "robotiq_arg2f_base_link",
+            "right_inner_finger",
+            "left_inner_finger",
+            "link5",  # not gripper link but is adjacent to the gripper part
+        ]
+        for link_name in gripper_links:
+            link = self.robot.links_map[link_name]
+            link.set_collision_group_bit(group=2, bit_idx=31, bit=1)
+
     def _after_init(self):
         self.finger1_link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "left_inner_finger_pad"
@@ -390,7 +408,7 @@ class XArm6Robotiq(BaseAgent):
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
 
-@register_agent()
+@register_agent(asset_download_ids=["xarm6"])
 class XArm6RobotiqWristCamera(XArm6Robotiq):
     uid = "xarm6_robotiq_wristcam"
 
