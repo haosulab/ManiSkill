@@ -106,8 +106,8 @@ class XArm6NoGripper(BaseAgent):
         )
         pd_joint_delta_pos = PDJointPosControllerConfig(
             self.arm_joint_names,
-            lower=-0.2,
-            upper=0.2,
+            lower=-0.1,
+            upper=0.1,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
