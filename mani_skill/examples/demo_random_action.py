@@ -107,7 +107,6 @@ def main(args: Args):
     while True:
         action = env.action_space.sample() if env.action_space is not None else None
         obs, reward, terminated, truncated, info = env.step(action)
-        print(obs.keys(), obs["extra"])
         if verbose:
             print("reward", reward)
             print("terminated", terminated)
