@@ -20,7 +20,7 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
-    parse_visual_obs_mode_to_struct,
+    parse_obs_mode_to_struct,
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
@@ -277,7 +277,8 @@ class BaseEnv(gym.Env):
             else:
                 raise NotImplementedError(f"Unsupported obs mode: {obs_mode}. Must be one of {self.SUPPORTED_OBS_MODES}")
         self._obs_mode = obs_mode
-        self._visual_obs_mode_struct = parse_visual_obs_mode_to_struct(self._obs_mode)
+        self.obs_mode_struct = parse_obs_mode_to_struct(self._obs_mode)
+        """dataclass describing what observation data is being requested by the user"""
 
         # Reward mode
         if reward_mode is None:
@@ -546,12 +547,12 @@ class BaseEnv(gym.Env):
                     sensor_obs[name] = sensor.get_obs(position=False, segmentation=False, apply_texture_transforms=apply_texture_transforms)
                 else:
                     sensor_obs[name] = sensor.get_obs(
-                        rgb=self._visual_obs_mode_struct.rgb,
-                        depth=self._visual_obs_mode_struct.depth,
-                        position=self._visual_obs_mode_struct.position,
-                        segmentation=self._visual_obs_mode_struct.segmentation,
-                        normal=self._visual_obs_mode_struct.normal,
-                        albedo=self._visual_obs_mode_struct.albedo,
+                        rgb=self.obs_mode_struct.visual.rgb,
+                        depth=self.obs_mode_struct.visual.depth,
+                        position=self.obs_mode_struct.visual.position,
+                        segmentation=self.obs_mode_struct.visual.segmentation,
+                        normal=self.obs_mode_struct.visual.normal,
+                        albedo=self.obs_mode_struct.visual.albedo,
                         apply_texture_transforms=apply_texture_transforms
                     )
         # explicitly synchronize and wait for cuda kernels to finish
