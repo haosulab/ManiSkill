@@ -25,7 +25,7 @@ class ObservationModeStruct:
     """textures to capture from cameras"""
 
 
-ALL_TEXTURES = ["rgb", "depth", "segmentation", "position", "normal", "albedo"]
+ALL_VISUAL_TEXTURES = ["rgb", "depth", "segmentation", "position", "normal", "albedo"]
 """set of all standard textures that can come from cameras"""
 
 
@@ -71,8 +71,6 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
                 albedo=False,
             ),
         )
-    elif obs_mode in ["state", "state_dict", "none"]:
-        return None
     else:
         # Parse obs mode into individual texture types
         textures = obs_mode.split("+")
@@ -82,12 +80,12 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
             textures.append("rgb")
             textures.append("segmentation")
         for texture in textures:
-            if texture == "state" or texture == "state_dict":
+            if texture == "state" or texture == "state_dict" or texture == "none":
                 # allows fetching privileged state data in addition to visual data.
                 continue
             assert (
-                texture in ALL_TEXTURES
-            ), f"Invalid texture type '{texture}' requested in the obs mode '{obs_mode}'. Each individual texture must be one of {ALL_TEXTURES}"
+                texture in ALL_VISUAL_TEXTURES
+            ), f"Invalid texture type '{texture}' requested in the obs mode '{obs_mode}'. Each individual texture must be one of {ALL_VISUAL_TEXTURES}"
         return ObservationModeStruct(
             state_dict="state_dict" in textures,
             state="state" in textures,
