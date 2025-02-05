@@ -491,7 +491,6 @@ class BaseEnv(gym.Env):
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "pointcloud":
-            # TODO support more flexible pcd obs mode with new render system
             obs = self._get_obs_with_sensor_data(info)
             obs = sensor_data_to_pointcloud(obs, self._sensors)
         elif self._obs_mode == "sensor_data":
@@ -499,6 +498,12 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
         else:
             obs = self._get_obs_with_sensor_data(info)
+
+        # flatten parts of the state observation if requested
+        if self.obs_mode_struct.state:
+            if isinstance(obs, dict):
+                data = dict(agent=obs.pop("agent"), extra=obs.pop("extra"))
+                obs["state"] = common.flatten_state_dict(data, use_torch=True, device=self.device)
         return obs
 
     def _get_obs_state_dict(self, info: Dict):

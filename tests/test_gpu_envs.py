@@ -70,7 +70,7 @@ def test_envs_obs_modes(env_id, obs_mode):
 
         if obs_mode in PREPROCESSED_OBS_MODES:
             if obs_mode == "pointcloud":
-                num_pts = len(obs["pointcloud"]["xyzw"])
+                num_pts = len(obs["pointcloud"]["xyzw"][0])
                 assert obs["pointcloud"]["xyzw"].shape == (16, num_pts, 4)
                 assert obs["pointcloud"]["rgb"].shape == (16, num_pts, 3)
                 assert obs["pointcloud"]["segmentation"].shape == (16, num_pts, 1)
@@ -78,7 +78,7 @@ def test_envs_obs_modes(env_id, obs_mode):
         else:
             if base_env.obs_mode_struct.visual.rgb:
                 for cam in obs["sensor_data"].keys():
-                    assert obs["sensor_data"][cam]["rgb"].shape == (15, 128, 128, 3)
+                    assert obs["sensor_data"][cam]["rgb"].shape == (16, 128, 128, 3)
                     assert obs["sensor_param"][cam]["extrinsic_cv"].shape == (16, 3, 4)
                     assert obs["sensor_param"][cam]["intrinsic_cv"].shape == (16, 3, 3)
                     assert obs["sensor_param"][cam]["cam2world_gl"].shape == (16, 4, 4)
@@ -103,7 +103,7 @@ def test_envs_obs_modes(env_id, obs_mode):
             if isinstance(obs, dict):
                 assert obs["state"].shape[0] == 16
             else:
-                assert obs.shape[0] == 13
+                assert obs.shape[0] == 16
         if base_env.obs_mode_struct.state_dict:
             assert isinstance(obs, dict)
             assert "agent" in obs
@@ -116,30 +116,6 @@ def test_envs_obs_modes(env_id, obs_mode):
         )
     env.close()
     del env
-
-
-# @pytest.mark.gpu_sim
-# @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
-# @pytest.mark.parametrize("obs_mode", ["rgbd", "pointcloud"])
-# def test_segmentation(env_id, obs_mode):
-#     env = gym.make_vec(
-#         env_id,
-#         num_envs=16,
-#         vectorization_mode="custom",
-#         vector_kwargs=dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
-#     )
-#     obs, _ = env.reset()
-#     assert_isinstance(obs, torch.Tensor)
-#     if obs_mode == "rgbd":
-#         for cam in obs["sensor_data"].keys():
-#             assert obs["sensor_data"][cam]["segmentation"]
-#     elif obs_mode == "pointcloud":
-#         num_pts = len(obs["pointcloud"]["xyzw"][0])
-#         assert obs["pointcloud"]["xyzw"].shape == (16, num_pts, 4)
-#         assert obs["pointcloud"]["rgb"].shape == (16, num_pts, 3)
-#         assert obs["pointcloud"]["segmentation"].shape == (16, num_pts, 1)
-#     env.close()
-#     del env
 
 
 @pytest.mark.gpu_sim
