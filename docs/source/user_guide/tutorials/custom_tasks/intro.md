@@ -32,7 +32,7 @@ If you have any questions or issues, feel free to ask in our [discord](https://d
 
 ## Setting up the Task Class
 
-All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the timelimit of the task.
+All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the time limit of the task.
 
 ```python
 import sapien
@@ -303,7 +303,7 @@ class PushCubeEnv(BaseEnv):
 
 `compute_normalized_dense_reward` is the default reward function used and returned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
 
-Dense reward functions are not required and can be skipped. If not implemented then those reward modes are not supported and will raise an error if you try to use dense reward modes. Sparse reward functions are available if the evaluation function returns a dictonary with the success/fail key. If the task is in a success state, +1 reward is given. If the task is in a fail state, -1 reward is given. Otherwise 0 is given.
+Dense reward functions are not required and can be skipped. If not implemented then those reward modes are not supported and will raise an error if you try to use dense reward modes. Sparse reward functions are available if the evaluation function returns a dictionary with the success/fail key. If the task is in a success state, +1 reward is given. If the task is in a fail state, -1 reward is given. Otherwise 0 is given.
 
 ## (Optional) Setting up Cameras/Sensors for Observations and Recording
 

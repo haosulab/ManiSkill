@@ -17,6 +17,9 @@ from mani_skill.utils.assets.data import DATA_GROUPS, DATA_SOURCES
 
 
 def prompt_yes_no(message):
+    skip_prompt = os.getenv("MS_SKIP_ASSET_DOWNLOAD_PROMPT")
+    if skip_prompt == "1":
+        return True
     r"""Prints a message and prompts the user for "y" or "n" returning True or False."""
     # https://github.com/facebookresearch/habitat-sim/blob/main/src_python/habitat_sim/utils/datasets_download.py
     print("\n-------------------------")

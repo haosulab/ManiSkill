@@ -56,7 +56,7 @@ class YourEnv(BaseEnv):
 
 Whenever possible, task code should be written in batch mode (assuming all data in and out are batched by the number of parallel environments). This generally ensures that the task is then GPU simulatable, which is of great benefit to workflows that leverage sim data collection at scale.
 
-GPU simulation also entails tuning the GPU simulation configurations. You can opt to do two ways, dynamic or fix GPU simulation configurations.
+GPU simulation also entails tuning the GPU simulation configurations. You can opt to do two ways, dynamic or fixed GPU simulation configurations.
 
 A version of fixed configurations can be seen in `mani_skill/envs/tasks/push_cube.py` which defines the default
 

@@ -53,6 +53,9 @@ def parse_visual_obs_mode_to_struct(obs_mode: str) -> CameraObsTextures:
         # Parse obs mode into individual texture types
         textures = obs_mode.split("+")
         for texture in textures:
+            if texture == "state" or texture == "state_dict":
+                # allows fetching privileged state data in addition to visual data.
+                continue
             assert (
                 texture in ALL_TEXTURES
             ), f"Invalid texture type '{texture}' requested in the obs mode '{obs_mode}'. Each individual texture must be one of {ALL_TEXTURES}"

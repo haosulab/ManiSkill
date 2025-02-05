@@ -14,5 +14,6 @@ from .unitree_go import *
 from .unitree_h1 import *
 from .ur_e import UR10e
 from .widowx import *
+from .xarm6 import *
 from .xarm import XArm7Ability
 from .xmate3 import Xmate3Robotiq

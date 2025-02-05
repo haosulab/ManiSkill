@@ -96,8 +96,8 @@ done
 for seed in ${seeds[@]}
 do
   python ppo_fast.py --env_id="PegInsertionSide-v1" --seed=${seed} \
-    --num_envs=1024 --update_epochs=8 --num_minibatches=32 --gamma=0.97 --gae_lambda=0.95 \
-    --total_timesteps=150_000_000 --num-steps=100 --num-eval-steps=100 \
+    --num_envs=2048 --update_epochs=8 --num_minibatches=32 --gamma=0.97 --gae_lambda=0.95 \
+    --total_timesteps=75_000_000 --num-steps=16 --num-eval-steps=100 \
     --num_eval_envs=16 \
     --save-model --cudagraphs --exp-name="ppo-PegInsertionSide-v1-state-${seed}-walltime_efficient" \
     --wandb_entity="stonet2000" --track
@@ -133,6 +133,16 @@ do
     --wandb_entity="stonet2000" --track
 done
 
+for seed in ${seeds[@]}
+do 
+  python ppo_fast.py --env_id="OpenCabinetDrawer-v1" --seed=${seed} \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 --num-steps=16 --num-eval-steps=100 \
+    --num_eval_envs=16 \
+    --save-model --cudagraphs --exp-name="ppo-OpenCabinetDrawer-v1-state-${seed}-walltime_efficient" \
+    --wandb_entity="stonet2000" --track
+done
+
 ### RGB Based PPO Baselines ###
 for seed in ${seeds[@]}
 do
@@ -162,4 +172,14 @@ do
     --num_eval_envs=16 \
     --exp-name="ppo-PushT-v1-rgb-${seed}-walltime_efficient" \
     --wandb_entity="stonet2000" --track
-  done
+done
+
+for seed in ${seeds[@]}
+do 
+  python ppo_rgb.py --env_id="AnymalC-Reach-v1" --seed=${seed} \
+    --num_envs=1024 --update_epochs=8 --num_minibatches=32 --gamma=0.99 --gae_lambda=0.95 \
+    --total_timesteps=50_000_000 --num-steps=16 --num-eval-steps=200 \
+    --num_eval_envs=16 --eval-reconfiguration-freq=0 \
+    --exp-name="ppo-AnymalC-Reach-v1-rgb-${seed}-walltime_efficient" \
+    --wandb_entity="stonet2000" --track
+done
