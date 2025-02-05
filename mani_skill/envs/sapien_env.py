@@ -278,7 +278,7 @@ class BaseEnv(gym.Env):
                 raise NotImplementedError(f"Unsupported obs mode: {obs_mode}. Must be one of {self.SUPPORTED_OBS_MODES}")
         self._obs_mode = obs_mode
         self.obs_mode_struct = parse_obs_mode_to_struct(self._obs_mode)
-        """dataclass describing what observation data is being requested by the user"""
+        """dataclass describing what observation data is being requested by the user, detailing if state data is requested and what visual data is requested"""
 
         # Reward mode
         if reward_mode is None:

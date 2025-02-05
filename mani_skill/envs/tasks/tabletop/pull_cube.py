@@ -119,7 +119,7 @@ class PullCubeEnv(BaseEnv):
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_region.pose.p,
         )
-        if self._obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 obj_pose=self.obj.pose.raw_pose,
             )
