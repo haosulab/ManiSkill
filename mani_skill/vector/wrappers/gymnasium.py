@@ -142,7 +142,7 @@ class ManiSkillVectorEnv(VectorEnv):
         dones = torch.logical_or(terminations, truncations)
 
         if dones.any() and self.auto_reset:
-            final_obs = obs
+            final_obs = copy.deepcopy(obs)
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
             final_info = copy.deepcopy(infos)
             obs, infos = self.reset(options=dict(env_idx=env_idx))
