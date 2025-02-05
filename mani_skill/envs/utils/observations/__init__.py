@@ -24,6 +24,11 @@ class ObservationModeStruct:
     visual: CameraObsTextures
     """textures to capture from cameras"""
 
+    @property
+    def use_state(self):
+        """whether or not the environment should return ground truth/privileged information such as object poses"""
+        return self.state or self.state_dict
+
 
 ALL_VISUAL_TEXTURES = ["rgb", "depth", "segmentation", "position", "normal", "albedo"]
 """set of all standard textures that can come from cameras"""
