@@ -4,11 +4,14 @@ from typing import Optional
 import hydra
 import numpy as np
 import torch
+from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
 from lerobot.common.robot_devices.motors.dynamixel import TorqueMode
+from lerobot.common.robot_devices.robots.configs import KochRobotConfig
+from lerobot.common.robot_devices.robots.manipulator import ManipulatorRobot
 from lerobot.common.robot_devices.utils import busy_wait
 
 # lerobot/lerobot-related imports
-from lerobot.common.utils.utils import init_hydra_config
+# from lerobot.common.utils.utils import init_hydra_config
 from tqdm import tqdm
 
 from mani_skill.agents.robots.koch.koch import Koch
@@ -36,13 +39,22 @@ class MS3RealKoch(BaseRealAgent):
     def _load_agent(self, **kwargs):
         """Conect the robot"""
         # load koch with provided yaml
-        robot = hydra.utils.instantiate(init_hydra_config(self.yaml_path))
+        # robot = hydra.utils.instantiate(init_hydra_config(self.yaml_path))
+        # TOOD (stao): @ xander my suggestion is to just let user pass by code their own RobotConfig here. We expect LeRobot users to either use the default we provide here
+        # or to write their own config anyway and pass it in. We just do a check that they label the base camera instead?
+        robot_config = KochRobotConfig(
+            leader_arms={},
+            cameras={
+                "base_camera": OpenCVCameraConfig(
+                    camera_index=0,
+                    fps=30,
+                    width=640,
+                    height=480,
+                )
+            },
+        )
+        robot = ManipulatorRobot(robot_config)
         robot.connect()
-
-        # turn off leader arm torque - unnecessary for pure rl
-        leader = list(robot.leader_arms)[0]
-        robot.leader_arms[leader].write("Torque_Enable", TorqueMode.DISABLED.value)
-        print(f"MS3: Disabled {leader} Torque")
         return robot
 
     def send_qpos(self, qpos):
