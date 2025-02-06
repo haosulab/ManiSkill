@@ -1,0 +1,45 @@
+seed: 0
+algo: cheq
+verbose: 1
+
+
+# environment
+env_id: PickCube-v1
+obs: state # 
+control_mode: default 
+num_envs: 32
+num_eval_envs: 4
+env_type: gpu 
+render_mode: rgb_array 
+render_size: 64
+setting_tag: none 
+  
+evaluation:
+  eval_agent: true
+  eval_count: 2
+  eval_freq: 20
+
+
+training:
+  steps: 1_500_000
+  batch_size: 32
+  train_start: 1000
+  start_steps: 5000
+  uhigh: 0.15
+  ulow: 0.03
+  lam-high: 1       # lambda high for CHEQ
+  lam-low: 0.2      # lambda low for CHEQ
+  lam-warm: 0.3     # warmup lambda for the C variants
+  pfreq: 2          # policy update frequency
+  G: 1              # Number of Q updates per env step
+
+
+# critics
+ensemble_size: 5
+
+
+
+
+
+
+

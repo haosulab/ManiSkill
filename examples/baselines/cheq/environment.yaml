@@ -1,0 +1,22 @@
+name: cheq-env
+channels:
+  - pytorch
+  - defaults
+  - anaconda
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch=2.1.1
+  - numpy>=1.22
+  - matplotlib>=3.5
+  - wandb=0.16.2
+  - pip
+  - pip:
+      - easydict==1.11
+      - gymnasium==0.29.1
+      - pycairo==1.21
+      - numba==0.56
+      - pygame==2.1
+      - Shapely==1.8.4
+      - stable-baselines3==2.2.1
+      - control==0.9.4
