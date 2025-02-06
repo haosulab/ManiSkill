@@ -7,9 +7,6 @@ from typing import Callable, List, Optional, Union
 import gymnasium as gym
 import h5py
 import numpy as np
-import sapien.physx as physx
-import torch
-import tree
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
