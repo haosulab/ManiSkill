@@ -181,7 +181,7 @@ class PullCubeToolEnv(BaseEnv):
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
 
-        if self._obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 cube_pose=self.cube.pose.raw_pose,
                 tool_pose=self.l_shape_tool.pose.raw_pose,

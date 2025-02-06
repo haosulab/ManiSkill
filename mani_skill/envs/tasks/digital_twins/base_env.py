@@ -164,8 +164,10 @@ class BaseDigitalTwinEnv(BaseEnv):
         obs = super().get_obs(info)
 
         # "greenscreen" process
-        if self._obs_mode == "rgb+segmentation" and (
-            self.rgb_overlay_paths is not None or alt_imgs is not None
+        if (
+            self.obs_mode_struct.visual.rgb
+            and self.obs_mode_struct.visual.segmentation
+            and self.rgb_overlay_paths is not None
         ):
             # get the actor ids of objects to manipulate; note that objects here are not articulated
             overlays = alt_imgs if alt_imgs is not None else self._rgb_overlay_images
