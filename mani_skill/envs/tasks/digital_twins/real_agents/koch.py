@@ -88,7 +88,7 @@ class MS3RealKoch(BaseRealAgent):
                 dt_s = time.perf_counter() - start_loop_t
                 busy_wait(1 / freq - dt_s)
 
-            print("Press Enter to make first eval")
+            print("Press Enter to Reset Koch v1.1 Follower Arm")
             input()
 
     # TODO (xhin): test multi-camera setup
