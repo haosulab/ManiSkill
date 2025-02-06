@@ -272,7 +272,7 @@ class PushCubeEnv(BaseEnv):
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
         if self.obs_mode_struct.use_state:
-            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+            # if the observation mode requests to use state, we provide ground truth information about where the cube is.
             # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
                 goal_pos=self.goal_region.pose.p,
