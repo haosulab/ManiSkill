@@ -84,6 +84,82 @@ def build_box(
     )
     return _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
 
+def build_container_grid(
+    scene: ManiSkillScene,
+    size: float,
+    height: float,
+    thickness: float,
+    color,
+    name: str,
+    n: int,
+    m: int,
+    initial_pose: sapien.Pose,
+    body_type: str = "static",
+    scene_idxs: Optional[Array] = None,
+):
+    builder = scene.create_actor_builder()
+
+    # Container base
+    base_pose = sapien.Pose([0., 0., -thickness / 2])  # Make the base's z equal to 0
+    base_half_size = [size / 2, size / 2, thickness / 2]
+    builder.add_box_collision(pose=base_pose, half_size=base_half_size)
+    builder.add_box_visual(pose=base_pose, half_size=base_half_size)
+
+    # Container sides (x4)
+    for i in [-1, 1]:
+        for axis in ['x', 'y']:
+            side_pose = sapien.Pose(
+                [i * (size - thickness) / 2 if axis == 'x' else 0,
+                 i * (size - thickness) / 2 if axis == 'y' else 0,
+                 height / 2]
+            )
+            side_half_size = [thickness / 2, size / 2, height / 2] if axis == 'x' else [size / 2, thickness / 2, height / 2]
+            builder.add_box_collision(pose=side_pose, half_size=side_half_size)
+            builder.add_box_visual(pose=side_pose, half_size=side_half_size)
+
+    # Create grid cells
+    internal_size = size - 2 * thickness
+
+    cell_width = internal_size / n
+    cell_height = internal_size / m
+
+    for i in range(1, n):
+        # Vertical dividers
+        divider_pose = sapien.Pose([i * cell_width - internal_size / 2, 0, height / 2])
+        divider_half_size = [thickness / 2, size / 2, height / 2]
+        builder.add_box_collision(pose=divider_pose, half_size=divider_half_size)
+        builder.add_box_visual(pose=divider_pose, half_size=divider_half_size)
+
+    for j in range(1, m):
+        # Horizontal dividers
+        divider_pose = sapien.Pose([0, j * cell_height - internal_size / 2, height / 2])
+        divider_half_size = [size / 2, thickness / 2, height / 2]
+        builder.add_box_collision(pose=divider_pose, half_size=divider_half_size)
+        builder.add_box_visual(pose=divider_pose, half_size=divider_half_size)
+
+    container = _build_by_type(builder, name, body_type, scene_idxs, initial_pose)
+    # Create goal sites at the center of each cell
+    goal_sites = []
+    goal_radius = 0.02
+    goal_color = [0, 1, 0, 1]
+    for i in range(n):
+        for j in range(m):
+            goal_x = (i + 0.5) * cell_width - internal_size / 2
+            goal_y = (j + 0.5) * cell_height - internal_size / 2
+            goal_local_pose = sapien.Pose([goal_x, goal_y, thickness + goal_radius])
+            goal_world_pose = initial_pose * goal_local_pose  # Transform to world frame
+            goal_site = build_box(
+                scene,
+                half_sizes=[cell_width / 2, cell_height / 2, thickness / 2],
+                color=goal_color,
+                name=f"goal_site_{i}_{j}",
+                body_type="kinematic",
+                add_collision=False,
+                initial_pose=goal_world_pose,
+            )
+            goal_sites.append(goal_site)
+
+    return container, goal_sites
 
 def build_cylinder(
     scene: ManiSkillScene,

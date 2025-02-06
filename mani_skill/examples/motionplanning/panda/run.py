@@ -87,7 +87,6 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         except Exception as e:
             print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
             res = -1
-
         if res == -1:
             success = False
             failed_motion_plans += 1
