@@ -449,13 +449,12 @@ if __name__ == "__main__":
 
         if iteration % args.eval_freq == 0:
             actor.eval()
-            base_tensor = torch.Tensor([255.0, 255.0, 255.0, 1024.0]).to(device)
-            norm_tensor = base_tensor.repeat(camera_count)
             def sample_fn(obs):
                 if isinstance(obs["rgbd"], np.ndarray):
                     for k, v in obs.items():
                         obs[k] = torch.from_numpy(v).float().to(device)
-                obs["rgbd"] = torch.div(obs["rgbd"], norm_tensor)
+                else:
+                    obs["rgbd"] = obs["rgbd"].float().to(device)
                 action = actor(obs["rgbd"], obs["state"])
                 if args.sim_backend == "cpu":
                     action = action.cpu().numpy()
