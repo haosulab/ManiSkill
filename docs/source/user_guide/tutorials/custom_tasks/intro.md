@@ -260,7 +260,7 @@ By default, the observations returned to users through calls to `env.reset` and 
 
 To better support state based observations, you need to augment the observations given to users by implementing the `_get_obs_extra` function. This function takes the `info` object generated via the earlier defined `evaluate` function as input and returns the augmented observation data as a dictionary. 
 
-Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode is "state" or "state_dict", such as the pose of the cube you are pushing. There are some data like `self.agent.tcp.pose` which are always available for single-arm robots and given all the time, and also critical information like the goal position to direct the agent where to push the cube.
+Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode the user requests is asking for it, such as the pose of the cube you are pushing. There are some data like `self.agent.tcp.pose` which are always available for single-arm robots and given all the time, and also critical information like goal information in tasks like PickCube which direct where the robot should pick the cube to. To check if a user is requesting for state data, you can check if `self.obs_mode_struct.use_state` is true. It is true if the provided `obs_mode` when creating an environment includes "state" or "state_dict" in it. More details on observation modes are available in the [separate observation page](../../concepts/observation.md).
 
 ```python
 class PushCubeEnv(BaseEnv):
@@ -270,12 +270,12 @@ class PushCubeEnv(BaseEnv):
         # grippers of the robot
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
-            goal_pos=self.goal_region.pose.p,
         )
-        if self._obs_mode in ["state", "state_dict"]:
-            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+        if self.obs_mode_struct.use_state:
+            # if the observation mode requests to use state, we provide ground truth information about where the cube is.
             # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
+                goal_pos=self.goal_region.pose.p,
                 obj_pose=self.obj.pose.raw_pose,
             )
         return obs

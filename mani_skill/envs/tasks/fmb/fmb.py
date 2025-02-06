@@ -180,7 +180,7 @@ class FMBAssembly1Env(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
-        if self.obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 board_pos=self.board.pose.p,
                 bridge_pose=self.bridge.pose.raw_pose,
