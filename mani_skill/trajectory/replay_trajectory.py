@@ -210,7 +210,7 @@ def replay_parallelized_sim(
         ):
             flushed_trajectories = np.zeros(len(episode_batch), dtype=bool)
             # mark the fake padding trajectories as flushed
-            if episode_batch_index == len(batches) - 1:
+            if episode_batch_index == len(batches) - 1 and episode_pad > 0:
                 flushed_trajectories[-episode_pad:] = True
             for t, a in enumerate(original_actions_batch):
                 _, _, _, truncated, info = env.step(a)
