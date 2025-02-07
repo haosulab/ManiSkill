@@ -2,11 +2,11 @@
 
 ManiSkill provides simple tools to use motion planning to generate robot trajectories, primarily via the open-source [mplib](https://github.com/haosulab/MPlib) library. If you install ManiSkill, mplib will come installed already so no extra installation is necessary.
 
-For an in depth tutorial on how to use more advanced features of mplib check out their documentation here: https://motion-planning-lib.readthedocs.io/latest/. Otherwise this section will cover some example code you can use and modify to generate motion planned demonstrations. The example code here is written for the Panda arm but should be modifiable to work for other robots.
+For an in-depth tutorial on how to use more advanced features of mplib check out their documentation here: https://motion-planning-lib.readthedocs.io/latest/. Otherwise this section will cover some example code you can use and modify to generate motion planned demonstrations. The example code here is written for the Panda arm but can be modified to work for other robots.
 
 ## Motion Planning with Panda Arm
 
-We provide some built in motion planning solutions for some tasks using the Panda arm at https://github.com/haosulab/ManiSkill/tree/main/mani_skill/examples/motionplanning/panda. You can run a quick demo below, which will save trajectory data as .h5 files to `demos/motionplanning/<env_id>` and optionally save videos and/or visualize with a GUI.
+We provide some built-in motion planning solutions for some tasks using the Panda arm at https://github.com/haosulab/ManiSkill/tree/main/mani_skill/examples/motionplanning/panda. You can run a quick demo below, which will save trajectory data as .h5 files to `demos/motionplanning/<env_id>` and optionally save videos and/or visualize with a GUI.
 
 ```bash
 python -m mani_skill.examples.motionplanning.panda.run -e "PickCube-v1" --save-video # runs headless and only saves video
@@ -28,4 +28,4 @@ For example, the PickCube-v1 task is composed of
 3. close the gripper
 4. move the gripper to above the goal location so the tool center point (tcp) of the gripper is at the goal
 
-Note that while motion planning can generate and solve a wide variety of tasks, it's main limitations is that it often requires an human/engineer to tune and write, as well as being unable to generate solutions for more dynamical tasks.
+Note that while motion planning can generate and solve a wide variety of tasks, its main limitation is that it often requires an human/engineer to tune and write, as well as being unable to generate solutions for more dynamical tasks.

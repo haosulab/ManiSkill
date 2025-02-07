@@ -5,7 +5,7 @@ import sapien
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import Fetch, Panda
+from mani_skill.agents.robots import Fetch, Panda, XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -13,7 +13,6 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import SimConfig
 
 
 @register_env("PickCube-v1", max_episode_steps=50)
@@ -33,8 +32,12 @@ class PickCubeEnv(BaseEnv):
     """
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
-    SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    SUPPORTED_ROBOTS = [
+        "panda",
+        "fetch",
+        "xarm6_robotiq",
+    ]
+    agent: Union[Panda, Fetch, XArm6Robotiq]
     cube_half_size = 0.02
     goal_thresh = 0.025
 
@@ -138,8 +141,13 @@ class PickCubeEnv(BaseEnv):
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * is_grasped
 
+        qvel_without_gripper = self.agent.robot.get_qvel()
+        if self.robot_uids == "xarm6_robotiq":
+            qvel_without_gripper = qvel_without_gripper[..., :-6]
+        elif self.robot_uids == "panda":
+            qvel_without_gripper = qvel_without_gripper[..., :-2]
         static_reward = 1 - torch.tanh(
-            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+            5 * torch.linalg.norm(qvel_without_gripper, axis=1)
         )
         reward += static_reward * info["is_obj_placed"]
 

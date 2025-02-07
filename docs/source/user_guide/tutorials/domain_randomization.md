@@ -1,6 +1,6 @@
 # Domain Randomization
 
-One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This documents demonstrates a number of simple tools for randomization. In the beta release we currently only have a tutorial on how to do camera randomization.
+One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This document demonstrates a number of simple tools for randomization. In the beta release we currently only have a tutorial on how to do camera randomization.
 
 ## Camera Randomization
 

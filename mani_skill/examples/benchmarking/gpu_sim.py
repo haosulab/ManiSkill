@@ -1,7 +1,7 @@
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 import gymnasium as gym
 import numpy as np
 import torch
@@ -26,19 +26,19 @@ class Args:
     """Whether to use the CPU or GPU simulation"""
     seed: int = 0
     save_example_image: bool = False
-    control_freq: int | None = 60
-    sim_freq: int | None = 120
-    num_cams: int | None = None
+    control_freq: Optional[int] = 60
+    sim_freq: Optional[int] = 120
+    num_cams: Optional[int] = None
     """Number of cameras. Only used by benchmark environments"""
-    cam_width: int | None = None
+    cam_width: Optional[int] = None
     """Width of cameras. Only used by benchmark environments"""
-    cam_height: int | None = None
+    cam_height: Optional[int] = None
     """Height of cameras. Only used by benchmark environments"""
     render_mode: str = "rgb_array"
     """Which set of cameras/sensors to render for video saving. 'cameras' value will save a video showing all sensor/camera data in the observation, e.g. rgb and depth. 'rgb_array' value will show a higher quality render of the environment running."""
     save_video: bool = False
     """Whether to save videos"""
-    save_results: str | None = None
+    save_results: Optional[str] = None
     """Path to save results to. Should be path/to/results.csv"""
 def main(args: Args):
     profiler = Profiler(output_format="stdout")

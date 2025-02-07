@@ -140,7 +140,7 @@ class RollBallEnv(BaseEnv):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
-        if self._obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 goal_pos=self.goal_region.pose.p,
                 ball_pose=self.ball.pose.raw_pose,

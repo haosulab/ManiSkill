@@ -7,7 +7,7 @@
 [demos-badge]: https://img.shields.io/badge/demos-yes-green.svg
 # Drawing Tasks
 
-These are tasks where the robot is controlled to draw a specific shape or pattern
+These are tasks where the robot is controlled to draw a specific shape or pattern.
 The document here has both a high-level overview/list of all tasks in a table as well as detailed task cards with video demonstrations after.
 
 ## Task Table

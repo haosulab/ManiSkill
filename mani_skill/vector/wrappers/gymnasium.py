@@ -159,7 +159,7 @@ class ManiSkillVectorEnv(VectorEnv):
         return self._env.close()
 
     def call(self, name: str, *args, **kwargs):
-        function = getattr(self.env, name)
+        function = getattr(self._env, name)
         return function(*args, **kwargs)
 
     def get_attr(self, name: str):

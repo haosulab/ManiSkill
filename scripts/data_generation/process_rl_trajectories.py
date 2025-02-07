@@ -1,7 +1,9 @@
 import copy
 import json
+import os
 import shutil
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import gymnasium as gym
@@ -25,8 +27,8 @@ class Args:
 def main():
     args = tyro.cli(Args)
 
-    import os
-    from pathlib import Path
+    if args.dry_run:
+        print("Dry run, skipping actual processing")
 
     # Dictionary to store paths for each environment experiment
     env_paths = {}
@@ -67,7 +69,8 @@ def main():
         new_metadata = copy.deepcopy(metadata)
         new_metadata["episodes"] = []
         control_mode = new_metadata["env_info"]["env_kwargs"]["control_mode"]
-        traj_filename = f"{env_id}/rl/trajectory.none.{control_mode}.cuda"
+        sim_backend = new_metadata["env_info"]["env_kwargs"]["sim_backend"]
+        traj_filename = f"{env_id}/rl/trajectory.none.{control_mode}.{sim_backend}"
         out_trajectory_path = os.path.join(args.out_dir, f"{traj_filename}.h5")
 
         if not args.dry_run:
@@ -125,15 +128,15 @@ def main():
                 recursive_copy_and_slice(traj_id, out_file, traj)
             new_episode = copy.deepcopy(episode)
             new_episode["success"] = True
-            new_episode["episode_length"] = last_success_index + 1
+            new_episode["elapsed_steps"] = last_success_index + 1
             new_metadata["episodes"].append(new_episode)
 
             if not args.dry_run:
                 if not recorded_sample_video:
                     recorded_sample_video = True
-                    env_kwargs = new_metadata["env_info"]["env_kwargs"]
+                    env_kwargs = copy.deepcopy(new_metadata["env_info"]["env_kwargs"])
                     env_kwargs["num_envs"] = 1
-                    env_kwargs["sim_backend"] = "cpu"
+                    env_kwargs["sim_backend"] = "physx_cpu"
                     env_kwargs["human_render_camera_configs"] = {
                         "shader_pack": "rt-med"
                     }
@@ -145,7 +148,7 @@ def main():
                     env_states = utils.dict_to_list_of_dicts(
                         out_file[traj_id]["env_states"]
                     )
-                    for step in range(new_episode["episode_length"]):
+                    for step in range(new_episode["elapsed_steps"]):
                         env.set_state_dict(env_states[step])
                         imgs.append(env.render_rgb_array().cpu().numpy()[0])
                     env.close()
@@ -184,7 +187,9 @@ def main():
 
             # Copy checkpoint to output dir
             checkpoint_path = env_path["checkpoint"]
-            checkpoint_out_path = os.path.join(args.out_dir, f"{env_id}/rl/ppo_ckpt.pt")
+            checkpoint_out_path = os.path.join(
+                args.out_dir, f"{env_id}/rl/ppo_{control_mode}_ckpt.pt"
+            )
             os.makedirs(os.path.dirname(checkpoint_out_path), exist_ok=True)
             shutil.copy(checkpoint_path, checkpoint_out_path)
 
