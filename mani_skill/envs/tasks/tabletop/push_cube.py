@@ -158,7 +158,7 @@ class PushCubeEnv(BaseEnv):
             q = [1, 0, 0, 0]
             # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
             # is not batched, Pose.create_from_pq will automatically batch p or q accordingly
-            # furthermore, notice how here we do not even using env_idx as a variable to say set the pose for objects in desired
+            # furthermore, notice how here we do not even use env_idx as a variable to say set the pose for objects in desired
             # environments. This is because internally any calls to set data on the GPU buffer (e.g. set_pose, set_linear_velocity etc.)
             # automatically are masked so that you can only set data on objects in environments that are meant to be initialized
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
@@ -178,13 +178,14 @@ class PushCubeEnv(BaseEnv):
 
     def evaluate(self):
         # success is achieved when the cube's xy position on the table is within the
-        # goal region's area (a circle centered at the goal region's xy position)
+        # goal region's area (a circle centered at the goal region's xy position) and
+        # the cube is still on the surface
         is_obj_placed = (
             torch.linalg.norm(
                 self.obj.pose.p[..., :2] - self.goal_region.pose.p[..., :2], axis=1
             )
             < self.goal_radius
-        )
+        ) & (self.obj.pose.p[..., 2] < self.cube_half_size + 5e-3)
 
         return {
             "success": is_obj_placed,
@@ -196,8 +197,8 @@ class PushCubeEnv(BaseEnv):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
-        if self._obs_mode in ["state", "state_dict"]:
-            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+        if self.obs_mode_struct.use_state:
+            # if the observation mode requests to use state, we provide ground truth information about where the cube is.
             # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
                 goal_pos=self.goal_region.pose.p,

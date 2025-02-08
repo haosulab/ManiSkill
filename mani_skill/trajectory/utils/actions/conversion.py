@@ -1,4 +1,4 @@
-"""Utilities to convert actions between different control modes"""
+"""Utilities to convert actions between different control modes. Note that this code is specifically designed for the Franka Panda robot arm, it is not guaranteed to work for other robots."""
 from typing import Union
 
 import numpy as np
@@ -16,6 +16,7 @@ from mani_skill.agents.controllers import (
 from mani_skill.agents.controllers.base_controller import CombinedController
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils
+from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 
@@ -107,7 +108,8 @@ def from_pd_joint_pos_to_ee(
         "root_translation:root_aligned_body_rotation",
         "root_translation",
     ], "Currently only support the 'root_translation:root_aligned_body_rotation' ee control frame for delta pose control and 'root_translation' ee control frame for delta pos control"
-    ori_env.agent.robot.links_map[arm_controller.ee_link.name]
+    target_controller_is_delta = arm_controller.config.use_delta
+
     ee_link: Link = arm_controller.ee_link
     pos_only = arm_controller.config.frame == "root_translation"
     use_target = arm_controller.config.use_target == True
@@ -139,44 +141,69 @@ def from_pd_joint_pos_to_ee(
             ori_controller.articulation.pose.sp
             * pin_model.get_link_pose(arm_controller.ee_link.index)
         )
+
         flag = True
         for _ in range(4):
-            delta_q = [1, 0, 0, 0]
-            if "root_translation" in arm_controller.config.frame:
-                if use_target:
-                    delta_position = (
-                        target_ee_pose_pin.p
-                        - arm_controller._target_pose.p
-                        - arm_controller.articulation.pose.p
-                    )
-                else:
-                    delta_position = target_ee_pose_pin.p - ee_link.pose.p
-            if "root_aligned_body_rotation" in arm_controller.config.frame:
-                if use_target:
-                    delta_q = (
-                        arm_controller._target_pose.sp * target_ee_pose_pin.sp.inv()
-                    ).q
-                else:
-                    delta_q = (ee_link.pose.sp * target_ee_pose_pin.sp.inv()).q
+            if target_controller_is_delta:
+                delta_q = [1, 0, 0, 0]
+                if "root_translation" in arm_controller.config.frame:
+                    if use_target:
+                        delta_position = (
+                            target_ee_pose_pin.p
+                            - arm_controller._target_pose.p
+                            - arm_controller.articulation.pose.p
+                        )
+                    else:
+                        delta_position = target_ee_pose_pin.p - ee_link.pose.p
+                if "root_aligned_body_rotation" in arm_controller.config.frame:
+                    if use_target:
+                        delta_q = (
+                            arm_controller._target_pose.sp * target_ee_pose_pin.sp.inv()
+                        ).q
+                    else:
+                        delta_q = (ee_link.pose.sp * target_ee_pose_pin.sp.inv()).q
 
-            delta_pose = sapien.Pose(delta_position.cpu().numpy()[0], delta_q)
+                delta_pose = sapien.Pose(delta_position.cpu().numpy()[0], delta_q)
 
-            arm_action = delta_pose_to_pd_ee_delta(
-                arm_controller, delta_pose, pos_only=pos_only
-            )
-            if (np.abs(arm_action[:3])).max() > 1:  # position clipping
-                if verbose:
-                    tqdm.write(f"Position action is clipped: {arm_action[:3]}")
-                arm_action[:3] = np.clip(arm_action[:3], -1, 1)
-                flag = False
-            if not pos_only:
-                if np.linalg.norm(arm_action[3:]) > 1:  # rotation clipping
+                arm_action = delta_pose_to_pd_ee_delta(
+                    arm_controller, delta_pose, pos_only=pos_only
+                )
+                if (np.abs(arm_action[:3])).max() > 1:  # position clipping
                     if verbose:
-                        tqdm.write(f"Rotation action is clipped: {arm_action[3:]}")
-                    arm_action[3:] = arm_action[3:] / np.linalg.norm(arm_action[3:])
+                        tqdm.write(f"Position action is clipped: {arm_action[:3]}")
+                    arm_action[:3] = np.clip(arm_action[:3], -1, 1)
                     flag = False
-            output_action_dict["arm"] = common.to_tensor(arm_action, device=env.device)
-            output_action = controller.from_action_dict(output_action_dict)
+                if not pos_only:
+                    if np.linalg.norm(arm_action[3:]) > 1:  # rotation clipping
+                        if verbose:
+                            tqdm.write(f"Rotation action is clipped: {arm_action[3:]}")
+                        arm_action[3:] = arm_action[3:] / np.linalg.norm(arm_action[3:])
+                        flag = False
+                output_action_dict["arm"] = common.to_tensor(
+                    arm_action, device=env.unwrapped.device
+                )
+                output_action = controller.from_action_dict(output_action_dict)
+            else:
+                # NOTE (stao): We convert from quaternion to matrix to euler angles since this is how the default pd ee pose controller does it
+                # As far as I know this is not notably any slower than a batched version of transforms3d euler2quat.
+                output_action_dict["arm"] = torch.cat(
+                    [
+                        common.to_tensor(
+                            target_ee_pose_pin.p[0], device=env.unwrapped.device
+                        ),
+                        common.to_tensor(
+                            rotation_conversions.matrix_to_euler_angles(
+                                rotation_conversions.quaternion_to_matrix(
+                                    target_ee_pose_pin.q[0]
+                                ),
+                                "XYZ",
+                            ),
+                            device=env.unwrapped.device,
+                        ),
+                    ]
+                )
+                output_action_dict["arm"][:3] -= arm_controller.articulation.pose.p[0]
+                output_action = controller.from_action_dict(output_action_dict)
 
             _, _, _, _, info = env.step(output_action)
             if render:

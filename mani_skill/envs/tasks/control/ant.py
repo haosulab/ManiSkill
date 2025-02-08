@@ -245,7 +245,7 @@ class AntEnv(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         obs = super()._get_obs_extra(info)
-        if self._obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 cmass=info["cmass_linvel"],
                 link_angvels=info["link_angvels"],

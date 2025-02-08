@@ -116,7 +116,7 @@ class QuadrupedReachEnv(BaseEnv):
             root_angular_velocity=self.agent.robot.root_angular_velocity,
             reached_goal=info["success"],
         )
-        if self.obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 goal_pos=self.goal.pose.p[:, :2],
                 robot_to_goal=self.goal.pose.p[:, :2] - self.agent.robot.pose.p[:, :2],

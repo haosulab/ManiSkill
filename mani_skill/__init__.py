@@ -3,7 +3,7 @@ from pathlib import Path
 
 from .utils.logging_utils import logger
 
-__version__ = "3.0.0b14"
+__version__ = "3.0.0b18"
 
 # ---------------------------------------------------------------------------- #
 # Setup paths
@@ -12,10 +12,16 @@ PACKAGE_DIR = Path(__file__).parent.resolve()
 PACKAGE_ASSET_DIR = PACKAGE_DIR / "assets"
 # Non-package data
 ASSET_DIR = Path(
-    os.getenv("MS_ASSET_DIR", os.path.join(os.path.expanduser("~"), ".maniskill/data"))
+    os.path.join(
+        os.getenv("MS_ASSET_DIR", os.path.join(os.path.expanduser("~"), ".maniskill")),
+        "data",
+    )
 )
 DEMO_DIR = Path(
-    os.getenv("MS_ASSET_DIR", os.path.join(os.path.expanduser("~"), ".maniskill/demos"))
+    os.path.join(
+        os.getenv("MS_ASSET_DIR", os.path.join(os.path.expanduser("~"), ".maniskill")),
+        "demos",
+    )
 )
 
 
