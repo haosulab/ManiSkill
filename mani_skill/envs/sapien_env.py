@@ -20,7 +20,7 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
-    parse_visual_obs_mode_to_struct,
+    parse_obs_mode_to_struct,
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
@@ -277,7 +277,8 @@ class BaseEnv(gym.Env):
             else:
                 raise NotImplementedError(f"Unsupported obs mode: {obs_mode}. Must be one of {self.SUPPORTED_OBS_MODES}")
         self._obs_mode = obs_mode
-        self._visual_obs_mode_struct = parse_visual_obs_mode_to_struct(self._obs_mode)
+        self.obs_mode_struct = parse_obs_mode_to_struct(self._obs_mode)
+        """dataclass describing what observation data is being requested by the user, detailing if state data is requested and what visual data is requested"""
 
         # Reward mode
         if reward_mode is None:
@@ -490,7 +491,6 @@ class BaseEnv(gym.Env):
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "pointcloud":
-            # TODO support more flexible pcd obs mode with new render system
             obs = self._get_obs_with_sensor_data(info)
             obs = sensor_data_to_pointcloud(obs, self._sensors)
         elif self._obs_mode == "sensor_data":
@@ -498,6 +498,12 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
         else:
             obs = self._get_obs_with_sensor_data(info)
+
+        # flatten parts of the state observation if requested
+        if self.obs_mode_struct.state:
+            if isinstance(obs, dict):
+                data = dict(agent=obs.pop("agent"), extra=obs.pop("extra"))
+                obs["state"] = common.flatten_state_dict(data, use_torch=True, device=self.device)
         return obs
 
     def _get_obs_state_dict(self, info: Dict):
@@ -546,12 +552,12 @@ class BaseEnv(gym.Env):
                     sensor_obs[name] = sensor.get_obs(position=False, segmentation=False, apply_texture_transforms=apply_texture_transforms)
                 else:
                     sensor_obs[name] = sensor.get_obs(
-                        rgb=self._visual_obs_mode_struct.rgb,
-                        depth=self._visual_obs_mode_struct.depth,
-                        position=self._visual_obs_mode_struct.position,
-                        segmentation=self._visual_obs_mode_struct.segmentation,
-                        normal=self._visual_obs_mode_struct.normal,
-                        albedo=self._visual_obs_mode_struct.albedo,
+                        rgb=self.obs_mode_struct.visual.rgb,
+                        depth=self.obs_mode_struct.visual.depth,
+                        position=self.obs_mode_struct.visual.position,
+                        segmentation=self.obs_mode_struct.visual.segmentation,
+                        normal=self.obs_mode_struct.visual.normal,
+                        albedo=self.obs_mode_struct.visual.albedo,
                         apply_texture_transforms=apply_texture_transforms
                     )
         # explicitly synchronize and wait for cuda kernels to finish

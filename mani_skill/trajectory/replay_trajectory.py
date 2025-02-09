@@ -210,7 +210,7 @@ def replay_parallelized_sim(
         ):
             flushed_trajectories = np.zeros(len(episode_batch), dtype=bool)
             # mark the fake padding trajectories as flushed
-            if episode_batch_index == len(batches) - 1:
+            if episode_batch_index == len(batches) - 1 and episode_pad > 0:
                 flushed_trajectories[-episode_pad:] = True
             for t, a in enumerate(original_actions_batch):
                 _, _, _, truncated, info = env.step(a)
@@ -535,6 +535,13 @@ def main(args: Args):
         args.count = len(json_data["episodes"])
 
     pbar = tqdm(total=args.count, unit="step", dynamic_ncols=True)
+
+    # if missing info or auto sim backend is provided, we try to infer which backend is being used
+    if "sim_backend" not in env_kwargs or (
+        env_kwargs["sim_backend"] == "auto"
+        and ("num_envs" not in env_kwargs or env_kwargs["num_envs"] == 1)
+    ):
+        env_kwargs["sim_backend"] = "physx_cpu"
     if env_kwargs["sim_backend"] not in CPU_SIM_BACKENDS:
         env_kwargs["num_envs"] = args.num_envs
         record_episode_kwargs["max_steps_per_video"] = env_info["max_episode_steps"]
