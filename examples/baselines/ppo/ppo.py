@@ -21,6 +21,7 @@ from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
+
 @dataclass
 class Args:
     exp_name: Optional[str] = None
@@ -103,7 +104,6 @@ class Args:
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = False
 
-
     # to be filled in runtime
     batch_size: int = 0
     """the batch size (computed in runtime)"""
@@ -111,6 +111,7 @@ class Args:
     """the mini-batch size (computed in runtime)"""
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
+
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -137,12 +138,13 @@ class Agent(nn.Module):
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01 * np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
 
     def get_value(self, x):
         return self.critic(x)
+
     def get_action(self, x, deterministic=False):
         action_mean = self.actor_mean(x)
         if deterministic:
@@ -151,6 +153,7 @@ class Agent(nn.Module):
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         return probs.sample()
+
     def get_action_and_value(self, x, action=None):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
@@ -160,16 +163,20 @@ class Agent(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
+
 class Logger:
     def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
         self.writer = tensorboard
         self.log_wandb = log_wandb
+
     def add_scalar(self, tag, scalar_value, step):
         if self.log_wandb:
             wandb.log({tag: scalar_value}, step=step)
         self.writer.add_scalar(tag, scalar_value, step)
+
     def close(self):
         self.writer.close()
+
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -181,7 +188,6 @@ if __name__ == "__main__":
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     else:
         run_name = args.exp_name
-
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -195,8 +201,10 @@ if __name__ == "__main__":
     env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="physx_cuda")
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
-    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
+    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1,
+                    reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq,
+                         **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -206,11 +214,15 @@ if __name__ == "__main__":
             eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
         print(f"Saving eval videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
-            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
-            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
+            save_video_trigger = lambda x: (x // args.num_steps) % args.save_train_video_freq == 0
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False,
+                                 save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps,
+                                 video_fps=30)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate,
+                                  trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset,
+                                   record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
@@ -219,9 +231,14 @@ if __name__ == "__main__":
         print("Running training")
         if args.track:
             import wandb
+
             config = vars(args)
-            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
-            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=False)
+            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id,
+                                     reward_mode="normalized_dense", env_horizon=max_episode_steps,
+                                     partial_reset=args.partial_reset)
+            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id,
+                                          reward_mode="normalized_dense", env_horizon=max_episode_steps,
+                                          partial_reset=False)
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,
@@ -259,12 +276,18 @@ if __name__ == "__main__":
     eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
     print(f"####")
-    print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
-    print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
+    print(
+        f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
+    print(
+        f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
-    action_space_low, action_space_high = torch.from_numpy(envs.single_action_space.low).to(device), torch.from_numpy(envs.single_action_space.high).to(device)
+    action_space_low, action_space_high = torch.from_numpy(envs.single_action_space.low).to(device), torch.from_numpy(
+        envs.single_action_space.high).to(device)
+
+
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
+
 
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
@@ -280,7 +303,8 @@ if __name__ == "__main__":
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(
+                        agent.get_action(eval_obs, deterministic=True))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -328,7 +352,8 @@ if __name__ == "__main__":
                 for k, v in final_info["episode"].items():
                     logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
                 with torch.no_grad():
-                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
+                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(
+                        infos["final_observation"][done_mask]).view(-1)
         rollout_time = time.time() - rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
@@ -342,7 +367,7 @@ if __name__ == "__main__":
                 else:
                     next_not_done = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                real_next_values = next_not_done * nextvalues + final_values[t] # t instead of t+1
+                real_next_values = next_not_done * nextvalues + final_values[t]  # t instead of t+1
                 # next_not_done means nextvalues is computed from the correct next_obs
                 # if next_not_done is 1, final_values is always 0
                 # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
@@ -355,10 +380,10 @@ if __name__ == "__main__":
                     lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
                     We then normalize it by the sum of the lambda^i (instead of 1-lambda)
                     """
-                    if t == args.num_steps - 1: # initialize
+                    if t == args.num_steps - 1:  # initialize
                         lam_coef_sum = 0.
-                        reward_term_sum = 0. # the sum of the second term
-                        value_term_sum = 0. # the sum of the third term
+                        reward_term_sum = 0.  # the sum of the second term
+                        value_term_sum = 0.  # the sum of the third term
                     lam_coef_sum = lam_coef_sum * next_not_done
                     reward_term_sum = reward_term_sum * next_not_done
                     value_term_sum = value_term_sum * next_not_done
@@ -370,7 +395,8 @@ if __name__ == "__main__":
                     advantages[t] = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
                 else:
                     delta = rewards[t] + args.gamma * real_next_values - values[t]
-                    advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
+                    advantages[
+                        t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam  # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
             returns = advantages + values
 
         # flatten the batch
@@ -436,9 +462,9 @@ if __name__ == "__main__":
                 loss.backward()
                 nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
                 optimizer.step()
-
-            if args.target_kl is not None and approx_kl > args.target_kl:
-                break
+            else:
+                continue
+            break
 
         update_time = time.time() - update_time
 
