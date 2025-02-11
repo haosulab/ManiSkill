@@ -98,7 +98,9 @@ python ppo.py --env_id="OpenCabinetDrawer-v1" \
 python ppo.py --env_id="RollBall-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=20_000_000 --num-steps=80 --num_eval_steps=80 --gamma=0.95
-
+python ppo.py --env_id="TransferCube-v1" \
+  --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=60_000_000 --num-steps=80 --num-eval-steps=80
 ### RGB Based PPO ###
 python ppo_rgb.py --env_id="PushCube-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=8 \
