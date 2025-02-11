@@ -6,6 +6,7 @@ from envs.wrappers.tensor import TensorWrapper
 from envs.wrappers.record_episode import RecordEpisodeWrapper
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
+from mani_skill.utils.wrappers import FlattenRGBDObservationWrapper
 from mani_skill.utils import gym_utils
 from functools import partial
 from gymnasium.vector import AsyncVectorEnv, SyncVectorEnv, VectorEnv
@@ -78,6 +79,7 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 		control_mode = env.control_mode
 		max_episode_steps = gym_utils.find_max_episode_steps_value(env)
 		if cfg['obs'] == 'rgb':
+			env = FlattenRGBDObservationWrapper(env, rgb=True, depth=False, state=cfg.include_state)
 			env = PixelWrapper(cfg, env, num_envs)
 		if record_video_path is not None:
 			env = RecordEpisodeWrapper(

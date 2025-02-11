@@ -101,9 +101,11 @@ class WorldModel(nn.Module):
 		"""
 		if self.cfg.multitask:
 			obs = self.task_emb(obs, task)
-		if self.cfg.obs == 'rgb' and isinstance(obs, dict):
+		if self.cfg.obs == 'rgb' and not self.cfg.include_state and obs.ndim == 5:
+			return torch.stack([self._encoder[self.cfg.obs](o) for o in obs])
+		elif self.cfg.obs == 'rgb' and self.cfg.include_state and isinstance(obs, dict):
 			return self._encoder_fc(torch.cat([self._encoder[k](o) for k, o in obs.items()], dim=1)) #  concats rgb and state latent, then encode to latent_dim
-		elif self.cfg.obs == 'rgb' and isinstance(obs, TensorDict): # Iterate through buffer batch for update
+		elif self.cfg.obs == 'rgb' and self.cfg.include_state and isinstance(obs, TensorDict): # Iterate through buffer batch for update
 			if obs.ndim == 2: # ndim=6 for rgb but ndim=2 here bc it's diffeerent with TensorDict
 				return torch.stack([self._encoder_fc(torch.cat([self._encoder[k](o) for k, o in os.items()], dim=1)) for os in obs])
 			else: # ndim=5 for rgb

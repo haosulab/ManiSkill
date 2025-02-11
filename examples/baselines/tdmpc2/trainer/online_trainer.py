@@ -131,7 +131,7 @@ class OnlineTrainer(Trainer):
 			vec_done = vec_terminated | vec_truncated
 
 			if vec_done[0]: # use actual final_observation
-				if self.cfg.obs == 'rgb':
+				if self.cfg.obs == 'rgb' and isinstance(vec_info["final_observation"], dict):
 					obs = vec_info["final_observation"].copy()
 				else:
 					obs = vec_info["final_observation"]
