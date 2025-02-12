@@ -199,7 +199,7 @@ def build_obs_space(env, depth_dtype, state_obs_extractor):
 
 
 def build_state_obs_extractor(env_id):
-    agent_extra_envs = ["PickCube", "PushChair", "DrawTriangle", "DrawSVG"]
+    agent_extra_envs = ["PickCube", "PushChair", "DrawTriangle", "DrawSVG","PushCube"]
     env_name = env_id.split("-")[0]
     if env_name in ["TurnFaucet", "StackCube"]:
         return lambda obs: list(obs["extra"].values())
