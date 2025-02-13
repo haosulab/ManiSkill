@@ -17,6 +17,22 @@ from mani_skill.utils.logging_utils import logger
 
 @register_env("StackPyramid-v1", max_episode_steps=50)
 class StackPyramidEnv(BaseEnv):
+    """
+    **Task Description:**
+    - The goal is to pick up a red cube, place it next to the green cube, and stack the blue cube on top of the red and green cube without it falling off.
+
+    **Randomizations:**
+    - both cubes have their z-axis rotation randomized
+    - both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
+
+    **Success Conditions:**
+    - the blue cube is static
+    - the blue cube is on top of both the red and green cube (to within half of the cube size)
+    - none of the red, green, blue cubes are grasped by the robot (robot must let go of the cubes)
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackPyramid-v1_rt.mp4"
+
+    """
 
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
     SUPPORTED_REWARD_MODES = ["none", "sparse"]
