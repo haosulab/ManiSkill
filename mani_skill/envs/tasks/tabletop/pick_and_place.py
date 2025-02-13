@@ -156,7 +156,6 @@ class PickAndPlaceEnv(BaseEnv):
 
     def evaluate(self):
         results = dict()
-        total_distance_to_goal = torch.tensor(0.0, device=self.device)
         all_placed = torch.tensor(True, device=self.device)
         any_grasped = torch.tensor(False, device=self.device)
         # only count success after all objects grasped and placed
