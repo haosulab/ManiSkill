@@ -94,14 +94,6 @@ class PickAndPlaceEnv(BaseEnv):
 
         self.cubes = [self.red_cube, self.green_cube, self.blue_cube, self.yellow_cube]
         self._hidden_objects.extend(self.goal_sites)
-
-    def build_ycb_object(self, model_id, position, name):
-        builder = actors.get_actor_builder(
-            self.scene,
-            id=f"ycb:{model_id}",
-        )
-        builder.initial_pose = Pose.create_from_pq(p=position, q=torch.tensor([1, 0, 0, 0]))
-        return builder.build(name=name)
     
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -173,24 +165,25 @@ class PickAndPlaceEnv(BaseEnv):
             obj = self.cubes[i]
             obj_name = obj.name
 
+            distance_to_goal = torch.linalg.norm(goal_site.pose.p - obj.pose.p, axis=1)
             is_placed =  (
-                torch.linalg.norm(goal_site.pose.p - obj.pose.p, axis=1)
+                distance_to_goal
                 <= self.goal_thresh
             )
             is_grasped = self.agent.is_grasping(obj)
 
-            results[f"{obj_name}_distance_to_goal"] = torch.linalg.norm(goal_site.pose.p - obj.pose.p, axis=1)
-            results[f"is_{obj_name}_placed"] = torch.tensor(is_placed, dtype=torch.bool, device=self.device)
-            results[f"is_{obj_name}_grasped"] = torch.tensor(is_grasped, dtype=torch.bool, device=self.device)
+            results[f"{obj_name}_distance_to_goal"] = distance_to_goal
+            results[f"is_{obj_name}_placed"] = is_placed
+            results[f"is_{obj_name}_grasped"] = is_grasped
 
-            all_placed = torch.logical_and(all_placed, torch.tensor(is_placed, dtype=torch.bool, device=self.device))
-            any_grasped = torch.logical_or(any_grasped, torch.tensor(is_grasped, dtype=torch.bool, device=self.device))
+            all_placed = torch.logical_and(all_placed, is_placed)
+            any_grasped = torch.logical_or(any_grasped, is_grasped)
 
 
         # Success is defined as all cubes being placed and none being grasped
         results["success"] = torch.logical_and(all_placed, torch.logical_not(any_grasped))
 
         # Reward for the robot being static
-        results["is_robot_static"] = torch.tensor(self.agent.is_static(0.2), dtype=torch.bool, device=self.device)
+        results["is_robot_static"] = self.agent.is_static(0.2)
 
         return results
