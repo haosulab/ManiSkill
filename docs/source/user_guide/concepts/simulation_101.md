@@ -24,7 +24,7 @@ Actors are generally "singular" objects that when physically acted upon with som
 
 In simulation actors are composed of two major elements, collision shapes and visual shapes.
 
-**Colision Shapes:**
+**Collision Shapes:**
 
 Collision shapes define how an object will behave in simulation. A single actor can also be composed of several convex collision shapes in simulation.
 

@@ -26,6 +26,7 @@ class KitchenCounterSceneBuilder(SceneBuilder):
         builder.add_visual_from_file(
             filename=table_model_file, scale=[scale] * 3, pose=table_pose
         )
+        builder.initial_pose = sapien.Pose()
         table = builder.build_static(name="kitchen-counter")
 
         floor_width = 100

@@ -12,11 +12,11 @@ BC Baselines are characterized by supervised learning focused algorithms for lea
 | ------------------------------ | ------------------------------------------------------------------------------------------- | ------- | ------------------------------------------ |
 | Standard Behavior Cloning (BC) | WIP                                                                                         | WIP     | N/A                                        |
 | Diffusion Policy (DP)          | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/diffusion_policy) | WIP     | [Link](https://arxiv.org/abs/2303.04137v4) |
-
+| Action Chunking Transformer (ACT) | [Link](https://github.com/haosulab/ManiSkill/blob/main/examples/baselines/act) | WIP     | [Link](https://arxiv.org/abs/2304.13705) |
 
 **Online Learning from Demonstrations Baselines**
 
-Online ;earning from demonstrations baselines are characterized by learning from demonstrations while also leveraging online environment interactions. 
+Online learning from demonstrations baselines are characterized by learning from demonstrations while also leveraging online environment interactions. 
 
 | Baseline                                      | Code                                                                            | Results | Paper                                    |
 | --------------------------------------------- | ------------------------------------------------------------------------------- | ------- | ---------------------------------------- |

@@ -11,7 +11,7 @@ The idea of sub-scenes is that reading data of e.g. actor poses is automatically
 :::{figure} images/physx_scene_subscene_relationship.png 
 :::
 
-SAPIEN permits sub-scenes to be located at any location you want, ManiSkill just picks the most square setup with a fixed spacing parameter. Notice that if objects in one sub-scene go beyond it's workspace, it can actually affect the other sub-scenes. This is a common bug users may face when simulating larger scenes of e.g. houses or out-door settings where the spacing parameter is set too low so objects from e.g. sub-scene-0 will contact with objects in sub-scene-1.
+SAPIEN permits sub-scenes to be located at any location you want, ManiSkill just picks the most square setup with a fixed spacing parameter. Notice that if objects in one sub-scene go beyond its workspace, it can actually affect the other sub-scenes. This is a common bug users may face when simulating larger scenes of e.g. houses or out-door settings where the spacing parameter is set too low so objects from e.g. sub-scene-0 will contact with objects in sub-scene-1.
 
 
 ## GPU Simulation Lifecycle
@@ -20,7 +20,7 @@ In ManiSkill, the gym API is adopted to create, reset, and step through environm
 
 The `env.reset` part consists of one time reconfiguration followed by initialization:
 
-1. Reconfiguration: Loading objects (comrpised of actors/articulations/lights) into the scene (basically spawning them in with an initial pose and not doing anything else)
+1. Reconfiguration: Loading objects (comprised of actors/articulations/lights) into the scene (basically spawning them in with an initial pose and not doing anything else)
 2. A call to `physx_system.gpu_init()` to initialize all GPU memory buffers and setting up all the rendering groups for parallelized rendering
 3. Initializing all actors and articulations (set poses, qpos values etc.).
 4. Running `physx_system.gpu_apply_*` to then save all the initialized data in step 3 to the GPU buffers to prepare for simulation

@@ -275,12 +275,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @mass.setter
     @before_gpu_init
     def mass(self, arg1: float) -> None:
-        if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Setting mass is not supported on GPU sim at the moment."
-            )
-        else:
-            self._bodies[0].mass = arg1
+        for body in self._bodies:
+            body.set_mass(arg1)
 
     # @property
     # def max_contact_impulse(self) -> float:
@@ -321,27 +317,41 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         return self.linear_velocity
 
     # NOTE (fxiang): Cannot lock after gpu setup
-    # def get_locked_motion_axes(self) -> list[bool]: ...
+    def get_locked_motion_axes(self) -> Array:
+        return self.locked_motion_axes
 
     # def put_to_sleep(self) -> None: ...
     def set_angular_velocity(self, arg0: Array):
+        """
+        Set the angular velocity of the dynamic rigid body.
+        Args:
+            arg0: The angular velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same angular velocity to all managed bodies.
+        """
         self.angular_velocity = arg0
 
     # def set_kinematic(self, arg0: bool) -> None: ...
     # def set_kinematic_target(self, arg0: sapien.pysapien.Pose) -> None: ...
     def set_linear_velocity(self, arg0: Array):
+        """
+        Set the linear velocity of the dynamic rigid body.
+        Args:
+            arg0: The linear velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same linear velocity to all managed bodies.
+        """
         self.linear_velocity = arg0
 
-    # def set_locked_motion_axes(self, axes: list[bool]) -> None:
-    #     """
-    #     set some motion axes of the dynamic rigid body to be locked
-    #     Args:
-    #         axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
-    #               The order is linear X, Y, Z followed by angular X, Y, Z.
+    def set_locked_motion_axes(self, axes: Array) -> None:
+        """
+        Set some motion axes of the dynamic rigid body to be locked
+        Args:
+            axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
+                  The order is linear X, Y, Z followed by angular X, Y, Z. If given a single list of length 6, it will be applied to all managed bodies.
+                  If given a a batch of shape (N, 6), you can modify the N managed bodies each in batch.
 
-    #     Example:
-    #         set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
-    #     """
+        Example:
+            set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
+        """
+        self.locked_motion_axes = axes
+
     # def wake_up(self) -> None: ...
     @property
     def angular_velocity(self) -> torch.Tensor:
@@ -437,11 +447,25 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
                 arg1 = arg1[0]
             self._bodies[0].linear_velocity = arg1
 
-    # @property
-    # def locked_motion_axes(self) -> list[bool]:
-    #     """
-    #     :type: list[bool]
-    #     """
+    @property
+    def locked_motion_axes(self) -> Array:
+        """
+        :type: list[bool]
+        """
+        return torch.tensor(
+            [body.locked_motion_axes for body in self._bodies], device=self.device
+        )
+
+    @locked_motion_axes.setter
+    @before_gpu_init
+    def locked_motion_axes(self, arg1: Array) -> None:
+        arg1 = common.to_tensor(arg1, device=self.device)
+        if arg1.shape[0] == 6:
+            for body in self._bodies:
+                body.set_locked_motion_axes(arg1.cpu().tolist())
+        else:
+            for i, body in enumerate(self._bodies):
+                body.set_locked_motion_axes(arg1[i].cpu().tolist())
 
 
 @dataclass

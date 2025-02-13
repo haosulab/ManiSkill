@@ -62,14 +62,14 @@ Note that there are a number of common issues users may face (often due to incor
 
 ManiSkill supports importing [Mujoco's MJCF format](https://mujoco.readthedocs.io/en/latest/modeling.html) of files to load robots (and other objects), although not all features are supported.
 
-For example code that loads the robot and the scene see https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py
+For example code that loads the robot and the scene see https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/control/cartpole.py. Generally you can simply replace the `urdf_path` property of the agent used in URDF based agents with `mjcf_path` property and it will use the MJCF loader instead.
 
 
 At the moment, the following are not supported:
 - Procedural texture generation
 - Importing motors and solver configurations
 - Correct use of contype and conaffinity attributes (contype of 0 means no collision mesh is added, otherwise it is always added)
-- Correct use of groups (at the moment anything in group 0 and 2 can be seen, other groups are hidden all the time)
+- Correct use of groups (at the moment anything in group 0 and 2 can be seen by default, other groups are hidden all the time)
 
 These may be supported in the future so stay tuned for updates.
 
@@ -377,7 +377,7 @@ To achieve fewer contacts and leverage just basic primitives, the model of the A
 :::{figure} images/anymal-visual-collision.png
 :::
 
-Another way to acheive fewer contacts is to remove collision shapes/meshes that are more often not going to be close to another one. Normally the collision mesh of the quadruped above is "dense" with no gaps between parts. By leaving big enough gaps in between, the physics simulation never needs to bother checking collisions between parts that are normally close together. The minimum gap required is determined by the simulation configuration `contact_offset` which acts as a first-pass filter to determine whether a contact between two bodies (Actor/Links) in the simulation needs to be checked and resolved.
+Another way to achieve fewer contacts is to remove collision shapes/meshes that are more often not going to be close to another one. Normally the collision mesh of the quadruped above is "dense" with no gaps between parts. By leaving big enough gaps in between, the physics simulation never needs to bother checking collisions between parts that are normally close together. The minimum gap required is determined by the simulation configuration `contact_offset` which acts as a first-pass filter to determine whether a contact between two bodies (Actor/Links) in the simulation needs to be checked and resolved.
 
 Moreover, when there are fewer contacts the GPU memory requirements are significantly lessened.
 
@@ -468,7 +468,7 @@ First is the use of simplified collision meshes. The URDF used by ManiSkill is [
 :::
 
 
-You can view collisons of any object/articulation in the simulation via the GUI viewer by clicking any link on the articulation and under the articulation tab click Show collision. For individual objects you can do the same under the Entity tab.
+You can view collisions of any object/articulation in the simulation via the GUI viewer by clicking any link on the articulation and under the articulation tab click Show collision. For individual objects you can do the same under the Entity tab.
 
 ## FAQ / Troubleshooting
 
@@ -483,7 +483,7 @@ In the viewer when visualizing the robot you created, click any link on the robo
 
 **The collision shape looks completely different from the visual (like a convex version of it)**
 
-This can be caused by a few reasons. One may be that your defined base agent has its `load_multiple_collisions` property set to False. If the collision meshes you use have multiple convex shapes that can be loaded (preferrably a .ply or .glb format), then setting `load_multiple_collisions = True` in your custom robot class can work.
+This can be caused by a few reasons. One may be that your defined base agent has its `load_multiple_collisions` property set to False. If the collision meshes you use have multiple convex shapes that can be loaded (preferably a .ply or .glb format), then setting `load_multiple_collisions = True` in your custom robot class can work.
 
 Another reason is if your collision mesh is in the .stl format. Our loader has some issues loading .stl files at times and we recommend converting them to `.glb` as that is the easiest for our system to load and interpret. 
 

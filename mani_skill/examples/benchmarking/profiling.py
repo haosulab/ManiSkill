@@ -1,13 +1,16 @@
 import os
 import time
 from contextlib import contextmanager
-from typing import Literal
+from typing import List, Literal, Optional
+import imageio
 import numpy as np
 
 import psutil
 import torch
 import pynvml
 import subprocess as sp
+
+import tqdm
 def flatten_dict_keys(d: dict, prefix=""):
     """Flatten a dict by expanding its keys recursively."""
     out = dict()
@@ -120,6 +123,45 @@ class Profiler:
             if process.pid == self.current_pid:
                 memory_usage = process.usedGpuMemory
                 return memory_usage
+def images_to_video(
+    images: List[np.ndarray],
+    output_dir: str,
+    video_name: str,
+    fps: int = 10,
+    quality: Optional[float] = 5,
+    verbose: bool = True,
+    **kwargs,
+):
+    r"""Calls imageio to run FFMPEG on a list of images. For more info on
+    parameters, see https://imageio.readthedocs.io/en/stable/format_ffmpeg.html
+    Args:
+        images: The list of images. Images should be HxWx3 in RGB order.
+        output_dir: The folder to put the video in.
+        video_name: The name for the video.
+        fps: Frames per second for the video. Not all values work with FFMPEG,
+            use at your own risk.
+        quality: Default is 5. Uses variable bit rate. Highest quality is 10,
+            lowest is 0.  Set to None to prevent variable bitrate flags to
+            FFMPEG so you can manually specify them using output_params
+            instead. Specifying a fixed bitrate using ‘bitrate’ disables
+            this parameter.
+    References:
+        https://github.com/facebookresearch/habitat-lab/blob/main/habitat/utils/visualizations/utils.py
+    """
+    assert 0 <= quality <= 10
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    video_name = video_name.replace(" ", "_").replace("\n", "_") + ".mp4"
+    output_path = os.path.join(output_dir, video_name)
+    writer = imageio.get_writer(output_path, fps=fps, quality=quality, **kwargs)
+    if verbose:
+        print(f"Video created: {output_path}")
+        images_iter = tqdm.tqdm(images)
+    else:
+        images_iter = images
+    for im in images_iter:
+        writer.append_data(im)
+    writer.close()
 
 def tile_images(images, nrows=1):
     """

@@ -39,6 +39,18 @@ python -m mani_skill.examples.demo_random_action
 A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
 
 Once you are done here, you can head over to the [quickstart page](./quickstart.md) to try out some live demos and start to program with ManiSkill.
+
+There are also 2 environment variables that you may want to set. There are many assets, demonstration datasets etc. that are not downloaded by default. Modify `MS_ASSET_DIR` to the directory where you want to save all the data for ManiSkill, which by default is `~/.maniskill/data`.
+
+```bash
+export MS_ASSET_DIR=path/to/where/to/save/all/mani_skill_data
+```
+
+You can also do the following to skip the prompt to download the assets, meaning if you run code that needs access to assets that are not found, it will no longer prompt you to download them.
+```bash
+export MS_SKIP_ASSET_DOWNLOAD_PROMPT=1
+```
+
 <!-- 
 ## Soft-body tasks / Warp (ManiSkill-version)
 

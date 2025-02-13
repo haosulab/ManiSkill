@@ -19,9 +19,21 @@ from mani_skill.utils.structs.types import SceneConfig, SimConfig
 @register_env("TableTopFreeDraw-v1", max_episode_steps=1000)
 class TableTopFreeDrawEnv(BaseEnv):
     """
-    This is a simple environment demonstrating drawing simulation on a table with a robot arm. There are no success/rewards defined, users can use this code as a starting point
-    to create their own drawing type tasks.
+    **Task Description:**
+    Instantiates a table with a white canvas on it and a robot with a stick that draws red lines. This environment is primarily for a reference / for others to copy
+    to make their own drawing tasks.
+
+    **Randomizations:**
+    None
+
+    **Success Conditions:**
+    None
+
+    **Goal Specification:**
+    None
     """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TableTopFreeDraw-v1_rt.mp4"
 
     MAX_DOTS = 1010
     """

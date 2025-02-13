@@ -1,17 +1,17 @@
 import numpy as np
 import sapien
 
-from mani_skill import ASSET_DIR
+from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
 
 
-@register_agent(asset_download_ids=["unitree_g1"])
+@register_agent()
 class UnitreeG1(BaseAgent):
     uid = "unitree_g1"
-    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/g1_humanoid/g1.urdf"
     urdf_config = dict()
     fix_root_link = False
     load_multiple_collisions = True
@@ -172,7 +172,7 @@ class UnitreeG1(BaseAgent):
         return self.robot.pose.p[:, 2] < 0.3
 
 
-@register_agent(asset_download_ids=["unitree_g1"])
+@register_agent()
 class UnitreeG1Simplified(UnitreeG1):
     uid = "unitree_g1_simplified_legs"
-    urdf_path = f"{ASSET_DIR}/robots/unitree_g1/g1_simplified_legs.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/g1_humanoid/g1_simplified_legs.urdf"

@@ -194,7 +194,7 @@ class RotateValveEnv(BaseEnv):
                 valve_x=torch.cos(valve_qpos[:, 0]),
                 valve_y=torch.sin(valve_qpos[:, 0]),
             )
-            if self._obs_mode in ["state", "state_dict"]:
+            if self.obs_mode_struct.use_state:
                 obs.update(
                     valve_pose=vectorize_pose(self.valve.pose),
                 )

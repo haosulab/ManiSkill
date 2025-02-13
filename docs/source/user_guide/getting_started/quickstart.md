@@ -1,11 +1,11 @@
 # {octicon}`rocket` Quickstart
 
 <!-- TODO: add link to new sapien website eventually -->
-ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
+ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover, ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
 
 ## Interface
 
-Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and execute a random policy with a few basic options
+Here is a basic example of how to run a ManiSkill task following the interface of [Gymnasium](https://gymnasium.farama.org/) and executing a random policy with a few basic options
 
 ```python
 import gymnasium as gym
@@ -31,7 +31,7 @@ while not done:
 env.close()
 ```
 
-Changing `num_envs` to a value > 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks).
+Changing `num_envs` to a value greater than 1 will automatically turn on the GPU simulation mode. More quick details [covered below](#gpu-parallelizedvectorized-tasks).
 
 You can also run the same code from the command line to demo random actions and play with rendering options
 
@@ -42,7 +42,7 @@ python -m mani_skill.examples.demo_random_action -e PickCube-v1
 python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode="human" --shader="rt-fast"
 ```
 
-Running with `render_mode="human"` will open up a GUI shown below that you can use to interactively explore the scene, pause/play the script, teleport objects around, and more.
+Running with `render_mode="human"` will open up a GUI, shown below, that you can use to interactively explore the scene, pause/play the script, teleport objects around, and more.
 
 ```{figure} images/demo_random_action_gui.png
 ---
@@ -69,7 +69,7 @@ python -m mani_skill.examples.demo_random_action -e "ReplicaCAD_SceneManipulatio
 <source src="https://github.com/haosulab/ManiSkill/raw/main/docs/source/_static/videos/fetch_random_action_replica_cad_rt.mp4" type="video/mp4">
 </video> -->
 
-You will also notice that all data returned is a batched torch tensor. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch Tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
+You will also notice that all data returned is a batched torch tensor. To reduce extra code handling numpy vs torch, cpu vs gpu sim, everything in ManiSkill defaults to serving/using batched torch tensors of all data. To change the environment to serve numpy, unbatched data simply do the following
 
 ```python
 from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
@@ -78,7 +78,7 @@ env = CPUGymWrapper(env)
 obs, _ = env.reset() # obs is numpy and unbatched
 ```
 
-To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.org/) for single/vectorized environments see the section on [reinforcement learning setups](../reinforcement_learning/setup.md).
+To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.org/) for single/vectorized environments, see the section on [reinforcement learning setups](../reinforcement_learning/setup.md).
 
 For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
@@ -90,7 +90,7 @@ See {py:class}`mani_skill.envs.sapien_env` for the full list of environment inst
 
 ManiSkill is powered by SAPIEN which supports GPU parallelized physics simulation and GPU parallelized rendering. This enables achieving 200,000+ state-based simulation FPS and 30,000+ FPS with rendering on a single 4090 GPU on a e.g. manipulation tasks. The FPS can be higher or lower depending on what is simulated. For full benchmarking results see [this page](../additional_resources/performance_benchmarking)
 
-In order to run massively parallelized tasks on a GPU, it is as simple as adding the `num_envs` argument to `gym.make` as so
+In order to run massively parallelized tasks on a GPU, it is as simple as adding the `num_envs` argument to `gym.make` as follows: 
 
 ```python
 import gymnasium as gym

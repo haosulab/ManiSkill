@@ -204,11 +204,9 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                         object["translation"][1] + 0,
                     ]
                     pose = sapien.Pose(p=position, q=q)
-                    builder.add_visual_from_file(str(model_path), pose=pose)
-                    builder.add_nonconvex_collision_from_file(
-                        str(model_path), pose=pose
-                    )
-                    builder.initial_pose = sapien.Pose()
+                    builder.add_visual_from_file(str(model_path))
+                    builder.add_nonconvex_collision_from_file(str(model_path))
+                    builder.initial_pose = pose
                     builder.set_scene_idxs(env_idx)
                     actor = builder.build_static(name=f"{unique_id}_{actor_name}")
                 else:

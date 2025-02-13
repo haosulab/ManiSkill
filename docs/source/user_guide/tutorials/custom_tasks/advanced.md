@@ -6,7 +6,7 @@ This page covers nearly every feature useful for task building in ManiSkill. If 
 
 ### Pair-wise Contact Forces
 
-You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(...)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces betewen two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions for faster RL. 
+You may notice that in some tasks like [PickCube-v1](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/pikc_cube.py) we call a function `self.agent.is_grasping(...)`. In ManiSkill, we leverage the pairwise impulses/forces API of SAPIEN to compute the forces between two objects. In the case of robots with two-finger grippers we check if both fingers are contacting a queried object. This is particularly useful for building better reward functions for faster RL. 
 
 The API for querying pair-wise contact forces is unified between the GPU and CPU and is accessible via the `self.scene` object in your environment, accessible as so given a pair of actors/links of type `Actor | Link` to query via the ManiSkillScene object.
 
@@ -147,7 +147,7 @@ Now recorded trajectories of your task will include the height as part of the en
 
 ### Handling Heterogeneous Simulation States
 
-Many tasks like OpenCabinetDrawer-v1 and PegInsertionSide-v1 support heterogeneous simulation where each environment has a different object/geometry/dof. For these tasks often times during scene loading you run a for loop to create each different object in each parallel environment. However in doing so you have to give them each a different name which causes inconsistenency in the environment state as now the number of environments changes the shape of the state dictionary. To handle this you need to remove the per-environment actor/articulation from the state dictionary registry and add in the merged version. See sections on how to use [scene masks](#scene-masks) and [merging](#merging) for information on how to build heterogeneous simulated environments.
+Many tasks like OpenCabinetDrawer-v1 and PegInsertionSide-v1 support heterogeneous simulation where each environment has a different object/geometry/dof. For these tasks often times during scene loading you run a for loop to create each different object in each parallel environment. However in doing so you have to give them each a different name which causes inconsistency in the environment state as now the number of environments changes the shape of the state dictionary. To handle this you need to remove the per-environment actor/articulation from the state dictionary registry and add in the merged version. See sections on how to use [scene masks](#scene-masks) and [merging](#merging) for information on how to build heterogeneous simulated environments.
 
 ```python
 class MyCustomTask(BaseEnv):
@@ -319,7 +319,7 @@ Note the default `sim_freq, control_freq` values are tuned for GPU simulation an
 
 The custom tasks tutorial demonstrated adding fixed cameras to the PushCube task. ManiSkill+SAPIEN also supports mounting cameras to Actors and Links, which can be useful to e.g. have a camera follow a object as it moves around.
 
-For example if you had a task with a baseketball in it and it's actor object is stored at `self.basketball`, in the `_default_sensor_configs` or `_default_human_render_camera_configs` properties you can do
+For example if you had a task with a basketball in it and its actor object is stored at `self.basketball`, in the `_default_sensor_configs` or `_default_human_render_camera_configs` properties you can do
 
 ```python
 from mani_skill.utils import sapien_utils
@@ -328,7 +328,7 @@ class MyCustomTask(BaseEnv):
     # ...
     @property
     def _default_sensor_configs(self)
-        # look towards the center of the baskeball from a positon that is offset
+        # look towards the center of the basketball from a positon that is offset
         # (0.3, 0.3, 0.5) away from the basketball
         pose = sapien_utils.look_at(eye=[0.3, 0.3, 0.5], target=[0, 0, 0])
         return [
@@ -353,7 +353,7 @@ class MyCustomTask(BaseEnv):
         self.cam_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
 ```
 
-`self.cam_mount` has it's own pose data and if changed the camera will move with it.
+`self.cam_mount` has its own pose data and if changed the camera will move with it.
 
 
 
@@ -395,23 +395,4 @@ However as a user you don't need to worry about adding a plane collision in each
 
 ## Dynamically Updating Simulation Properties
 
-The GPU simulation has some restrictions on what can be updated after reconfiguration. At the moment you cannot modify the number of robots or add/remove objects after reconfiguration. You can however modify properties such as object textures and controller properties on the fly.
-
-
-### Texture Modification
-
-Currently there is not a general API for "batched" material modifications but you can modify each of the objects managed by an {py:class}`mani_skill.utils.structs.Actor` or {py:class}`mani_skill.utils.structs.Articulation` object in the `._objs` list property. For each of those objects you can directly change the attached RenderBodyComponent and replace with a different one to change the material. 
-
-### Controller Modification
-
-To modify controller properties on the fly, you can directly modify the controller configuration and call `set_drive_property` to apply the changes. For the controllers that come out of the box with ManiSkill there are some configuration parameters like stiffness and damping (PD parameters) that need to be applied before it takes effect since the modify properties of the articulation/robot, which is done by `set_drive_property`.
-
-For example if you had an environment `env` and are using the `"panda"` robot, and if you wanted to change the stiffness of the controller, you can do the following:
-
-```python
-# find the controller object to modify. The panda robot's pd_joint_delta_pos controller
-# has multiple sub-controllers, one for the "arm" and one for the "gripper".
-controller = env.agent.controllers["pd_joint_delta_pos"].controllers["arm"]
-controller.config.stiffness = 100
-controller.set_drive_property()
-```
+See the page on [domain randomization](../domain_randomization.md) for more information on modifying various simulation (visual/physical) properties on the fly.

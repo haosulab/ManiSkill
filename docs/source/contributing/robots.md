@@ -1,12 +1,12 @@
 # Robots
 
-To add a new robot, you can follow any of the existing robots built already as templates in ManiSkill. We also highly recommend that you read through [custom robot tutorial](../user_guide/tutorials/custom_robots.md) to learn how to make new robots and tune them.
+To add a new robot, you can follow any of the existing robots built already as templates in ManiSkill. We also highly recommend that you read through the [custom robot tutorial](../user_guide/tutorials/custom_robots.md) to learn how to make new robots and tune them.
 
 ManiSkill is a supporter of open-source and we encourage you to make contributions to help grow our list of robots in simulation!
 
 ## Contributing the Robot to ManiSkill
 
-We recommend first opening an issue on our GitHub about your interest in adding a new robot as to not conflict with others and to consolidate information. Once done our maintainers can give a go ahead.
+We recommend first opening an issue on our GitHub about your interest in adding a new robot as to not conflict with others and to consolidate information. Once done, our maintainers can give a go ahead.
 
 In your pull request, we ask you to do the following:
 - The robot / agent class code should be placed in `mani_skill/agents/<agent_group_name>/your_robot.py`. If you want to re-use an agent class (e.g. as done with the Allegro hand robot and the Panda robot) you can create a folder that groups all the different agent classes together.

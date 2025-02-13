@@ -197,9 +197,9 @@ def flatten_state_dict(
     for key, value in state_dict.items():
         if isinstance(value, dict):
             state = flatten_state_dict(value, use_torch=use_torch)
-            if state.size == 0:
+            if state.nelement() == 0:
                 state = None
-            if use_torch:
+            elif use_torch:
                 state = to_tensor(state, device=device)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value

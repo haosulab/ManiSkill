@@ -177,6 +177,19 @@ class CartpoleEnv(BaseEnv):
 
 @register_env("MS-CartpoleBalance-v1", max_episode_steps=1000)
 class CartpoleBalanceEnv(CartpoleEnv):
+    """
+    **Task Description:**
+    Use the Cartpole robot to balance a pole on a cart.
+
+    **Randomizations:**
+    - Pole direction is randomized around the vertical axis. the range is [-0.05, 0.05] radians.
+
+    **Fail Conditions:**
+    - Pole is lower than the horizontal plane
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/MS-CartpoleBalance-v1_rt.mp4"
+
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -199,6 +212,19 @@ class CartpoleBalanceEnv(CartpoleEnv):
 
 @register_env("MS-CartpoleSwingUp-v1", max_episode_steps=1000)
 class CartpoleSwingUpEnv(CartpoleEnv):
+    """
+    **Task Description:**
+    Use the Cartpole robot to swing up a pole on a cart.
+
+    **Randomizations:**
+    - Pole direction is randomized around the whole circle. the range is [-pi, pi] radians.
+
+    **Success Conditions:**
+    - No specific success conditions. The task is considered successful if the pole is upright for the whole episode.
+    """
+
+    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "none")
+
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,

@@ -74,4 +74,11 @@
     <disable_collisions link1="panda_link6" link2="panda_rightfinger" reason="Never"/>
     <disable_collisions link1="panda_link7" link2="panda_rightfinger" reason="Never"/>
     <disable_collisions link1="panda_link7" link2="panda_hand" reason="Default"/>
+    <disable_collisions link1="panda_link6" link2="panda_hand" reason="Default"/>
+
+    <disable_collisions link1="panda_rightfinger" link2="camera_link" reason="Default"/>
+    <disable_collisions link1="panda_leftfinger" link2="camera_link" reason="Default"/>
+    <disable_collisions link1="panda_hand" link2="camera_link" reason="Default"/>
+    <disable_collisions link1="panda_link7" link2="camera_link" reason="Default"/>
+    <disable_collisions link1="panda_link6" link2="camera_link" reason="Default"/>
 </robot>

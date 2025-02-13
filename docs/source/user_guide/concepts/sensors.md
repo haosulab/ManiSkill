@@ -41,13 +41,13 @@ These specific customizations can be useful for those looking to customize how t
 
 The following shaders are available in ManiSkill:
 
-| Shader Name | Available Textures                                     | Description                                                                      |
-|-------------|--------------------------------------------------------|----------------------------------------------------------------------------------|
-| minimal     | rgb, depth, position, segmentation                     | The fastest shader with minimal GPU memory usage                                 |
-| default     | rgb, depth, position, segmentation, normal, albedo     | A balance between speed and texture availability                                 |
-| rt          | rgb, depth, position, segmentation, normal, albedo     | A shader optimized for photo-realistic rendering via ray-tracing                 |
-| rt-med      | rgb, depth, position, segmentation, normal, albedo     | Same as rt but runs faster with slightly lower quality                           |
-| rt-fast     | rgb, depth, position, segmentation, normal, albedo     | Same as rt-med but runs faster with slightly lower quality |
+| Shader Name | Available Textures                                 | Description                                                                                                                                     |
+| ----------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| minimal     | rgb, depth, position, segmentation                 | The fastest shader with minimal GPU memory usage. Note that the background will always be black (normally it is the color of the ambient light) |
+| default     | rgb, depth, position, segmentation, normal, albedo | A balance between speed and texture availability                                                                                                |
+| rt          | rgb, depth, position, segmentation, normal, albedo | A shader optimized for photo-realistic rendering via ray-tracing                                                                                |
+| rt-med      | rgb, depth, position, segmentation, normal, albedo | Same as rt but runs faster with slightly lower quality                                                                                          |
+| rt-fast     | rgb, depth, position, segmentation, normal, albedo | Same as rt-med but runs faster with slightly lower quality                                                                                      |
 
 
 
@@ -57,7 +57,7 @@ The following textures are available in ManiSkill. Note all data is not scaled/n
 |---------|-------|-------|-------------|
 | rgb | [H, W, 3] | torch.uint8 | Red, Green, Blue colors of the image. Range of 0-255 |
 | depth | [H, W, 1] | torch.int16 | Depth in millimeters |
-| position | [H, W, 4] | torch.int16 | x, y, z, and segmentation in millimeters |
+| position | [H, W, 4] | torch.int16 | x, y, z in millimeters and 4th channel is same as segmentation below |
 | segmentation | [H, W, 1] | torch.int16 | Segmentation mask with unique integer IDs for each object |
 | normal | [H, W, 3] | torch.float32 | x, y, z components of the normal vector |
 | albedo | [H, W, 3] | torch.uint8 | Red, Green, Blue colors of the albedo. Range of 0-255 |

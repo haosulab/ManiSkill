@@ -255,7 +255,7 @@ class RotateCubeEnv(BaseEnv):
             goal_pos=self.obj_goal.pose.p,
             goal_q=self.obj_goal.pose.q,
         )
-        if self._obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 obj_p=self.obj.pose.p,
                 obj_q=self.obj.pose.q,

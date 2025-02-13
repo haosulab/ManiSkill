@@ -3,12 +3,12 @@
 ## Observation mode
 
 **The observation mode defines the observation space.**
-All ManiSkill tasks take the observation mode (`obs_mode`) as one of the input arguments of `__init__`.
+All ManiSkill tasks take the observation mode (`obs_mode`) as one of the input arguments of `gym.make(env_id, obs_mode=...)`.
 In general, the observation is organized as a dictionary (with an observation space of `gym.spaces.Dict`).
 
-There are two raw observations modes: `state_dict` (privileged states) and `sensor_data` (raw sensor data like visual data without postprocessing). `state` is a flat version of `state_dict`. `rgb+depth`, `rgb+depth+segmentation` (or any combination of `rgb`, `depth`, `segmentation`), and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data.
+There are three raw observations modes: `state_dict` (privileged states), `sensor_data` (raw sensor data like visual data without postprocessing) and `state+sensor_data` for both. `state` is a flat version of `state_dict`. `rgb+depth`, `rgb+depth+segmentation` (or any combination of `rgb`, `depth`, `segmentation`), and `pointcloud` apply post-processing on `sensor_data` to give convenient representations of visual data. `state_dict+rgb` would return privileged unflattened states and visual data, you can mix and match the different modalities however you like.
 
-The details here show the unbatched shapes. In general there is always a batch dimension unless you are using CPU simulation. Moreover, we annotate what dtype some values are, where some have both a torch and numpy dtype depending on whether you are using GPU or CPU simulation respectively.
+The details here show the unbatched shapes. In general returned data always has a batch dimension unless you are using CPU simulation and returned as torch tensors. Moreover, we annotate what dtype some values are.
 
 ### state_dict
 
@@ -34,7 +34,7 @@ In addition to `agent` and `extra`, `sensor_data` and `sensor_param` are introdu
     
     If the data comes from a camera sensor:
     - `Color`: [H, W, 4], `torch.uint8`. RGB+Alpha values..
-    - `PositionSegmentation`: [H, W, 4], `torch.int16`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convension. The unit is millimeters. The last dimension represents segmentation ID, see the [Segmentation data section](#segmentation-data) for more details.
+    - `PositionSegmentation`: [H, W, 4], `torch.int16`. The first 3 dimensions stand for (x, y, z) coordinates in the OpenGL/Blender convention. The unit is millimeters. The last dimension represents segmentation ID, see the [Segmentation data section](#segmentation-data) for more details.
 
 - `sensor_param`: parameters of each sensor, which varies depending on type of sensor
   - `{sensor_uid}`:
@@ -61,7 +61,7 @@ This observation mode has the same data format as the [sensor_data mode](#sensor
 Note that this data is not scaled/normalized to [0, 1] or [-1, 1] in order to conserve memory, so if you consider to train on RGB, depth, and/or segmentation data be sure to scale your data before training on it.
 
 
-ManiSkill by default flexibly supports different combinations of RGB, depth, and segmentation data, namely `rgb`, `depth`, `segmentation`, `rgb+depth`, `rgb+depth+segmentation`, `rgb+segmentation`, and`depth+segmentation`. (`rgbd` is a short hand for `rgb+depth`). Whichever image modality that is not chosen will not be included in the observation and conserves some memory and GPU bandwith.
+ManiSkill by default flexibly supports different combinations of RGB, depth, and segmentation data, namely `rgb`, `depth`, `segmentation`, `rgb+depth`, `rgb+depth+segmentation`, `rgb+segmentation`, and`depth+segmentation`. (`rgbd` is a short hand for `rgb+depth`). Whichever image modality that is not chosen will not be included in the observation and conserves some memory and GPU bandwidth.
 
 The RGB and depth data visualized can look like below:
 ```{image} images/replica_cad_rgbd.png

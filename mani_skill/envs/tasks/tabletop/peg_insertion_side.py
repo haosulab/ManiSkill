@@ -49,7 +49,21 @@ def _build_box_with_hole(
 
 @register_env("PegInsertionSide-v1", max_episode_steps=100)
 class PegInsertionSideEnv(BaseEnv):
-    SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
+    """
+    **Task Description:**
+    Pick up a orange-white peg and insert the orange end into the box with a hole in it.
+
+    **Randomizations:**
+    - Peg half length is randomized between 0.085 and 0.125 meters. Box half length is the same value. (during reconfiguration)
+    - Peg radius/half-width is randomized between 0.015 and 0.025 meters. Box hole's radius is same value + 0.003m of clearance. (during reconfiguration)
+    - Peg is laid flat on table and has it's xy position and z-axis rotation randomized
+    - Box is laid flat on table and has it's xy position and z-axis rotation randomized
+
+    **Success Conditions:**
+    - The white end of the peg is within 0.015m of the center of the box (inserted mid way).
+    """
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PegInsertionSide-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_wristcam"]
     agent: Union[PandaWristCam]
     _clearance = 0.003
@@ -274,7 +288,7 @@ class PegInsertionSideEnv(BaseEnv):
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
-        if self._obs_mode in ["state", "state_dict"]:
+        if self.obs_mode_struct.use_state:
             obs.update(
                 peg_pose=self.peg.pose.raw_pose,
                 peg_half_size=self.peg_half_sizes,

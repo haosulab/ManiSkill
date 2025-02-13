@@ -36,4 +36,27 @@ def dict_to_list_of_dicts(x):
 
 
 def list_of_dicts_to_dict(x):
-    raise NotImplementedError()
+    """Convert a list of dictionaries into a dictionary of lists/arrays.
+
+    This is the inverse operation of dict_to_list_of_dicts.
+
+    Args:
+        x: List of dictionaries with the same structure
+
+    Returns:
+        Dictionary where each value is a list/array containing the corresponding values from input dicts
+    """
+    if not x:  # Empty list
+        return {}
+
+    result = {}
+    # Get keys from first dict since all should have same structure
+    for key in x[0].keys():
+        # If value is itself a dict, recursively convert
+        if isinstance(x[0][key], dict):
+            result[key] = list_of_dicts_to_dict([d[key] for d in x])
+        else:
+            # Convert list of values to numpy array
+            result[key] = np.array([d[key] for d in x])
+
+    return result

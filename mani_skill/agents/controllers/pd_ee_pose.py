@@ -199,7 +199,8 @@ class PDEEPoseController(PDEEPosController):
         pos_action = gym_utils.clip_and_scale_action(
             action[:, :3], self.action_space_low[:3], self.action_space_high[:3]
         )
-        rot_action = action[:, 3:]
+        # need to clone here to avoid in place modification of the original action data
+        rot_action = action[:, 3:].clone()
 
         rot_norm = torch.linalg.norm(rot_action, axis=1)
         rot_action[rot_norm > 1] = torch.mul(rot_action, 1 / rot_norm[:, None])[

@@ -6,7 +6,7 @@ ManiSkill provides a few ways to record videos/trajectories of tasks on single a
 
 The recommended approach is to use our RecordEpisode wrapper, which supports both single and vectorized environments, and saves videos and/or trajectory data (in the [ManiSkill format](../datasets/demos.md)) to disk. It will save whatever render_mode is specified upon environment creation (can be "rgb_array", "sensors", or "all" which combines both).
 
-This wrapper by default saves videos on environment reset for single environments
+This wrapper by default saves videos on environment reset for single environments.
 ```python
 import mani_skill.envs
 import gymnasium as gym

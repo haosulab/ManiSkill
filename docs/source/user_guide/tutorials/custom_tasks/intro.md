@@ -32,7 +32,7 @@ If you have any questions or issues, feel free to ask in our [discord](https://d
 
 ## Setting up the Task Class
 
-All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the timelimit of the task.
+All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the time limit of the task.
 
 ```python
 import sapien
@@ -72,7 +72,7 @@ class PushCubeEnv(BaseEnv):
     def _load_agent(self, options: dict):
         super()._load_agent(options, sapien.Pose(p=[0, 0, 1]))
 ```
-To define the initial pose of the robot you ovverride the `_load_agent` function. This is done in PushCube above. It is recommended to set initial poses for all objects such that if they were spawned there they don't intersect other objects. Here we spawn the robot 1 meter above the ground which won't clash with anything else. If you are intending to spawn multiple robots you can pass a list of poses to the `_load_agent` function.
+To define the initial pose of the robot you override the `_load_agent` function. This is done in PushCube above. It is recommended to set initial poses for all objects such that if they were spawned there they don't intersect other objects. Here we spawn the robot 1 meter above the ground which won't clash with anything else. If you are intending to spawn multiple robots you can pass a list of poses to the `_load_agent` function.
 
 
 Initializing/randomizing these robots occurs in the initialization / randomization section covered later. With this setup you can later access agent data via `self.agent` and the specific articulation data of the robot via `self.agent.robot`. For multi-robot setups you can access each agent via `self.agent.agents`.
@@ -160,7 +160,7 @@ import torch
 class PushCubeEnv(BaseEnv):
     # ...
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # useing torch.device context manager to auto create tensors 
+        # using torch.device context manager to auto create tensors 
         # on CPU/CUDA depending on self.device, the device the env runs on
         with torch.device(self.device):
             b = len(env_idx)
@@ -260,7 +260,7 @@ By default, the observations returned to users through calls to `env.reset` and 
 
 To better support state based observations, you need to augment the observations given to users by implementing the `_get_obs_extra` function. This function takes the `info` object generated via the earlier defined `evaluate` function as input and returns the augmented observation data as a dictionary. 
 
-Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode is "state" or "state_dict", such as the pose of the cube you are pushing. There are some data like `self.agent.tcp.pose` which are always available for single-arm robots and given all the time, and also critical information like the goal position to direct the agent where to push the cube.
+Generally you want to ensure you do not provide any ground-truth information that should not be available unless the observation mode the user requests is asking for it, such as the pose of the cube you are pushing. There are some data like `self.agent.tcp.pose` which are always available for single-arm robots and given all the time, and also critical information like goal information in tasks like PickCube which direct where the robot should pick the cube to. To check if a user is requesting for state data, you can check if `self.obs_mode_struct.use_state` is true. It is true if the provided `obs_mode` when creating an environment includes "state" or "state_dict" in it. More details on observation modes are available in the [separate observation page](../../concepts/observation.md).
 
 ```python
 class PushCubeEnv(BaseEnv):
@@ -270,12 +270,12 @@ class PushCubeEnv(BaseEnv):
         # grippers of the robot
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
-            goal_pos=self.goal_region.pose.p,
         )
-        if self._obs_mode in ["state", "state_dict"]:
-            # if the observation mode is state/state_dict, we provide ground truth information about where the cube is.
+        if self.obs_mode_struct.use_state:
+            # if the observation mode requests to use state, we provide ground truth information about where the cube is.
             # for visual observation modes one should rely on the sensed visual data to determine where the cube is
             obs.update(
+                goal_pos=self.goal_region.pose.p,
                 obj_pose=self.obj.pose.raw_pose,
             )
         return obs
@@ -301,9 +301,9 @@ class PushCubeEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
 ```
 
-`compute_normalized_dense_reward` is the default reward function used and retuurned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
+`compute_normalized_dense_reward` is the default reward function used and returned from `env.step`. We recommend defining normalized reward function as these tend to be easier to learn from, especially in algorithms that learn Q functions in RL. The result of `compute_dense_reward` is returned when an environment created as `gym.make(env_id=..., reward_mode="dense")`
 
-Dense reward functions are not required and can be skipped. If not implemented then those reward modes are not supported and will raise an error if you try to use dense reward modes. Sparse reward functions are available if the evaluation function returns a dictonary with the success/fail key. If the task is in a success state, +1 reward is given. If the task is in a fail state, -1 reward is given. Otherwise 0 is given.
+Dense reward functions are not required and can be skipped. If not implemented then those reward modes are not supported and will raise an error if you try to use dense reward modes. Sparse reward functions are available if the evaluation function returns a dictionary with the success/fail key. If the task is in a success state, +1 reward is given. If the task is in a fail state, -1 reward is given. Otherwise 0 is given.
 
 ## (Optional) Setting up Cameras/Sensors for Observations and Recording
 
