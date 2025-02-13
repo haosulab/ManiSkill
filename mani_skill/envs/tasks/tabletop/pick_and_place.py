@@ -21,6 +21,29 @@ from mani_skill.utils.building.actors.common import build_container_grid
 
 @register_env("PickAndPlace-v1", max_episode_steps=500)
 class PickAndPlaceEnv(BaseEnv):
+    """
+    **Task Description:**
+    - Pick and place the four cubes into distinct container cells.
+    - The red cube must be placed on the upper left cell.
+    - The green cube must be placed on the upper right cell.
+    - The blue cube must be placed on the lower left cell.
+    - The yellow cube must be placed on the lower right cell.
+
+    **Randomizations:**
+    - The four cubes' positions are randomized in the xy range of x in [0.05, 0.09] and y in [-0.15, -0.1].
+    - The z-coordinate of the cubes is fixed at 0.04 to place them on the table surface.
+    - The cubes' orientations are randomized.
+    - Even though randomized, the cubes are ensured to have a minimum Euclidean distance of 0.06 from each other to avoid overlaps.
+
+    **Success Conditions:**
+    - Each cube is placed into its corresponding cell.
+    - Robot is static within the threshold of 0.2
+
+    **Goal Specification:**
+    - 3D goal position (also visualized in human renders)
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickAndPlace-v1_rt.mp4"
+    """
     SUPPORTED_ROBOTS = ["panda_wristcam"]
     SUPPORTED_REWARD_MODES = ["none", "sparse"]
     agent: Union[PandaWristCam]
