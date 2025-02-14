@@ -43,7 +43,7 @@ class PixelWrapper(gym.ObservationWrapper):
 		rgb = self.rgb_stack.roll(shifts=-self._stack_idx, dims=-1).permute(0,1,2,4,3).reshape((*self.rgb_shape[:-1], -1)).permute(0, 3, 1, 2)		
 		if self.include_state:
 			state = self.state_stack.roll(shifts=-self._stack_idx, dims=-1).permute(0,2,1).reshape((*self.state_shape[:-1], -1))
-			return {'rgb': rgb, 'state': state}
+			return {'rgb': rgb, 'rgb-state': state}
 		else:
 			return rgb
 

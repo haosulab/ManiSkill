@@ -63,6 +63,9 @@ vmax: +10
 model_size: ???
 num_enc_layers: 2
 enc_dim: 256
+rgb_state_enc_dim: 64
+rgb_state_num_enc_layers: 1
+rgb_state_latent_dim: 64
 num_channels: 32
 mlp_dim: 512
 latent_dim: 512
@@ -98,6 +101,7 @@ action_dims: ???
 episode_lengths: ???
 seed_steps: ???
 bin_size: ???
+true_latent_dim: ???
 
 # Added for Maniskill RL Baselines Config Convention (don't assign to them)
 env_cfg:
