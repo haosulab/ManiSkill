@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
-import copy
 from gymnasium.vector import VectorEnv
 
 from mani_skill.utils.structs.types import Array
+from mani_skill.utils.common import torch_clone_dict
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
@@ -142,9 +142,9 @@ class ManiSkillVectorEnv(VectorEnv):
         dones = torch.logical_or(terminations, truncations)
 
         if dones.any() and self.auto_reset:
-            final_obs = copy.deepcopy(obs)
+            final_obs = torch_clone_dict(obs)
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
-            final_info = copy.deepcopy(infos)
+            final_info = torch_clone_dict(infos)
             obs, infos = self.reset(options=dict(env_idx=env_idx))
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs
