@@ -7,6 +7,7 @@ import torch
 from gymnasium.vector import VectorEnv
 
 from mani_skill.utils.structs.types import Array
+from mani_skill.utils.common import torch_clone_dict
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
@@ -92,7 +93,7 @@ class ManiSkillVectorEnv(VectorEnv):
         obs, info = self._env.reset(seed=seed, options=options)
         if "env_idx" in options:
             env_idx = options["env_idx"]
-            mask = torch.zeros(self.num_envs, dtype=bool, device=self.base_env.device)
+            mask = torch.zeros(self.num_envs, dtype=bool, device=self.device)
             mask[env_idx] = True
             if self.record_metrics:
                 self.success_once[mask] = False
@@ -141,19 +142,25 @@ class ManiSkillVectorEnv(VectorEnv):
         dones = torch.logical_or(terminations, truncations)
 
         if dones.any() and self.auto_reset:
-            final_obs = obs
-            env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
-            obs, _ = self.reset(options=dict(env_idx=env_idx))
-            infos["final_info"] = infos.copy()
-            # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
-            infos["final_observation"] = final_obs
-            # NOTE (stao): that adding masks like below is a bit redundant and not necessary
-            # but this is to follow the standard gymnasium API
-            infos["_final_info"] = dones
-            infos["_final_observation"] = dones
-            infos["_elapsed_steps"] = dones
-            # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
+            obs, infos = self._do_auto_reset(dones=dones, final_obs=obs, infos=infos)
+        
         return obs, rew, terminations, truncations, infos
+
+    def _do_auto_reset(self, dones: torch.Tensor, final_obs: torch.Tensor, infos: dict) -> tuple:
+        final_obs_copy = torch_clone_dict(final_obs)
+        final_info_copy = torch_clone_dict(infos)
+        env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
+        obs, infos = self.reset(options=dict(env_idx=env_idx))
+        # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
+        infos["final_observation"] = final_obs_copy
+        infos["final_info"] = final_info_copy
+        # NOTE (stao): that adding masks like below is a bit redundant and not necessary
+        # but this is to follow the standard gymnasium API
+        infos["_final_info"] = dones
+        infos["_final_observation"] = dones
+        infos["_elapsed_steps"] = dones
+        # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
+        return obs, infos
 
     def close(self):
         return self._env.close()
