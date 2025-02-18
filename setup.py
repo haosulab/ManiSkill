@@ -24,7 +24,7 @@ setup(
     python_requires=">=3.9",
     setup_requires=["setuptools>=62.3.0"],
     install_requires=[
-        "numpy>=1.22,<2.0.0",
+        "numpy>=1.26,<2.0.0",
         "scipy",
         "dacite",
         "gymnasium==0.29.1",
@@ -41,7 +41,7 @@ setup(
         "mplib==0.1.1;platform_system=='Linux'",
         "fast_kinematics==0.2.2;platform_system=='Linux'",
         "IPython",
-        "pytorch_kinematics==0.7.4",
+        "pytorch_kinematics==0.7.5",
         "pynvml",  # gpu monitoring
         "tyro>=0.8.5",  # nice, typed, command line arg parser
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
