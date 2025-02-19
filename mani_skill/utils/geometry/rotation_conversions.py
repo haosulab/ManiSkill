@@ -194,6 +194,16 @@ def _axis_angle_rotation(axis: str, angle: torch.Tensor) -> torch.Tensor:
     return torch.stack(R_flat, -1).reshape(angle.shape + (3, 3))
 
 
+def _validate_convention_str(convention: str):
+    if len(convention) != 3:
+        raise ValueError("Convention must have 3 letters.")
+    if convention[1] in (convention[0], convention[2]):
+        raise ValueError(f"Invalid convention {convention}.")
+    for letter in convention:
+        if letter not in ("X", "Y", "Z"):
+            raise ValueError(f"Invalid letter {letter} in convention string.")
+
+
 def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch.Tensor:
     """
     Convert rotations given as Euler angles in radians to rotation matrices.
@@ -208,13 +218,7 @@ def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch
     """
     if euler_angles.dim() == 0 or euler_angles.shape[-1] != 3:
         raise ValueError("Invalid input euler angles.")
-    if len(convention) != 3:
-        raise ValueError("Convention must have 3 letters.")
-    if convention[1] in (convention[0], convention[2]):
-        raise ValueError(f"Invalid convention {convention}.")
-    for letter in convention:
-        if letter not in ("X", "Y", "Z"):
-            raise ValueError(f"Invalid letter {letter} in convention string.")
+    _validate_convention_str(convention)
     matrices = [
         _axis_angle_rotation(c, e)
         for c, e in zip(convention, torch.unbind(euler_angles, -1))
@@ -277,13 +281,7 @@ def matrix_to_euler_angles(matrix: torch.Tensor, convention: str) -> torch.Tenso
     Returns:
         Euler angles in radians as tensor of shape (..., 3).
     """
-    if len(convention) != 3:
-        raise ValueError("Convention must have 3 letters.")
-    if convention[1] in (convention[0], convention[2]):
-        raise ValueError(f"Invalid convention {convention}.")
-    for letter in convention:
-        if letter not in ("X", "Y", "Z"):
-            raise ValueError(f"Invalid letter {letter} in convention string.")
+    _validate_convention_str(convention)
     if matrix.size(-1) != 3 or matrix.size(-2) != 3:
         raise ValueError(f"Invalid rotation matrix shape {matrix.shape}.")
     i0 = _index_from_letter(convention[0])
@@ -597,3 +595,47 @@ def matrix_to_rotation_6d(matrix: torch.Tensor) -> torch.Tensor:
     """
     batch_dim = matrix.size()[:-2]
     return matrix[..., :2, :].clone().reshape(batch_dim + (6,))
+
+
+def quaternion_to_euler_angles(q: torch.Tensor, convention: str) -> torch.Tensor:
+    """
+    Convert rotations given as Euler angles in radians to rotation matrices.
+
+    Args:
+        quaternions: quaternions with real part first,
+            as tensor of shape (..., 4).
+        convention: Convention string of three uppercase letters from
+            {"X", "Y", and "Z"}.
+
+    Returns:
+        Euler angles in radians as tensor of shape (..., 3).
+    """
+    _validate_convention_str(convention)
+
+    qw, qx, qy, qz = torch.unbind(q, dim=-1)
+
+    # roll (x-axis rotation)
+    sinr_cosp = 2.0 * (qw * qx + qy * qz)
+    cosr_cosp = qw * qw - qx * qx - qy * qy + qz * qz
+    roll = torch.atan2(sinr_cosp, cosr_cosp)
+
+    # pitch (y-axis rotation)
+    sinp = 2.0 * (qw * qy - qz * qx)
+    pitch = torch.where(
+        torch.abs(sinp) >= 1,
+        _copysign(
+            torch.tensor(torch.pi / 2.0, device=sinp.device, dtype=torch.float).repeat(
+                sinp.size(0)
+            ),
+            sinp,
+        ),
+        torch.asin(sinp),
+    )
+
+    # yaw (z-axis rotation)
+    siny_cosp = 2.0 * (qw * qz + qx * qy)
+    cosy_cosp = qw * qw + qx * qx - qy * qy - qz * qz
+    yaw = torch.atan2(siny_cosp, cosy_cosp)
+
+    convention_to_rpy = {"X": roll, "Y": pitch, "Z": yaw}
+    return torch.stack([convention_to_rpy[c] for c in convention], dim=-1)
