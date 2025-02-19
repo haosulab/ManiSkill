@@ -32,11 +32,11 @@ class FloatingRobotiq2F85Gripper(BaseAgent):
     )
     keyframes = dict(
         open_facing_up=Keyframe(
-            qpos=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            qpos=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             pose=sapien.Pose(p=np.array([0.0, 0.0, 0.5])),
         ),
         open_facing_side=Keyframe(
-            qpos=[0, 0, 0, 0, 0, 0],
+            qpos=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             pose=sapien.Pose(
                 p=np.array([0.0, 0.0, 0.5]), q=np.array([0.7071, 0, 0.7071, 0])
             ),
