@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Union, Optional
 from functools import cached_property
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
+import sapien
 import torch
 from gymnasium import spaces
 
+from mani_skill.utils.structs.pose import Pose
+
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
+
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.types import Array
 
@@ -20,6 +24,8 @@ class SceneBuilder:
 
     robot_init_qpos_noise: float = 0.02
     """Robot init qpos noise"""
+    robot_initial_pose: Union[sapien.Pose, Pose] = sapien.Pose()
+    """Initial pose of the robot (passed to load_agent)"""
 
     builds_lighting: bool = False
     """Whether this scene builder will add its own lighting when build is called. If False, ManiSkill will add some default lighting"""

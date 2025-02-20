@@ -19,9 +19,6 @@ from mani_skill.utils.structs.pose import to_sapien_pose
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
-SPAWN_SPACING = 5
-SPAWN_START_GAP = 10
-
 
 class ArticulationBuilder(SapienArticulationBuilder):
     scene: ManiSkillScene
