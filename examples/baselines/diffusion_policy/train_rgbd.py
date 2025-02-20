@@ -143,9 +143,10 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
                 obs_traj_dict, obs_space
             )  # key order in demo is different from key order in env obs
             _obs_traj_dict = obs_process_fn(_obs_traj_dict)
-            _obs_traj_dict["depth"] = torch.Tensor(
-                _obs_traj_dict["depth"].astype(np.float32)
-            ).to(device=device, dtype=torch.float16)
+            if "rgbd" in args.demo_path:
+                _obs_traj_dict["depth"] = torch.Tensor(
+                    _obs_traj_dict["depth"].astype(np.float32)
+                ).to(device=device, dtype=torch.float16)
             _obs_traj_dict["rgb"] = torch.from_numpy(_obs_traj_dict["rgb"]).to(
                 device
             )  # still uint8
@@ -421,7 +422,7 @@ if __name__ == "__main__":
     env_kwargs = dict(
         control_mode=args.control_mode,
         reward_mode="sparse",
-        obs_mode="rgbd",
+        obs_mode="rgbd" if "rgbd" in args.demo_path else "rgb" ,
         render_mode="rgb_array",
     )
     if args.max_episode_steps is not None:
@@ -434,7 +435,7 @@ if __name__ == "__main__":
         env_kwargs,
         other_kwargs,
         video_dir=f"runs/{run_name}/videos" if args.capture_video else None,
-        wrappers=[partial(FlattenRGBDObservationWrapper, sep_depth=True)],
+        wrappers=[partial(FlattenRGBDObservationWrapper, sep_depth=True, depth = "rgbd" in args.demo_path)],
     )
     if args.track:
         import wandb
@@ -478,8 +479,9 @@ if __name__ == "__main__":
             np.transpose, axes=(0, 3, 1, 2)
         ),  # (B, H, W, C) -> (B, C, H, W)
         state_obs_extractor=build_state_obs_extractor(args.env_id),
+        depth = "rgbd" in args.demo_path
     )
-    tmp_env = gym.make(args.env_id, obs_mode="rgbd")
+    tmp_env = gym.make(args.env_id, obs_mode="rgbd" if "rgbd" in args.demo_path else "rgb")
     orignal_obs_space = tmp_env.observation_space
     tmp_env.close()
     dataset = SmallDemoDataset_DiffusionPolicy(

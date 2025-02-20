@@ -139,16 +139,20 @@ def load_demo_dataset(
     return dataset
 
 
-def convert_obs(obs, concat_fn, transpose_fn, state_obs_extractor):
+def convert_obs(obs, concat_fn, transpose_fn, state_obs_extractor, depth = True):
     img_dict = obs["sensor_data"]
+    ls = ["rgb"]
+    if depth:
+        ls = ["rgb", "depth"]
+
     new_img_dict = {
         key: transpose_fn(
             concat_fn([v[key] for v in img_dict.values()])
         )  # (C, H, W) or (B, C, H, W)
-        for key in ["rgb", "depth"]
+        for key in ls
     }
-    # if isinstance(new_img_dict['depth'], torch.Tensor): # MS2 vec env uses float16, but gym AsyncVecEnv uses float32
-    #     new_img_dict['depth'] = new_img_dict['depth'].to(torch.float16)
+    if "depth" in new_img_dict and isinstance(new_img_dict['depth'], torch.Tensor): # MS2 vec env uses float16, but gym AsyncVecEnv uses float32
+        new_img_dict['depth'] = new_img_dict['depth'].to(torch.float16)
 
     # Unified version
     states_to_stack = state_obs_extractor(obs)
@@ -169,8 +173,12 @@ def convert_obs(obs, concat_fn, transpose_fn, state_obs_extractor):
     out_dict = {
         "state": state,
         "rgb": new_img_dict["rgb"],
-        "depth": new_img_dict["depth"],
     }
+    
+    if "depth" in new_img_dict:
+        out_dict["depth"] = new_img_dict["depth"]
+
+
     return out_dict
 
 

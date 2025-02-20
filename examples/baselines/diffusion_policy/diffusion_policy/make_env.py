@@ -97,7 +97,7 @@ def make_eval_envs(
                     )
                 if env_kwargs["obs_mode"] == "state":
                     env = gym.wrappers.FrameStack(env, other_kwargs["obs_horizon"])
-                elif env_kwargs["obs_mode"] == "rgbd":
+                elif env_kwargs["obs_mode"] == "rgbd" or env_kwargs["obs_mode"] == "rgb":
                     env = DictFrameStack(env, other_kwargs["obs_horizon"])
                 env.action_space.seed(seed)
                 env.observation_space.seed(seed)
