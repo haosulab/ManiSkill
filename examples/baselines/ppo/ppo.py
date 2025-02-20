@@ -436,9 +436,9 @@ if __name__ == "__main__":
                 loss.backward()
                 nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
                 optimizer.step()
-
-            if args.target_kl is not None and approx_kl > args.target_kl:
-                break
+            else:
+                continue
+            break
 
         update_time = time.time() - update_time
 
