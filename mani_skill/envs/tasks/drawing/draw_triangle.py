@@ -48,7 +48,7 @@ class DrawTriangleEnv(BaseEnv):
     """The brushes radius"""
     BRUSH_COLORS = [[0.8, 0.2, 0.2, 1]]
     """The colors of the brushes. If there is more than one color, each parallel environment will have a randomly sampled color."""
-    THRESHOLD = 0.02
+    THRESHOLD = 0.05
 
     SUPPORTED_REWARD_MODES = ["sparse"]
 
