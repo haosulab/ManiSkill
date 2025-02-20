@@ -173,6 +173,7 @@ class DrawTriangleEnv(BaseEnv):
                     base_color=base_color,
                 ),
             )
+            builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
             return builder.build_kinematic(name=name)
 
         # build a white canvas on the table
@@ -202,6 +203,7 @@ class DrawTriangleEnv(BaseEnv):
                         ),
                     )
                     builder.set_scene_idxs([env_idx])
+                    builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
                     actor = builder.build_kinematic(name=f"dot_{i}_{env_idx}")
                     actors.append(actor)
                 self.dots.append(Actor.merge(actors))
@@ -214,6 +216,7 @@ class DrawTriangleEnv(BaseEnv):
                         base_color=self.BRUSH_COLORS[0]
                     ),
                 )
+                builder.initial_pose = sapien.Pose(p=[0, 0, 0.1])
                 actor = builder.build_kinematic(name=f"dot_{i}")
                 self.dots.append(actor)
         self.goal_tri = create_goal_triangle(
