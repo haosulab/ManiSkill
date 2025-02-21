@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Sequence, Union
 
+import line_profiler
 import numpy as np
 import torch
 from gymnasium import spaces
@@ -70,6 +71,7 @@ class PDJointPosController(BaseController):
             targets, self.joints, self.active_joint_indices
         )
 
+    @line_profiler.profile
     def set_action(self, action: Array):
         action = self._preprocess_action(action)
         self._step = 0

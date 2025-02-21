@@ -1,5 +1,6 @@
 from typing import Dict
 
+import line_profiler
 import numpy as np
 import sapien
 import torch

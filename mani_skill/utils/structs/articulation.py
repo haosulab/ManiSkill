@@ -19,6 +19,8 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
+import line_profiler
+
 
 @dataclass
 class Articulation(BaseStruct[physx.PhysxArticulation]):
@@ -710,7 +712,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     # def _get_joint_indices(self, joints: List[Joint]):
     #     if
-
+    @line_profiler.profile
     def set_joint_drive_targets(
         self,
         targets: Array,

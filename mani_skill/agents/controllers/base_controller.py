@@ -22,6 +22,8 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
+import line_profiler
+
 
 class BaseController:
     """Base class for controllers.
@@ -132,6 +134,7 @@ class BaseController:
             action = self._clip_and_scale_action(action)
         return action
 
+    @line_profiler.profile
     def set_action(self, action: Array):
         """Set the action to execute.
         The action can be low-level control signals or high-level abstract commands.

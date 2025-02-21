@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import dacite
 import gymnasium as gym
+import line_profiler
 import numpy as np
 import sapien
 import sapien.physx as physx
@@ -922,7 +923,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Step
     # -------------------------------------------------------------------------- #
-
+    @line_profiler.profile
     def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
         """
         Take a step through the environment with an action. Actions are automatically clipped to the action space.
@@ -953,7 +954,7 @@ class BaseEnv(gym.Env):
             torch.zeros(self.num_envs, dtype=bool, device=self.device),
             info,
         )
-
+    @line_profiler.profile
     def _step_action(
         self, action: Union[None, np.ndarray, torch.Tensor, Dict]
     ) -> Union[None, torch.Tensor]:

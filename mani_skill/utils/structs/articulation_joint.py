@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from mani_skill.utils.structs.articulation import Articulation
     from mani_skill.utils.structs.link import Link
 
+import line_profiler
+
 
 @dataclass
 class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
@@ -234,6 +236,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
             return torch.from_numpy(self._objs[0].drive_target[None, :])
 
     @drive_target.setter
+    @line_profiler.profile
     def drive_target(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
         if self.scene.gpu_sim_enabled:
