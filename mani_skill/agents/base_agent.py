@@ -76,6 +76,9 @@ class BaseAgent:
     However for some robots/tasks it may be easier to disable all self collisions between links in the robot to increase simulation speed
     """
 
+    group_collisions_by_depth: bool = False
+    """Whether to set collision groups by depth. This is only used when loading .mjcf files."""
+
     keyframes: Dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
 
@@ -158,11 +161,14 @@ class BaseAgent:
         elif self.mjcf_path is not None:
             loader = self.scene.create_mjcf_loader()
             asset_path = format_path(str(self.mjcf_path))
+        else:
+            raise ValueError("One of urdf_path or mjcf_path must be provided")
 
         loader.name = self.uid
         if self._agent_idx is not None:
             loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
+        loader.group_collisions_by_depth = self.group_collisions_by_depth
         loader.load_multiple_collisions_from_file = self.load_multiple_collisions
         loader.disable_self_collisions = self.disable_self_collisions
 
