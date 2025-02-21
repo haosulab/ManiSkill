@@ -76,7 +76,7 @@ def make_eval_envs(
         video_dir: the directory to save the videos. If None no videos are recorded.
         wrappers: the list of wrappers to apply to the environment.
     """
-    if sim_backend == "cpu":
+    if sim_backend == "physx_cpu":
 
         def cpu_make_env(
             env_id, seed, video_dir=None, env_kwargs=dict(), other_kwargs=dict()

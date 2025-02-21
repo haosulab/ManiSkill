@@ -85,7 +85,7 @@ class Args:
     """the number of episodes to evaluate the agent on"""
     num_eval_envs: int = 10
     """the number of parallel environments to evaluate the agent on"""
-    sim_backend: str = "cpu"
+    sim_backend: str = "physx_cpu"
     """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
     num_dataload_workers: int = 0
     """the number of workers to use for loading the training data in the torch dataloader"""

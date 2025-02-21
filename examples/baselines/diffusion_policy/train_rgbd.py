@@ -102,7 +102,7 @@ class Args:
     """the number of episodes to evaluate the agent on"""
     num_eval_envs: int = 10
     """the number of parallel environments to evaluate the agent on"""
-    sim_backend: str = "cpu"
+    sim_backend: str = "physx_cpu"
     """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
     num_dataload_workers: int = 0
     """the number of workers to use for loading the training data in the torch dataloader"""
@@ -442,9 +442,7 @@ if __name__ == "__main__":
 
         config = vars(args)
         
-        # TODO: Check if this is needed (if so non rgbd could use this as well)
-        # deals with gym utils not being able to access max episode steps for async vector envs
-        if args.sim_backend == "cpu" and args.num_eval_envs > 1:
+        if args.sim_backend == "physx_cpu" and args.num_eval_envs > 1:
             assert args.max_episode_steps != None, "If using cpu environments max_steps must be specified"
             horizon = args.max_episode_steps
         else:
