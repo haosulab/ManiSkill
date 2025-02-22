@@ -85,7 +85,7 @@ class Args:
     n_groups: int = (
         8  # jigu says it is better to let each group have at least 8 channels; it seems 4 and 8 are simila
     )
-    depth: bool = True
+    include_depth: bool = True
     """use depth to train"""
 
     # Environment/experiment specific arguments
@@ -264,7 +264,7 @@ class Agent(nn.Module):
         _, H, W, C = envs.single_observation_space["rgb"].shape
 
         visual_feature_dim = 256
-        in_c = int(C / 3 * 4) if args.depth else C
+        in_c = int(C / 3 * 4) if args.include_depth else C
         self.visual_encoder = PlainConv(
             in_channels=in_c, out_dim=visual_feature_dim, pool_feature_map=True
         )
@@ -285,7 +285,7 @@ class Agent(nn.Module):
 
     def encode_obs(self, obs_seq, eval_mode):
         rgb = obs_seq["rgb"].float() / 255.0  # (B, obs_horizon, 3*k, H, W)
-        if args.depth:
+        if args.include_depth:
             depth = obs_seq["depth"].float() / 1024.0  # (B, obs_horizon, 1*k, H, W)
             img_seq = torch.cat([rgb, depth], dim=2)  # (B, obs_horizon, C, H, W), C=4*k
         else:
@@ -340,7 +340,7 @@ class Agent(nn.Module):
         B = obs_seq["state"].shape[0]
         with torch.no_grad():
             obs_seq["rgb"] = obs_seq["rgb"].permute(0, 1, 4, 2, 3)
-            if args.depth:
+            if args.include_depth:
                 obs_seq["depth"] = obs_seq["depth"].permute(0, 1, 4, 2, 3)
 
             obs_cond = self.encode_obs(
@@ -441,7 +441,7 @@ if __name__ == "__main__":
         import wandb
 
         config = vars(args)
-        
+
         if args.sim_backend == "physx_cpu" and args.num_eval_envs > 1:
             assert args.max_episode_steps != None, "If using cpu environments max_steps must be specified"
             horizon = args.max_episode_steps
