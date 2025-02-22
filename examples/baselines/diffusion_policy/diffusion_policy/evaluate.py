@@ -1,7 +1,7 @@
 from collections import defaultdict
-import gymnasium
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from mani_skill.utils import common
 
@@ -20,8 +20,10 @@ def collect_episode_info(infos, result):
                 result['fail'].append(info['fail'])
     return result
 
-def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
+def evaluate(n: int, agent, eval_envs, device, sim_backend: str, progress_bar: bool = False):
     agent.eval()
+    if progress_bar:
+        pbar = tqdm(total=n)
     with torch.no_grad():
         eval_metrics = defaultdict(list)
         obs, info = eval_envs.reset()
@@ -46,6 +48,7 @@ def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
                         for k, v in final_info["episode"].items():
                             eval_metrics[k].append(v)
                 eps_count += eval_envs.num_envs
+                pbar.update(eval_envs.num_envs)
     agent.train()
     for k in eval_metrics.keys():
         eval_metrics[k] = np.stack(eval_metrics[k])

@@ -425,8 +425,8 @@ if __name__ == "__main__":
         obs_mode="rgbd" if "rgbd" in args.demo_path else "rgb" ,
         render_mode="rgb_array",
     )
-    if args.max_episode_steps is not None:
-        env_kwargs["max_episode_steps"] = args.max_episode_steps
+    assert args.max_episode_steps != None, "max_episode_steps must be specified as imitation learning algorithms task solve speed is dependent on the data you train on"
+    env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = dict(obs_horizon=args.obs_horizon)
     envs = make_eval_envs(
         args.env_id,
@@ -442,11 +442,7 @@ if __name__ == "__main__":
 
         config = vars(args)
 
-        if args.sim_backend == "physx_cpu" and args.num_eval_envs > 1:
-            assert args.max_episode_steps != None, "If using cpu environments max_steps must be specified"
-            horizon = args.max_episode_steps
-        else:
-            horizon = gym_utils.find_max_episode_steps_value(envs)
+        horizon = args.max_episode_steps
         config["eval_env_cfg"] = dict(
             **env_kwargs,
             num_envs=args.num_eval_envs,
@@ -550,20 +546,11 @@ if __name__ == "__main__":
 
         ema.step(agent.parameters())
 
-        if iteration % args.log_freq == 0:
-            print(f"Iteration {iteration}, loss: {total_loss.item()}")
-            writer.add_scalar(
-                "charts/learning_rate", optimizer.param_groups[0]["lr"], iteration
-            )
-            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
-            for k, v in timings.items():
-                writer.add_scalar(f"time/{k}", v, iteration)
         # Evaluation
         if iteration % args.eval_freq == 0:
             last_tick = time.time()
 
             ema.copy_to(ema_agent.parameters())
-            # def sample_fn(obs):
 
             eval_metrics = evaluate(
                 args.num_eval_episodes, ema_agent, envs, device, args.sim_backend
@@ -584,6 +571,14 @@ if __name__ == "__main__":
                     print(
                         f"New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint."
                     )
+        if iteration % args.log_freq == 0:
+            print(f"Iteration {iteration}, loss: {total_loss.item()}")
+            writer.add_scalar(
+                "charts/learning_rate", optimizer.param_groups[0]["lr"], iteration
+            )
+            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
+            for k, v in timings.items():
+                writer.add_scalar(f"time/{k}", v, iteration)
 
         # Checkpoint
         if args.save_freq is not None and iteration % args.save_freq == 0:
