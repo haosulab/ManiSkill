@@ -140,7 +140,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
                 obs_traj_dict, obs_space
             )  # key order in demo is different from key order in env obs
             _obs_traj_dict = obs_process_fn(_obs_traj_dict)
-            if "rgbd" in args.demo_path:
+            if args.include_depth:
                 _obs_traj_dict["depth"] = torch.Tensor(
                     _obs_traj_dict["depth"].astype(np.float32)
                 ).to(device=device, dtype=torch.float16)
@@ -420,7 +420,7 @@ if __name__ == "__main__":
     env_kwargs = dict(
         control_mode=args.control_mode,
         reward_mode="sparse",
-        obs_mode="rgbd" if "rgbd" in args.demo_path else "rgb" ,
+        obs_mode="rgb+depth" if args.include_depth else "rgb",
         render_mode="rgb_array",
         human_render_camera_configs=dict(shader_pack="default")
     )
@@ -466,7 +466,7 @@ if __name__ == "__main__":
         state_obs_extractor=build_state_obs_extractor(args.env_id),
         depth = "rgbd" in args.demo_path
     )
-    tmp_env = gym.make(args.env_id, obs_mode="rgbd" if "rgbd" in args.demo_path else "rgb")
+    tmp_env = gym.make(args.env_id, **env_kwargs)
     orignal_obs_space = tmp_env.observation_space
     tmp_env.close()
     dataset = SmallDemoDataset_DiffusionPolicy(
