@@ -9,6 +9,7 @@ import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
+from mani_skill.envs.utils.system.backend import BackendInfo
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
@@ -51,6 +52,7 @@ class ManiSkillScene:
         debug_mode: bool = True,
         device: Device = None,
         parallel_in_single_scene: bool = False,
+        backend: BackendInfo = None,
     ):
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
@@ -69,6 +71,7 @@ class ManiSkillScene:
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
         self.device = device
+        self.backend = backend  # references the backend object stored in BaseEnv class
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
         self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
