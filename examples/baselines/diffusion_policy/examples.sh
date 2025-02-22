@@ -62,3 +62,26 @@ python train.py --env-id StackPyramid-v1 \
   --demo-path  ./demos/StackPyramid-v1/motionplanning/$stack_pyramid_traj_name.state.pd_joint_delta_pos.cpu.h5 \
   --control-mode "pd_joint_delta_pos" --sim-backend "cpu" --num-demos 100 \
   --max_episode_steps 300 --total_iters 30000 --num-eval-envs 20
+
+# PickAndPlace-v1
+pick_and_place_traj_name="pick_and_place_trajectory"
+python -m mani_skill.examples.motionplanning.panda.run -e "PickAndPlace-v1" \
+  --num-procs 20 -n 100 --reward-mode="sparse" \
+  --sim-backend cpu --only-count-success \
+  --traj-name $pick_and_place_traj_name
+
+python -m mani_skill.trajectory.replay_trajectory  -b cpu \
+  --traj-path  ./demos/PickAndPlace-v1/motionplanning/$pick_and_place_traj_name.h5 \
+  --use-first-env-state -c pd_joint_delta_pos -o state \
+  --save-traj --num-procs 20
+
+python train.py --env-id PickAndPlace-v1 \
+  --demo-path  ./demos/PickAndPlace-v1/motionplanning/$pick_and_place_traj_name.state.pd_joint_delta_pos.cpu.h5 \
+  --control-mode "pd_joint_delta_pos" --sim-backend "cpu" --num-demos 100 \
+  --max_episode_steps 300 --total_iters 30000 --num-eval-envs 20
+  
+
+python train.py --env-id PickAndPlace-v1 \
+  --demo-path ../../../demos/PickAndPlace-v1/motionplanning/20241209_162523.state.pd_joint_delta_pos.cpu.h5 \
+  --control-mode "pd_joint_delta_pos" --sim-backend "cpu" --num-demos 100 --max_episode_steps 800 \
+  --total_iters 30000 --num-eval-envs 20
