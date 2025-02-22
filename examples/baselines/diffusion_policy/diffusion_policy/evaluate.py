@@ -20,7 +20,7 @@ def collect_episode_info(infos, result):
                 result['fail'].append(info['fail'])
     return result
 
-def evaluate(n: int, agent, eval_envs, device, sim_backend: str, progress_bar: bool = False):
+def evaluate(n: int, agent, eval_envs, device, sim_backend: str, progress_bar: bool = True):
     agent.eval()
     if progress_bar:
         pbar = tqdm(total=n)
@@ -48,7 +48,8 @@ def evaluate(n: int, agent, eval_envs, device, sim_backend: str, progress_bar: b
                         for k, v in final_info["episode"].items():
                             eval_metrics[k].append(v)
                 eps_count += eval_envs.num_envs
-                pbar.update(eval_envs.num_envs)
+                if progress_bar:
+                    pbar.update(eval_envs.num_envs)
     agent.train()
     for k in eval_metrics.keys():
         eval_metrics[k] = np.stack(eval_metrics[k])
