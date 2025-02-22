@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 import sapien
 import torch
 from gymnasium import spaces
-
 from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
@@ -24,7 +23,7 @@ class SceneBuilder:
 
     robot_init_qpos_noise: float = 0.02
     """Robot init qpos noise"""
-    robot_initial_pose: Union[sapien.Pose, Pose] = sapien.Pose()
+    robot_load_pose: Union[sapien.Pose, Pose] = sapien.Pose()
     """Initial pose of the robot (passed to load_agent)"""
 
     builds_lighting: bool = False

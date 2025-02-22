@@ -35,7 +35,7 @@ IGNORE_FETCH_COLLISION_STRS = ["mat", "rug", "carpet"]
 @register_scene_builder("ReplicaCAD")
 class ReplicaCADSceneBuilder(SceneBuilder):
 
-    robot_initial_pose = sapien.Pose(
+    robot_load_pose = sapien.Pose(
         p=[-1, 0, 0.02]
     )  # generally a safe initial spawn pose for the Fetch robot
 

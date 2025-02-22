@@ -112,7 +112,7 @@ class SceneManipulationEnv(BaseEnv):
     def _load_agent(self, options: dict):
         super()._load_agent(
             options,
-            self.scene_builder.robot_initial_pose,
+            self.scene_builder.robot_load_pose,
         )
 
     def _load_scene(self, options: dict):
