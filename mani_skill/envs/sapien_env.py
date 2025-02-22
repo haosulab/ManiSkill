@@ -1088,7 +1088,8 @@ class BaseEnv(gym.Env):
             sub_scenes,
             sim_config=self.sim_config,
             device=self.device,
-            parallel_in_single_scene=self._parallel_in_single_scene
+            parallel_in_single_scene=self._parallel_in_single_scene,
+            backend=self.backend
         )
         self.scene.px.timestep = 1.0 / self._sim_freq
 
