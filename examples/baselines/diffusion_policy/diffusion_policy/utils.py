@@ -100,6 +100,7 @@ def load_demo_dataset(
 ):
     # assert num_traj is None
     raw_data = load_traj_hdf5(path, num_traj)
+    import ipdb; ipdb.set_trace()
     # raw_data has keys like: ['traj_0', 'traj_1', ...]
     # raw_data['traj_0'] has keys like: ['actions', 'dones', 'env_states', 'infos', ...]
     _traj = raw_data["traj_0"]
@@ -174,7 +175,7 @@ def convert_obs(obs, concat_fn, transpose_fn, state_obs_extractor, depth = True)
         "state": state,
         "rgb": new_img_dict["rgb"],
     }
-    
+
     if "depth" in new_img_dict:
         out_dict["depth"] = new_img_dict["depth"]
 
