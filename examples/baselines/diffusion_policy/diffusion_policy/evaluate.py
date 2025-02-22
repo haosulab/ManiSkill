@@ -29,7 +29,7 @@ def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
         while eps_count < n:
             obs = common.to_tensor(obs, device)
             action_seq = agent.get_action(obs)
-            if sim_backend == "cpu":
+            if sim_backend == "physx_cpu":
                 action_seq = action_seq.cpu().numpy()
             for i in range(action_seq.shape[1]):
                 obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
