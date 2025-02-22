@@ -5,6 +5,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Optional
+import json
 
 import gymnasium as gym
 import numpy as np
@@ -50,6 +51,8 @@ class Args:
     """path to a pretrained checkpoint file to start evaluation/training from"""
     render_mode: str = "all"
     """the environment rendering mode"""
+    obs_mode: str = "rgb"
+    """the environment observation mode"""
 
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
@@ -109,6 +112,9 @@ class Args:
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = False
+    """toggle finite horizon gae"""
+    user_kwargs_path: Optional[str] = None
+    """path to json with extra env kwargs"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -304,9 +310,13 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgb", render_mode=args.render_mode, sim_backend="physx_cuda")
-    if args.control_mode is not None:
-        env_kwargs["control_mode"] = args.control_mode
+    env_kwargs = dict(obs_mode=args.obs_mode, control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="physx_cuda")
+    if args.user_kwargs_path is not None:
+        with open(args.user_kwargs_path, "r") as f:
+            user_kwargs = json.load(f)
+        # add user_kwargs to env kwargs
+        env_kwargs.update(user_kwargs)
+
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
 
@@ -324,8 +334,8 @@ if __name__ == "__main__":
         print(f"Saving eval videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
             save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
-            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
+            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=15)
+        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=15)
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
