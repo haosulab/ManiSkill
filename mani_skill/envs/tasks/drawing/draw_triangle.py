@@ -1,10 +1,12 @@
 import math
 from typing import Dict
 
-import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
 import torch
+from transforms3d.euler import euler2quat
+
+import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
@@ -15,7 +17,6 @@ from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from transforms3d.euler import euler2quat
 
 
 @register_env("DrawTriangle-v1", max_episode_steps=300)
@@ -31,9 +32,8 @@ class DrawTriangleEnv(BaseEnv):
     **Success Conditions:**
     - the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal triangle
     """
+
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawTriangle-v1_rt.mp4"
-
-
 
     MAX_DOTS = 300
     """
@@ -99,6 +99,9 @@ class DrawTriangleEnv(BaseEnv):
             near=0.01,
             far=100,
         )
+
+    def _load_agent(self, options: dict):
+        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
 

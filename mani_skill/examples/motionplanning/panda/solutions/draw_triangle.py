@@ -1,6 +1,6 @@
 import sapien
 from mani_skill.envs.tasks import DrawTriangleEnv
-from mani_skill.examples.motionplanning.panda_stick.motionplanner import \
+from mani_skill.examples.motionplanning.panda.motionplanner_stick import \
     PandaStickMotionPlanningSolver
 
 

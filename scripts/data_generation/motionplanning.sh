@@ -13,9 +13,9 @@ done
 ## Panda Stick Solutions ##
 for env_id in DrawTriangle-v1
 do
-    python -m mani_skill.examples.motionplanning.run --env-id $env_id \
+    python -m mani_skill.examples.motionplanning.panda.run --env-id $env_id \
       --traj-name="trajectory" --only-count-success --save-video -n 1 \
       --shader="rt" # generate sample videos
     mv demos/$env_id/motionplanning/0.mp4 demos/$env_id/motionplanning/sample.mp4
-    python -m mani_skill.examples.motionplanning.run --env-id $env_id --traj-name="trajectory" -n 1000 --num-procs 10 --only-count-success
+    python -m mani_skill.examples.motionplanning.panda.run --env-id $env_id --traj-name="trajectory" -n 1000 --num-procs 10 --only-count-success
 done
