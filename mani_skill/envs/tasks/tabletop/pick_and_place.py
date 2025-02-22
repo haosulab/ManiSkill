@@ -174,7 +174,7 @@ class PickAndPlaceEnv(BaseEnv):
                 obs[f"{obj.name}_to_goal_pos"] = self.goal_sites[i].pose.p - obj.pose.p
                 obs[f"tcp_to_{obj.name}_pos"] = obj.pose.p - self.agent.tcp.pose.p
 
-        return {}
+        return obs
 
 
     def evaluate(self):

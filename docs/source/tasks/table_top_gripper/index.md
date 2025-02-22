@@ -280,7 +280,6 @@ A simple task where the objective is to grasp a red cube and move it to a target
 </div>
 
 ## StackPyramid-v1
-![dense-reward][reward-badge]
 :::{dropdown} Task Card
 :icon: note
 :color: primary
@@ -339,7 +338,25 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 </video>
 </div>
 
+<<<<<<< Updated upstream
 ## PlaceSphere-v1
+=======
+## PickAndPlace-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+
+
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickAndPlace-v1_rt.mp4" type="video/mp4">
+</video>
+
+## PegInsertionSide-v1
+![dense-reward][reward-badge]
+>>>>>>> Stashed changes
 
 ![dense-reward][dense-reward-badge]
 ![sparse-reward][sparse-reward-badge]
