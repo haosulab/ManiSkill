@@ -422,6 +422,7 @@ if __name__ == "__main__":
         reward_mode="sparse",
         obs_mode="rgbd" if "rgbd" in args.demo_path else "rgb" ,
         render_mode="rgb_array",
+        human_render_camera_configs=dict(shader_pack="default")
     )
     assert args.max_episode_steps != None, "max_episode_steps must be specified as imitation learning algorithms task solve speed is dependent on the data you train on"
     env_kwargs["max_episode_steps"] = args.max_episode_steps
