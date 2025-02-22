@@ -245,7 +245,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
                 arg1 = arg1.reshape(
                     1,
                 )
-            self._objs[0].drive_target = arg1
+            self._objs[0].drive_target = arg1.numpy()
 
     @property
     def drive_velocity_target(self) -> torch.Tensor:
