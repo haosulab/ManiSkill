@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from tqdm import tqdm
 import tyro
 from diffusers.optimization import get_scheduler
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
@@ -62,7 +63,7 @@ class Args:
     demo_path: str = (
         "data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5"
     )
-    """the path of demo dataset (pkl or h5)"""
+    """the path of demo dataset, it is expected to be a ManiSkill dataset h5py format file"""
     num_demos: Optional[int] = None
     """number of trajectories to load from the demo dataset"""
     total_iters: int = 1_000_000
@@ -419,6 +420,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
+    # create evaluation environment
     env_kwargs = dict(
         control_mode=args.control_mode,
         reward_mode="sparse",
@@ -512,46 +514,14 @@ if __name__ == "__main__":
     ema = EMAModel(parameters=agent.parameters(), power=0.75)
     ema_agent = Agent(envs, args).to(device)
 
-    # ---------------------------------------------------------------------------- #
-    # Training begins.
-    # ---------------------------------------------------------------------------- #
-    agent.train()
-
     best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
-    for iteration, data_batch in enumerate(train_dataloader):
-        # # copy data from cpu to gpu
-        # data_batch = {k: v.cuda(non_blocking=True) for k, v in data_batch.items()}
-
-        # forward and compute loss
-        obs_batch_dict = data_batch["observations"]
-        # obs_batch_dict = {
-        #     k: v.cuda(non_blocking=True) for k, v in obs_batch_dict.items()
-        # }
-        act_batch = data_batch["actions"]
-
-        # forward and compute loss
-        total_loss = agent.compute_loss(
-            obs_seq=obs_batch_dict,  # obs_batch_dict['state'] is (B, L, obs_dim)
-            action_seq=act_batch,  # (B, L, act_dim)
-        )
-
-        # backward
-        optimizer.zero_grad()
-        total_loss.backward()
-        optimizer.step()
-        lr_scheduler.step()  # step lr scheduler every batch, this is different from standard pytorch behavior
-        last_tick = time.time()
-
-        ema.step(agent.parameters())
-
-        # Evaluation
+    # define evaluation and logging functions
+    def evaluate_and_save_best(iteration):
         if iteration % args.eval_freq == 0:
             last_tick = time.time()
-
             ema.copy_to(ema_agent.parameters())
-
             eval_metrics = evaluate(
                 args.num_eval_episodes, ema_agent, envs, device, args.sim_backend
             )
@@ -571,8 +541,9 @@ if __name__ == "__main__":
                     print(
                         f"New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint."
                     )
+    def log_metrics(iteration):
         if iteration % args.log_freq == 0:
-            print(f"Iteration {iteration}, loss: {total_loss.item()}")
+            # print(f"Iteration {iteration}, loss: {total_loss.item()}")
             writer.add_scalar(
                 "charts/learning_rate", optimizer.param_groups[0]["lr"], iteration
             )
@@ -580,8 +551,55 @@ if __name__ == "__main__":
             for k, v in timings.items():
                 writer.add_scalar(f"time/{k}", v, iteration)
 
+    # ---------------------------------------------------------------------------- #
+    # Training begins.
+    # ---------------------------------------------------------------------------- #
+    agent.train()
+    last_tick = time.time()
+    pbar = tqdm(total=args.total_iters)
+    for iteration, data_batch in enumerate(train_dataloader):
+        obs_batch_dict = data_batch["observations"]
+        act_batch = data_batch["actions"]
+        timings["data_loading"] += time.time() - last_tick
+
+        # forward and compute loss
+        last_tick = time.time()
+        total_loss = agent.compute_loss(
+            obs_seq=obs_batch_dict,  # obs_batch_dict['state'] is (B, L, obs_dim)
+            action_seq=act_batch,  # (B, L, act_dim)
+        )
+        timings["forward"] += time.time() - last_tick
+
+        # backward
+        last_tick = time.time()
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+        lr_scheduler.step()  # step lr scheduler every batch, this is different from standard pytorch behavior
+        timings["backward"] += time.time() - last_tick
+
+        # ema step
+        last_tick = time.time()
+        ema.step(agent.parameters())
+        timings["ema"] += time.time() - last_tick
+
+        # Evaluation
+        evaluate_and_save_best(iteration)
+        log_metrics(iteration)
+
         # Checkpoint
         if args.save_freq is not None and iteration % args.save_freq == 0:
             save_ckpt(run_name, str(iteration))
+        pbar.update(1)
+        pbar.set_postfix(
+            {
+                "loss": total_loss.item(),
+            }
+        )
+        last_tick = time.time()
+
+    evaluate_and_save_best(args.total_iters)
+    log_metrics(args.total_iters)
+
     envs.close()
     writer.close()
