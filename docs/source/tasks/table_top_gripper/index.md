@@ -113,6 +113,14 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>100</p></td>
 </tr>
 <tr class="row-odd">
+<td><p><a href="#pulldrawer-v1">PullDrawer-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PullDrawer-v1_rt_thumb_first.png' alt='PullDrawer-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PullDrawer-v1_rt_thumb_last.png' alt='PullDrawer-v1'></div></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>❌</p></td>
+<td><p>200</p></td>
+</tr>
+<tr class="row-odd">
 <td><p><a href="#pushcube-v1">PushCube-v1</a></p></td>
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PushCube-v1_rt_thumb_first.png' alt='PushCube-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PushCube-v1_rt_thumb_last.png' alt='PushCube-v1'></div></td>
 <td><p>✅</p></td>
