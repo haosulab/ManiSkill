@@ -1,12 +1,10 @@
 ALGO_NAME = "BC_Diffusion_rgbd_UNet"
 
-import argparse
 import os
 import random
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from distutils.util import strtobool
 from functools import partial
 from typing import List, Optional
 
@@ -22,8 +20,6 @@ from diffusers.optimization import get_scheduler
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.training_utils import EMAModel
 from gymnasium import spaces
-from mani_skill.utils import gym_utils
-from mani_skill.utils.registration import REGISTERED_ENVS
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
@@ -58,10 +54,10 @@ class Args:
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
-    env_id: str = "PegInsertionSide-v0"
+    env_id: str = "PegInsertionSide-v1"
     """the id of the environment"""
     demo_path: str = (
-        "data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5"
+        "demos/PegInsertionSide-v1/trajectory.state.pd_ee_delta_pose.physx_cpu.h5"
     )
     """the path of demo dataset, it is expected to be a ManiSkill dataset h5py format file"""
     num_demos: Optional[int] = None
@@ -441,16 +437,8 @@ if __name__ == "__main__":
     )
     if args.track:
         import wandb
-
         config = vars(args)
-
-        horizon = args.max_episode_steps
-        config["eval_env_cfg"] = dict(
-            **env_kwargs,
-            num_envs=args.num_eval_envs,
-            env_id=args.env_id,
-            env_horizon=horizon,
-        )
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps)
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
@@ -543,7 +531,6 @@ if __name__ == "__main__":
                     )
     def log_metrics(iteration):
         if iteration % args.log_freq == 0:
-            # print(f"Iteration {iteration}, loss: {total_loss.item()}")
             writer.add_scalar(
                 "charts/learning_rate", optimizer.param_groups[0]["lr"], iteration
             )
@@ -555,18 +542,16 @@ if __name__ == "__main__":
     # Training begins.
     # ---------------------------------------------------------------------------- #
     agent.train()
-    last_tick = time.time()
     pbar = tqdm(total=args.total_iters)
+    last_tick = time.time()
     for iteration, data_batch in enumerate(train_dataloader):
-        obs_batch_dict = data_batch["observations"]
-        act_batch = data_batch["actions"]
         timings["data_loading"] += time.time() - last_tick
 
         # forward and compute loss
         last_tick = time.time()
         total_loss = agent.compute_loss(
-            obs_seq=obs_batch_dict,  # obs_batch_dict['state'] is (B, L, obs_dim)
-            action_seq=act_batch,  # (B, L, act_dim)
+            obs_seq=data_batch["observations"],  # obs_batch_dict['state'] is (B, L, obs_dim)
+            action_seq=data_batch["actions"],  # (B, L, act_dim)
         )
         timings["forward"] += time.time() - last_tick
 
@@ -591,11 +576,7 @@ if __name__ == "__main__":
         if args.save_freq is not None and iteration % args.save_freq == 0:
             save_ckpt(run_name, str(iteration))
         pbar.update(1)
-        pbar.set_postfix(
-            {
-                "loss": total_loss.item(),
-            }
-        )
+        pbar.set_postfix({"loss": total_loss.item()})
         last_tick = time.time()
 
     evaluate_and_save_best(args.total_iters)
