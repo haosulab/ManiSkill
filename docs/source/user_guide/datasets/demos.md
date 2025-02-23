@@ -1,6 +1,6 @@
 # Demonstrations
 
-We provide a command line tool to download demonstrations directly from our [Hugging Face 🤗 dataset](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations) which is done by task ID. The tool will download the demonstration files to a folder and also a few demonstration videos visualizing what the demonstrations look like. See [Tasks](../../tasks/index.md) for a list of all supported tasks.
+We provide a command line tool to download demonstrations directly from our [Hugging Face 🤗 dataset](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations) which is done by task ID. The tool will download the demonstration files to a folder and also a few demonstration videos visualizing what the demonstrations look like. See [Tasks](../../tasks/index.md) for a list of all supported tasks that have demonstrations.
 
 <!-- TODO: add a table here detailing the data info in detail -->
 <!-- Please see our [notes](https://docs.google.com/document/d/1bBKmsR-R_7tR9LwaT1c3J26SjIWw27tWSLdHnfBR01c/edit?usp=sharing) about the details of the demonstrations. -->
@@ -12,6 +12,9 @@ python -m mani_skill.utils.download_demo # with no args this prints all availabl
 # Download the full datasets (can be very slow)
 python -m mani_skill.utils.download_demo all
 ```
+
+We provide a flexible tool to replay demonstration datasets to modify them e.g. add visual observation data, record videos and more, see the [trajectory replay documentation](../datasets/replay.md).If you want to generate the original datasets yourself locally we save all scripts used for dataset generation in the [data_generation](https://github.com/haosulab/ManiSkill/tree/main/scripts/data_generation) folder.
+
 
 ## Format
 

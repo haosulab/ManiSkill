@@ -19,7 +19,7 @@ To ensure everyone has the same preprocessed/replayed dataset, make sure to run 
 
 It has fixed settings for the trajectory replay to generate observation data and set the desired action space/controller for all benchmarked tasks. All benchmarked results in the [Wandb project detailing all benchmarked training runs](https://wandb.ai/stonet2000/ManiSkill) use the data replayed by the script above
 
-If you need more advanced use-cases for trajectory replay (e.g. generating pointclouds, changing controller modes), see the [trajectory replay documentation](../datasets/replay.md).
+If you need more advanced use-cases for trajectory replay (e.g. generating pointclouds, changing controller modes), see the [trajectory replay documentation](../datasets/replay.md). If you want to generate the original datasets yourself locally we save all scripts used for dataset generation in the [data_generation](https://github.com/haosulab/ManiSkill/tree/main/scripts/data_generation) folder.
 
 
 ## Evaluation
