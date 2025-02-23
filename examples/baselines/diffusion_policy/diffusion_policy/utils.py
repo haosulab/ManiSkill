@@ -100,7 +100,6 @@ def load_demo_dataset(
 ):
     # assert num_traj is None
     raw_data = load_traj_hdf5(path, num_traj)
-    import ipdb; ipdb.set_trace()
     # raw_data has keys like: ['traj_0', 'traj_1', ...]
     # raw_data['traj_0'] has keys like: ['actions', 'dones', 'env_states', 'infos', ...]
     _traj = raw_data["traj_0"]
