@@ -185,6 +185,7 @@ class BaseEnv(gym.Env):
     def __init__(
         self,
         num_envs: int = 1,
+        max_episode_steps: int = -1,
         obs_mode: Optional[str] = None,
         reward_mode: Optional[str] = None,
         control_mode: Optional[str] = None,
@@ -205,6 +206,8 @@ class BaseEnv(gym.Env):
         self._enhanced_determinism = enhanced_determinism
 
         self.num_envs = num_envs
+        self.max_episode_steps = max_episode_steps
+        assert max_episode_steps > 0
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
         if shader_dir is not None:
@@ -801,6 +804,9 @@ class BaseEnv(gym.Env):
                 raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
         else:
             env_idx = torch.arange(0, self.num_envs, device=self.device)
+        staggered_reset = options.get("staggered_reset", False)
+        if staggered_reset:
+            assert len(env_idx) == self.num_envs, "Staggered reset is only applicable when resetting all envs"
 
         self._set_main_rng(seed)
 
@@ -822,7 +828,17 @@ class BaseEnv(gym.Env):
             self.num_envs, dtype=torch.bool, device=self.device
         )
         self.scene._reset_mask[env_idx] = True
-        self._elapsed_steps[env_idx] = 0
+        if self.num_envs > 1 and staggered_reset:
+            if self.num_envs == 1:
+                self._elapsed_steps[:] = 0
+            else:
+                # Create evenly spaced steps, ensuring first is 0 and last is max_steps-1
+                steps = torch.linspace(0, self.max_episode_steps - 1, self.num_envs, device=self.device)
+                self._elapsed_steps[:] = (
+                    steps.round().to(torch.int32).clamp(0, self.max_episode_steps - 1)
+                )
+        else:
+            self._elapsed_steps[env_idx] = 0
 
         self._clear_sim_state()
         if self.reconfiguration_freq != 0:
