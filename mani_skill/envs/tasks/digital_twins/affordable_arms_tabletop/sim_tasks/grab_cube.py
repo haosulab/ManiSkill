@@ -25,8 +25,8 @@ class GrabCubeEnv(Sim4RealBaseEnv):
     # Task DR
     spawn_box_half_size = 0.1 / 2
 
-    cube_size_mean = 0.0175 / 2
-    cube_size_std = 7e-4 / 2
+    cube_size_mean = 0.017 / 2
+    cube_size_std = 7e-4
 
     cube_friction_mean = 0.3
     cube_friction_std = 0.05
@@ -221,7 +221,7 @@ class GrabCubeEnv(Sim4RealBaseEnv):
             axis=-1,
         )
         # reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reaching_reward = 1 - torch.tanh(15 * tcp_to_obj_dist)
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reward += reaching_reward
 
         # still stage 1, orient gripper correctly, important for correctly grasping the
@@ -234,7 +234,9 @@ class GrabCubeEnv(Sim4RealBaseEnv):
         # stage 2, grasp the cube
         # close_gripper_dist = self.agent.controller._target_qpos.clone()[..., -1].abs() # closed at 0
         close_gripper_dist = (2 * (self.cube_half_sizes) - gripper_finger_dist).abs()
-        reward += 2 * (1 - torch.tanh(40 * close_gripper_dist)) * is_close.float()
+        reward += (
+            2 * (1 - torch.tanh(50 * close_gripper_dist)) * is_close.float()
+        )  # this used to be a value of 10 ##xx changed
         reward += is_properly_grasped.float()
 
         # stage 3, lift the cube
@@ -245,9 +247,11 @@ class GrabCubeEnv(Sim4RealBaseEnv):
             3 * (1 - torch.tanh(4 * info["robot_to_grasped_rest_dist"])) * cube_lifted
         )
 
-        # just don't close gripper early, it's that simple :)
-        gripper_closing = self.agent.robot.qpos[..., -1] <= 0.9
-        reward -= 3 * gripper_closing * torch.tanh(10 * tcp_to_obj_dist) * ~is_close
+        gripper_open = self.rest_qpos[-1]  # keep gripper at starting keyframe position
+        to_open_dist = (gripper_open - self.agent.robot.qpos[..., -1]).abs()
+        # allow some leeway of a couple of degrees
+        to_open_dist[to_open_dist <= 0.05] = 0
+        reward -= 0.25 * torch.tanh(5 * to_open_dist) * ~is_close
 
         # touch table
         reward -= 2.0 * info["touching_table"].float()

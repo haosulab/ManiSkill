@@ -17,7 +17,7 @@ class Koch(BaseAgent):
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/koch/follower_arm_v1.1_simplified.urdf"
     urdf_config = dict(
         _materials=dict(
-            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+            gripper=dict(static_friction=0.3, dynamic_friction=0.3, restitution=0.0)
         ),
         link=dict(
             link_6=dict(material="gripper", patch_radius=0.1, min_patch_radius=0.1),

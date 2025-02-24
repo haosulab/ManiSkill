@@ -46,7 +46,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     agent: Koch
 
     # rgb overlay supplied by user
-    rgb_overlay_paths: None
+    rgb_overlay_paths: dict = None  # e.g. dict(base_camera="bkground.png")
     """dict mapping camera name to the file path of the greenscreening image"""
     rgb_overlay_mode: str = "background"
 
