@@ -279,6 +279,33 @@ A simple task where the objective is to grasp a red cube and move it to a target
 </video>
 </div>
 
+## StackPyramid-v1
+![dense-reward][reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+The goal is to pick up a red cube, place it next to the green cube, and stack the blue cube on top of the red and green cube without it falling off.
+
+**Supported Robots: Panda**
+
+**Randomizations:**
+- both cubes have their z-axis rotation randomized
+- both cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other
+
+**Success Conditions:**
+- the blue cube is static
+- the blue cube is on top of both the red and green cube (to within half of the cube size)
+- the blue cube is static
+- none of the red, green, blue cubes are grasped by the robot (robot must let go of the cubes)
+:::
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
+</video>
+
+
 ## PickSingleYCB-v1
 
 ![dense-reward][dense-reward-badge]
@@ -313,7 +340,25 @@ Pick up a random object sampled from the [YCB dataset](https://www.ycbbenchmarks
 </video>
 </div>
 
+<<<<<<< Updated upstream
 ## PlaceSphere-v1
+=======
+## PickAndPlace-v1
+
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+
+
+
+<video preload="auto" controls="True" width="100%">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickAndPlace-v1_rt.mp4" type="video/mp4">
+</video>
+
+## PegInsertionSide-v1
+![dense-reward][reward-badge]
+>>>>>>> Stashed changes
 
 ![dense-reward][dense-reward-badge]
 ![sparse-reward][sparse-reward-badge]
