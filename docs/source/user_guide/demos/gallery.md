@@ -61,7 +61,11 @@ We demonstrate some zero-shot sim2real manipulation results using the low-cost $
 We port over some of the Real2Sim evaluation environments from the SIMPLER project. The videos below show 4 different vision language action (VLA) models being evaluated on 4 different tasks (videos are originally from SIMPLER). These videos are subsets of the 128 environments that are being simulated and rendered in parallel to evaluate VLAs.
 
 
-<!-- ## Teleoperation -->
+## Teleoperation
 
+We provide a few teleoperation tools in ManiSkill. The most flexible of which is Virtual Reality (VR) based teleoperation. The teleoperation setup is being cleaned up at the moment and will be documented and open-sourced eventually.
 
-
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" playsinline="true" poster="https://github.com/StoneT2000/paper-assets/raw/refs/heads/main/projects/mani_skill3/teleop/teleop_ability_hand_thumb.jpg"><source src="https://github.com/StoneT2000/paper-assets/raw/refs/heads/main/projects/mani_skill3/teleop/teleop_ability_hand_compressed.mp4" type="video/mp4"></video>
+<caption>
+    Teleoperation of a bi-manual 5-finger dextrous hand setup using the Meta Quest 3 system. The integrated VR teleoperation system enables 60 Hz streaming of 4K stereo video for low latency and smooth teleoperation.
+</caption>

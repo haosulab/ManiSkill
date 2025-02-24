@@ -16,6 +16,23 @@ from mani_skill.utils.structs.types import Array, Device
 # Utilities for working with tensors, numpy arrays, and batched data
 # -------------------------------------------------------------------------- #
 
+def torch_clone_dict(data: dict) -> dict:
+    """
+    Recursively clones all torch tensors in a dictionary.
+    If the input was a torch tensor, it will return a clone of the tensor.
+    """
+    if isinstance(data, torch.Tensor):
+        return data.clone()
+    
+    output_dict = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            output_dict[key] = torch_clone_dict(value)
+        elif isinstance(value, torch.Tensor):
+            output_dict[key] = value.clone()
+        else:
+            output_dict[key] = value
+    return output_dict
 
 def _batch(array: Union[Array, Sequence]):
     if isinstance(array, (dict)):

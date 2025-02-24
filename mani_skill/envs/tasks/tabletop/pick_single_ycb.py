@@ -64,9 +64,19 @@ class PickSingleYCBEnv(BaseEnv):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         self.model_id = None
         self.all_model_ids = np.array(
-            list(
-                load_json(ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json").keys()
-            )
+            [
+                k
+                for k in load_json(
+                    ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"
+                ).keys()
+                if k
+                not in [
+                    "022_windex_bottle",
+                    "028_skillet_lid",
+                    "029_plate",
+                    "059_chain",
+                ]  # NOTE (arth): ignore these non-graspable/hard to grasp ycb objects
+            ]
         )
         if reconfiguration_freq is None:
             if num_envs == 1:
