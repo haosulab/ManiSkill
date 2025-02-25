@@ -129,6 +129,10 @@ class BaseDigitalTwinEnv(BaseEnv):
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
+        # MS3 uses render_backend = gpu with num_envs = 1, ensure rgb, seg & overlay on same device
+        rgb = rgb.to(self.device)
+        segmentation = segmentation.to(self.device)
+
         actor_seg = segmentation[..., 0]
         mask = torch.ones_like(actor_seg)
         if ("background" in self.rgb_overlay_mode) or (
