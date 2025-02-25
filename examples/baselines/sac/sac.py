@@ -54,23 +54,21 @@ class Args:
     """logging frequency in terms of environment steps"""
 
     # Environment specific arguments
-    env_id: str = "PegInsertionSide-v1"
+    env_id: str = "PickCube-v1"
     """the id of the environment"""
     env_vectorization: str = "gpu"
     """the type of environment vectorization to use"""
-    num_envs: int = 1024
+    num_envs: int = 16
     """the number of parallel environments"""
     num_eval_envs: int = 16
     """the number of parallel evaluation environments"""
     partial_reset: bool = False
     """whether to let parallel environments reset upon termination instead of truncation"""
-    staggered_reset: bool = True
-    """whether to stagger the reset of the environments"""
     eval_partial_reset: bool = False
     """whether to let parallel evaluation environments reset upon termination instead of truncation"""
-    num_steps: int = 100
+    num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
-    num_eval_steps: int = 100
+    num_eval_steps: int = 50
     """the number of steps to run in each evaluation environment during evaluation"""
     reconfiguration_freq: Optional[int] = None
     """how often to reconfigure the environment during training"""
@@ -84,19 +82,19 @@ class Args:
     """the control mode to use for the environment"""
 
     # Algorithm specific arguments
-    total_timesteps: int = 10_000_000_000
+    total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
     buffer_size: int = 1_000_000
     """the replay memory buffer size"""
     buffer_device: str = "cuda"
     """where the replay buffer is stored. Can be 'cpu' or 'cuda' for GPU"""
-    gamma: float = 0.99
+    gamma: float = 0.8
     """the discount factor gamma"""
-    tau: float = 0.005
+    tau: float = 0.01
     """target smoothing coefficient"""
-    batch_size: int = 16_384
+    batch_size: int = 1024
     """the batch size of sample from the replay memory"""
-    learning_starts: int = 5_000
+    learning_starts: int = 4_000
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -106,7 +104,7 @@ class Args:
     """the frequency of training policy (delayed)"""
     target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 1.0
+    alpha: float = 0.2
     """Entropy regularization coefficient."""
     autotune: bool = True
     """automatic tuning of the entropy coefficient"""
@@ -114,6 +112,8 @@ class Args:
     """training frequency (in steps)"""
     utd: float = 0.5
     """update to data ratio"""
+    partial_reset: bool = False
+    """whether to let parallel environments reset upon termination instead of truncation"""
     bootstrap_at_done: str = "always"
     """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
 
