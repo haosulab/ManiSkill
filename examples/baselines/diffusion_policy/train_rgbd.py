@@ -9,6 +9,7 @@ from functools import partial
 from typing import List, Optional
 
 import gymnasium as gym
+from gymnasium.vector.vector_env import VectorEnv
 import numpy as np
 import torch
 import torch.nn as nn
@@ -82,10 +83,10 @@ class Args:
     n_groups: int = (
         8  # jigu says it is better to let each group have at least 8 channels; it seems 4 and 8 are simila
     )
-    include_depth: bool = True
-    """use depth to train"""
 
     # Environment/experiment specific arguments
+    obs_mode: str = "rgb+depth"
+    """The observation mode to use for the environment, which dictates what visual inputs to pass to the model. Can be "rgb", "depth", or "rgb+depth"."""
     max_episode_steps: Optional[int] = None
     """Change the environments' max_episode_steps to this value. Sometimes necessary if the demonstrations being imitated are too short. Typically the default
     max episode steps of environments in ManiSkill are tuned lower so reinforcement learning agents can learn faster."""
@@ -121,17 +122,14 @@ def reorder_keys(d, ref_dict):
 
 
 class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
-    def __init__(self, data_path, obs_process_fn, obs_space, device, num_traj):
-        if data_path[-4:] == ".pkl":
-            raise NotImplementedError()
-        else:
-            from diffusion_policy.utils import load_demo_dataset
-
-            trajectories = load_demo_dataset(data_path, num_traj=num_traj, concat=False)
-            # trajectories['observations'] is a list of dict, each dict is a traj, with keys in obs_space, values with length L+1
-            # trajectories['actions'] is a list of np.ndarray (L, act_dim)
-
-        print("Raw trajectory loaded, start to pre-process the observations...")
+    def __init__(self, data_path, obs_process_fn, obs_space, include_rgb, include_depth, device, num_traj):
+        self.include_rgb = include_rgb
+        self.include_depth = include_depth
+        from diffusion_policy.utils import load_demo_dataset
+        trajectories = load_demo_dataset(data_path, num_traj=num_traj, concat=False)
+        # trajectories['observations'] is a list of dict, each dict is a traj, with keys in obs_space, values with length L+1
+        # trajectories['actions'] is a list of np.ndarray (L, act_dim)
+        print("Raw trajectory loaded, beginning observation pre-processing...")
 
         # Pre-process the observations, make them align with the obs returned by the obs_wrapper
         obs_traj_dict_list = []
@@ -140,13 +138,14 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
                 obs_traj_dict, obs_space
             )  # key order in demo is different from key order in env obs
             _obs_traj_dict = obs_process_fn(_obs_traj_dict)
-            if args.include_depth:
+            if self.include_depth:
                 _obs_traj_dict["depth"] = torch.Tensor(
                     _obs_traj_dict["depth"].astype(np.float32)
                 ).to(device=device, dtype=torch.float16)
-            _obs_traj_dict["rgb"] = torch.from_numpy(_obs_traj_dict["rgb"]).to(
-                device
-            )  # still uint8
+            if self.include_rgb:
+                _obs_traj_dict["rgb"] = torch.from_numpy(_obs_traj_dict["rgb"]).to(
+                    device
+                )  # still uint8
             _obs_traj_dict["state"] = torch.from_numpy(_obs_traj_dict["state"]).to(
                 device
             )
@@ -167,12 +166,14 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
             "delta_pos" in args.control_mode
             or args.control_mode == "base_pd_joint_vel_arm_pd_joint_vel"
         ):
+            print("Detected a delta controller type, padding with a zero action to ensure the arm stays still after solving tasks.")
             self.pad_action_arm = torch.zeros(
                 (trajectories["actions"][0].shape[1] - 1,), device=device
             )
             # to make the arm stay still, we pad the action with 0 in 'delta_pos' control mode
             # gripper action needs to be copied from the last action
         else:
+            # NOTE for absolute joint pos control probably should pad with the final joint position action.
             raise NotImplementedError(f"Control Mode {args.control_mode} not supported")
         self.obs_horizon, self.pred_horizon = obs_horizon, pred_horizon = (
             args.obs_horizon,
@@ -243,7 +244,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
 
 
 class Agent(nn.Module):
-    def __init__(self, env, args):
+    def __init__(self, env: VectorEnv, args: Args):
         super().__init__()
         self.obs_horizon = args.obs_horizon
         self.act_horizon = args.act_horizon
@@ -258,12 +259,18 @@ class Agent(nn.Module):
         # denoising results will be clipped to [-1,1], so the action should be in [-1,1] as well
         self.act_dim = env.single_action_space.shape[0]
         obs_state_dim = env.single_observation_space["state"].shape[1]
-        _, H, W, C = envs.single_observation_space["rgb"].shape
+        total_visual_channels = 0
+        self.include_rgb = "rgb" in env.single_observation_space.keys()
+        self.include_depth = "depth" in env.single_observation_space.keys()
+
+        if self.include_rgb:
+            total_visual_channels += env.single_observation_space["rgb"].shape[-1]
+        if self.include_depth:
+            total_visual_channels += env.single_observation_space["depth"].shape[-1]
 
         visual_feature_dim = 256
-        in_c = int(C / 3 * 4) if args.include_depth else C
         self.visual_encoder = PlainConv(
-            in_channels=in_c, out_dim=visual_feature_dim, pool_feature_map=True
+            in_channels=total_visual_channels, out_dim=visual_feature_dim, pool_feature_map=True
         )
         self.noise_pred_net = ConditionalUnet1D(
             input_dim=self.act_dim,  # act_horizon is not used (U-Net doesn't care)
@@ -281,18 +288,21 @@ class Agent(nn.Module):
         )
 
     def encode_obs(self, obs_seq, eval_mode):
-        rgb = obs_seq["rgb"].float() / 255.0  # (B, obs_horizon, 3*k, H, W)
-        if args.include_depth:
-            depth = obs_seq["depth"].float() / 1024.0  # (B, obs_horizon, 1*k, H, W)
-            img_seq = torch.cat([rgb, depth], dim=2)  # (B, obs_horizon, C, H, W), C=4*k
-        else:
+        if self.include_rgb:
+            rgb = obs_seq["rgb"].float() / 255.0  # (B, obs_horizon, 3*k, H, W)
             img_seq = rgb
+        if self.include_depth:
+            depth = obs_seq["depth"].float() / 1024.0  # (B, obs_horizon, 1*k, H, W)
+            img_seq = depth
+        if self.include_rgb and self.include_depth:
+            img_seq = torch.cat([rgb, depth], dim=2)  # (B, obs_horizon, C, H, W), C=4*k
+        batch_size = img_seq.shape[0]
         img_seq = img_seq.flatten(end_dim=1)  # (B*obs_horizon, C, H, W)
         if hasattr(self, "aug") and not eval_mode:
             img_seq = self.aug(img_seq)  # (B*obs_horizon, C, H, W)
         visual_feature = self.visual_encoder(img_seq)  # (B*obs_horizon, D)
         visual_feature = visual_feature.reshape(
-            rgb.shape[0], self.obs_horizon, visual_feature.shape[1]
+            batch_size, self.obs_horizon, visual_feature.shape[1]
         )  # (B, obs_horizon, D)
         feature = torch.cat(
             (visual_feature, obs_seq["state"]), dim=-1
@@ -336,8 +346,9 @@ class Agent(nn.Module):
         # obs_seq['state']: (B, obs_horizon, obs_state_dim)
         B = obs_seq["state"].shape[0]
         with torch.no_grad():
-            obs_seq["rgb"] = obs_seq["rgb"].permute(0, 1, 4, 2, 3)
-            if args.include_depth:
+            if self.include_rgb:
+                obs_seq["rgb"] = obs_seq["rgb"].permute(0, 1, 4, 2, 3)
+            if self.include_depth:
                 obs_seq["depth"] = obs_seq["depth"].permute(0, 1, 4, 2, 3)
 
             obs_cond = self.encode_obs(
@@ -420,7 +431,7 @@ if __name__ == "__main__":
     env_kwargs = dict(
         control_mode=args.control_mode,
         reward_mode="sparse",
-        obs_mode="rgb+depth" if args.include_depth else "rgb",
+        obs_mode=args.obs_mode,
         render_mode="rgb_array",
         human_render_camera_configs=dict(shader_pack="default")
     )
@@ -436,6 +447,7 @@ if __name__ == "__main__":
         video_dir=f"runs/{run_name}/videos" if args.capture_video else None,
         wrappers=[FlattenRGBDObservationWrapper],
     )
+
     if args.track:
         import wandb
         config = vars(args)
@@ -466,11 +478,23 @@ if __name__ == "__main__":
         state_obs_extractor=build_state_obs_extractor(args.env_id),
         depth = "rgbd" in args.demo_path
     )
+
+    # create temporary env to get original observation space as AsyncVectorEnv (CPU parallelization) doesn't permit that
     tmp_env = gym.make(args.env_id, **env_kwargs)
     orignal_obs_space = tmp_env.observation_space
+    # determine whether the env will return rgb and/or depth data
+    include_rgb = tmp_env.unwrapped.obs_mode_struct.visual.rgb
+    include_depth = tmp_env.unwrapped.obs_mode_struct.visual.depth
     tmp_env.close()
+
     dataset = SmallDemoDataset_DiffusionPolicy(
-        args.demo_path, obs_process_fn, orignal_obs_space, device, args.num_demos
+        data_path=args.demo_path,
+        obs_process_fn=obs_process_fn,
+        obs_space=orignal_obs_space,
+        include_rgb=include_rgb,
+        include_depth=include_depth,
+        device=device,
+        num_traj=args.num_demos
     )
     sampler = RandomSampler(dataset, replacement=False)
     batch_sampler = BatchSampler(sampler, batch_size=args.batch_size, drop_last=True)

@@ -21,7 +21,7 @@ class PlainConv(nn.Module):
         last_act=True,  # True for ConvBody, False for CNN
     ):
         super().__init__()
-        # assume input image size is 64x64
+        # assume input image size is 128x128
 
         self.out_dim = out_dim
         self.cnn = nn.Sequential(
