@@ -357,25 +357,20 @@ def unbatch(*args: Tuple[Union[Array, Sequence]]):
 
 
 def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
-    try:
-        if isinstance(array, (dict)):
-            return {k: _to_numpy(v) for k, v in array.items()}
-        if isinstance(array, torch.Tensor):
-            return array.cpu().numpy()
-        if (
-            isinstance(array, np.ndarray)
-            or isinstance(array, bool)
-            or isinstance(array, str)
-            or isinstance(array, float)
-            or isinstance(array, int)
-        ):
-            return array
-        else:
-            return np.array(array)
-    except:
-        import ipdb
-
-        ipdb.set_trace()
+    if isinstance(array, (dict)):
+        return {k: _to_numpy(v) for k, v in array.items()}
+    if isinstance(array, torch.Tensor):
+        return array.cpu().numpy()
+    if (
+        isinstance(array, np.ndarray)
+        or isinstance(array, bool)
+        or isinstance(array, str)
+        or isinstance(array, float)
+        or isinstance(array, int)
+    ):
+        return array
+    else:
+        return np.array(array)
 
 
 def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
