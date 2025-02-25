@@ -21,7 +21,8 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         state (bool): Whether to include state data in the observation
         sep_depth (bool): Whether to separate depth and rgb images in the observation. Default is True.
 
-    Note that the returned observations will have a "rgbd" or "rgb" or "depth" key depending on the rgb/depth bool flags.
+    Note that the returned observations will have a "rgb" or "depth" key depending on the rgb/depth bool flags, and will
+    always have a "state" key. If sep_depth is False, rgb and depth will be merged into a single "rgbd" key.
     """
 
     def __init__(self, env, rgb=True, depth=True, state=True, sep_depth=True) -> None:
