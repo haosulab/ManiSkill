@@ -211,7 +211,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
                 return self._body_data[self._body_data_index, 7:10]
             return self._body_data[self._body_data_index, 10:13]
         else:
-            return torch.Tensor([body.linear_velocity for body in self._bodies])
+            return torch.tensor([body.linear_velocity for body in self._bodies])
 
     @property
     def auto_compute_mass(self) -> torch.Tensor:
@@ -432,7 +432,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
                 return self._body_data[self._body_data_index, 10:13]
             return self._body_data[self._body_data_index, 7:10]
         else:
-            return torch.Tensor([body.linear_velocity for body in self._bodies])
+            return torch.tensor([body.linear_velocity for body in self._bodies])
 
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):
