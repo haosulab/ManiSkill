@@ -4,6 +4,7 @@ import pytest
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import mani_skill.envs
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 from tests.utils import VENV_OBS_MODES
 
 
@@ -15,7 +16,7 @@ def test_gymnasium_cpu_vecenv(env_id, obs_mode):
         env_id,
         n_envs,
         obs_mode=obs_mode,
-        # wrappers=[FlattenObservationWrapper],
+        wrappers=[CPUGymWrapper],
         vectorization_mode="sync",
     )
     np.random.seed(2022)
