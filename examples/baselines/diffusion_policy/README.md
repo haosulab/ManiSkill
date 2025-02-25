@@ -20,7 +20,7 @@ Read through the [imitation learning setup documentation](https://maniskill.read
 
 We provide scripts to train Diffusion Policy on demonstrations.
 
-Note that some demonstrations are slow (e.g. motion planning or human teleoperated) and can exceed the default max episode steps which can be an issue as imitation learning algorithms learn to solve the task at the same speed the demonstrations solve it. In this case, you can use the `--max-episode-steps` flag to set a higher value so that the policy can solve the task in time. General recommendation is to set `--max-episode-steps` to about 2x the length of the mean demonstrations length you are using for training. We have tuned baselines in the `baselines.sh` script that set a recommended `--max-episode-steps` for each task.
+Note that some demonstrations are slow (e.g. motion planning or human teleoperated) and can exceed the default max episode steps which can be an issue as imitation learning algorithms learn to solve the task at the same speed the demonstrations solve it. In this case, you can use the `--max-episode-steps` flag to set a higher value so that the policy can solve the task in time. General recommendation is to set `--max-episode-steps` to about 2x the length of the mean demonstrations length you are using for training. We have tuned baselines in the `baselines.sh` script that set a recommended `--max-episode-steps` for each task. Note we have not yet tuned/tested DP for RGB+Depth, just RGB or state only.
 
 Example state based training, learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
 
@@ -33,6 +33,19 @@ python train.py --env-id PickCube-v1 \
   --total_iters 30000 \
   --exp-name diffusion_policy-PickCube-v1-state-${demos}_motionplanning_demos-${seed} \
   --track # track training on wandb
+```
+
+Example RGB based training (which currently assumes input images are 128x128), learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
+
+```bash
+seed=1
+demos=100
+python train_rgbd.py --env-id PickCube-v1 \
+  --demo-path ~/.maniskill/demos/PickCube-v1/motionplanning/trajectory.rgb.pd_ee_delta_pos.physx_cpu.h5 \
+  --control-mode "pd_ee_delta_pos" --sim-backend "physx_cpu" --num-demos ${demos} --max_episode_steps 100 \
+  --total_iters 30000 --obs-mode "rgb" \
+  --exp-name diffusion_policy-PickCube-v1-rgb-${demos}_motionplanning_demos-${seed} \
+  --track
 ```
 
 ## Citation

@@ -38,17 +38,17 @@ print(env.action_space) # is a flat array now
 
 ## Flatten RGBD Observations
 
-This wrapper concatenates all the RGB and Depth images into a single image with combined channels, and concatenates all state data into a single array so that the observation space becomes a simple dictionary composed of a `state` key and a `rgbd` key.
+This wrapper concatenates all the RGB and Depth images into a single image with combined channels, and concatenates all state data into a single array so that the observation space becomes a simple dictionary composed of a `state`, `rgb`, and `depth` key.
 
 ```python
 import mani_skill.envs
 from mani_skill.utils.wrappers import FlattenRGBDObservationWrapper
 import gymnasium as gym
 
-env = gym.make("PickCube-v1", obs_mode="rgbd")
+env = gym.make("PickCube-v1", obs_mode="rgb+depth")
 print(env.observation_space) # is a complex dictionary
 # Dict('agent': Dict('qpos': Box(-inf, inf, (1, 9), float32), 'qvel': Box(-inf, inf, (1, 9), float32)), 'extra': Dict('is_grasped': Box(False, True, (1,), bool), 'tcp_pose': Box(-inf, inf, (1, 7), float32), 'goal_pos': Box(-inf, inf, (1, 3), float32)), 'sensor_param': Dict('base_camera': Dict('extrinsic_cv': Box(-inf, inf, (1, 3, 4), float32), 'cam2world_gl': Box(-inf, inf, (1, 4, 4), float32), 'intrinsic_cv': Box(-inf, inf, (1, 3, 3), float32))), 'sensor_data': Dict('base_camera': Dict('rgb': Box(0, 255, (1, 128, 128, 3), uint8), 'depth': Box(-32768, 32767, (1, 128, 128, 1), int16))))
 env = FlattenRGBDObservationWrapper(env)
 print(env.observation_space) # is a much simpler dictionary now
-# Dict('state': Box(-inf, inf, (1, 29), float32), 'rgbd': Box(-32768, 32767, (1, 128, 128, 4), int16))
+# Dict('state': Box(-inf, inf, (1, 29), float32), 'rgb': Box(-32768, 32767, (1, 128, 128, 3), int16), 'depth': Box(-32768, 32767, (1, 128, 128, 1), int16))
 ```
