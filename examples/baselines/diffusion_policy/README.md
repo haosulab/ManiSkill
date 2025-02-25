@@ -35,7 +35,7 @@ python train.py --env-id PickCube-v1 \
   --track # track training on wandb
 ```
 
-Example RGB based training, learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
+Example RGB based training (which currently assumes input images are 128x128), learning from 100 demonstrations generated via motionplanning in the PickCube-v1 task
 
 ```bash
 seed=1
