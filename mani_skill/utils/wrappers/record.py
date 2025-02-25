@@ -790,15 +790,6 @@ class RecordEpisode(gym.Wrapper):
                             video_name += "_" + suffix
             else:
                 video_name = name
-            # tile images
-            for i in range(len(self.render_images)):
-                image = self.render_images[i]
-                if len(image.shape) > 3:
-                    if len(image) == 1:
-                        image = image[0]
-                    else:
-                        image = tile_images(image, nrows=self.video_nrows)
-                self.render_images[i] = image
             images_to_video(
                 self.render_images,
                 str(self.output_dir),

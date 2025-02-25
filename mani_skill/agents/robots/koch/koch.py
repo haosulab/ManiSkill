@@ -128,8 +128,6 @@ class Koch(BaseAgent):
                         for part in mesh.parts:
                             part.material.base_color = color
 
-    # TODO (xhin): have to make a proper api to turn on color randomization
-    # currently incompatible with koch prints of other colors
     def _after_loading_articulation(self):
         super()._after_loading_articulation()
         self.set_colors()
