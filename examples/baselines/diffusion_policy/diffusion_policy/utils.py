@@ -207,11 +207,6 @@ def build_obs_space(env, depth_dtype, state_obs_extractor):
 
 
 def build_state_obs_extractor(env_id):
-    agent_extra_envs = ["PickCube", "PushChair", "DrawTriangle", "DrawSVG","PushCube", "StackCube"]
-    env_name = env_id.split("-")[0]
-    if env_name in ["TurnFaucet"]:
-        return lambda obs: list(obs["extra"].values())
-    elif env_name in agent_extra_envs:
-        return lambda obs: list(obs["agent"].values()) + list(obs["extra"].values())
-    else:
-        raise NotImplementedError(f"Please tune state obs by yourself")
+    # NOTE: You can tune/modify state observations specific to each environment here as you wish. By default we include all data
+    # but in some use cases you might want to exclude e.g. obs["agent"]["qvel"] as qvel is not always something you query in the real world.
+    return lambda obs: list(obs["agent"].values()) + list(obs["extra"].values())
