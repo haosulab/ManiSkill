@@ -61,11 +61,6 @@ for demos in 100; do
     --total_iters 100000 --no_include_depth \
     --exp-name diffusion_policy-StackCube-v1-rgb-${demos}_motionplanning_demos-${seed} \
     --demo_type=motionplanning --track
-
-  python -m mani_skill.trajectory.replay_trajectory \
-    --traj-path ~/.maniskill/demos/DrawTriangle-v1/motionplanning/trajectory.h5 \
-    --use-first-env-state -c pd_ee_delta_pos -o rgb \
-    --save-traj --num-envs 10 -b physx_cpu
     
   python train_rgbd.py --env-id DrawTriangle-v1 \
     --demo-path ~/.maniskill/demos/DrawTriangle-v1/motionplanning/trajectory.rgb.pd_ee_delta_pos.physx_cpu.h5 \

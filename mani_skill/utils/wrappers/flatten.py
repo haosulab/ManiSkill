@@ -32,20 +32,31 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         self.include_depth = depth
         self.sep_depth = sep_depth
         self.include_state = state
+
+        # check if rgb/depth data exists in first camera's sensor data
+        first_cam = next(iter(self.base_env._init_raw_obs["sensor_data"].values()))
+        if "depth" not in first_cam:
+            self.include_depth = False
+        if "rgb" not in first_cam:
+            self.include_rgb = False
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
     def observation(self, observation: Dict):
         sensor_data = observation.pop("sensor_data")
         del observation["sensor_param"]
-        images = []
+        rgb_images = []
+        depth_images = []
         for cam_data in sensor_data.values():
             if self.include_rgb:
-                images.append(cam_data["rgb"])
+                rgb_images.append(cam_data["rgb"])
             if self.include_depth:
-                images.append(cam_data["depth"])
+                depth_images.append(cam_data["depth"])
 
-        images = torch.concat(images, axis=-1)
+        if len(rgb_images) > 0:
+            rgb_images = torch.concat(rgb_images, axis=-1)
+        if len(depth_images) > 0:
+            depth_images = torch.concat(depth_images, axis=-1)
         # flatten the rest of the data which should just be state data
         observation = common.flatten_state_dict(
             observation, use_torch=True, device=self.base_env.device
@@ -54,15 +65,15 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         if self.include_state:
             ret["state"] = observation
         if self.include_rgb and not self.include_depth:
-            ret["rgb"] = images
+            ret["rgb"] = rgb_images
         elif self.include_rgb and self.include_depth:
             if self.sep_depth:
-                ret["rgb"] = images[..., :-1]
-                ret["depth"] = images[..., -1:]
+                ret["rgb"] = rgb_images
+                ret["depth"] = depth_images
             else:
-                ret["rgbd"] = images
+                ret["rgbd"] = torch.concat([rgb_images, depth_images], axis=-1)
         elif self.include_depth and not self.include_rgb:
-            ret["depth"] = images
+            ret["depth"] = depth_images
         return ret
 
 

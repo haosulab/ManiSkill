@@ -434,7 +434,7 @@ if __name__ == "__main__":
         env_kwargs,
         other_kwargs,
         video_dir=f"runs/{run_name}/videos" if args.capture_video else None,
-        wrappers=[partial(FlattenRGBDObservationWrapper, sep_depth=True, depth = "rgbd" in args.demo_path)],
+        wrappers=[FlattenRGBDObservationWrapper],
     )
     if args.track:
         import wandb
