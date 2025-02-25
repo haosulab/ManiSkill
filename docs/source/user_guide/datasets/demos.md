@@ -13,7 +13,7 @@ python -m mani_skill.utils.download_demo # with no args this prints all availabl
 python -m mani_skill.utils.download_demo all
 ```
 
-We provide a flexible tool to replay demonstration datasets to modify them e.g. add visual observation data, record videos and more, see the [trajectory replay documentation](../datasets/replay.md).If you want to generate the original datasets yourself locally we save all scripts used for dataset generation in the [data_generation](https://github.com/haosulab/ManiSkill/tree/main/scripts/data_generation) folder.
+Demo datasets are typically stored in a minimal format (e.g., no observation data) and store env states instead to compress them. We provide a flexible tool to replay demonstration datasets to modify them e.g. add visual observation data, record videos and more, see the [trajectory replay documentation](../datasets/replay.md). If you want to generate the original compressed datasets yourself locally we save all scripts used for dataset generation in the [data_generation](https://github.com/haosulab/ManiSkill/tree/main/scripts/data_generation) folder. For users looking to benchmark imitation learning we strongly recommend following the instructions on the [imitation learning setup page](../learning_from_demos/setup.md) which details how to replay the compressed datasets for benchmarking training datasets.
 
 
 ## Format
