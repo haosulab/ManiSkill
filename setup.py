@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = "3.0.0b18"
+__version__ = "3.0.0b19"
 
 long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/), with a strong focus on manipulation skills. The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
 - GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU!
