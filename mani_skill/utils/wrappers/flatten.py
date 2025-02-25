@@ -19,11 +19,12 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         rgb (bool): Whether to include rgb images in the observation
         depth (bool): Whether to include depth images in the observation
         state (bool): Whether to include state data in the observation
+        sep_depth (bool): Whether to separate depth and rgb images in the observation. Default is True.
 
     Note that the returned observations will have a "rgbd" or "rgb" or "depth" key depending on the rgb/depth bool flags.
     """
 
-    def __init__(self, env, rgb=True, depth=True, state=True, sep_depth=False) -> None:
+    def __init__(self, env, rgb=True, depth=True, state=True, sep_depth=True) -> None:
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
         self.include_rgb = rgb
@@ -55,8 +56,8 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
             ret["rgb"] = images
         elif self.include_rgb and self.include_depth:
             if self.sep_depth:
-                ret["rgb"] = images[...,:-1]
-                ret["depth"] = images[...,-1:]
+                ret["rgb"] = images[..., :-1]
+                ret["depth"] = images[..., -1:]
             else:
                 ret["rgbd"] = images
         elif self.include_depth and not self.include_rgb:
