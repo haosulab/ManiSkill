@@ -1,17 +1,19 @@
 import time
 from typing import Optional
 
+import cv2
 import hydra
 import numpy as np
 import torch
+
+# lerobot/lerobot-related imports
 from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
-from lerobot.common.robot_devices.motors.dynamixel import TorqueMode
+from lerobot.common.robot_devices.motors.configs import DynamixelMotorsBusConfig
 from lerobot.common.robot_devices.robots.configs import KochRobotConfig
 from lerobot.common.robot_devices.robots.manipulator import ManipulatorRobot
 from lerobot.common.robot_devices.utils import busy_wait
 
 # lerobot/lerobot-related imports
-# from lerobot.common.utils.utils import init_hydra_config
 from tqdm import tqdm
 
 from mani_skill.agents.robots.koch.koch import Koch
@@ -22,36 +24,50 @@ from mani_skill.utils.visualization.misc import tile_images
 
 class MS3RealKoch(BaseRealAgent):
     def __init__(
-        self, yaml_path, control_freq: int, control_mode: Optional[str] = None, **kwargs
+        self,
+        control_freq: int,
+        control_mode: Optional[str] = None,
+        img_square_crop=True,
+        img_res=(128, 128),
+        **kwargs
     ):
-        self.yaml_path = yaml_path
-        # default image transformation options, feel free to change if you set up your camera(s) differently
-        kwargs.setdefault("img_square_crop", True)
-        kwargs.setdefault("img_rotate", True)
-        kwargs.setdefault("img_res", (128, 128))
         super().__init__(
             sim_agent_cls=Koch,
             control_freq=control_freq,
             control_mode=control_mode,
             **kwargs,
         )
+        self.img_square_crop = img_square_crop
+        self.img_res = img_res
 
     def _load_agent(self, **kwargs):
         """Conect the robot"""
-        # load koch with provided yaml
-        # robot = hydra.utils.instantiate(init_hydra_config(self.yaml_path))
-        # TOOD (stao): @ xander my suggestion is to just let user pass by code their own RobotConfig here. We expect LeRobot users to either use the default we provide here
-        # or to write their own config anyway and pass it in. We just do a check that they label the base camera instead?
         robot_config = KochRobotConfig(
             leader_arms={},
+            follower_arms={
+                "main": DynamixelMotorsBusConfig(
+                    port="/dev/ttyACM0",  # <--- CHANGE HERE
+                    motors={
+                        # name: (index, model)
+                        "shoulder_pan": [1, "xl430-w250"],
+                        "shoulder_lift": [2, "xl430-w250"],
+                        "elbow_flex": [3, "xl330-m288"],
+                        "wrist_flex": [4, "xl330-m288"],
+                        "wrist_roll": [5, "xl330-m288"],
+                        "gripper": [6, "xl330-m288"],
+                    },
+                ),
+            },
             cameras={
                 "base_camera": OpenCVCameraConfig(
-                    camera_index=0,
-                    fps=30,
+                    camera_index=2,  # <--- CHANGE HERE
+                    fps=60,
                     width=640,
                     height=480,
-                )
+                    rotation=90,  # <--- CHANGE If Necessary
+                ),
             },
+            calibration_dir="koch_calibration",  # <--- CHANGE HERE
         )
         robot = ManipulatorRobot(robot_config)
         robot.connect()
@@ -117,3 +133,19 @@ class MS3RealKoch(BaseRealAgent):
             img = torch.tensor(self.img_trans(self.robot.cameras[name].read()))
             sensor_obs[name] = dict(rgb=img)
         return common.batch(sensor_obs)
+
+    def img_trans(self, img):
+        # center crop
+        if self.img_square_crop:
+            xy_res = img.shape[:2]
+            crop_res = np.min(xy_res)
+            cutoff = (np.max(xy_res) - crop_res) // 2
+            if xy_res[0] == xy_res[1]:
+                pass
+            elif np.argmax(xy_res) == 0:
+                img = img[cutoff:-cutoff, :, :]
+            else:
+                img = img[:, cutoff:-cutoff, :]
+        # resize
+        img = cv2.resize(img, self.img_res)
+        return img

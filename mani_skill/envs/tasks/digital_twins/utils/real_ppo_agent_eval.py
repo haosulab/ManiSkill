@@ -19,9 +19,6 @@ from mani_skill.utils.wrappers.record import RecordEpisode
 class Args:
     real_env_id: str = "RealGrabCube-v1"
     """environment for evalulation"""
-    robot_yaml_path: str = ""
-    keyframe_id: str = None
-    """robot keyframe for task initial robot qpos"""
     control_freq: int = 5
     control_mode: str = "pd_joint_delta_pos"
     checkpoint: str = None
@@ -45,8 +42,6 @@ if __name__ == "__main__":
     # make eval environment
     eval_envs = gym.make(
         args.real_env_id,
-        robot_yaml_path=args.robot_yaml_path,
-        keyframe_id=args.keyframe_id,
         control_freq=args.control_freq,
         control_mode=args.control_mode,
         control_timing=not args.debug,

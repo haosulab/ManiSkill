@@ -16,24 +16,20 @@ class RealGrabCubeEnv(BaseRealEnv):
     def __init__(
         self,
         agent=None,
-        robot_yaml_path=None,
         keyframe_id=None,
         control_freq=None,
         control_mode=None,
         control_timing=True,
         **kwargs
     ):
-        assert (
-            agent is not None or robot_yaml_path is not None
-        ), "robot or robot yaml path required to instantiate"
         if agent is None:
             agent = self.real_agent_cls(
-                robot_yaml_path,
-                control_freq=control_freq,
-                control_mode=control_mode,
-                **kwargs
+                control_freq=control_freq, control_mode=control_mode, **kwargs
             )
-        super().__init__(agent, keyframe_id=keyframe_id, control_timing=control_timing)
+        # we default to koch's 'evelated_turn' keyframe for this task
+        super().__init__(
+            agent, keyframe_id="elevated_turn", control_timing=control_timing
+        )
 
     # NOTE: In emulating maniskill environments, batching obs with batchsize=1 is required
     # agent qpos is already included in state observations, from BaseRealEnv

@@ -21,7 +21,7 @@ class BaseRealEnv(gym.Env):
     # once the physical robot and configs are set up, allows easy testing of evaluation environment
     # create image transform for raw camera outputs as necessary:
     real_robot = ...
-    real_env = gym.make("RealGrabCube-v1", real_robot=real_robot, keyframe_id="rest", control_mode="pd_joint_delta_pos")
+    real_env = gym.make("RealGrabCube-v1", real_robot=real_robot, control_mode="pd_joint_delta_pos")
     real_env = FlattenRGBDObservationWrapper(real_env, rgb=True, depth=False, state=True)
 
     # BaseRealEnv use pseudocode

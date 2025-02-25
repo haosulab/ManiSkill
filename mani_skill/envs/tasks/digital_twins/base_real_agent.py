@@ -36,19 +36,11 @@ class BaseRealAgent:
         sim_agent_cls: BaseAgent,
         control_freq: Optional[int] = None,
         control_mode: Optional[str] = None,
-        img_square_crop=True,
-        img_res=(128, 128),
-        img_rotate=True,
     ):
         self.sim_agent = sim_agent_cls(
             ManiSkillScene(), control_freq, control_mode, None, None
         )
         self.robot = self._load_agent()
-
-        # image transform information
-        self.img_square_crop = img_square_crop
-        self.img_res = img_res
-        self.img_rotate = img_rotate
 
         # reuse of ms3 controller for real robot
         self.control_mode = (
@@ -87,25 +79,3 @@ class BaseRealAgent:
 
     def get_obs_sensor_data(self):
         raise NotImplementedError()
-
-    # TODO (xhin): allow args to be lists/tuples for multi-camera setup
-    # TODO (xhin): support non 1:1 aspect ratio - currently not supported
-    def img_trans(self, img):
-        # center crop
-        if self.img_square_crop:
-            xy_res = img.shape[:2]
-            crop_res = np.min(xy_res)
-            cutoff = (np.max(xy_res) - crop_res) // 2
-            if xy_res[0] == xy_res[1]:
-                pass
-            elif np.argmax(xy_res) == 0:
-                img = img[cutoff:-cutoff, :, :]
-            else:
-                img = img[:, cutoff:-cutoff, :]
-        # rotate
-        if self.img_rotate:
-            img = img.transpose(1, 0, 2)
-            img = img[:, ::-1, :]
-        # resize
-        img = cv2.resize(img, self.img_res)
-        return img

@@ -13,12 +13,8 @@ from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 
 @dataclass
 class Args:
-    robot_yaml_path: str = ""
-    """path for the lerobot yaml config file of robot"""
     sim_env_id: str = "GrabCube-v1"
     real_env_id: str = "RealGrabCube-v1"
-    keyframe_id: str = None
-    """robot keyframe for task initial robot qpos"""
     user_kwargs_path: Optional[str] = None
     """path to json with extra env kwargs"""
     output_photo_path: Optional[str] = None
@@ -65,6 +61,7 @@ if __name__ == "__main__":
         obs_mode="rgb+segmentation",
         render_mode="rgb_array",
         debug=True,  # by default, basedigitaltwinsenv debug = True for 50/50 overlay
+        render_backend="cpu",
         **env_kwargs,
     )
     sim_env = FlattenRGBDObservationWrapper(sim_env, rgb=True, depth=False, state=True)
@@ -72,8 +69,6 @@ if __name__ == "__main__":
 
     real_env = gym.make(
         args.real_env_id,
-        robot_yaml_path=args.robot_yaml_path,
-        keyframe_id=args.keyframe_id,
         control_freq=sim_env.control_freq,
         control_mode=sim_env.control_mode,
         control_timing=False,  # no stepping occurs
