@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: maniskill-tdmpc2-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: gpu-container
+        image: visweshnagaswamy/maniskill_tdmpc2:latest
+        command: ["/bin/bash", "-c"]
+        args: [
+          "export WANDB_API_KEY=b3592fd884921171d1224569c36612d0b3604990 && \
+          git stash && git pull && \
+          conda run -n tdmpc2-ms python train.py model_size=5 steps=5000000 seed=1 \
+          exp_name=tdmpc2_experiment env_id=PushCube-v1 env_type=gpu num_envs=32 \
+          control_mode=pd_joint_vel obs=state save_video_local=true wandb=true \
+          > /pers_vol/logs/$(date +%Y-%m-%d_%H-%M-%S)-tdmpc.log"
+        ]
+        volumeMounts:
+        - mountPath: /pers_vol
+          name: persistent-volume
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: "128Gi"
+            cpu: "24"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: "128Gi"
+            cpu: "24"
+      restartPolicy: Never
+      volumes:
+      - name: persistent-volume
+        persistentVolumeClaim:
+          claimName: your_pvc_name
