@@ -12,14 +12,14 @@ from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube
 MP_SOLUTIONS = {
     "PickCube-v1": solvePickCube,
+    "PickCube-v2": solvePickCube,
     "StackCube-v1": solveStackCube,
     "PegInsertionSide-v1": solvePegInsertionSide,
     "PlugCharger-v1": solvePlugCharger,
     "PushCube-v1": solvePushCube,
     "PullCubeTool-v1": solvePullCubeTool,
     "LiftPegUpright-v1": solveLiftPegUpright,
-    "PullCube-v1": solvePullCube
-
+    "PullCube-v1": solvePullCube,
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -36,6 +36,8 @@ def parse_args(args=None):
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str, default="demos", help="where to save the recorded trajectories")
     parser.add_argument("--num-procs", type=int, default=1, help="Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing and only works with the CPU simulation backend at the moment.")
+    parser.add_argument("--camera-width", type=int, default=128, help="Width of the camera.")
+    parser.add_argument("--camera-height", type=int, default=128, help="Height of the camera.")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
@@ -49,11 +51,13 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
-        sim_backend=args.sim_backend
+        sim_backend=args.sim_backend,
+        camera_width=args.camera_width,
+        camera_height=args.camera_height
     )
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
-    
+
     if not args.traj_name:
         new_traj_name = time.strftime("%Y%m%d_%H%M%S")
     else:
