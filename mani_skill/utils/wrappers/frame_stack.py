@@ -1,84 +1,11 @@
 """Wrapper that stacks frames. Adapted from gymnasium package to support GPU vectorizated environments."""
 from collections import deque
-from typing import Union
 
 import gymnasium as gym
 import numpy as np
 import torch
-from gymnasium.error import DependencyNotInstalled
-from gymnasium.spaces import Box
 
 from mani_skill.envs.sapien_env import BaseEnv
-
-
-class LazyFrames:
-    """Ensures common frames are only stored once to optimize memory use.
-
-    To further reduce the memory use, it is optionally to turn on lz4 to compress the observations.
-
-    Note:
-        This object should only be converted to numpy array just before forward pass.
-    """
-
-    __slots__ = ("frame_shape", "dtype", "shape", "lz4_compress", "_frames")
-
-    def __init__(self, frames: list, lz4_compress: bool = False):
-        """Lazyframe for a set of frames and if to apply lz4.
-
-        Args:
-            frames (list): The frames to convert to lazy frames
-            lz4_compress (bool): Use lz4 to compress the frames internally
-
-        Raises:
-            DependencyNotInstalled: lz4 is not installed
-        """
-        self.frame_shape = tuple(frames[0].shape)
-        self.shape = (len(frames),) + self.frame_shape
-        self.dtype = frames[0].dtype
-        self._frames = frames
-        self.lz4_compress = lz4_compress
-
-    def __array__(self, dtype=None):
-        """Gets a torch tensor of stacked frames with specific dtype.
-
-        Args:
-            dtype: The dtype of the stacked frames
-
-        Returns:
-            The array of stacked frames with dtype
-        """
-        arr = self[:]
-        if dtype is not None:
-            return arr.astype(dtype)
-        return arr
-
-    def __len__(self):
-        """Returns the number of frame stacks.
-
-        Returns:
-            The number of frame stacks
-        """
-        return self.shape[0]
-
-    def __getitem__(self, int_or_slice: Union[int, slice]):
-        """Gets the stacked frames for a particular index or slice.
-
-        Args:
-            int_or_slice: Index or slice to get items for
-
-        Returns:
-            torch.stacked frames for the int or slice
-
-        """
-        # if isinstance(int_or_slice, int):
-        #     return self._check_decompress(self._frames[int_or_slice])  # single frame
-        return torch.stack(
-            [self._check_decompress(f) for f in self._frames[int_or_slice]], axis=0
-        )
-
-    def __eq__(self, other):
-        """Checks that the current frames are equal to the other object."""
-        return self.__array__() == other
 
 
 class FrameStack(gym.ObservationWrapper):
@@ -89,16 +16,14 @@ class FrameStack(gym.ObservationWrapper):
     is an array with shape [42], so if we stack 4 observations, the processed observation
     has shape [4, 42].
 
+    This wrapper also supports dict observations, and will stack the leafs of the dictionary accordingly.
+
     Note:
         - After :meth:`reset` is called, the frame buffer will be filled with the initial observation.
           I.e. the observation returned by :meth:`reset` will consist of `num_stack` many identical frames.
     """
 
-    def __init__(
-        self,
-        env: gym.Env,
-        num_stack: int,
-    ):
+    def __init__(self, env: gym.Env, num_stack: int, lz4_compress: bool = False):
         """Observation wrapper that stacks the observations in a rolling manner.
 
         Args:
@@ -110,7 +35,9 @@ class FrameStack(gym.ObservationWrapper):
 
         self.num_stack = num_stack
         self.frames = deque(maxlen=num_stack)
+        self.lz4_compress = lz4_compress
         [self.frames.append(self.base_env._init_raw_obs) for _ in range(self.num_stack)]
+        self.use_dict = isinstance(self.base_env._init_raw_obs, dict)
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
@@ -119,7 +46,24 @@ class FrameStack(gym.ObservationWrapper):
         return self.env.unwrapped
 
     def observation(self, observation):
-        return torch.stack(list(self.frames)).transpose(0, 1)
+        assert len(self.frames) == self.num_stack, (len(self.frames), self.num_stack)
+        if self.use_dict:
+            return {
+                k: torch.stack([x[k] for x in self.frames], dim=0).transpose(0, 1)
+                for k in self.observation_space.keys()
+            }
+        else:
+            return torch.stack(list(self.frames)).transpose(0, 1)
+
+        # LazyFrames equivalent code. It is unclear yet if this is faster or saves much memory. LazyFrames leverages __slots__ to save memory
+        # and have faster attribute access.
+        # if self.use_dict:
+        #     return {
+        #         k: LazyFrames([x[k] for x in self.frames], self.lz4_compress)
+        #         for k in self.observation_space.keys()
+        #     }
+        # else:
+        #     return LazyFrames(list(self.frames), self.lz4_compress)
 
     def step(self, action):
         """Steps through the environment, appending the observation to the frame buffer.
@@ -134,16 +78,26 @@ class FrameStack(gym.ObservationWrapper):
         self.frames.append(observation)
         return self.observation(None), reward, terminated, truncated, info
 
-    def reset(self, **kwargs):
+    def reset(self, seed=None, options=None):
         """Reset the environment with kwargs.
 
         Args:
-            **kwargs: The kwargs for the environment reset
+            seed: The seed for the environment reset
+            options: The options for the environment reset
 
         Returns:
             The stacked observations
         """
-        obs, info = self.env.reset(**kwargs)
+        if (
+            isinstance(options, dict)
+            and "env_idx" in options
+            and len(options["env_idx"]) < self.base_env.num_envs
+        ):
+            raise RuntimeError(
+                "partial environment reset is currently not supported for the FrameStack wrapper at this moment for GPU parallelized environments"
+            )
+        # NOTE (stao): we can support partial reset easily using tensordicts
+        obs, info = self.env.reset(seed=seed, options=options)
 
         [self.frames.append(obs) for _ in range(self.num_stack)]
 

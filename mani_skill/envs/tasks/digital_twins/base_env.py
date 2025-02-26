@@ -106,7 +106,14 @@ class BaseDigitalTwinEnv(BaseEnv):
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
         actor_seg = segmentation[..., 0]
-        mask = torch.ones_like(actor_seg)
+        mask = torch.ones_like(actor_seg, device=actor_seg.device)
+        if actor_seg.device != self.robot_link_ids.device:
+            # if using CPU simulation, the device of the robot_link_ids and target_object_actor_ids will be CPU first
+            # but for most users who use the sapien_cuda render backend image data will be on the GPU.
+            self.robot_link_ids = self.robot_link_ids.to(actor_seg.device)
+            self.target_object_actor_ids = self.target_object_actor_ids.to(
+                actor_seg.device
+            )
         if ("background" in self.rgb_overlay_mode) or (
             "debug" in self.rgb_overlay_mode
         ):
@@ -151,10 +158,18 @@ class BaseDigitalTwinEnv(BaseEnv):
                 assert (
                     "segmentation" in obs["sensor_data"][camera_name].keys()
                 ), "Image overlay requires segment info in the observation!"
+                if (
+                    self._rgb_overlay_images[camera_name].device
+                    != obs["sensor_data"][camera_name]["rgb"].device
+                ):
+                    self._rgb_overlay_images[camera_name] = self._rgb_overlay_images[
+                        camera_name
+                    ].to(obs["sensor_data"][camera_name]["rgb"].device)
+                overlay_img = self._rgb_overlay_images[camera_name]
                 green_screened_rgb = self._green_sceen_rgb(
                     obs["sensor_data"][camera_name]["rgb"],
                     obs["sensor_data"][camera_name]["segmentation"],
-                    self._rgb_overlay_images[camera_name],
+                    overlay_img,
                 )
                 obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
         return obs

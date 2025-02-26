@@ -2,11 +2,11 @@ import mplib
 import numpy as np
 import sapien
 import trimesh
-
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.structs.pose import to_sapien_pose
+
 
 class PandaStickMotionPlanningSolver:
     def __init__(
@@ -114,7 +114,7 @@ class PandaStickMotionPlanningSolver:
     ):
         pose = to_sapien_pose(pose)
         # try screw two times before giving up
-        pose = sapien.Pose(p=pose.p , q=pose.q)
+        pose = sapien.Pose(p=pose.p, q=pose.q)
         result = self.planner.plan_screw(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],

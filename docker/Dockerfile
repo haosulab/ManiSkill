@@ -42,7 +42,7 @@ COPY nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
 COPY nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json
 
 # install dependencies
-RUN pip install --upgrade mani-skill==3.0.0.b18 && pip cache purge
+RUN pip install --upgrade mani-skill==3.0.0b19 && pip cache purge
 RUN pip install torch 
 
 # download physx GPU binary via sapien

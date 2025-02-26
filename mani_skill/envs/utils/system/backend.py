@@ -63,7 +63,8 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
     elif render_backend[:4] == "cuda":
         render_device = sapien.Device(render_backend)
     else:
-        raise ValueError(f"Invalid render backend: {render_backend}")
+        # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
+        render_device = sapien.Device(render_backend)
     return BackendInfo(
         device=device,
         sim_device=sim_device,
