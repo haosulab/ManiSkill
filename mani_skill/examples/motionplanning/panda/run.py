@@ -2,54 +2,25 @@ import multiprocessing as mp
 import os
 from copy import deepcopy
 import time
-import traceback
 import argparse
 import gymnasium as gym
-import json
 import numpy as np
 from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere,solveOpenDrawer,solveRaiseCube
-from mani_skill.envs.distraction_set import DISTRACTION_SETS
-
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube
 MP_SOLUTIONS = {
-    "DrawTriangle-v1": solveDrawTriangle,
     "PickCube-v1": solvePickCube,
-    "PickCubeMP-v1": solvePickCube,
+    "PickCube-v2": solvePickCube,
     "StackCube-v1": solveStackCube,
     "PegInsertionSide-v1": solvePegInsertionSide,
     "PlugCharger-v1": solvePlugCharger,
-    "PlaceSphere-v1": solvePlaceSphere,
     "PushCube-v1": solvePushCube,
     "PullCubeTool-v1": solvePullCubeTool,
     "LiftPegUpright-v1": solveLiftPegUpright,
     "PullCube-v1": solvePullCube,
-    "DrawSVG-v1" : solveDrawSVG,
-    # 
-    # New tasks:
-    "RaiseCube-v1": solveRaiseCube,
-    "OpenDrawer-v1": solveOpenDrawer,               # new
-    "PushCube-v2": solvePushCube,                   # new
-    "StackCube-v2": solveStackCube,                 # new
 }
-
-"""
-DISTRACTION_SET=none
-# ^ Must be one of: none, all, distractor_object_cfg, MO_color_cfg, MO_texture_cfg, RO_color_cfg, RO_texture_cfg, table_color_cfg, table_texture_cfg, camera_pose_cfg
-
-python mani_skill/examples/motionplanning/panda/run.py \
-    --env-id ${ENV_ID} \
-    --num-traj 10 \
-    --distraction-set ${DISTRACTION_SET} \
-    --num-procs 1 \
-    --reward-mode "sparse" \
-    --random-seed \
-    --vis
-"""
-
-
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1", help=f"Environment to run motion planning solver on. Available options are {list(MP_SOLUTIONS.keys())}")
@@ -61,46 +32,29 @@ def parse_args(args=None):
     parser.add_argument("--render-mode", type=str, default="rgb_array", help="can be 'sensors' or 'rgb_array' which only affect what is saved to videos")
     parser.add_argument("--vis", action="store_true", help="whether or not to open a GUI to visualize the solution live")
     parser.add_argument("--save-video", action="store_true", help="whether or not to save videos locally")
-    parser.add_argument("--random-seed", action="store_true", help="whether or not to randomize the seed for each process")
     parser.add_argument("--traj-name", type=str, help="The name of the trajectory .h5 file that will be created.")
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str, default="demos", help="where to save the recorded trajectories")
     parser.add_argument("--num-procs", type=int, default=1, help="Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing and only works with the CPU simulation backend at the moment.")
-    parser.add_argument("--distraction-set", type=str, required=True, help=f"Distraction set to use. Available options are {list(DISTRACTION_SETS.keys())}")
+    parser.add_argument("--camera-width", type=int, default=128, help="Width of the camera.")
+    parser.add_argument("--camera-height", type=int, default=128, help="Height of the camera.")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
-    distraction_set = DISTRACTION_SETS[args.distraction_set.upper()]
-    print("Distraction set:")
-    print(json.dumps(distraction_set.to_dict(), indent=2))
-    try:
-        env = gym.make(
-            env_id,
-            obs_mode=args.obs_mode,
-            control_mode="pd_joint_pos",
-            render_mode=args.render_mode,
-            reward_mode="dense" if args.reward_mode is None else args.reward_mode,
-            sensor_configs=dict(shader_pack=args.shader),
-            human_render_camera_configs=dict(shader_pack=args.shader),
-            viewer_camera_configs=dict(shader_pack=args.shader),
-            sim_backend=args.sim_backend,
-            distraction_set=distraction_set
-        )
-    except TypeError as e:
-        assert "got an unexpected keyword argument 'distraction_set'" in str(e)
-        env = gym.make(
-            env_id,
-            obs_mode=args.obs_mode,
-            control_mode="pd_joint_pos",
-            render_mode=args.render_mode,
-            reward_mode="dense" if args.reward_mode is None else args.reward_mode,
-            sensor_configs=dict(shader_pack=args.shader),
-            human_render_camera_configs=dict(shader_pack=args.shader),
-            viewer_camera_configs=dict(shader_pack=args.shader),
-            sim_backend=args.sim_backend,
-        )
-
+    env = gym.make(
+        env_id,
+        obs_mode=args.obs_mode,
+        control_mode="pd_joint_pos",
+        render_mode=args.render_mode,
+        reward_mode="dense" if args.reward_mode is None else args.reward_mode,
+        sensor_configs=dict(shader_pack=args.shader),
+        human_render_camera_configs=dict(shader_pack=args.shader),
+        viewer_camera_configs=dict(shader_pack=args.shader),
+        sim_backend=args.sim_backend,
+        camera_width=args.camera_width,
+        camera_height=args.camera_height
+    )
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
 
@@ -118,27 +72,23 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         source_type="motionplanning",
         source_desc="official motion planning solution from ManiSkill contributors",
         video_fps=30,
-        record_reward=False,
         save_on_reset=False
     )
     output_h5_path = env._h5_file.filename
     solve = MP_SOLUTIONS[env_id]
+    print(f"Motion Planning Running on {env_id}")
     pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")
     seed = start_seed
-    print(f"Motion Planning Running on {env_id} with seed {seed}")
     successes = []
     solution_episode_lengths = []
     failed_motion_plans = 0
     passed = 0
     while True:
-        env.reset(seed=seed, options={"reconfigure": True}) # reconfigure so distractor variations are resampled
-        res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
-        # try:
-        # except Exception as e:
-        #     print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
-        #     print("Traceback:")
-        #     print(''.join(traceback.format_tb(e.__traceback__)))
-        #     res = -1
+        try:
+            res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
+        except Exception as e:
+            print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
+            res = -1
 
         if res == -1:
             success = False
@@ -165,7 +115,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
                     failed_motion_plan_rate=failed_motion_plans / (seed + 1),
                     avg_episode_length=np.mean(solution_episode_lengths),
                     max_episode_length=np.max(solution_episode_lengths),
-                    min_episode_length=np.min(solution_episode_lengths)
+                    # min_episode_length=np.min(solution_episode_lengths)
                 )
             )
             seed += 1
@@ -195,12 +145,10 @@ def main(args):
             tqdm.write(f"Remove {json_path}")
             os.remove(json_path)
     else:
-        if args.random_seed:
-            seed = np.random.randint(0, int(2**32-1))
-        else:
-            seed = 0
-        _main(args, start_seed=seed)
+        _main(args)
 
 if __name__ == "__main__":
+    # start = time.time()
     mp.set_start_method("spawn")
     main(parse_args())
+    # print(f"Total time taken: {time.time() - start}")
