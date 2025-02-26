@@ -153,6 +153,16 @@ do
     --track
 done
 
+for seed in ${seeds[@]}
+do
+  python ppo_fast.py --env_id="PullDrawer-v1" --seed=${seed} \
+    --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 --num-eval-steps=100 \
+    --num_eval_envs=16 \
+    --cudagraphs --exp-name="ppo-PullDrawer-v1-state-${seed}-walltime_efficient" \
+    --track
+done
+
 ### RGB Based PPO Baselines ###
 for seed in ${seeds[@]}
 do
