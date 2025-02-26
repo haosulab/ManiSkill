@@ -88,7 +88,11 @@ class FrameStack(gym.ObservationWrapper):
         Returns:
             The stacked observations
         """
-        if isinstance(options, dict) and "env_idx" in options:
+        if (
+            isinstance(options, dict)
+            and "env_idx" in options
+            and len(options["env_idx"]) < self.base_env.num_envs
+        ):
             raise RuntimeError(
                 "partial environment reset is currently not supported for the FrameStack wrapper at this moment for GPU parallelized environments"
             )
