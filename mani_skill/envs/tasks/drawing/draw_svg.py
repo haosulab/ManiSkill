@@ -31,7 +31,7 @@ class DrawSVGEnv(BaseEnv):
     - the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal svg
     """
 
-    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawSVG-v1_rt.mp4"
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/DrawSVG-v1_rt.mp4"
 
 
     MAX_DOTS = 1000
