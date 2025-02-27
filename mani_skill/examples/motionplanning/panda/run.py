@@ -20,8 +20,9 @@ MP_SOLUTIONS = {
     "PushCube-v1": solvePushCube,
     "PullCubeTool-v1": solvePullCubeTool,
     "LiftPegUpright-v1": solveLiftPegUpright,
-    "PullCube-v1": solvePullCube
-
+    "PullCube-v1": solvePullCube,
+    "StackPyramid-v1": solveStackPyramid,
+    "PickAndPlace-v1": solvePickAndPlace,
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
