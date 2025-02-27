@@ -82,6 +82,7 @@ class PickAndPlaceEnv(BaseEnv):
             name="container_grid",
             n=2,
             m=2,
+            body_type="kinematic",
         )
         self.red_cube = actors.build_cube(
             self.scene,
