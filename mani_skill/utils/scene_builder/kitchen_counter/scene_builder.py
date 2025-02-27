@@ -8,8 +8,6 @@ import sapien.render
 import torch
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.multi_agent import MultiAgent
-from mani_skill.agents.robots.fetch import FETCH_WHEELS_COLLISION_BIT
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
 

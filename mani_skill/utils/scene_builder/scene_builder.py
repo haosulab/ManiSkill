@@ -52,12 +52,19 @@ class SceneBuilder:
     def build(self, build_config_idxs: List[int] = None):
         """
         Should create actor/articulation builders and only build objects into the scene without initializing pose, qpos, velocities etc.
+
+        Arguments:
+            build_config_idxs: A list of integers, where the ith value is the scene id for the ith parallel env, an API to support heterogeneous scenes building.
         """
         raise NotImplementedError()
 
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
         """
         Should initialize the scene, which can include e.g. setting the pose of all objects, changing the qpos/pose of articulations/robots etc.
+
+        Arguments:
+            env_idx: A tensor of integers indicating which parallel envs are being initialized.
+            init_config_idxs: A list of integers, where the ith value is the scene config id for the ith parallel env
         """
         raise NotImplementedError()
 

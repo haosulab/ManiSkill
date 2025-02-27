@@ -5,11 +5,14 @@ from mani_skill.utils.scene_builder.ai2thor.variants import (
     RoboTHORSceneBuilder,
     iTHORSceneBuilder,
 )
+from mani_skill.utils.scene_builder.infinigen.scene_builder import (
+    InfinigenIndoorsSceneBuilder,
+)
 from mani_skill.utils.scene_builder.registration import REGISTERED_SCENE_BUILDERS
+from mani_skill.utils.scene_builder.replicacad.rearrange import *
 from mani_skill.utils.scene_builder.replicacad.scene_builder import (
     ReplicaCADSceneBuilder,
 )
-from mani_skill.utils.scene_builder.replicacad.rearrange import *
 
 from .base_env import SceneManipulationEnv
 
