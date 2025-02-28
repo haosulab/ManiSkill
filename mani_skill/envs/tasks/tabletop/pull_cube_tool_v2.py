@@ -1,6 +1,6 @@
 import numpy as np
 
-from mani_skill.envs.tasks.tabletop.pick_cube import PickCubeEnv
+from mani_skill.envs.tasks.tabletop.pull_cube_tool import PullCubeToolEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
@@ -8,11 +8,11 @@ from mani_skill.utils.registration import register_env
 DEFAULT_CAMERA_WIDTH = 128
 DEFAULT_CAMERA_HEIGHT = 128
 
-@register_env("PickCube-v2", max_episode_steps=100)
-class PickCubeV2Env(PickCubeEnv):
+@register_env("PullCubeTool-v2", max_episode_steps=50)
+class PullCubeToolV2Env(PullCubeToolEnv):
     """
     **Task Description:**
-    Nearly exacty copy of PickCubeEnv, but with 3 cameras instead of 1.
+    Nearly exacty copy of PullCubeToolEnv, but with 3 cameras instead of 1.
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self._camera_width = kwargs.pop("camera_width", DEFAULT_CAMERA_WIDTH)

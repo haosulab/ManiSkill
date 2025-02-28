@@ -2,6 +2,7 @@ import multiprocessing as mp
 import os
 from copy import deepcopy
 import time
+import traceback
 import argparse
 import gymnasium as gym
 import numpy as np
@@ -13,13 +14,16 @@ from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, so
 MP_SOLUTIONS = {
     "DrawTriangle-v1": solveDrawTriangle,
     "PickCube-v1": solvePickCube,
-    "PickCube-v2": solvePickCube,
+    "PickCube-v2": solvePickCube, # new
     "StackCube-v1": solveStackCube,
+    "StackCube-v2": solveStackCube, # new
     "PegInsertionSide-v1": solvePegInsertionSide,
     "PlugCharger-v1": solvePlugCharger,
     "PlaceSphere-v1": solvePlaceSphere,
     "PushCube-v1": solvePushCube,
+    "PullCube-v2": solvePullCube,         # new
     "PullCubeTool-v1": solvePullCubeTool,
+    "PullCubeTool-v2": solvePullCubeTool, # new
     "LiftPegUpright-v1": solveLiftPegUpright,
     "PullCube-v1": solvePullCube,
     "DrawSVG-v1" : solveDrawSVG,
@@ -40,24 +44,38 @@ def parse_args(args=None):
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str, default="demos", help="where to save the recorded trajectories")
     parser.add_argument("--num-procs", type=int, default=1, help="Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing and only works with the CPU simulation backend at the moment.")
-    parser.add_argument("--camera-width", type=int, default=128, help="Width of the camera.")
-    parser.add_argument("--camera-height", type=int, default=128, help="Height of the camera.")
+    parser.add_argument("--camera-width", type=int, required=False, help="Width of the camera.")
+    parser.add_argument("--camera-height", type=int,  required=False, help="Height of the camera.")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
-    env = gym.make(
-        env_id,
-        obs_mode=args.obs_mode,
-        control_mode="pd_joint_pos",
-        render_mode=args.render_mode,
+    if args.camera_width is not None and args.camera_height is not None:
+        env = gym.make(
+            env_id,
+            obs_mode=args.obs_mode,
+            control_mode="pd_joint_pos",
+            render_mode=args.render_mode,
+            reward_mode="dense" if args.reward_mode is None else args.reward_mode,
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
         sim_backend=args.sim_backend,
         camera_width=args.camera_width,
-        camera_height=args.camera_height
-    )
+            camera_height=args.camera_height
+        )
+    else:
+        env = gym.make(
+            env_id,
+            obs_mode=args.obs_mode,
+            control_mode="pd_joint_pos",
+            render_mode=args.render_mode,
+            reward_mode="dense" if args.reward_mode is None else args.reward_mode,
+            sensor_configs=dict(shader_pack=args.shader),
+            human_render_camera_configs=dict(shader_pack=args.shader),
+            viewer_camera_configs=dict(shader_pack=args.shader),
+            sim_backend=args.sim_backend
+        )
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
 
@@ -92,6 +110,8 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
         except Exception as e:
             print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
+            print("Traceback:")
+            print(''.join(traceback.format_tb(e.__traceback__)))
             res = -1
 
         if res == -1:
