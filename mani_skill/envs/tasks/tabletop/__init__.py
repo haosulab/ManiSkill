@@ -6,9 +6,11 @@ from .pick_cube import PickCubeEnv
 from .pick_cube_v2 import PickCubeV2Env
 from .pick_single_ycb import PickSingleYCBEnv
 from .plug_charger import PlugChargerEnv
+from .plug_charger_v2 import PlugChargerV2Env # new
 from .pull_cube import PullCubeEnv
 from .pull_cube_v2 import PullCubeV2Env          # new
 from .push_cube import PushCubeEnv
+from .push_cube_v2 import PushCubeV2Env          # new
 from .stack_cube import StackCubeEnv
 from .stack_cube_v2 import StackCubeV2Env        # new
 from .turn_faucet import TurnFaucetEnv

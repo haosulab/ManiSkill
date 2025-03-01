@@ -21,6 +21,7 @@ MP_SOLUTIONS = {
     "PlugCharger-v1": solvePlugCharger,
     "PlaceSphere-v1": solvePlaceSphere,
     "PushCube-v1": solvePushCube,
+    "PushCube-v2": solvePushCube, # new
     "PullCube-v2": solvePullCube,         # new
     "PullCubeTool-v1": solvePullCubeTool,
     "PullCubeTool-v2": solvePullCubeTool, # new
