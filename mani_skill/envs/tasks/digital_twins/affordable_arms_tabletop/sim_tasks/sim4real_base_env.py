@@ -123,7 +123,6 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             self.rgb_overlay_path = None
 
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        self.cam_rand_on_step = cam_rand_on_step
         self.keyframe_id = keyframe_id
         if debug:
             overlay_mode = list(self.rgb_overlay_mode)
@@ -132,7 +131,6 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
 
         toggle_rand = 0.0 if ("debug" in self.rgb_overlay_mode or dr == False) else 1.0
         self.toggle_rand = toggle_rand
-
         ################ Task-Agnostic Randmoizations ################
         # robot color noise
         self.robot_color_noise = 0.05
@@ -152,6 +150,8 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         self.camera_fov_noise_range = (
             2.0 * (np.pi / 180) * toggle_rand
         )  # max rad offset from camera_fov to sample from
+
+        self.cam_rand_on_step = cam_rand_on_step and self.toggle_rand
 
         super().__init__(
             *args,
@@ -211,11 +211,23 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
         camera_fov_noise = self.camera_fov_noise_range * (
             2 * torch.rand(self.num_envs) - 1
         )
+        orig_width_height = np.array([640, 480])
+        scaling_factor = 480 / 128
+        intrinsic = np.array([[604.923, 0, 320.502], [0, 604.595, 246.317], [0, 0, 1]])
+        intrinsic[0, 2] = (
+            intrinsic[0, 2] - (orig_width_height[0] - orig_width_height[1]) / 2
+        )
+        intrinsic[1, 2] = intrinsic[1, 2]
+        intrinsic[:2, :3] = intrinsic[:2, :3] / scaling_factor
+
         return CameraConfig(
             "base_camera",
             pose=Pose.create_from_pq(p=[0, 0, 0]),
             width=128,
             height=128,
+            # intrinsic=np.array([[604.923, 0, 320.502], [0, 604.595, 246.317], [0, 0, 1]]),
+            # intrinsic=intrinsic,
+            # fov=np.pi*(43/180), # 42-48
             fov=[self.camera_fov + x.item() for x in camera_fov_noise],
             near=0.01,
             far=100,
@@ -240,7 +252,7 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
     def _load_scene(self, options: dict):
         # table
         self.table_scene = TableSceneBuilder(
-            self, robot_init_qpos_noise=self.robot_init_qpos_noise
+            self, robot_init_qpos_noise=self.robot_init_qpos_noise * self.toggle_rand
         )
         self.table_scene.build()
 

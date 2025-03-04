@@ -5,6 +5,7 @@ from typing import Optional
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 import tyro
 
 from mani_skill.utils.visualization.misc import tile_images
@@ -75,12 +76,15 @@ if __name__ == "__main__":
     real_env = FlattenRGBDObservationWrapper(
         real_env, rgb=True, depth=False, state=True
     )
+    real_env.reset()
+    for i in range(10):
+        real_env.step(None)
 
     # for plotting robot camera reads
     fig = plt.figure()
     ax = fig.add_subplot()
     im = ax.imshow(sim_env.render()[0] / 255)
-
+    torch.set_printoptions(precision=4)
     if args.output_photo_path is not None:
         path, ext = args.output_photo_path.split(".")
         real_obs = real_env.get_obs()["sensor_data"]
@@ -88,9 +92,13 @@ if __name__ == "__main__":
             plt.imsave(path + "_" + name + "." + ext, real_obs[name]["rgb"][0].numpy())
     else:
         obs, _ = real_env.reset()
+        # qpos_ckpt = torch.tensor([[0.2, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]])
+        # real_env.agent.reset(qpos_ckpt[0])
+        # sim_env.agent.robot.set_qpos(qpos_ckpt)
         print("Camera alignment: Move real camera to align, close figure to exit")
         while True:
             overlaid_imgs = overlay_envs(sim_env, real_env)
+            print("diff", sim_env.agent.robot.qpos - real_env.agent.qpos)
             im.set_data(overlaid_imgs)
             # Redraw the plot
             fig.canvas.draw()

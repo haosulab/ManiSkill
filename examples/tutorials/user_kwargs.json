@@ -1,0 +1,46 @@
+{
+  "robot_base_color": [
+    0.95,
+    0.95,
+    0.95
+  ],
+  "robot_motor_color": [
+    0.05,
+    0.05,
+    0.05
+  ],
+  "rgb_overlay_path": "/home/stao/work/research/maniskill/ManiSkill/greenscreen_base_camera.png",
+  "alignment_dots": [
+    [
+      0.2,
+      0.1,
+      0
+    ],
+    [
+      0.2,
+      -0.1,
+      0
+    ],
+    [
+      0.3,
+      0.0,
+      0
+    ],
+    [
+      0.3,
+      0.1,
+      0
+    ]
+  ],
+  "base_camera_pos": [
+    0.45,
+    -0.30,
+    0.14
+  ],
+  "camera_target": [
+    0.2,
+    0,
+    0
+  ],
+  "camera_fov": 0.7853981633974483
+}

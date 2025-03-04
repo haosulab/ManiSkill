@@ -7,7 +7,10 @@ import numpy as np
 import torch
 
 # lerobot/lerobot-related imports
-from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
+from lerobot.common.robot_devices.cameras.configs import (
+    IntelRealSenseCameraConfig,
+    OpenCVCameraConfig,
+)
 from lerobot.common.robot_devices.motors.configs import DynamixelMotorsBusConfig
 from lerobot.common.robot_devices.robots.configs import KochRobotConfig
 from lerobot.common.robot_devices.robots.manipulator import ManipulatorRobot
@@ -46,7 +49,7 @@ class MS3RealKoch(BaseRealAgent):
             leader_arms={},
             follower_arms={
                 "main": DynamixelMotorsBusConfig(
-                    port="/dev/ttyACM0",  # <--- CHANGE HERE
+                    port="/dev/ttyACM1",  # <--- CHANGE HERE
                     motors={
                         # name: (index, model)
                         "shoulder_pan": [1, "xl430-w250"],
@@ -59,12 +62,13 @@ class MS3RealKoch(BaseRealAgent):
                 ),
             },
             cameras={
-                "base_camera": OpenCVCameraConfig(
-                    camera_index=2,  # <--- CHANGE HERE
-                    fps=60,
+                "base_camera": IntelRealSenseCameraConfig(
+                    # camera_index=2,  # <--- CHANGE HERE
+                    serial_number=146322070293,
+                    fps=30,
                     width=640,
                     height=480,
-                    rotation=90,  # <--- CHANGE If Necessary
+                    # rotation=90,  # <--- CHANGE If Necessary
                 ),
             },
             calibration_dir="koch_calibration",  # <--- CHANGE HERE
@@ -75,7 +79,17 @@ class MS3RealKoch(BaseRealAgent):
 
     def send_qpos(self, qpos):
         """send qpos in radians for robot to match"""
-        self.robot.send_action(torch.rad2deg(qpos))
+        deg = torch.rad2deg(qpos)
+        # deg[2] -= 5
+        # deg[1] += 5
+        # deg[2] -= 3.0
+        # deg[-3] -= 3.0
+        # deg[-1] += 1
+
+        deg[0] -= 0.0
+        deg[2] -= 2.0
+        deg[3] -= 4.0
+        self.robot.send_action(deg)
 
     @property
     def qpos(self):
@@ -115,7 +129,7 @@ class MS3RealKoch(BaseRealAgent):
                 self.send_qpos(target_pos)
                 dt_s = time.perf_counter() - start_loop_t
                 busy_wait(1 / freq - dt_s)
-
+            print(self.qpos, qpos, qpos - self.qpos)
             print("Press Enter to Reset Koch v1.1 Follower Arm")
             input()
 
@@ -136,6 +150,9 @@ class MS3RealKoch(BaseRealAgent):
 
     def img_trans(self, img):
         # center crop
+        # import matplotlib.pyplot as plt
+        # plt.imshow(img)
+        # plt.show()
         if self.img_square_crop:
             xy_res = img.shape[:2]
             crop_res = np.min(xy_res)
