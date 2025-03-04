@@ -1,20 +1,16 @@
 ALGO_NAME = 'BC_Diffusion_state_UNet'
 
-import argparse
 import os
 import random
-from distutils.util import strtobool
 import time
-import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 from diffusion_policy.evaluate import evaluate
-from mani_skill.utils import gym_utils
-from mani_skill.utils.registration import REGISTERED_ENVS
 
 from collections import defaultdict
 
@@ -52,8 +48,10 @@ class Args:
 
     env_id: str = "PegInsertionSide-v0"
     """the id of the environment"""
-    demo_path: str = 'data/ms2_official_demos/rigid_body/PegInsertionSide-v0/trajectory.state.pd_ee_delta_pose.h5'
-    """the path of demo dataset (pkl or h5)"""
+    demo_path: str = (
+        "demos/PegInsertionSide-v1/trajectory.state.pd_ee_delta_pose.physx_cpu.h5"
+    )
+    """the path of demo dataset, it is expected to be a ManiSkill dataset h5py format file"""
     num_demos: Optional[int] = None
     """number of trajectories to load from the demo dataset"""
     total_iters: int = 1_000_000
@@ -85,7 +83,7 @@ class Args:
     """the number of episodes to evaluate the agent on"""
     num_eval_envs: int = 10
     """the number of parallel environments to evaluate the agent on"""
-    sim_backend: str = "cpu"
+    sim_backend: str = "physx_cpu"
     """the simulation backend to use for evaluation environments. can be "cpu" or "gpu"""
     num_dataload_workers: int = 0
     """the number of workers to use for loading the training data in the torch dataloader"""
@@ -296,16 +294,16 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array")
-    if args.max_episode_steps is not None:
-        env_kwargs["max_episode_steps"] = args.max_episode_steps
+    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array", human_render_camera_configs=dict(shader_pack="default"))
+    assert args.max_episode_steps != None, "max_episode_steps must be specified as imitation learning algorithms task solve speed is dependent on the data you train on"
+    env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = dict(obs_horizon=args.obs_horizon)
     envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
 
     if args.track:
         import wandb
         config = vars(args)
-        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps or gym_utils.find_max_episode_steps_value(envs))
+        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps)
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
@@ -355,48 +353,17 @@ if __name__ == "__main__":
     ema = EMAModel(parameters=agent.parameters(), power=0.75)
     ema_agent = Agent(envs, args).to(device)
 
-    # ---------------------------------------------------------------------------- #
-    # Training begins.
-    # ---------------------------------------------------------------------------- #
-    agent.train()
-
     best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
-    for iteration, data_batch in enumerate(train_dataloader):
-        # # copy data from cpu to gpu
-        # data_batch = {k: v.cuda(non_blocking=True) for k, v in data_batch.items()}
-
-        # forward and compute loss
-        total_loss = agent.compute_loss(
-            obs_seq=data_batch['observations'], # (B, L, obs_dim)
-            action_seq=data_batch['actions'], # (B, L, act_dim)
-        )
-
-        # backward
-        optimizer.zero_grad()
-        total_loss.backward()
-        optimizer.step()
-        lr_scheduler.step() # step lr scheduler every batch, this is different from standard pytorch behavior
-        last_tick = time.time()
-
-        # update Exponential Moving Average of the model weights
-        ema.step(agent.parameters())
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
-        if iteration % args.log_freq == 0:
-            print(f"Iteration {iteration}, loss: {total_loss.item()}")
-            writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], iteration)
-            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
-            for k, v in timings.items():
-                writer.add_scalar(f"time/{k}", v, iteration)
-        # Evaluation
+    # define evaluation and logging functions
+    def evaluate_and_save_best(iteration):
         if iteration % args.eval_freq == 0:
             last_tick = time.time()
-
             ema.copy_to(ema_agent.parameters())
-            # def sample_fn(obs):
-
-            eval_metrics = evaluate(args.num_eval_episodes, ema_agent, envs, device, args.sim_backend)
+            eval_metrics = evaluate(
+                args.num_eval_episodes, ema_agent, envs, device, args.sim_backend
+            )
             timings["eval"] += time.time() - last_tick
 
             print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
@@ -410,9 +377,61 @@ if __name__ == "__main__":
                 if k in eval_metrics and eval_metrics[k] > best_eval_metrics[k]:
                     best_eval_metrics[k] = eval_metrics[k]
                     save_ckpt(run_name, f"best_eval_{k}")
-                    print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
+                    print(
+                        f"New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint."
+                    )
+    def log_metrics(iteration):
+        if iteration % args.log_freq == 0:
+            writer.add_scalar(
+                "charts/learning_rate", optimizer.param_groups[0]["lr"], iteration
+            )
+            writer.add_scalar("losses/total_loss", total_loss.item(), iteration)
+            for k, v in timings.items():
+                writer.add_scalar(f"time/{k}", v, iteration)
+
+    # ---------------------------------------------------------------------------- #
+    # Training begins.
+    # ---------------------------------------------------------------------------- #
+    agent.train()
+    pbar = tqdm(total=args.total_iters)
+    last_tick = time.time()
+    for iteration, data_batch in enumerate(train_dataloader):
+        timings["data_loading"] += time.time() - last_tick
+
+        # forward and compute loss
+        last_tick = time.time()
+        total_loss = agent.compute_loss(
+            obs_seq=data_batch["observations"],  # obs_batch_dict['state'] is (B, L, obs_dim)
+            action_seq=data_batch["actions"],  # (B, L, act_dim)
+        )
+        timings["forward"] += time.time() - last_tick
+
+        # backward
+        last_tick = time.time()
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+        lr_scheduler.step()  # step lr scheduler every batch, this is different from standard pytorch behavior
+        timings["backward"] += time.time() - last_tick
+
+        # ema step
+        last_tick = time.time()
+        ema.step(agent.parameters())
+        timings["ema"] += time.time() - last_tick
+
+        # Evaluation
+        evaluate_and_save_best(iteration)
+        log_metrics(iteration)
+
         # Checkpoint
         if args.save_freq is not None and iteration % args.save_freq == 0:
             save_ckpt(run_name, str(iteration))
+        pbar.update(1)
+        pbar.set_postfix({"loss": total_loss.item()})
+        last_tick = time.time()
+
+    evaluate_and_save_best(args.total_iters)
+    log_metrics(args.total_iters)
+
     envs.close()
     writer.close()

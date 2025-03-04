@@ -32,6 +32,22 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>❌</p></td>
 <td><p>1000</p></td>
 </tr>
+<tr class="row-odd">
+<td><p><a href="#drawsvg-v1">DrawSVG-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/DrawSVG-v1_rt_thumb_first.png' alt='DrawSVG-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/DrawSVG-v1_rt_thumb_last.png' alt='DrawSVG-v1'></div></td>
+<td><p>❌</p></td>
+<td><p>✅</p></td>
+<td><p>❌</p></td>
+<td><p>500</p></td>
+</tr>
+<tr class="row-odd">
+<td><p><a href="#drawtriangle-v1">DrawTriangle-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/DrawTriangle-v1_rt_thumb_first.png' alt='DrawTriangle-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/DrawTriangle-v1_rt_thumb_last.png' alt='DrawTriangle-v1'></div></td>
+<td><p>❌</p></td>
+<td><p>✅</p></td>
+<td><p>❌</p></td>
+<td><p>300</p></td>
+</tr>
 </tbody>
 </table>
 
@@ -60,5 +76,55 @@ None
 <div style="display: flex; justify-content: center;">
 <video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/TableTopFreeDraw-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/TableTopFreeDraw-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
+## DrawSVG-v1
+
+![no-dense-reward][no-dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Instantiates a table with a white canvas on it and a svg path specified with an outline. A robot with a stick is to draw the triangle with a red line.
+
+**Randomizations:**
+- the goal svg's position on the xy-plane is randomized
+- the goal svg's z-rotation is randomized in range [0, 2 $\pi$]
+
+**Success Conditions:**
+- the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal svg
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/DrawSVG-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawSVG-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
+## DrawTriangle-v1
+
+![no-dense-reward][no-dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Instantiates a table with a white canvas on it and a goal triangle with an outline. A robot with a stick is to draw the triangle with a red line.
+
+**Randomizations:**
+- the goal triangle's position on the xy-plane is randomized
+- the goal triangle's z-rotation is randomized in range [0, 2 $\pi$]
+
+**Success Conditions:**
+- the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal triangle
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/DrawTriangle-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawTriangle-v1_rt.mp4" type="video/mp4">
 </video>
 </div>

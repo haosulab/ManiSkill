@@ -1,6 +1,6 @@
 # Replaying/Converting Trajectories
 
-ManiSkill provides tools to not only collect/load trajectories, but to also replay trajectories and convert observations/actions.
+ManiSkill provides tools to not only collect/load trajectories, but also to replay trajectories and convert observations/actions.
 
 To replay the demonstrations (without changing the observation mode and control mode):
 
@@ -111,7 +111,7 @@ Since some demonstrations are collected in a non-quasi-static way (objects are n
 
 As the replay trajectory tool is fairly complex and feature rich, we suggest a few example workflows that may be useful for various use cases
 
-### Replaying Trajectories from One Control Mode to a Easier to Learn Control Mode
+### Replaying Trajectories from One Control Mode to an Easier-to-Learn Control Mode
 
 In machine learning workflows, it can sometimes be easier to learn from some control modes such as end-effector control ones. The example below does that exactly
 
@@ -124,7 +124,7 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 Note that some target control modes are difficult to convert to due to inherent differences in controllers and the behavior of the demonstrations.
 
-### Adding rewards/observations in trajectories
+### Adding rewards/observations to trajectories
 
 To conserve memory, demonstrations are typically stored without observations and rewards. The example below shows how to add rewards and RGB observations and normalized dense rewards (assuming the environment supports dense rewards) back in. `--use-env-states` is added as a way to ensure the state/observation data replayed exactly as the original trajectory generated.
 

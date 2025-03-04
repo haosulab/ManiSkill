@@ -43,7 +43,7 @@ def initialize_data_sources():
         source_type="task_assets",
         url="https://huggingface.co/datasets/haosulab/ManiSkill2/resolve/main/data/mani_skill2_ycb.zip",
         target_path="assets/mani_skill2_ycb",
-        checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
+        checksum="eb6f30642c90203715c178f67bf2288887ef6e7d05a9f3f1e713efcf7c2a541c",
     )
     DATA_SOURCES["pick_clutter_ycb_configs"] = DataSource(
         source_type="task_assets",
@@ -188,6 +188,11 @@ def initialize_data_sources():
         source_type="robot",
         url="https://github.com/haosulab/ManiSkill-Robotiq_2F/archive/refs/tags/v0.1.0.zip",
         target_path="robots/robotiq_2f",
+    )
+    DATA_SOURCES["xarm6"] = DataSource(
+        source_type="robot",
+        url="https://github.com/haosulab/ManiSkill-XArm6/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/xarm6",
     )
 
 

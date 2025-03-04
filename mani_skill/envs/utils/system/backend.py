@@ -1,10 +1,12 @@
 """
 Utilities for determining the simulation backend and devices
 """
-from dataclasses import dataclass
 import platform
+from dataclasses import dataclass
+
 import sapien
 import torch
+
 from mani_skill.utils.logging_utils import logger
 
 
@@ -55,10 +57,12 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
     else:
         raise ValueError(f"Invalid simulation backend: {sim_backend}")
 
-    if platform.system() == 'Darwin':
+    if platform.system() == "Darwin":
         render_device = sapien.Device("cpu")
         render_backend = "sapien_cpu"
-        logger.warning("Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible.")
+        logger.warning(
+            "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
+        )
     elif render_backend == "sapien_cuda":
         render_device = sapien.Device("cuda")
     elif render_backend == "sapien_cpu":
@@ -66,9 +70,8 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
     elif render_backend[:4] == "cuda":
         render_device = sapien.Device(render_backend)
     else:
-        raise ValueError(f"Invalid render backend: {render_backend}")
-    
-    
+        # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
+        render_device = sapien.Device(render_backend)
     return BackendInfo(
         device=device,
         sim_device=sim_device,

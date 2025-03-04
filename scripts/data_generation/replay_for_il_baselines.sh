@@ -56,6 +56,10 @@ python -m mani_skill.trajectory.replay_trajectory \
   --use-first-env-state -c pd_ee_delta_pose -o rgb \
   --save-traj --num-envs 10 -b physx_cpu
 
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/DrawTriangle-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pos -o rgb \
+  --save-traj --num-envs 10 -b physx_cpu
 
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PushT-v1/rl/trajectory.none.pd_ee_delta_pos.physx_cuda.h5 \

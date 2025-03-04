@@ -1,27 +1,13 @@
 from collections import defaultdict
-import gymnasium
 import numpy as np
 import torch
-
+from tqdm import tqdm
 from mani_skill.utils import common
 
-def collect_episode_info(infos, result):
-    if "final_info" in infos: # infos is a dict
-
-        indices = np.where(infos["_final_info"])[0] # not all envs are done at the same time
-        for i in indices:
-            info = infos["final_info"][i] # info is also a dict
-            ep = info['episode']
-            result['return'].append(ep['r'][0])
-            result['episode_len'].append(ep["l"][0])
-            if "success" in info:
-                result['success'].append(info['success'])
-            if "fail" in info:
-                result['fail'].append(info['fail'])
-    return result
-
-def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
+def evaluate(n: int, agent, eval_envs, device, sim_backend: str, progress_bar: bool = True):
     agent.eval()
+    if progress_bar:
+        pbar = tqdm(total=n)
     with torch.no_grad():
         eval_metrics = defaultdict(list)
         obs, info = eval_envs.reset()
@@ -29,7 +15,7 @@ def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
         while eps_count < n:
             obs = common.to_tensor(obs, device)
             action_seq = agent.get_action(obs)
-            if sim_backend == "cpu":
+            if sim_backend == "physx_cpu":
                 action_seq = action_seq.cpu().numpy()
             for i in range(action_seq.shape[1]):
                 obs, rew, terminated, truncated, info = eval_envs.step(action_seq[:, i])
@@ -46,6 +32,8 @@ def evaluate(n: int, agent, eval_envs, device, sim_backend: str):
                         for k, v in final_info["episode"].items():
                             eval_metrics[k].append(v)
                 eps_count += eval_envs.num_envs
+                if progress_bar:
+                    pbar.update(eval_envs.num_envs)
     agent.train()
     for k in eval_metrics.keys():
         eval_metrics[k] = np.stack(eval_metrics[k])
