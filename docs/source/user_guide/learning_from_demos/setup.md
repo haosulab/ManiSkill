@@ -9,9 +9,17 @@ This page documents key things to know when setting up ManiSkill environments fo
 
 ## Downloading and Replaying Trajectories / Standard Datasets
 
-For all benchmarked results publically shown in the ManiSkill paper and the [Wandb project detailing all benchmarked training runs](https://wandb.ai/stonet2000/ManiSkill), the following script is used to download and replay all demonstrations, which define the choice of action space/controller and observation modes: https://github.com/haosulab/ManiSkill/blob/main/scripts/data_generation/replay_for_il_baselines.sh
+By default for fast downloads and smaller file sizes, ManiSkill demonstrations are stored in a highly reduced/compressed format which includes not keeping any observation data. Run the command to download the raw minimized demonstration data.
 
-For more details on advanced use-cases for trajectory replay, see the [trajectory replay documentation](../datasets/replay.md).
+```bash
+python -m mani_skill.utils.download_demo "PickCube-v1"
+```
+
+To ensure everyone has the same preprocessed/replayed dataset, make sure to run this script: [https://github.com/haosulab/ManiSkill/blob/main/scripts/data_generation/replay_for_il_baselines.sh](https://github.com/haosulab/ManiSkill/blob/main/scripts/data_generation/replay_for_il_baselines.sh). Note that some scripts use the GPU simulation (marked by `-b physx_cuda`) for replay, which may potentially require more GPU memory than you have available. You can always lower the number of parallel environments used to be replayed by setting `--num-procs` to a lower number.
+
+It has fixed settings for the trajectory replay to generate observation data and set the desired action space/controller for all benchmarked tasks. All benchmarked results in the [Wandb project detailing all benchmarked training runs](https://wandb.ai/stonet2000/ManiSkill) use the data replayed by the script above
+
+If you need more advanced use-cases for trajectory replay (e.g. generating pointclouds, changing controller modes), see the [trajectory replay documentation](../datasets/replay.md). If you want to generate the original datasets yourself locally we save all scripts used for dataset generation in the [data_generation](https://github.com/haosulab/ManiSkill/tree/main/scripts/data_generation) folder.
 
 
 ## Evaluation

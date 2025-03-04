@@ -34,6 +34,11 @@ IGNORE_FETCH_COLLISION_STRS = ["mat", "rug", "carpet"]
 
 @register_scene_builder("ReplicaCAD")
 class ReplicaCADSceneBuilder(SceneBuilder):
+
+    robot_initial_pose = sapien.Pose(
+        p=[-1, 0, 0.02]
+    )  # generally a safe initial spawn pose for the Fetch robot
+
     builds_lighting = True  # we set this true because the ReplicaCAD dataset defines some lighting for us so we don't need the default option from ManiSkill
 
     # build configs for RCAD are string file names
@@ -256,9 +261,19 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 if mesh_fp.exists():
                     self._navigable_positions[bci] = trimesh.load(mesh_fp)
 
-        # ReplicaCAD's lighting isn't great for raytracing, so we define our own
-        self.scene.set_ambient_light([3 if self.ray_traced_lighting else 0.3] * 3)
-        color = np.array([1.0, 0.8, 0.5]) * (10 if self.ray_traced_lighting else 2)
+        # # ReplicaCAD's lighting isn't great for raytracing, so we define our own
+        if self.ray_traced_lighting:
+            for sub_scene in self.scene.sub_scenes:
+                sub_scene.set_environment_map(
+                    str(
+                        (
+                            Path(__file__).parent / "autumn_field_puresky_4k.hdr"
+                        ).absolute()
+                    )
+                )
+        else:
+            self.scene.set_ambient_light([0.3] * 3)
+        color = np.array([1.0, 0.8, 0.5]) * 2
         # entrance
         self.scene.add_point_light([-1.1, 2.775, 2.3], color=color)
         # dining area

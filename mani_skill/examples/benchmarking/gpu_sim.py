@@ -13,8 +13,9 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.examples.benchmarking.profiling import Profiler
 from mani_skill.utils.visualization.misc import images_to_video, tile_images
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
-import mani_skill.examples.benchmarking.envs # import benchmark env code
-
+import mani_skill.examples.benchmarking.envs
+from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper # import benchmark env code
+from gymnasium.vector.async_vector_env import AsyncVectorEnv
 BENCHMARK_ENVS = ["FrankaPickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "FrankaMoveBenchmark-v1"]
 @dataclass
 class Args:
@@ -48,15 +49,14 @@ def main(args: Args):
         sim_config["control_freq"] = args.control_freq
     if args.sim_freq:
         sim_config["sim_freq"] = args.sim_freq
+    kwargs = dict()
+    if args.env_id in BENCHMARK_ENVS:
+        kwargs = dict(
+            camera_width=args.cam_width,
+            camera_height=args.cam_height,
+            num_cameras=args.num_cams,
+        )
     if not args.cpu_sim:
-        kwargs = dict()
-        if args.env_id in BENCHMARK_ENVS:
-            kwargs = dict(
-                camera_width=args.cam_width,
-                camera_height=args.cam_height,
-                num_cameras=args.num_cams,
-            )
-
         env = gym.make(
             args.env_id,
             num_envs=num_envs,
@@ -70,8 +70,19 @@ def main(args: Args):
             env = FlattenActionSpaceWrapper(env)
         base_env: BaseEnv = env.unwrapped
     else:
-        env = gym.make_vec(args.env_id, num_envs=args.num_envs, vectorization_mode="async", vector_kwargs=dict(context="spawn"), obs_mode=args.obs_mode,)
-        base_env = gym.make(args.env_id, obs_mode=args.obs_mode).unwrapped
+        def make_env():
+            def _init():
+                env = gym.make(args.env_id,
+                               obs_mode=args.obs_mode,
+                               sim_config=sim_config,
+                               render_mode=args.render_mode,
+                               control_mode=args.control_mode,
+                               **kwargs)
+                env = CPUGymWrapper(env, )
+                return env
+            return _init
+        env = AsyncVectorEnv([make_env() for _ in range(num_envs)], context="forkserver") if args.num_envs > 1 else make_env()()
+        base_env = make_env()().unwrapped
 
     base_env.print_sim_details()
     images = []
@@ -89,6 +100,8 @@ def main(args: Args):
                     2 * torch.rand(env.action_space.shape, device=base_env.device)
                     - 1
                 )
+                if args.cpu_sim:
+                    actions = actions.numpy() # gymnasium async vector env processes torch actions very slowly.
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if args.save_video:
                     images.append(env.render().cpu().numpy())
@@ -123,7 +136,10 @@ def main(args: Args):
                         i = 0
                         for action in actions:
                             for _ in range(action[1]):
-                                env.step(torch.tile(action[0], (num_envs, 1)))
+                                a = torch.tile(action[0], (num_envs, 1))
+                                if args.cpu_sim:
+                                    a = a.numpy()
+                                env.step(a)
                                 i += 1
                                 if args.save_video:
                                     images.append(env.render().cpu().numpy())
@@ -154,6 +170,8 @@ def main(args: Args):
                 actions = (
                     2 * torch.rand(env.action_space.shape, device=base_env.device) - 1
                 )
+                if args.cpu_sim:
+                    actions = actions.numpy()
                 obs, rew, terminated, truncated, info = env.step(actions)
                 if i % 200 == 0 and i != 0:
                     env.reset()

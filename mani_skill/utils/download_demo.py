@@ -26,6 +26,7 @@ DATASET_SOURCES: dict[str, DemoDatasetSource] = {}
 # Rigid body envs
 for env_id in [
     "AnymalC-Reach-v1",
+    "DrawTriangle-v1",
     "LiftPegUpright-v1",
     "PegInsertionSide-v1",
     "PickCube-v1",
