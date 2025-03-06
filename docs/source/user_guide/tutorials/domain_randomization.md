@@ -1,10 +1,10 @@
 # Domain Randomization
 
-One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This document demonstrates a number of simple tools for randomization. In the beta release we currently only have a tutorial on how to do camera randomization.
+One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This document demonstrates a number of simple tools for randomization.
 
 ## Camera Randomization
 
-For cameras, which are created by adding `CameraConfig` objects to your task's `_default_sensor_configs` property, you can randomize the pose and fov across all parallel sub-scenes. This can be done either during reconfiguration or episode initialization.
+For cameras, which are created by adding {py:class}`mani_skill.sensors.camera.CameraConfig` objects to your task's `_default_sensor_configs` property, you can randomize the pose and fov across all parallel sub-scenes. This can be done either during reconfiguration or episode initialization.
 
 ### During Reconfiguration
 
@@ -51,7 +51,7 @@ It will generate the following result (for 16 parallel environments) on e.g. the
 :::
 
 
-Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks/loading_objects.md#reconfiguring-and-optimization)
+Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks/loading_objects.md#reconfiguring-and-optimization).
 
 ### During Episode Initialization / Resets
 
