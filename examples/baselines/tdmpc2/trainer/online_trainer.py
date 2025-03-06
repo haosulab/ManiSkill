@@ -44,8 +44,8 @@ class OnlineTrainer(Trainer):
 		has_success, has_fail = False, False # if task has success or/and fail (added for maniskill)
 		for i in range(self.cfg.eval_episodes_per_env):
 			obs, _ = self.eval_env.reset()
-			done = torch.full((self.cfg.num_eval_envs, ), False, device=obs.device) # ms3: done is truncated since the ms3 ignore_terminations.
-			ep_reward, t = torch.zeros((self.cfg.num_eval_envs, ), device=obs.device), 0
+			done = torch.full((self.cfg.num_eval_envs, ), False, device=('cuda' if self.cfg.env_type=='gpu' else 'cpu')) # ms3: done is truncated since the ms3 ignore_terminations.
+			ep_reward, t = torch.zeros((self.cfg.num_eval_envs, ), device=('cuda' if self.cfg.env_type=='gpu' else 'cpu')), 0
 			while not done[0]: # done is truncated and should be the same
 				action = self.agent.act(obs, t0=t==0, eval_mode=True)
 				obs, reward, terminated, truncated, info = self.eval_env.step(action)
@@ -60,6 +60,7 @@ class OnlineTrainer(Trainer):
 		"""Before: Creates a TensorDict for a new episode. Return a td with batch (1, ), with obs, action, reward
 		After vectorization: added 1 argument: num_envs, now have batch size (num_envs, 1)"""
 		if isinstance(obs, dict): 
+			obs = {k: v.unsqueeze(1) for k,v in obs.items()}
 			obs = TensorDict(obs, batch_size=(), device='cpu') # before vectorization, obs must have its first dimension=1
 		else:
 			obs = obs.unsqueeze(1).cpu()
@@ -130,8 +131,8 @@ class OnlineTrainer(Trainer):
 			vec_done = vec_terminated | vec_truncated
 
 			if vec_done[0]: # use actual final_observation
-				if self.cfg.obs == 'rgb':
-					obs[:,-3:,...] = vec_info["final_observation"]['sensor_data']['base_camera']['rgb'].permute(0,3,1,2) # TODO: rgb extraction hard-coded here. might want to change it in the future
+				if self.cfg.obs == 'rgb' and isinstance(vec_info["final_observation"], dict):
+					obs = vec_info["final_observation"].copy()
 				else:
 					obs = vec_info["final_observation"]
 			
