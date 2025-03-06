@@ -5,9 +5,6 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 
-DEFAULT_CAMERA_WIDTH = 128
-DEFAULT_CAMERA_HEIGHT = 128
-
 @register_env("PickCube-v2", max_episode_steps=100)
 class PickCubeV2Env(PickCubeEnv):
     """
@@ -15,8 +12,10 @@ class PickCubeV2Env(PickCubeEnv):
     Nearly exacty copy of PickCubeEnv, but with 3 cameras instead of 1.
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
-        self._camera_width = kwargs.pop("camera_width", DEFAULT_CAMERA_WIDTH)
-        self._camera_height = kwargs.pop("camera_height", DEFAULT_CAMERA_HEIGHT)
+        assert "camera_width" in kwargs, "camera_width must be provided"
+        assert "camera_height" in kwargs, "camera_height must be provided"
+        self._camera_width = kwargs.pop("camera_width")
+        self._camera_height = kwargs.pop("camera_height")
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
     @property
