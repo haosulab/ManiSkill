@@ -397,40 +397,6 @@ def set_articulation_render_material(articulation: physx.PhysxArticulation, **kw
                     set_render_material(mat, **kwargs)
 
 
-def deep_copy_render_material(material: sapien.render.RenderMaterial):
-    """
-    Deep copy a sapien.render.RenderMaterial object
-    """
-    new_material = sapien.render.RenderMaterial()
-    new_material.set_base_color(material.get_base_color())
-    new_material.set_base_color_texture(material.get_base_color_texture())
-    new_material.set_diffuse_texture(material.get_diffuse_texture())
-    new_material.set_emission(material.get_emission())
-    new_material.set_emission_texture(material.get_emission_texture())
-    new_material.set_ior(material.get_ior())
-    new_material.set_metallic(material.get_metallic())
-    new_material.set_metallic_texture(material.get_metallic_texture())
-    new_material.set_normal_texture(material.get_normal_texture())
-    new_material.set_roughness(material.get_roughness())
-    new_material.set_roughness_texture(material.get_roughness_texture())
-    new_material.set_specular(material.get_specular())
-    new_material.set_transmission(material.get_transmission())
-    new_material.set_transmission_roughness(material.get_transmission_roughness())
-    new_material.set_transmission_texture(material.get_transmission_texture())
-    return new_material
-
-
-def deep_copy_physx_material(material: physx.PhysxMaterial):
-    """
-    Deep copy a physx.PhysxMaterial object
-    """
-    new_material = physx.PhysxMaterial()
-    new_material.set_static_friction(material.get_static_friction())
-    new_material.set_dynamic_friction(material.get_dynamic_friction())
-    new_material.set_restitution(material.get_restitution())
-    return new_material
-
-
 # -------------------------------------------------------------------------- #
 # Misc
 # -------------------------------------------------------------------------- #
