@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 from mani_skill.utils import common, gym_utils
 from mani_skill.utils.wrappers import RecordEpisode
 from common.logger import Logger
@@ -69,6 +70,15 @@ class RecordEpisodeWrapper(RecordEpisode):
                 video_name = "{}".format(self._video_id)
                 if suffix:
                     video_name += "_" + suffix
+                if self._avoid_overwriting_video:
+                    while (
+                        Path(self.output_dir)
+                        / (video_name.replace(" ", "_").replace("\n", "_") + ".mp4")
+                    ).exists():
+                        self._video_id += 1
+                        video_name = "{}".format(self._video_id)
+                        if suffix:
+                            video_name += "_" + suffix
             else:
                 video_name = name
             if self.logger.save_video_local:

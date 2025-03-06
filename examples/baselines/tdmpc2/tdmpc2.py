@@ -86,7 +86,10 @@ class TDMPC2:
 		Returns:
 			torch.Tensor: Action to take in the environment.
 		"""
-		obs = obs.to(self.device, non_blocking=True)
+		if isinstance(obs, dict): # RGB
+			obs = {k: v.to(self.device, non_blocking=True) for k,v in obs.items()}
+		else:
+			obs = obs.to(self.device, non_blocking=True)
 		if task is not None:
 			task = torch.tensor([task], device=self.device)
 		z = self.model.encode(obs, task) # [num_envs, latent_dim]
@@ -260,7 +263,7 @@ class TDMPC2:
 		self.model.train()
 
 		# Latent rollout
-		zs = torch.empty(self.cfg.horizon+1, self.cfg.batch_size, self.cfg.latent_dim, device=self.device)
+		zs = torch.empty(self.cfg.horizon+1, self.cfg.batch_size, self.cfg.true_latent_dim, device=self.device)
 		z = self.model.encode(obs[0], task)
 		zs[0] = z
 		consistency_loss = 0
