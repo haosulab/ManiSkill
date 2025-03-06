@@ -10,12 +10,31 @@ from sapien import ActorBuilder as SAPIENActorBuilder
 from sapien.wrapper.coacd import do_coacd
 
 from mani_skill import logger
-from mani_skill.utils import common
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
+
+
+def preprocess_mesh_file(filename: str):
+    """
+    Process input mesh file to a SAPIEN supported format
+    Args:
+        filename: input mesh file
+    Returns:
+        filename for the generated file or original filename
+    """
+
+    from sapien.wrapper.geometry.usd import convert_usd_to_glb
+
+    if any(filename.lower().endswith(s) for s in [".usd", ".usda", ".usdc", ".usdz"]):
+        glb_filename = filename + ".sapien.glb"
+        convert_usd_to_glb(filename, glb_filename)
+        return glb_filename
+
+    return filename
 
 
 class ActorBuilder(SAPIENActorBuilder):
@@ -71,6 +90,10 @@ class ActorBuilder(SAPIENActorBuilder):
             raise Exception(f"invalid physx body type [{self.physx_body_type}]")
 
         for r in self.collision_records:
+            if r.material is not None:
+                material = sapien_utils.deep_copy_physx_material(r.material)
+            else:
+                material = None
             try:
                 if r.type == "plane":
                     # skip adding plane collisions if we already added one.
@@ -80,7 +103,7 @@ class ActorBuilder(SAPIENActorBuilder):
                         or pose_key not in self._plane_collision_poses
                     ):
                         shape = physx.PhysxCollisionShapePlane(
-                            material=r.material,
+                            material=material,
                         )
                         shapes = [shape]
                         self._plane_collision_poses.add(pose_key)
@@ -88,41 +111,41 @@ class ActorBuilder(SAPIENActorBuilder):
                         continue
                 elif r.type == "box":
                     shape = physx.PhysxCollisionShapeBox(
-                        half_size=r.scale, material=r.material
+                        half_size=r.scale, material=material
                     )
                     shapes = [shape]
                 elif r.type == "capsule":
                     shape = physx.PhysxCollisionShapeCapsule(
                         radius=r.radius,
                         half_length=r.length,
-                        material=r.material,
+                        material=material,
                     )
                     shapes = [shape]
                 elif r.type == "cylinder":
                     shape = physx.PhysxCollisionShapeCylinder(
                         radius=r.radius,
                         half_length=r.length,
-                        material=r.material,
+                        material=material,
                     )
                     shapes = [shape]
                 elif r.type == "sphere":
                     shape = physx.PhysxCollisionShapeSphere(
                         radius=r.radius,
-                        material=r.material,
+                        material=material,
                     )
                     shapes = [shape]
                 elif r.type == "convex_mesh":
                     shape = physx.PhysxCollisionShapeConvexMesh(
                         filename=r.filename,
                         scale=r.scale,
-                        material=r.material,
+                        material=material,
                     )
                     shapes = [shape]
                 elif r.type == "nonconvex_mesh":
                     shape = physx.PhysxCollisionShapeTriangleMesh(
                         filename=r.filename,
                         scale=r.scale,
-                        material=r.material,
+                        material=material,
                     )
                     shapes = [shape]
                 elif r.type == "multiple_convex_meshes":
@@ -138,7 +161,7 @@ class ActorBuilder(SAPIENActorBuilder):
                     shapes = physx.PhysxCollisionShapeConvexMesh.load_multiple(
                         filename=filename,
                         scale=r.scale,
-                        material=r.material,
+                        material=material,
                     )
                 else:
                     raise RuntimeError(f"invalid collision shape type [{r.type}]")
@@ -160,6 +183,45 @@ class ActorBuilder(SAPIENActorBuilder):
                 component.cmass_local_pose = self._cmass_local_pose
                 component.inertia = self._inertia
 
+        return component
+
+    def build_render_component(self):
+        # NOTE (stao): Same as the SAPIEN render component function but instead deep copies the sapien render material
+        component = sapien.render.RenderBodyComponent()
+        for r in self.visual_records:
+            if r.type != "file":
+                assert isinstance(r.material, sapien.render.RenderMaterial)
+            else:
+                assert r.material is None or isinstance(
+                    r.material, sapien.render.RenderMaterial
+                )
+            # create a copy of the material saved in visual records to enable easier heterogeneous modifications
+            if r.material is not None:
+                material = sapien_utils.deep_copy_render_material(r.material)
+            else:
+                material = None
+            if r.type == "plane":
+                shape = sapien.render.RenderShapePlane(r.scale, material)
+            elif r.type == "box":
+                shape = sapien.render.RenderShapeBox(r.scale, material)
+            elif r.type == "sphere":
+                shape = sapien.render.RenderShapeSphere(r.radius, material)
+            elif r.type == "capsule":
+                shape = sapien.render.RenderShapeCapsule(r.radius, r.length, material)
+            elif r.type == "cylinder":
+                shape = sapien.render.RenderShapeCylinder(r.radius, r.length, material)
+            elif r.type == "file":
+                shape = sapien.render.RenderShapeTriangleMesh(
+                    preprocess_mesh_file(r.filename), r.scale, material
+                )
+                if r.scale[0] * r.scale[1] * r.scale[2] < 0:
+                    shape.set_front_face("clockwise")
+            else:
+                raise Exception(f"invalid visual shape type [{r.type}]")
+
+            shape.local_pose = r.pose
+            shape.name = r.name
+            component.attach(shape)
         return component
 
     def build_dynamic(self, name):
