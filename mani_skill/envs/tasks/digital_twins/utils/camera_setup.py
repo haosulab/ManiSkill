@@ -92,9 +92,9 @@ if __name__ == "__main__":
             plt.imsave(path + "_" + name + "." + ext, real_obs[name]["rgb"][0].numpy())
     else:
         obs, _ = real_env.reset()
-        # qpos_ckpt = torch.tensor([[0.2, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]])
-        # real_env.agent.reset(qpos_ckpt[0])
-        # sim_env.agent.robot.set_qpos(qpos_ckpt)
+        qpos_ckpt = torch.tensor([[0.2, 2.2, 2.2, -0.25, -np.pi / 2, 1.0]])
+        real_env.agent.reset(qpos_ckpt[0])
+        sim_env.agent.robot.set_qpos(qpos_ckpt)
         print("Camera alignment: Move real camera to align, close figure to exit")
         while True:
             overlaid_imgs = overlay_envs(sim_env, real_env)

@@ -251,7 +251,8 @@ class GrabCubeEnv(Sim4RealBaseEnv):
         to_open_dist = (gripper_open - self.agent.robot.qpos[..., -1]).abs()
         # allow some leeway of a couple of degrees
         to_open_dist[to_open_dist <= 0.05] = 0
-        reward -= 0.25 * torch.tanh(5 * to_open_dist) * ~is_close
+        # reward -= 0.25 * torch.tanh(5 * to_open_dist) * ~is_close
+        reward -= 3 * ~is_close * (self.agent.robot.qpos[..., -1] < 0.9)
 
         # touch table
         reward -= 2.0 * info["touching_table"].float()

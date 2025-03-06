@@ -95,10 +95,8 @@ class Koch(BaseAgent):
         motorcolor: RBGA length 4
         """
         if base_color is not None:
-            assert len(base_color) == 4
             self.robot_chassis_colors = base_color
         if motor_color is not None:
-            assert len(motor_color) == 4
             self.robot_motor_colors = motor_color
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
@@ -121,7 +119,7 @@ class Koch(BaseAgent):
                         x for x in rb_comp.render_shapes if "motor" in x.name
                     ]
                     for mesh in other_meshes_to_modify:
-                        if isinstance(self.robot_chassis_colors[0], list):
+                        if isinstance(self.robot_motor_colors[0], list):
                             color = self.robot_motor_colors[i]
                         else:
                             color = self.robot_motor_colors

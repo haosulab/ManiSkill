@@ -293,14 +293,18 @@ class Sim4RealBaseEnv(BaseDigitalTwinEnv):
             )
 
         # robot color randomization
-        base_color = torch.normal(
-            torch.tensor(self.robot_base_color, dtype=torch.float32),
-            torch.ones(3) * self.robot_color_noise * self.toggle_rand,
-        ).clip(0, 1).tolist() + [1]
+        # base_color = torch.rand(
+        #     torch.tensor(self.robot_base_color, dtype=torch.float32),
+        #     torch.ones(3) * self.robot_color_noise * self.toggle_rand,
+        # ).clip(0, 1).tolist() + [1]
+        base_color = torch.rand(size=(self.num_envs, 4))
+        base_color[:, -1] = 1
+        base_color = base_color.tolist()
         motor_color = torch.normal(
             torch.tensor(self.robot_motor_color, dtype=torch.float32),
             torch.ones(3) * self.robot_color_noise * self.toggle_rand,
         ).clip(0, 1).tolist() + [1]
+        print(base_color, motor_color)
         self.agent.set_colors(base_color=base_color, motor_color=motor_color)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

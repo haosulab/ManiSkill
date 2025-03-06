@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from dataclasses import dataclass
@@ -170,6 +171,8 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     device = torch.device("cpu")
 
+    torch.set_printoptions(precision=4)
+
     # make eval environment
     env_kwargs = {}
     with open(
@@ -184,7 +187,7 @@ if __name__ == "__main__":
         obs_mode="rgb+segmentation",
         render_mode="rgb_array",
         dr=False,
-        **env_kwargs
+        **env_kwargs,
     )
     eval_envs = gym.make(
         args.real_env_id,
@@ -201,6 +204,10 @@ if __name__ == "__main__":
     sim_env_test.reset()
     eval_obs, _ = eval_envs.reset()
     sim_obs, _ = sim_env_test.reset()
+    # import ipdb; ipdb.set_trace()
+    eval_envs.agent.controller._target_qpos[
+        :, :
+    ] = sim_env_test.agent.controller._target_qpos[:, :]
 
     # recreate sim ppo_rgb.py trained agent
     agent = Agent(eval_envs, sample_obs=eval_obs).to(device)
@@ -245,15 +252,26 @@ if __name__ == "__main__":
             eval_obs, _ = eval_envs.reset()
             sim_obs, _ = sim_env_test.reset()
         sim_env_test.cube.set_pose(
-            sapien.Pose(p=[0.2, 0.02, 0.0], q=[0.0, 0.0, 0.0, 1.0])
+            sapien.Pose(p=[0.25, 0.00, 0.0], q=[0.0, 0.0, 0.0, 1.0])
         )
-        print("diff", sim_env_test.agent.robot.qpos - eval_envs.agent.qpos)
+        #
+        # print("diff", sim_env_test.agent.robot.qpos - eval_envs.agent.qpos)
         for step in range(args.num_eval_steps + 1):
             # Small pause to render the image without blocking
             with torch.no_grad():
-                agent_obs = eval_obs
+                agent_obs = copy.deepcopy(eval_obs)
+                # if step % 2 == 0:
+                #     agent_obs = sim_obs
                 if args.use_sim_obs:
                     agent_obs = sim_obs
+                agent_obs["rgb"]  # (B, W, H, 3)
+                sim_obs["rgb"]  # (B, W, H, 3)
+                # grab_cube_training_5/801.ckpt is the best so far? because its less overfit?
+                # agent_obs["rgb"][:, :128, :40, :3] = sim_obs["rgb"][:, :128, :40, :3]
+                # if step < 35:
+                #     agent_obs["rgb"][:, 40:80, 50:90, :3] = sim_obs["rgb"][:, 40:80, 50:90, :3]
+                #     eval_obs["rgb"][:, 40:80, 50:90, :3] = sim_obs["rgb"][:, 40:80, 50:90, :3]
+                # can we edit the rgb image to look more sim like somehow
                 action = agent.get_action(agent_obs, deterministic=True)
                 if args.debug:
                     print("Eval step", step + 1)
@@ -265,44 +283,65 @@ if __name__ == "__main__":
                     # plt.title("Agent RGB Observation")
                     # Create figure and axes only once before the loop
                     if not hasattr(plt, "comparison_fig"):
-                        plt.comparison_fig, (plt.ax1, plt.ax2, plt.ax3) = plt.subplots(
-                            1, 3, figsize=(10, 6)
-                        )
+                        plt.comparison_fig, (
+                            plt.ax1,
+                            plt.ax2,
+                            plt.ax3,
+                            plt.ax4,
+                        ) = plt.subplots(1, 4, figsize=(10, 6))
 
                     # Clear previous images
                     plt.ax1.clear()
                     plt.ax2.clear()
                     plt.ax3.clear()
+                    plt.ax4.clear()
+                    agent_img = agent_obs["rgb"][0].cpu().numpy()
+                    plt.ax1.imshow(agent_img)
+                    plt.ax1.set_title("Policy Observation")
                     # Update with new images
                     real_img = eval_obs["rgb"][0].cpu().numpy()
-                    plt.ax1.imshow(real_img)
-                    plt.ax1.set_title("Real Robot Observation")
+                    plt.ax2.imshow(real_img)
+                    plt.ax2.set_title("Real Robot Observation")
                     # sim_obs, _ , _, _, _ = sim_env_test.step(None)
                     # sim_obs = dict(rgb=sim_env_test.render_sensors()[:, :128, :128, :])
                     sim_img = sim_obs["rgb"][0].cpu().numpy()
-                    plt.ax2.imshow(sim_img)
-                    plt.ax2.set_title("Simulation Observation")
+                    plt.ax3.imshow(sim_img)
+                    plt.ax3.set_title("Simulation Observation")
                     # Overlay the two images in the third subplot
-                    plt.ax3.imshow(real_img, alpha=0.5)
-                    plt.ax3.imshow(sim_img, alpha=0.5)
-                    plt.ax3.set_title("Overlaid Images")
+                    plt.ax4.imshow(real_img, alpha=0.5)
+                    plt.ax4.imshow(sim_img, alpha=0.5)
+                    plt.ax4.set_title("Overlaid Images")
                     plt.comparison_fig.tight_layout()
                     plt.draw()
                     plt.pause(0.0001)
-                    obs = eval_envs.get_obs()
-                    print("Agent Obs:")
-                    agent_obs = obs["agent"]
-                    for value in agent_obs:
-                        print(value, agent_obs[value])
-                    print("Extra Obs:")
-                    extra_obs = obs["extra"]
-                    for value in extra_obs:
-                        print(value, extra_obs[value])
 
+                    raw_real_obs = eval_envs.get_obs()
+                    raw_sim_obs = sim_env_test.get_obs()
+                    if args.use_sim_obs:
+                        obs = sim_env_test.get_obs()
+                    # print("Agent Obs:")
+                    # agent_obs = obs["agent"]
+                    # for value in agent_obs:
+                    #     print(value, agent_obs[value])
+                    # print("Extra Obs:")
+                    # extra_obs = obs["extra"]
+                    for key in raw_sim_obs["extra"].keys():
+                        print("Key: extra.", key)
+                        print(f"    sim: {raw_sim_obs['extra'][key]}")
+                        print(f"    eval: {raw_real_obs['extra'][key]}")
+                        print(
+                            f"    diff: {raw_sim_obs['extra'][key].float() - raw_real_obs['extra'][key].float()}"
+                        )
+                        # print(key, raw_sim_obs[key])
+                    #     print(value, extra_obs[value])
+                    print("====")
                     print("action", action)
                     print("value", critic_value)
+                    print("real_value", agent.get_value(eval_obs))
+                    print("sim_value", agent.get_value(sim_obs))
                     input("Press Enter for next action")
-                    print()
+                    # sim_env_test.render_human()
+                    print("====")
 
                 (
                     sim_obs,
@@ -311,7 +350,7 @@ if __name__ == "__main__":
                     sim_truncations,
                     sim_infos,
                 ) = sim_env_test.step(action)
-                print(sim_env_test.agent.robot.qpos - eval_envs.agent.qpos)
+                # print(sim_env_test.agent.robot.qpos - eval_envs.agent.qpos)
                 # sim_env_test.agent.robot.set_qpos(eval_envs.agent.qpos)
                 # sim_obs = sim_env_test.get_obs()
 

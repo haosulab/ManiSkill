@@ -86,10 +86,21 @@ class MS3RealKoch(BaseRealAgent):
         # deg[-3] -= 3.0
         # deg[-1] += 1
 
-        deg[0] -= 0.0
-        deg[2] -= 2.0
-        deg[3] -= 4.0
+        # deg[0] -= 0.0
+        # deg[2] -= 2.0
+        # deg[3] -= 4.0
         self.robot.send_action(deg)
+        qpos - self.qpos
+        # print(f"qpos_diff: {qpos_diff}")
+        # while torch.max(torch.abs(qpos_diff)) > 0.025:
+        #     print("one dim has more than 0.025 radians diff")
+        #     error_mask = torch.abs(qpos_diff) > 0.025
+        #     deg[error_mask] += 1.0 * torch.sign(qpos_diff[error_mask])
+        #     # input()
+        #     self.robot.send_action(deg)
+        #     qpos_diff = qpos - self.qpos
+        #     print(f"qpos_diff: {qpos_diff}")
+        #     # input()
 
     @property
     def qpos(self):
