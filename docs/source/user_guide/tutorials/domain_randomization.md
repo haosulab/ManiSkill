@@ -144,12 +144,12 @@ def _load_scene(self, options: dict):
     # due to shared material optimizations
     actor: Actor | Link 
     for i, obj in enumerate(actor._objs):
-        # modify some property of obj's components here, which is one of the actors/links 
-        # managed in parallel by the `actor` object
+        # modify the i-th object which is in parallel environment i
         
         # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
         rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
         if rigid_body_component is not None:
+            # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
             rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
         
         # modifying per collision shape properties such as friction values
@@ -216,10 +216,12 @@ def _load_scene(self, options: dict):
     # accordingly. Some examples are shown below.
     for link in self.agent.robot.links:
         for i, obj in enumerate(link._objs):
+            # modify the i-th object which is in parallel environment i
             
             # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
             rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
             if rigid_body_component is not None:
+                # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
                 rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
             
             # modifying per collision shape properties such as friction values
