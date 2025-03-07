@@ -22,8 +22,8 @@ class PandaWristCam(Panda):
             CameraConfig(
                 uid="hand_camera",
                 pose=sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0]),
-                width=128,
-                height=128,
+                width=64,
+                height=64,
                 fov=np.pi / 2,
                 near=0.01,
                 far=100,
