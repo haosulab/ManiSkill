@@ -668,6 +668,8 @@ class BaseEnv(gym.Env):
         self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         self._setup_sensors(options)
+        if self.render_mode == "human" and self._viewer is None:
+            self._viewer = create_viewer(self._viewer_camera_config)
         if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
