@@ -106,7 +106,7 @@ The result is the same as during reconfiguration, but instead every episode rese
 
 ## Actor/Link Physical and Visual Randomizations
 
-By default ManiSkill builds objects the same way in all parallel environments and share the same physical and visual materials due to engine limits and memory optimization purposes. If you want to randomize these materials such that each parallel environment has a different material, you can do so by building each object separately and then merging them together to be accessible under one view/object. We provide an example below for how to build a box shape in each parallel environment separately and then merge them. The concept of object merging in ManiSkill can be found on the documentation for [scene masks](./custom_tasks/advanced.md#scene-masks) and [object merging](./custom_tasks/advanced.md#merging).
+By default ManiSkill builds objects the same way in all parallel environments and share the same physical and visual materials due to engine limits and memory optimization purposes. If you want to randomize these materials such that each parallel environment has a different material, you can do so by building each object separately and then merging them together to be accessible under one view/object. We provide an example below for how to build a box shape in each parallel environment separately and then merge them. More details on how to build objects separately per parallel environment and merge them can be found on the documentation for [scene masks](./custom_tasks/advanced.md#scene-masks) and [object merging](./custom_tasks/advanced.md#merging).
 
 ```python
 def _load_scene(self, options: dict):
