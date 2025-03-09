@@ -20,6 +20,8 @@ BENCHMARK_ENVS = ["FrankaPickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "
 @dataclass
 class Args:
     env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v1"
+    robot_uids: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "widowxai"
+    """Some environments support multiple robots"""
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "state"
     control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_delta_pos"
     num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1024
@@ -64,6 +66,7 @@ def main(args: Args):
             render_mode=args.render_mode,
             control_mode=args.control_mode,
             sim_config=sim_config,
+            robot_uids=args.robot_uids,
             **kwargs
         )
         if isinstance(env.action_space, gym.spaces.Dict):

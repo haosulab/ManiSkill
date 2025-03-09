@@ -32,3 +32,16 @@ Robot UID: `widowx250s`
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/widowx/widowx.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/widowx/widowx.py)
 
 Robot Description: [https://github.com/haosulab/ManiSkill-WidowX250S](https://github.com/haosulab/ManiSkill-WidowX250S)
+
+## Widow X AI
+
+```{figure} ../images/widowxai.png
+```
+
+Robot UID: `widowxai`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/widowxai/widowxai.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/widowxai/widowxai.py)
+
+Robot Description: [https://github.com/hu-po/ManiSkill-WidowXAI](https://github.com/hu-po/ManiSkill-WidowXAI)
+
+
