@@ -43,7 +43,7 @@ def initialize_data_sources():
         source_type="task_assets",
         url="https://huggingface.co/datasets/haosulab/ManiSkill2/resolve/main/data/mani_skill2_ycb.zip",
         target_path="assets/mani_skill2_ycb",
-        checksum="174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
+        checksum="1551724fd1ac7bad9807ebcf46dd4a788caed5c9499c1225b9bfa080ffbefcb3",
     )
     DATA_SOURCES["pick_clutter_ycb_configs"] = DataSource(
         source_type="task_assets",
