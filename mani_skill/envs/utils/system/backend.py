@@ -38,37 +38,42 @@ render_backend_name_mapping = {
     "sapien_cuda": "sapien_cuda",
 }
 
-
 def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> BackendInfo:
-    sim_backend = sim_backend_name_mapping[sim_backend]
-    render_backend = render_backend_name_mapping[render_backend]
-    if sim_backend == "physx_cpu":
-        device = torch.device("cpu")
-        sim_device = sapien.Device("cpu")
-    elif sim_backend == "physx_cuda":
-        device = torch.device("cuda")
-        sim_device = sapien.Device("cuda")
-    elif sim_backend[:4] == "cuda":
+    if sim_backend[:4] == 'cuda':
         device = torch.device(sim_backend)
         sim_device = sapien.Device(sim_backend)
     else:
-        raise ValueError(f"Invalid simulation backend: {sim_backend}")
+        try:
+            sim_backend = sim_backend_name_mapping[sim_backend]
+        except KeyError:
+            raise ValueError(f"Invalid simulation backend: {sim_backend}")
+        else:
+            if sim_backend == "physx_cpu":
+                device = torch.device("cpu")
+                sim_device = sapien.Device("cpu")
+            elif sim_backend == "physx_cuda":
+                device = torch.device("cuda")
+                sim_device = sapien.Device("cuda")
 
     # TODO (stao): handle checking if system is mac, in which we must then use render_backend = "sapien_cpu"
     # determine render device
-    if render_backend == "sapien_cuda":
-        render_device = sapien.Device("cuda")
-    elif render_backend == "sapien_cpu":
-        render_device = sapien.Device("cpu")
-    elif render_backend[:4] == "cuda":
+    if render_backend[:4] == "cuda":
         render_device = sapien.Device(render_backend)
     else:
-        # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
-        render_device = sapien.Device(render_backend)
+        try:
+            render_backend = render_backend_name_mapping[render_backend]
+        except KeyError:
+            raise ValueError(f"Invalid render backend: {render_backend}")
+        else:
+            if render_backend == "sapien_cuda":
+                render_device = sapien.Device("cuda")
+            elif render_backend == "sapien_cpu":
+                render_device = sapien.Device("cpu")
+            # TODO: handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
     return BackendInfo(
         device=device,
         sim_device=sim_device,
-        sim_backend=sim_backend_name_mapping[sim_backend],
+        sim_backend=sim_backend,
         render_device=render_device,
         render_backend=render_backend,
     )
