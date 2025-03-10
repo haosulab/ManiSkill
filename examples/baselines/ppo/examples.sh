@@ -8,7 +8,7 @@ python ppo.py --env_id="PickCube-v1" \
   --total_timesteps=10_000_000
 python ppo.py --env_id="PickCube-v1" --robot_uids="widowxai" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
-  --total_timesteps=10_000_000
+  --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=100
 python ppo.py --env_id="StackCube-v1" \
   --num_envs=1024 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=25_000_000
@@ -109,9 +109,9 @@ python ppo_rgb.py --env_id="PushCube-v1" \
 python ppo_rgb.py --env_id="PickCube-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=8 \
   --total_timesteps=10_000_000
-python ppo_rgb.py --env_id="PickCube-v1" --robot_uids="widowxai" \
+python ppo_rgb.py --env_id="PickCube-v1" --robot_uids="widowxai_cam" \
   --num_envs=256 --update_epochs=8 --num_minibatches=8 \
-  --total_timesteps=10_000_000
+  --total_timesteps=100_000_000 --num-steps=100 --num-eval-steps=100
 python ppo_rgb.py --env_id="AnymalC-Reach-v1" \
   --num_envs=256 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=10_000_000 --num-steps=200 --num-eval-steps=200 \
