@@ -72,7 +72,7 @@ class Args:
     control_mode: Optional[str] = "pd_joint_delta_pos"
     """the control mode to use for the environment"""
     robot_uids: Optional[str] = None
-    """the uid of the robot to use for the environment"""
+    """Pass in a robot uid to change the robot loaded into the environment instead of using the default one"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8

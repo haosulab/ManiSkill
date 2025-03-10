@@ -20,8 +20,8 @@ BENCHMARK_ENVS = ["FrankaPickCubeBenchmark-v1", "CartpoleBalanceBenchmark-v1", "
 @dataclass
 class Args:
     env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v1"
-    robot_uids: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "widowxai"
-    """Some environments support multiple robots"""
+    robot_uids: Annotated[str, tyro.conf.arg(aliases=["-r"])] = None
+    """Pass in a robot uid to change the robot loaded into the environment instead of using the default one"""
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "state"
     control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_delta_pos"
     num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1024
