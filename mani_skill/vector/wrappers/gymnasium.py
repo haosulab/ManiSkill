@@ -6,8 +6,8 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils.structs.types import Array
 from mani_skill.utils.common import torch_clone_dict
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
@@ -40,6 +40,7 @@ class ManiSkillVectorEnv(VectorEnv):
         auto_reset: bool = True,
         ignore_terminations: bool = False,
         record_metrics: bool = False,
+        staggered_reset: bool = False,
         **kwargs,
     ):
         if isinstance(env, str):
@@ -47,6 +48,7 @@ class ManiSkillVectorEnv(VectorEnv):
         else:
             self._env = env
             num_envs = self.base_env.num_envs
+        self.staggered_reset = staggered_reset
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
         self.record_metrics = record_metrics
@@ -90,6 +92,9 @@ class ManiSkillVectorEnv(VectorEnv):
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = dict(),
     ):
+        options["staggered_reset"] = "env_idx" not in options and options.get(
+            "staggered_reset", self.staggered_reset
+        )
         obs, info = self._env.reset(seed=seed, options=options)
         if "env_idx" in options:
             env_idx = options["env_idx"]
@@ -145,7 +150,9 @@ class ManiSkillVectorEnv(VectorEnv):
             final_obs = torch_clone_dict(obs)
             env_idx = torch.arange(0, self.num_envs, device=self.device)[dones]
             final_info = torch_clone_dict(infos)
-            obs, infos = self.reset(options=dict(env_idx=env_idx))
+            obs, infos = self.reset(
+                options=dict(env_idx=env_idx, staggered_reset=False)
+            )
             # gymnasium calls it final observation but it really is just o_{t+1} or the true next observation
             infos["final_observation"] = final_obs
             infos["final_info"] = final_info
