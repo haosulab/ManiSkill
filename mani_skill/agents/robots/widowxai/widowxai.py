@@ -3,7 +3,7 @@ import sapien
 import torch
 
 from mani_skill import ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import common, sapien_utils
@@ -16,6 +16,24 @@ class WidowXAI(BaseAgent):
     urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai.urdf"
     urdf_config = dict()
 
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array(
+                [
+                    0.0,
+                    2.0,
+                    1.12,
+                    0.7,
+                    0.0,
+                    0.0,
+                    0.04,
+                    0.04,
+                ]
+            ),
+            pose=sapien.Pose(),
+        )
+    )
+
     arm_joint_names = [
         "joint_0",
         "joint_1",
@@ -24,7 +42,10 @@ class WidowXAI(BaseAgent):
         "joint_4",
         "joint_5",
     ]
-    gripper_joint_names = ["right_carriage_joint", "left_carriage_joint"]
+    gripper_joint_names = [
+        "right_carriage_joint",
+        "left_carriage_joint",
+    ]
     ee_link_name = "ee_gripper_link"
 
     def _after_loading_articulation(self):
