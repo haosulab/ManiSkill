@@ -23,11 +23,11 @@ import torch.nn as nn
 import torch.optim as optim
 import tqdm
 import tyro
-from torch.utils.tensorboard import SummaryWriter
 import wandb
 from tensordict import from_module
 from tensordict.nn import CudaGraphModule
 from torch.distributions.normal import Normal
+from torch.utils.tensorboard import SummaryWriter
 
 
 @dataclass
@@ -70,6 +70,8 @@ class Args:
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
     """whether to let parallel environments reset upon termination instead of truncation"""
+    staggered_reset: bool = False
+    """whether to stagger the reset of parallel environments"""
     eval_partial_reset: bool = False
     """whether to let parallel evaluation environments reset upon termination instead of truncation"""
     num_steps: int = 50
@@ -134,6 +136,7 @@ class Args:
     cudagraphs: bool = False
     """whether to use cudagraphs on top of compile."""
 
+
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -159,7 +162,7 @@ class Agent(nn.Module):
             nn.Tanh(),
             layer_init(nn.Linear(256, 256, device=device)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, n_act, device=device), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(256, n_act, device=device), std=0.01 * np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, n_act, device=device))
 
@@ -173,18 +176,27 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = action_mean + action_std * torch.randn_like(action_mean)
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(obs)
+        return (
+            action,
+            probs.log_prob(action).sum(1),
+            probs.entropy().sum(1),
+            self.critic(obs),
+        )
+
 
 class Logger:
     def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
         self.writer = tensorboard
         self.log_wandb = log_wandb
+
     def add_scalar(self, tag, scalar_value, step):
         if self.log_wandb:
             wandb.log({tag: scalar_value}, step=step)
         self.writer.add_scalar(tag, scalar_value, step)
+
     def close(self):
         self.writer.close()
+
 
 def gae(next_obs, next_done, container, final_values):
     # bootstrap value if not done
@@ -201,9 +213,13 @@ def gae(next_obs, next_done, container, final_values):
     for t in range(args.num_steps - 1, -1, -1):
         cur_val = vals_unbind[t]
         # real_next_values = nextvalues * nextnonterminal
-        real_next_values = nextnonterminal * nextvalues + final_values[t] # t instead of t+1
+        real_next_values = (
+            nextnonterminal * nextvalues + final_values[t]
+        )  # t instead of t+1
         delta = rewards[t] + args.gamma * real_next_values - cur_val
-        advantages.append(delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam)
+        advantages.append(
+            delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+        )
         lastgaelam = advantages[-1]
 
         nextnonterminal = nextnonterminals[t]
@@ -228,9 +244,13 @@ def rollout(obs, done):
             final_info = infos["final_info"]
             done_mask = infos["_final_info"]
             for k, v in final_info["episode"].items():
-                logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
+                logger.add_scalar(
+                    f"train/{k}", v[done_mask].float().mean(), global_step
+                )
             with torch.no_grad():
-                final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
+                final_values[
+                    step, torch.arange(args.num_envs, device=device)[done_mask]
+                ] = agent.get_value(infos["final_observation"][done_mask]).view(-1)
 
         ts.append(
             tensordict.TensorDict._new_unsafe(
@@ -294,13 +314,29 @@ def update(obs, actions, logprobs, advantages, returns, vals):
     gn = nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
     optimizer.step()
 
-    return approx_kl, v_loss.detach(), pg_loss.detach(), entropy_loss.detach(), old_approx_kl, clipfrac, gn
+    return (
+        approx_kl,
+        v_loss.detach(),
+        pg_loss.detach(),
+        entropy_loss.detach(),
+        old_approx_kl,
+        clipfrac,
+        gn,
+    )
 
 
 update = tensordict.nn.TensorDictModule(
     update,
     in_keys=["obs", "actions", "logprobs", "advantages", "returns", "vals"],
-    out_keys=["approx_kl", "v_loss", "pg_loss", "entropy_loss", "old_approx_kl", "clipfrac", "gn"],
+    out_keys=[
+        "approx_kl",
+        "v_loss",
+        "pg_loss",
+        "entropy_loss",
+        "old_approx_kl",
+        "clipfrac",
+        "gn",
+    ],
 )
 
 if __name__ == "__main__":
@@ -326,11 +362,24 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     ####### Environment setup #######
-    env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="physx_cuda")
+    env_kwargs = dict(
+        obs_mode="state", render_mode="rgb_array", sim_backend="physx_cuda"
+    )
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
-    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, human_render_camera_configs=dict(shader_pack="default"), **env_kwargs)
+    envs = gym.make(
+        args.env_id,
+        num_envs=args.num_envs if not args.evaluate else 1,
+        reconfiguration_freq=args.reconfiguration_freq,
+        **env_kwargs,
+    )
+    eval_envs = gym.make(
+        args.env_id,
+        num_envs=args.num_eval_envs,
+        reconfiguration_freq=args.eval_reconfiguration_freq,
+        human_render_camera_configs=dict(shader_pack="default"),
+        **env_kwargs,
+    )
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
         eval_envs = FlattenActionSpaceWrapper(eval_envs)
@@ -340,12 +389,43 @@ if __name__ == "__main__":
             eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
         print(f"Saving eval trajectories/videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
-            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
-            envs = RecordEpisode(envs, output_dir=f"runs/{run_name}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.save_trajectory, save_video=args.capture_video, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
-    envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
-    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+            save_video_trigger = (
+                lambda x: (x // args.num_steps) % args.save_train_video_freq == 0
+            )
+            envs = RecordEpisode(
+                envs,
+                output_dir=f"runs/{run_name}/train_videos",
+                save_trajectory=False,
+                save_video_trigger=save_video_trigger,
+                max_steps_per_video=args.num_steps,
+                video_fps=30,
+            )
+        eval_envs = RecordEpisode(
+            eval_envs,
+            output_dir=eval_output_dir,
+            save_trajectory=args.save_trajectory,
+            save_video=args.capture_video,
+            trajectory_name="trajectory",
+            max_steps_per_video=args.num_eval_steps,
+            video_fps=30,
+        )
+    envs = ManiSkillVectorEnv(
+        envs,
+        args.num_envs,
+        ignore_terminations=not args.partial_reset,
+        record_metrics=True,
+        staggered_reset=args.staggered_reset,
+    )
+    eval_envs = ManiSkillVectorEnv(
+        eval_envs,
+        args.num_eval_envs,
+        ignore_terminations=not args.eval_partial_reset,
+        record_metrics=True,
+        staggered_reset=False,
+    )
+    assert isinstance(
+        envs.single_action_space, gym.spaces.Box
+    ), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
     logger = None
@@ -353,9 +433,26 @@ if __name__ == "__main__":
         print("Running training")
         if args.track:
             import wandb
+
             config = vars(args)
-            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=args.partial_reset)
-            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, reward_mode="normalized_dense", env_horizon=max_episode_steps, partial_reset=False)
+            config["algo"] = "ppo"
+            config["env_cfg"] = dict(
+                **env_kwargs,
+                num_envs=args.num_envs,
+                env_id=args.env_id,
+                reward_mode="normalized_dense",
+                env_horizon=max_episode_steps,
+                partial_reset=args.partial_reset,
+                staggered_reset=args.staggered_reset,
+            )
+            config["eval_env_cfg"] = dict(
+                **env_kwargs,
+                num_envs=args.num_eval_envs,
+                env_id=args.env_id,
+                reward_mode="normalized_dense",
+                env_horizon=max_episode_steps,
+                partial_reset=False,
+            )
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,
@@ -364,23 +461,32 @@ if __name__ == "__main__":
                 name=run_name,
                 save_code=True,
                 group=args.wandb_group,
-                tags=["ppo", "walltime_efficient", f"GPU:{torch.cuda.get_device_name()}"]
+                tags=[
+                    "ppo",
+                    "walltime_efficient",
+                    f"GPU:{torch.cuda.get_device_name()}",
+                ],
             )
         writer = SummaryWriter(f"runs/{run_name}")
         writer.add_text(
             "hyperparameters",
-            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+            "|param|value|\n|-|-|\n%s"
+            % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
         )
         logger = Logger(log_wandb=args.track, tensorboard=writer)
     else:
         print("Running evaluation")
     n_act = math.prod(envs.single_action_space.shape)
     n_obs = math.prod(envs.single_observation_space.shape)
-    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+    assert isinstance(
+        envs.single_action_space, gym.spaces.Box
+    ), "only continuous action space is supported"
 
     # Register step as a special op not to graph break
     # @torch.library.custom_op("mylib::step", mutates_args=())
-    def step_func(action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def step_func(
+        action: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # NOTE (stao): change here for gpu env
         next_obs, reward, terminations, truncations, info = envs.step(action)
         next_done = torch.logical_or(terminations, truncations)
@@ -437,7 +543,13 @@ if __name__ == "__main__":
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.actor_mean(eval_obs))
+                    (
+                        eval_obs,
+                        eval_rew,
+                        eval_terminations,
+                        eval_truncations,
+                        eval_infos,
+                    ) = eval_envs.step(agent.actor_mean(eval_obs))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -483,7 +595,9 @@ if __name__ == "__main__":
         # Optimizing the policy and value network
         clipfracs = []
         for epoch in range(args.update_epochs):
-            b_inds = torch.randperm(container_flat.shape[0], device=device).split(args.minibatch_size)
+            b_inds = torch.randperm(container_flat.shape[0], device=device).split(
+                args.minibatch_size
+            )
             for b in b_inds:
                 container_local = container_flat[b]
 
@@ -497,21 +611,37 @@ if __name__ == "__main__":
         update_time = time.perf_counter() - update_time
         cumulative_times["update_time"] += update_time
 
-        logger.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        logger.add_scalar(
+            "charts/learning_rate", optimizer.param_groups[0]["lr"], global_step
+        )
         logger.add_scalar("losses/value_loss", out["v_loss"].item(), global_step)
         logger.add_scalar("losses/policy_loss", out["pg_loss"].item(), global_step)
         logger.add_scalar("losses/entropy", out["entropy_loss"].item(), global_step)
-        logger.add_scalar("losses/old_approx_kl", out["old_approx_kl"].item(), global_step)
+        logger.add_scalar(
+            "losses/old_approx_kl", out["old_approx_kl"].item(), global_step
+        )
         logger.add_scalar("losses/approx_kl", out["approx_kl"].item(), global_step)
-        logger.add_scalar("losses/clipfrac", torch.stack(clipfracs).mean().cpu().item(), global_step)
-        logger.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        logger.add_scalar(
+            "losses/clipfrac", torch.stack(clipfracs).mean().cpu().item(), global_step
+        )
+        logger.add_scalar(
+            "charts/SPS", int(global_step / (time.time() - start_time)), global_step
+        )
         logger.add_scalar("time/step", global_step, global_step)
         logger.add_scalar("time/update_time", update_time, global_step)
         logger.add_scalar("time/rollout_time", rollout_time, global_step)
-        logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
+        logger.add_scalar(
+            "time/rollout_fps",
+            args.num_envs * args.num_steps / rollout_time,
+            global_step,
+        )
         for k, v in cumulative_times.items():
             logger.add_scalar(f"time/total_{k}", v, global_step)
-        logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
+        logger.add_scalar(
+            "time/total_rollout+update_time",
+            cumulative_times["rollout_time"] + cumulative_times["update_time"],
+            global_step,
+        )
     if not args.evaluate:
         if args.save_model:
             model_path = f"runs/{run_name}/final_ckpt.pt"
