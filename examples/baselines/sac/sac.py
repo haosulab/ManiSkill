@@ -546,6 +546,7 @@ if __name__ == "__main__":
             import wandb
 
             config = vars(args)
+            config["algo"] = "sac"
             config["env_cfg"] = dict(
                 **env_kwargs,
                 num_envs=args.num_envs,
