@@ -38,6 +38,9 @@ class EnvSpec:
     def make(self, **kwargs):
         _kwargs = self.default_kwargs.copy()
         _kwargs.update(kwargs)
+        # NOTE (arth): to implement staggered reset, we need max_episode_steps
+        #   but removing TimeLimit wrapper for good needs to be approved
+        _kwargs["max_episode_steps"] = self.max_episode_steps
 
         # check if all assets necessary are downloaded
         assets_to_download = []
