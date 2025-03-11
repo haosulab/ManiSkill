@@ -1,2 +1,4 @@
-runs
-videos
+/runs
+/videos
+/pretrained
+/wandb

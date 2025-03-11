@@ -51,7 +51,7 @@ class Args:
     """if toggled, only runs evaluation with the given model checkpoint and saves the evaluation trajectories"""
     checkpoint: Optional[str] = None
     """path to a pretrained checkpoint file to start evaluation/training from"""
-    log_freq: int = 1_000
+    log_freq: int = 50_000
     """logging frequency in terms of environment steps"""
 
     # Environment specific arguments
@@ -75,8 +75,8 @@ class Args:
     """how often to reconfigure the environment during training"""
     eval_reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
-    eval_freq: int = 25
-    """evaluation frequency in terms of iterations"""
+    eval_freq: int = 500_000
+    """evaluation frequency in terms of global step"""
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
     control_mode: Optional[str] = "pd_joint_delta_pos"
@@ -122,11 +122,9 @@ class Args:
     """the dropout rate of the Q network"""
     min_q: int = 2
     """number of Q target networks to get the min over"""
-    num_q: int = 10
+    num_q: int = 2
     """total number of Q networks"""
 
-    gamma: float = 0.8
-    """the discount factor gamma"""
     tau: float = 0.005
     """target smoothing coefficient"""
     alpha: float = 0.2
@@ -135,6 +133,9 @@ class Args:
     """automatic tuning of the entropy coefficient"""
     alpha_lr: float = 3e-4
     """the learning rate of the entropy coefficient"""
+
+    gamma: float = 0.8
+    """the discount factor gamma"""
     bootstrap_at_done: str = "always"
     """the bootstrap method to use when a done signal is received. Can be 'always' or 'never'"""
 
@@ -565,7 +566,11 @@ if __name__ == "__main__":
                 name=run_name,
                 save_code=True,
                 group=args.wandb_group,
-                tags=["sac", "walltime_efficient"],
+                tags=[
+                    "sac",
+                    "walltime_efficient",
+                    f"GPU:{torch.cuda.get_device_name()}",
+                ],
             )
         writer = SummaryWriter(f"runs/{run_name}")
         writer.add_text(
@@ -659,124 +664,128 @@ if __name__ == "__main__":
     for iteration in range(
         math.ceil(args.total_timesteps / global_steps_per_iteration)
     ):
-        with torch.inference_mode():
-            if (
-                args.eval_freq > 0
-                and (global_step - global_steps_per_iteration) // args.eval_freq
-                < global_step // args.eval_freq
-            ):
-                # evaluate
-                actor.eval()
-                stime = time.perf_counter()
-                eval_obs, _ = eval_envs.reset()
-                eval_metrics = defaultdict(list)
-                num_episodes = 0
-                for _ in range(args.num_eval_steps):
-                    with torch.no_grad():
-                        (
-                            eval_obs,
-                            eval_rew,
-                            eval_terminations,
-                            eval_truncations,
-                            eval_infos,
-                        ) = eval_envs.step(actor.get_eval_action(eval_obs))
-                        if "final_info" in eval_infos:
-                            mask = eval_infos["_final_info"]
-                            num_episodes += mask.sum()
-                            for k, v in eval_infos["final_info"]["episode"].items():
-                                eval_metrics[k].append(v)
-                eval_metrics_mean = {}
-                for k, v in eval_metrics.items():
-                    mean = torch.stack(v).float().mean()
-                    eval_metrics_mean[k] = mean
-                    if logger is not None:
-                        logger.add_scalar(f"eval/{k}", mean, global_step)
-                pbar.set_description(
-                    f"success_once: {eval_metrics_mean['success_once']:.2f}, "
-                    f"return: {eval_metrics_mean['return']:.2f}"
-                )
-                if logger is not None:
-                    eval_time = time.perf_counter() - stime
-                    cumulative_times["eval_time"] += eval_time
-                    logger.add_scalar("time/eval_time", eval_time, global_step)
-                if args.evaluate:
-                    break
-                actor.train()
-
-                if args.save_model:
-                    model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
-                    _save_dict = {
-                        "actor": actor.state_dict(),
-                        "qfs": [qf_target.state_dict() for qf_target in qf_targets],
-                        "log_alpha": log_alpha,
-                    }
+        if (
+            args.eval_freq > 0
+            and (global_step - global_steps_per_iteration) // args.eval_freq
+            < global_step // args.eval_freq
+        ):
+            # evaluate
+            actor.eval()
+            stime = time.perf_counter()
+            eval_obs, _ = eval_envs.reset()
+            eval_metrics = defaultdict(list)
+            num_episodes = 0
+            for _ in range(args.num_eval_steps):
+                with torch.no_grad():
                     if args.obs_rms:
-                        _save_dict["obs_rms"] = obs_rms.state_dict()
-                    torch.save(
-                        _save_dict,
-                        model_path,
-                    )
-                    print(f"model saved to {model_path}")
-
-            # Collect samples from environemnts
-            rollout_time = time.perf_counter()
-
-            for local_step in range(args.steps_per_env_per_iteration):
-                global_step += 1 * args.num_envs
-
-                # ALGO LOGIC: put action logic here
-                if args.obs_rms:
-                    obs_rms.update(obs)
-                if not learning_has_started:
-                    actions = torch.tensor(
-                        envs.action_space.sample(), dtype=torch.float32, device=device
-                    )
-                else:
-                    if args.obs_rms:
-                        actions, _, _ = actor.get_action(obs_rms.normalize(obs))
+                        eval_action = actor.get_eval_action(obs_rms.normalize(eval_obs))
                     else:
-                        actions, _, _ = actor.get_action(obs)
-                    actions = actions.detach()
+                        eval_action = actor.get_eval_action(eval_obs)
+                    (
+                        eval_obs,
+                        eval_rew,
+                        eval_terminations,
+                        eval_truncations,
+                        eval_infos,
+                    ) = eval_envs.step(eval_action)
+                    if "final_info" in eval_infos:
+                        mask = eval_infos["_final_info"]
+                        num_episodes += mask.sum()
+                        for k, v in eval_infos["final_info"]["episode"].items():
+                            eval_metrics[k].append(v)
+            eval_metrics_mean = {}
+            for k, v in eval_metrics.items():
+                mean = torch.stack(v).float().mean()
+                eval_metrics_mean[k] = mean
+                if logger is not None:
+                    logger.add_scalar(f"eval/{k}", mean, global_step)
+            pbar.set_description(
+                f"success_once: {eval_metrics_mean['success_once']:.2f}, "
+                f"return: {eval_metrics_mean['return']:.2f}",
+                refresh=False,
+            )
+            if logger is not None:
+                eval_time = time.perf_counter() - stime
+                cumulative_times["eval_time"] += eval_time
+                logger.add_scalar("time/eval_time", eval_time, global_step)
+            if args.evaluate:
+                break
+            actor.train()
 
-                # TRY NOT TO MODIFY: execute the game and log data.
-                next_obs, rewards, terminations, truncations, infos = envs.step(actions)
-                real_next_obs = next_obs.clone()
-                if args.bootstrap_at_done == "never":
-                    need_final_obs = torch.ones_like(terminations, dtype=torch.bool)
-                    stop_bootstrap = (
-                        truncations | terminations
-                    )  # always stop bootstrap when episode ends
+            if args.save_model:
+                model_path = f"runs/{run_name}/ckpt_{global_step}.pt"
+                _save_dict = {
+                    "actor": actor.state_dict(),
+                    "qfs": [qf_target.state_dict() for qf_target in qf_targets],
+                    "log_alpha": log_alpha,
+                }
+                if args.obs_rms:
+                    _save_dict["obs_rms"] = obs_rms.state_dict()
+                torch.save(
+                    _save_dict,
+                    model_path,
+                )
+                print(f"model saved to {model_path}")
+
+        # Collect samples from environemnts
+        rollout_time = time.perf_counter()
+
+        for local_step in range(args.steps_per_env_per_iteration):
+            global_step += 1 * args.num_envs
+
+            # ALGO LOGIC: put action logic here
+            if args.obs_rms:
+                obs_rms.update(obs)
+            if not learning_has_started:
+                actions = torch.tensor(
+                    envs.action_space.sample(), dtype=torch.float32, device=device
+                )
+            else:
+                if args.obs_rms:
+                    actions, _, _ = actor.get_action(obs_rms.normalize(obs))
                 else:
-                    if args.bootstrap_at_done == "always":
-                        need_final_obs = (
-                            truncations | terminations
-                        )  # always need final obs when episode ends
-                        stop_bootstrap = torch.zeros_like(
-                            terminations, dtype=torch.bool
-                        )  # never stop bootstrap
-                    else:  # bootstrap at truncated
-                        need_final_obs = truncations & (
-                            ~terminations
-                        )  # only need final obs when truncated and not terminated
-                        stop_bootstrap = terminations  # only stop bootstrap when terminated, don't stop when truncated
-                if "final_info" in infos:
-                    final_info = infos["final_info"]
-                    done_mask = infos["_final_info"]
-                    real_next_obs[need_final_obs] = infos["final_observation"][
-                        need_final_obs
-                    ]
-                    for k, v in final_info["episode"].items():
-                        logger.add_scalar(
-                            f"train/{k}", v[done_mask].float().mean(), global_step
-                        )
+                    actions, _, _ = actor.get_action(obs)
+                actions = actions.detach()
 
-                rb.add(obs, real_next_obs, actions, rewards, stop_bootstrap)
+            # TRY NOT TO MODIFY: execute the game and log data.
+            next_obs, rewards, terminations, truncations, infos = envs.step(actions)
+            real_next_obs = next_obs.clone()
+            if args.bootstrap_at_done == "never":
+                need_final_obs = torch.ones_like(terminations, dtype=torch.bool)
+                stop_bootstrap = (
+                    truncations | terminations
+                )  # always stop bootstrap when episode ends
+            else:
+                if args.bootstrap_at_done == "always":
+                    need_final_obs = (
+                        truncations | terminations
+                    )  # always need final obs when episode ends
+                    stop_bootstrap = torch.zeros_like(
+                        terminations, dtype=torch.bool
+                    )  # never stop bootstrap
+                else:  # bootstrap at truncated
+                    need_final_obs = truncations & (
+                        ~terminations
+                    )  # only need final obs when truncated and not terminated
+                    stop_bootstrap = terminations  # only stop bootstrap when terminated, don't stop when truncated
+            if "final_info" in infos:
+                final_info = infos["final_info"]
+                done_mask = infos["_final_info"]
+                real_next_obs[need_final_obs] = infos["final_observation"][
+                    need_final_obs
+                ]
+                for k, v in final_info["episode"].items():
+                    logger.add_scalar(
+                        f"train/{k}", v[done_mask].float().mean(), global_step
+                    )
 
-                # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
-                obs = next_obs
-            rollout_time = time.perf_counter() - rollout_time
-            cumulative_times["rollout_time"] += rollout_time
-            pbar.update(global_steps_per_iteration)
+            rb.add(obs, real_next_obs, actions, rewards, stop_bootstrap)
+
+            # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
+            obs = next_obs
+        rollout_time = time.perf_counter() - rollout_time
+        cumulative_times["rollout_time"] += rollout_time
+        pbar.update(global_steps_per_iteration)
 
         # ALGO LOGIC: training.
         if global_step < args.learning_starts:
@@ -870,7 +879,7 @@ if __name__ == "__main__":
 
         # Log training-related data
         if (
-            global_step - args.training_freq
+            global_step - global_steps_per_iteration
         ) // args.log_freq < global_step // args.log_freq:
             logger.add_scalar(
                 "losses/qf_mean_values",
