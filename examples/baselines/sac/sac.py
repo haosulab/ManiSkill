@@ -65,6 +65,8 @@ class Args:
     """the number of parallel evaluation environments"""
     partial_reset: bool = False
     """whether to let parallel environments reset upon termination instead of truncation"""
+    staggered_reset: bool = False
+    """whether to stagger episode resets in training env"""
     eval_partial_reset: bool = False
     """whether to let parallel evaluation environments reset upon termination instead of truncation"""
     num_steps: int = 50
@@ -523,12 +525,14 @@ if __name__ == "__main__":
         args.num_envs,
         ignore_terminations=not args.partial_reset,
         record_metrics=True,
+        staggered_reset=args.staggered_reset,
     )
     eval_envs = ManiSkillVectorEnv(
         eval_envs,
         args.num_eval_envs,
         ignore_terminations=not args.eval_partial_reset,
         record_metrics=True,
+        staggered_reset=False,
     )
     assert isinstance(
         envs.single_action_space, gym.spaces.Box
@@ -549,6 +553,7 @@ if __name__ == "__main__":
                 reward_mode="normalized_dense",
                 env_horizon=max_episode_steps,
                 partial_reset=args.partial_reset,
+                staggered_reset=args.staggered_reset,
             )
             config["eval_env_cfg"] = dict(
                 **env_kwargs,

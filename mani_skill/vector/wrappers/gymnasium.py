@@ -90,9 +90,11 @@ class ManiSkillVectorEnv(VectorEnv):
         self,
         *,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = dict(),
+        options: Optional[dict] = None,
     ):
-        options["staggered_reset"] = "env_idx" not in options and options.get(
+        if options is None:
+            options = {}
+        options["staggered_reset"] = ("env_idx" not in options) and options.get(
             "staggered_reset", self.staggered_reset
         )
         obs, info = self._env.reset(seed=seed, options=options)
