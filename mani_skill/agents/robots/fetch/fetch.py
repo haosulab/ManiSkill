@@ -54,8 +54,8 @@ class Fetch(BaseAgent):
             CameraConfig(
                 uid="fetch_head",
                 pose=Pose.create_from_pq([0, 0, 0], [1, 0, 0, 0]),
-                width=128,
-                height=128,
+                width=64,
+                height=64,
                 fov=2,
                 near=0.01,
                 far=100,
@@ -64,8 +64,8 @@ class Fetch(BaseAgent):
             CameraConfig(
                 uid="fetch_hand",
                 pose=Pose.create_from_pq([-0.1, 0, 0.1], [1, 0, 0, 0]),
-                width=128,
-                height=128,
+                width=64,
+                height=64,
                 fov=2,
                 near=0.01,
                 far=100,
