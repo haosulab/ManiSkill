@@ -2,10 +2,12 @@
 
 seeds=(9351 4796 1788)
 
-# State Baselines
 for seed in "${seeds[@]}"
 do
-    # obs_rms
+    # ------------------------------------------------------------------------------------------------
+    # State Baselines
+    # ------------------------------------------------------------------------------------------------
+    # PickCube obs_rms
     env_id=PickCube-v1
     num_envs=1024
     batch_size=4096
@@ -48,7 +50,7 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
         --track
     
-    # no obs_rms
+    # PickCube no obs_rms
     env_id=PickCube-v1
     num_envs=1024
     batch_size=4096
@@ -89,6 +91,7 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
         --track
 
+    # PickSingleYCB
     env_id="PickSingleYCB-v1" 
     num_envs=1024
     batch_size=4096
@@ -129,6 +132,7 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
         --track
 
+    # PegInsertionSide
     env_id="PegInsertionSide-v1" 
     num_envs=1024
     batch_size=4096
@@ -169,6 +173,7 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
         --track
 
+    # UnitreeG1TransportBox
     env_id="UnitreeG1TransportBox-v1" 
     num_envs=4096
     batch_size=2048
@@ -209,13 +214,12 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
         --track
 
-done
+    # ------------------------------------------------------------------------------------------------
 
-# Staggered Reset Baselines
-for seed in "${seeds[@]}"
-do
-
-    # obs_rms
+    # ------------------------------------------------------------------------------------------------
+    # Staggered Reset Baselines
+    # ------------------------------------------------------------------------------------------------
+    # PickCube obs_rms
     env_id=PickCube-v1
     num_envs=1024
     batch_size=4096
@@ -259,7 +263,7 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient-staggered_reset" \
         --track
 
-    # no obs_rms
+    # PickCube no obs_rms
     env_id=PickCube-v1
     num_envs=1024
     batch_size=4096
@@ -301,6 +305,7 @@ do
         --exp-name="sac-${env_id}-state-${seed}-walltime_efficient-staggered_reset" \
         --track
 
+    # PickSingleYCB
     env_id="PickSingleYCB-v1" 
     num_envs=1024
     batch_size=4096
@@ -339,9 +344,10 @@ do
         \
         --log_freq=$((num_envs * horizon * 2)) \
         --eval_freq=$((num_envs * horizon * 4)) \
-        --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
+        --exp-name="sac-${env_id}-state-${seed}-walltime_efficient-staggered_reset" \
         --track
 
+    # PegInsertionSide
     env_id="PegInsertionSide-v1" 
     num_envs=1024
     batch_size=4096
@@ -380,9 +386,10 @@ do
         \
         --log_freq=$((num_envs * horizon * 2)) \
         --eval_freq=$((num_envs * horizon * 4)) \
-        --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
+        --exp-name="sac-${env_id}-state-${seed}-walltime_efficient-staggered_reset" \
         --track
 
+    # UnitreeG1TransportBox
     env_id="UnitreeG1TransportBox-v1" 
     num_envs=4096
     batch_size=2048
@@ -421,7 +428,6 @@ do
         \
         --log_freq=$((num_envs * horizon * 2)) \
         --eval_freq=$((num_envs * horizon * 4)) \
-        --exp-name="sac-${env_id}-state-${seed}-walltime_efficient" \
+        --exp-name="sac-${env_id}-state-${seed}-walltime_efficient-staggered_reset" \
         --track
-
 done
