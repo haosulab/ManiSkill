@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import sapien
 import torch
@@ -60,12 +62,163 @@ class WidowXAI(BaseAgent):
     ]
     ee_link_name = "ee_gripper_link"
 
+    arm_stiffness = 1e3
+    arm_damping = 1e2
+    arm_force_limit = 100
+
+    gripper_stiffness = 1e3
+    gripper_damping = 1e2
+    gripper_force_limit = 100
+
+    @property
+    def _controller_configs(self):
+        # -------------------------------------------------------------------------- #
+        # Arm
+        # -------------------------------------------------------------------------- #
+        arm_pd_joint_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
+            lower=None,
+            upper=None,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            normalize_action=False,
+        )
+        arm_pd_joint_delta_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
+            lower=-0.1,
+            upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            use_delta=True,
+        )
+        arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
+        arm_pd_joint_target_delta_pos.use_target = True
+
+        # PD ee position
+        arm_pd_ee_delta_pos = PDEEPosControllerConfig(
+            joint_names=self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            ee_link=self.ee_link_name,
+            urdf_path=self.urdf_path,
+        )
+        arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
+            joint_names=self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            rot_lower=-0.1,
+            rot_upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            ee_link=self.ee_link_name,
+            urdf_path=self.urdf_path,
+        )
+        arm_pd_ee_pose = PDEEPoseControllerConfig(
+            joint_names=self.arm_joint_names,
+            pos_lower=None,
+            pos_upper=None,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            ee_link=self.ee_link_name,
+            urdf_path=self.urdf_path,
+            use_delta=False,
+            normalize_action=False,
+        )
+
+        arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
+        arm_pd_ee_target_delta_pos.use_target = True
+        arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
+        arm_pd_ee_target_delta_pose.use_target = True
+
+        # PD joint velocity
+        arm_pd_joint_vel = PDJointVelControllerConfig(
+            self.arm_joint_names,
+            -1.0,
+            1.0,
+            self.arm_damping,  # this might need to be tuned separately
+            self.arm_force_limit,
+        )
+
+        # PD joint position and velocity
+        arm_pd_joint_pos_vel = PDJointPosVelControllerConfig(
+            self.arm_joint_names,
+            None,
+            None,
+            self.arm_stiffness,
+            self.arm_damping,
+            self.arm_force_limit,
+            normalize_action=False,
+        )
+        arm_pd_joint_delta_pos_vel = PDJointPosVelControllerConfig(
+            self.arm_joint_names,
+            -0.1,
+            0.1,
+            self.arm_stiffness,
+            self.arm_damping,
+            self.arm_force_limit,
+            use_delta=True,
+        )
+
+        # -------------------------------------------------------------------------- #
+        # Gripper
+        # -------------------------------------------------------------------------- #
+        # NOTE(jigu): IssacGym uses large P and D but with force limit
+        # However, tune a good force limit to have a good mimic behavior
+        gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
+            self.gripper_joint_names,
+            lower=-0.01,  # a trick to have force when the object is thin
+            upper=0.04,
+            stiffness=self.gripper_stiffness,
+            damping=self.gripper_damping,
+            force_limit=self.gripper_force_limit,
+        )
+
+        controller_configs = dict(
+            pd_joint_delta_pos=dict(
+                arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos
+            ),
+            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
+            pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos),
+            pd_ee_delta_pose=dict(
+                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos
+            ),
+            pd_ee_pose=dict(arm=arm_pd_ee_pose, gripper=gripper_pd_joint_pos),
+            # TODO(jigu): how to add boundaries for the following controllers
+            pd_joint_target_delta_pos=dict(
+                arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos
+            ),
+            pd_ee_target_delta_pos=dict(
+                arm=arm_pd_ee_target_delta_pos, gripper=gripper_pd_joint_pos
+            ),
+            pd_ee_target_delta_pose=dict(
+                arm=arm_pd_ee_target_delta_pose, gripper=gripper_pd_joint_pos
+            ),
+            # Caution to use the following controllers
+            pd_joint_vel=dict(arm=arm_pd_joint_vel, gripper=gripper_pd_joint_pos),
+            pd_joint_pos_vel=dict(
+                arm=arm_pd_joint_pos_vel, gripper=gripper_pd_joint_pos
+            ),
+            pd_joint_delta_pos_vel=dict(
+                arm=arm_pd_joint_delta_pos_vel, gripper=gripper_pd_joint_pos
+            ),
+        )
+
+        # Make a deepcopy in case users modify any config
+        return deepcopy_dict(controller_configs)
+
     def _after_loading_articulation(self):
         self.finger1_link = self.robot.links_map["gripper_left"]
         self.finger2_link = self.robot.links_map["gripper_right"]
         self.tcp = sapien_utils.get_obj_by_name(self.robot.get_links(), self.ee_link_name)
 
-    def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
+    def is_grasping(self, object: Actor, min_force=0.2, max_angle=85):
         """Check if the robot is grasping an object
 
         Args:
@@ -84,16 +237,24 @@ class WidowXAI(BaseAgent):
 
         # direction to open the gripper
         ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
+        print(f"ldirection: {ldirection}")
         rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
+        print(f"rdirection: {rdirection}")
         langle = common.compute_angle_between(ldirection, l_contact_forces)
+        print(f"langle: {langle}")
         rangle = common.compute_angle_between(rdirection, r_contact_forces)
+        print(f"rangle: {rangle}")
         lflag = torch.logical_and(
             lforce >= min_force, torch.rad2deg(langle) <= max_angle
         )
+        print(f"lflag: {lflag}")
         rflag = torch.logical_and(
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
-        return torch.logical_and(lflag, rflag)
+        print(f"rflag: {rflag}")
+        _is_grasped = torch.logical_and(lflag, rflag)
+        print(f"is_grasped: {_is_grasped}")
+        return _is_grasped
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]

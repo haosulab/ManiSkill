@@ -13,21 +13,15 @@ env = gym.make("PickCube-v1", robot_uids="widowxai", control_mode="pd_joint_pos"
 obs, info = env.reset(seed=0)
 num_steps_per_pose = 200
 joint_positions = {
-    "pre-grasp" : np.array([0.096, 2.647, 2.335, -0.738, 0.0, 0.0, 0.04, 0.04]),
-    "grasp" : np.array([0.096, 2.647, 2.335, -0.738, 0.0, 0.0, 0.02, 0.02]),
+    "pre-grasp" : np.array([0.096, 2.647, 2.335, -0.738, 0.0, 0.0, 0.04]),
+    "grasp" : np.array([0.096, 2.647, 2.335, -0.738, 0.0, 0.0, 0.02]),
 }
+
 for position_name, joint_pos in joint_positions.items():
     print(f"\n--- Moving to position: {position_name} ---")
     for step in range(num_steps_per_pose):
         obs, rew, term, trunc, info = env.step(joint_pos)
         env.render_human()
-        if step % 100 == 0:
-            is_grasping = info.get('is_grasping', False)
-            print(f"Step {step}, Is grasping: {is_grasping}")
-            if 'success' in info:
-                print(f"Success: {info['success']}")
+        print(f"is_grasped: {info['is_grasped']}, success: {info['success']}")
 
-print("\n--- Final grasping check ---")
-is_grasping = info.get('is_grasping', False)
-print(f"Is grasping cube: {is_grasping}")
 env.close()
