@@ -364,14 +364,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             meshes.append(mesh)
             if first_only:
                 break
-        if to_world_frame:
-            mat = self.pose
-            for i, mesh in enumerate(meshes):
-                if mat is not None:
-                    if len(mat) > 1:
-                        mesh.apply_transform(mat[i].sp.to_transformation_matrix())
-                    else:
-                        mesh.apply_transform(mat.sp.to_transformation_matrix())
         if first_only:
             return meshes[0]
         return meshes

@@ -102,18 +102,3 @@ def get_actor_visual_mesh(actor: sapien.Entity):
     if mesh is None:
         return None
     return mesh
-
-
-def get_articulation_meshes(
-    articulation: physx.PhysxArticulation, exclude_link_names=()
-):
-    """Get link meshes in the world frame."""
-    meshes = []
-    for link in articulation.get_links():
-        if link.name in exclude_link_names:
-            continue
-        mesh = get_component_mesh(link, True)
-        if mesh is None:
-            continue
-        meshes.append(mesh)
-    return meshes
