@@ -14,7 +14,19 @@ from mani_skill.utils.structs.actor import Actor
 class WidowXAI(BaseAgent):
     uid = "widowxai"
     urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai.urdf"
-    urdf_config = dict()
+    urdf_config = dict(
+        _materials=dict(
+            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            gripper_left=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            gripper_right=dict(
+                material="gripper", patch_radius=0.1, min_patch_radius=0.1
+            ),
+        ),
+    )
 
     keyframes = dict(
         ready_to_grasp=Keyframe(
@@ -26,8 +38,8 @@ class WidowXAI(BaseAgent):
                     0.7,
                     0.0,
                     0.0,
-                    0.04,
-                    0.04,
+                    0.03,
+                    0.03,
                 ]
             ),
             pose=sapien.Pose(),
