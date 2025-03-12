@@ -1,7 +1,12 @@
 # {octicon}`rocket` Quickstart
 
 <!-- TODO: add link to new sapien website eventually -->
-ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like RL and imitation learning. Moreover, ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
+ManiSkill is a robotics simulator built on top of SAPIEN. It provides a standard Gym/Gymnasium interface for easy use with existing learning workflows like reinforcement learning (RL) and imitation learning (IL). Moreover, ManiSkill supports simulation on both the GPU and CPU, as well as fast parallelized rendering.
+
+We recommend going through this document first and playing with some of the demos. Then for specific applications we recommend the following:
+- To get started with RL follow the [RL setup page](../reinforcement_learning/index.md).
+- To get started with IL follow the [IL setup page](../learning_from_demos/index.md).
+- To learn how to build your own tasks follow the [task creation tutorial](../tutorials/custom_tasks/index.md).
 
 ## Interface
 
@@ -74,7 +79,7 @@ You will also notice that all data returned is a batched torch tensor. To reduce
 ```python
 from mani_skill.utils.wrappers.gymnasium import CPUGymWrapper
 env = gym.make(env_id, num_envs=1)
-env = CPUGymWrapper(env)
+env = CPUGymWrapper(env) # this also completely implements standard Gymnasium Env interface
 obs, _ = env.reset() # obs is numpy and unbatched
 ```
 
@@ -83,6 +88,7 @@ To have the exact same API defined by [gym/gymnasium](https://gymnasium.farama.o
 For a compilation of demos you can run without having to write any extra code check out the [demos page](../demos/index)
 
 See {py:class}`mani_skill.envs.sapien_env` for the full list of environment instantiation options.
+
 
 
 

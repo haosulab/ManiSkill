@@ -19,8 +19,8 @@ You should be able to run both CPU and GPU simulation, which you can test below
 
 ```bash
 docker pull maniskill/base
-docker run --rm -it --gpus all maniskill/base python -m mani_skill.examples.demo_random_action
-docker run --rm -it --gpus all maniskill/base python -m mani_skill.examples.benchmarking.gpu_sim
+docker run --rm -it --gpus all --pid host maniskill/base python -m mani_skill.examples.demo_random_action
+docker run --rm -it --gpus all --pid host maniskill/base python -m mani_skill.examples.benchmarking.gpu_sim
 ```
 
 Note that inside a docker image you generally cannot render a GUI to see the results. You can still record videos and the demo scripts have options to record videos instead of rendering a GUI.

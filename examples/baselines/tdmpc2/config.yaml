@@ -8,6 +8,7 @@ control_mode: default # or pd_joint_delta_pos or pd_ee_delta_pose
 num_envs: 32
 num_eval_envs: 4
 env_type: gpu # cpu
+include_state: true # for rgb mode, if we want to use extra state data like qpos, goal position, etc.
 render_mode: rgb_array # ['rgb_array' for quality, or 'sensors' for speed]
 render_size: 64
 setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for wandb tags
@@ -16,6 +17,7 @@ setting_tag: none # ['none', 'walltime_efficient', 'sample_efficient', ...] for 
 checkpoint: ???
 eval_episodes_per_env: 2 # total (eval_episodes_per_env * num_eval_envs number) of eval episodes
 eval_freq: 50000
+eval_reconfiguration_frequency: 1
 
 # training
 steps: 1_000_000
@@ -61,6 +63,9 @@ vmax: +10
 model_size: ???
 num_enc_layers: 2
 enc_dim: 256
+rgb_state_enc_dim: 64
+rgb_state_num_enc_layers: 1
+rgb_state_latent_dim: 64
 num_channels: 32
 mlp_dim: 512
 latent_dim: 512
@@ -96,6 +101,7 @@ action_dims: ???
 episode_lengths: ???
 seed_steps: ???
 bin_size: ???
+true_latent_dim: ???
 
 # Added for Maniskill RL Baselines Config Convention (don't assign to them)
 env_cfg:
