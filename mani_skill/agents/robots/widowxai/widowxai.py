@@ -17,7 +17,7 @@ class WidowXAI(BaseAgent):
     urdf_config = dict()
 
     keyframes = dict(
-        rest=Keyframe(
+        ready_to_grasp=Keyframe(
             qpos=np.array(
                 [
                     0.0,

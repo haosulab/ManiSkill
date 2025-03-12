@@ -1,6 +1,5 @@
 seeds=(9351 4796 1788)
 
-
 for seed in ${seeds[@]}
 do
   python ppo_fast.py --env_id="PickCube-v1" --robot_uids="widowxai" --seed=${seed} \
