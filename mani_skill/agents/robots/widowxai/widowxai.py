@@ -18,7 +18,7 @@ class WidowXAI(BaseAgent):
     urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai.urdf"
     urdf_config = dict(
         _materials=dict(
-            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+            gripper=dict(static_friction=4.0, dynamic_friction=4.0, restitution=0.0)
         ),
         link=dict(
             gripper_left=dict(
@@ -237,23 +237,23 @@ class WidowXAI(BaseAgent):
 
         # direction to open the gripper
         ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
-        print(f"ldirection: {ldirection}")
+        # print(f"ldirection: {ldirection}")
         rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
-        print(f"rdirection: {rdirection}")
+        # print(f"rdirection: {rdirection}")
         langle = common.compute_angle_between(ldirection, l_contact_forces)
-        print(f"langle: {langle}")
+        # print(f"langle: {langle}")
         rangle = common.compute_angle_between(rdirection, r_contact_forces)
-        print(f"rangle: {rangle}")
+        # print(f"rangle: {rangle}")
         lflag = torch.logical_and(
             lforce >= min_force, torch.rad2deg(langle) <= max_angle
         )
-        print(f"lflag: {lflag}")
+        # print(f"lflag: {lflag}")
         rflag = torch.logical_and(
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
-        print(f"rflag: {rflag}")
+        # print(f"rflag: {rflag}")
         _is_grasped = torch.logical_and(lflag, rflag)
-        print(f"is_grasped: {_is_grasped}")
+        # print(f"is_grasped: {_is_grasped}")
         return _is_grasped
 
     def is_static(self, threshold: float = 0.2):
