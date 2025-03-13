@@ -36,6 +36,22 @@ If you are looking to
 
 TODO: use record episode still
 
+## Applying Wrappers in Sim to Real Environments
+
+Often times during RL / IL workflows you will have various useful environment wrappers to modify the aspects such as observations (e.g. to combine rgb and depth images) or actions (e.g. to apply an action sequence). Whatever wrappers you use for the simulation environment can also be applied to the real environment by simply appyling them to the sim environment before passing it into the `RealEnv` constructor.
+
+```python
+from mani_skill.envs.real_env import RealEnv
+from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
+
+wrappers = [FlattenRGBDObservationWrapper]
+sim_env = gym.make("YourEnvironment", obs_mode="rgb")
+for wrapper in wrappers:
+    sim_env = wrapper(sim_env)
+real_env = RealEnv(sim_env=sim_env, agent=YourCustomRealRobotClass)
+```
+
+
 ## Customizing Real Environments More
 
 By default the `RealEnv` class will infer and setup the observation and controllers as best as possible. However it is possible you might have specific use-cases such as custom real world controller code different from the simulation controller or modifications to the observation space.

@@ -83,4 +83,4 @@ class LeRobotAgent(BaseRealAgent):
         )
 
     def get_qvel(self):
-        raise NotImplementedError
+        return None

@@ -951,7 +951,6 @@ class BaseEnv(gym.Env):
         obs = self.get_obs(info)
         reward = self.get_reward(obs=obs, action=action, info=info)
         if "success" in info:
-
             if "fail" in info:
                 terminated = torch.logical_or(info["success"], info["fail"])
             else:
