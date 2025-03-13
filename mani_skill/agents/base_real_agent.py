@@ -16,35 +16,6 @@ class BaseRealAgent:
     def __init__(self, sensor_configs: Dict[str, BaseSensorConfig]):
         self.sensor_configs = sensor_configs
 
-    # ---------------------------------------------------------------------------- #
-    # functions for controlling the agent
-    # ---------------------------------------------------------------------------- #
-    def set_target_qpos(self, qpos: np.ndarray):
-        """
-        Set the target joint positions of the agent.
-        Args:
-            qpos (np.ndarray): the joint positions to set the agent to.
-        """
-        # equivalent to set_drive_targets in simulation
-        raise NotImplementedError
-
-    def set_target_qvel(self, qvel: np.ndarray):
-        """
-        Set the target joint velocities of the agent.
-        Args:
-            qvel (np.ndarray): the joint velocities to set the agent to.
-        """
-        # equivalent to set_drive_velocity_targets in simulation
-        raise NotImplementedError
-
-    def reset(self, qpos: np.ndarray):
-        """
-        Reset the agent to a given qpos. For real robots this function should move the robot at a safe and controlled speed to the given qpos and aim to reach it accurately.
-        Args:
-            qpos (np.ndarray): the qpos to reset the agent to.
-        """
-        raise NotImplementedError
-
     def start(self):
         """
         Start the agent, which include turning on the motors/robot, setting up cameras/sensors etc.
@@ -58,6 +29,35 @@ class BaseRealAgent:
     def stop(self):
         """
         Stop the agent, which include turning off the motors/robot, stopping cameras/sensors etc.
+        """
+        raise NotImplementedError
+
+    # ---------------------------------------------------------------------------- #
+    # functions for controlling the agent
+    # ---------------------------------------------------------------------------- #
+    def set_target_qpos(self, qpos: np.ndarray):
+        """
+        Set the target joint positions of the agent.
+        Args:
+            qpos (np.ndarray): the joint positions in radians to set the agent to.
+        """
+        # equivalent to set_drive_targets in simulation
+        raise NotImplementedError
+
+    def set_target_qvel(self, qvel: np.ndarray):
+        """
+        Set the target joint velocities of the agent.
+        Args:
+            qvel (np.ndarray): the joint velocities in radians/s to set the agent to.
+        """
+        # equivalent to set_drive_velocity_targets in simulation
+        raise NotImplementedError
+
+    def reset(self, qpos: np.ndarray):
+        """
+        Reset the agent to a given qpos. For real robots this function should move the robot at a safe and controlled speed to the given qpos and aim to reach it accurately.
+        Args:
+            qpos (np.ndarray): the qpos in radians to reset the agent to.
         """
         raise NotImplementedError
 
@@ -93,13 +93,13 @@ class BaseRealAgent:
 
     def get_qpos(self):
         """
-        Get the current joint positions of the agent.
+        Get the current joint positions in radians of the agent.
         """
         raise NotImplementedError
 
     def get_qvel(self):
         """
-        Get the current joint velocities of the agent.
+        Get the current joint velocities in radians/s of the agent.
         """
         raise NotImplementedError
 
