@@ -1,4 +1,5 @@
-from typing import Dict, List
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -21,6 +22,33 @@ class BaseRealAgent:
         self.sensor_configs = sensor_configs
 
         self._sim_agent: BaseAgent = None
+
+        @dataclass
+        class RealRobot:
+            agent: BaseRealAgent
+
+            @property
+            def qpos(self):
+                return self.get_qpos()
+
+            def get_qpos(self):
+                return self.agent.get_qpos()
+
+            @property
+            def qvel(self):
+                return self.get_qvel()
+
+            def get_qvel(self):
+                return self.agent.get_qvel()
+
+        self.robot = RealRobot(self)
+        """
+        a reference to a fake robot/articulation used for accessing qpos/qvel values.
+        """
+
+    @property
+    def controller(self):
+        return self._sim_agent.controller
 
     # def _setup(self, sim_env: BaseEnv):
     #     """
@@ -52,7 +80,7 @@ class BaseRealAgent:
         """
         Set the target joint positions of the agent.
         Args:
-            qpos (np.ndarray): the joint positions in radians to set the agent to.
+            qpos: the joint positions in radians to set the agent to.
         """
         # equivalent to set_drive_targets in simulation
         raise NotImplementedError
@@ -61,16 +89,16 @@ class BaseRealAgent:
         """
         Set the target joint velocities of the agent.
         Args:
-            qvel (np.ndarray): the joint velocities in radians/s to set the agent to.
+            qvel: the joint velocities in radians/s to set the agent to.
         """
         # equivalent to set_drive_velocity_targets in simulation
         raise NotImplementedError
 
-    def reset(self, qpos: np.ndarray):
+    def reset(self, qpos: Array):
         """
         Reset the agent to a given qpos. For real robots this function should move the robot at a safe and controlled speed to the given qpos and aim to reach it accurately.
         Args:
-            qpos (np.ndarray): the qpos in radians to reset the agent to.
+            qpos: the qpos in radians to reset the agent to.
         """
         raise NotImplementedError
 
@@ -78,13 +106,13 @@ class BaseRealAgent:
     # data access for e.g. joint position values, sensor observations etc.
     # All of the def get_x() functions should return numpy arrays and be implemented
     # ---------------------------------------------------------------------------- #
-    def capture_sensor_data(self, sensor_names: List[str] = None):
+    def capture_sensor_data(self, sensor_names: Optional[List[str]] = None):
         """
-        Capture the sensor data asynchronously from the agent based on the given sensor names. If sensor_names is None then all sensor data should be captured. This should not return anythin and should be async if possible.
+        Capture the sensor data asynchronously from the agent based on the given sensor names. If sensor_names is None then all sensor data should be captured. This should not return anything and should be async if possible.
         """
         raise NotImplementedError
 
-    def get_sensor_obs(self, sensor_names: List[str] = None):
+    def get_sensor_obs(self, sensor_names: Optional[List[str]] = None):
         """
         Get the desired sensor observations from the agent based on the given sensor names. If sensor_names is None then all sensor data should be returned. The expected format for cameras is in line with the simulation's
         format for cameras.
@@ -92,13 +120,13 @@ class BaseRealAgent:
         ```
         {
             "sensor_name": {
-                "rgb": torch.uint8 (H, W, 3), # red green blue image colors
-                "depth": torch.int16 (H, W, 1), # depth in millimeters
+                "rgb": torch.uint8 (1, H, W, 3), # red green blue image colors
+                "depth": torch.int16 (1, H, W, 1), # depth in millimeters
             }
         }
         ```
 
-        whether rgb or depth is included depends on the real camera and can be omitted if not supported or not used.
+        whether rgb or depth is included depends on the real camera and can be omitted if not supported or not used. Note that a batch dimension is expected in the data.
 
         For more details see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/sensors.html in order to ensure
         the real data aligns with simulation formats.
@@ -127,15 +155,19 @@ class BaseRealAgent:
 
     def get_qpos(self):
         """
-        Get the current joint positions in radians of the agent.
+        Get the current joint positions in radians of the agent as a torch tensor. Data should have a batch dimension, the shape should be (1, N) for N joint positions.
         """
-        return None
+        raise NotImplementedError(
+            "This real agent does not an implementation for getting joint positions. If you do not need joint positions and are using the Sim2Real env setup you can override the simulation _get_obs_agent function to remove the qpos information."
+        )
 
     def get_qvel(self):
         """
-        Get the current joint velocities in radians/s of the agent.
+        Get the current joint velocities in radians/s of the agent as a torch tensor. Data should have a batch dimension, the shape should be (1, N) for N joint velocities.
         """
-        return None
+        raise NotImplementedError(
+            "This real agent does not an implementation for getting joint velocities. If you do not need joint velocities and are using the Sim2Real env setup you can override the simulation _get_obs_agent function to remove the qvel information."
+        )
 
     @property
     def qpos(self):

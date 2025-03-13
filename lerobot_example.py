@@ -1,3 +1,4 @@
+import gymnasium as gym
 import numpy as np
 from lerobot.common.robot_devices.cameras.configs import (
     IntelRealSenseCameraConfig,
@@ -7,6 +8,8 @@ from lerobot.common.robot_devices.motors.configs import DynamixelMotorsBusConfig
 from lerobot.common.robot_devices.robots.configs import KochRobotConfig
 from lerobot.common.robot_devices.robots.manipulator import ManipulatorRobot
 
+import mani_skill.envs.tasks.digital_twins.koch_pickcube
+from mani_skill.agents.robots.lerobot.manipulator import LeRobotAgent
 from mani_skill.envs.sim2real_env import Sim2RealEnv
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 
@@ -38,18 +41,11 @@ robot_config = KochRobotConfig(
 )
 robot = ManipulatorRobot(robot_config)
 
-from mani_skill.agents.robots.lerobot.manipulator import LeRobotAgent
-
 agent = LeRobotAgent(robot, sensor_configs={})
 
-agent.start()
-
-agent.reset(np.array([0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]))
-
-import gymnasium as gym
 
 wrappers = [FlattenRGBDObservationWrapper]
-sim_env = gym.make("PickCube-v1", obs_mode="rgb")
+sim_env = gym.make("KochPickCubeEnv-v1", obs_mode="rgb")
 for wrapper in wrappers:
     sim_env = wrapper(sim_env)
 real_env = Sim2RealEnv(sim_env=sim_env, agent=agent, obs_mode="rgb")

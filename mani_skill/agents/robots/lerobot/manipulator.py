@@ -3,6 +3,7 @@ Code based on https://github.com/huggingface/lerobot for supporting real robot c
 """
 
 import time
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -27,21 +28,21 @@ class LeRobotAgent(BaseRealAgent):
     def __init__(self, robot: ManipulatorRobot, **kwargs):
         super().__init__(**kwargs)
         self._captured_sensor_data = None
-        self.robot = robot
+        self.real_robot = robot
 
     def start(self):
-        self.robot.connect()
+        self.real_robot.connect()
 
     def stop(self):
-        self.robot.disconnect()
+        self.real_robot.disconnect()
 
     def set_target_qpos(self, qpos: Array):
-        qpos = common.to_cpu_tensor(qpos)
-        self.robot.send_action(torch.rad2deg(qpos))
+        qpos = common.to_cpu_tensor(qpos).flatten()
+        self.real_robot.send_action(torch.rad2deg(qpos))
 
     def set_target_qvel(self, qvel: Array):
-        qvel = common.to_cpu_tensor(qvel)
-        self.robot.send_action(qvel)
+        qvel = common.to_cpu_tensor(qvel).flatten()
+        self.real_robot.send_action(qvel)
 
     def reset(self, qpos: Array):
         qpos = common.to_cpu_tensor(qpos)
@@ -60,27 +61,34 @@ class LeRobotAgent(BaseRealAgent):
             dt_s = time.perf_counter() - start_loop_t
             busy_wait(1 / freq - dt_s)
 
-    def capture_sensor_data(self):
+    def capture_sensor_data(self, sensor_names: Optional[List[str]] = None):
         sensor_obs = dict()
-        cameras: dict[str, Camera] = self.robot.cameras
-        for name in cameras:
+        cameras: dict[str, Camera] = self.real_robot.cameras
+        if sensor_names is None:
+            sensor_names = list(cameras.keys())
+        for name in sensor_names:
             data = cameras[name].async_read()
             # until https://github.com/huggingface/lerobot/issues/860 is resolved we temporarily assume this is RGB data only otherwise need to write a few extra if statements to check
             # if isinstance(cameras[name], IntelRealSenseCamera):
-            sensor_obs[name] = dict(rgb=data)
+            sensor_obs[name] = dict(rgb=(common.to_tensor(data)).unsqueeze(0))
         self._captured_sensor_data = sensor_obs
 
-    def get_sensor_obs(self):
+    def get_sensor_obs(self, sensor_names: Optional[List[str]] = None):
         if self._captured_sensor_data is None:
             raise RuntimeError(
                 "No sensor data captured yet. Please call capture_sensor_data() first."
             )
-        return self._captured_sensor_data
+        if sensor_names is None:
+            return self._captured_sensor_data
+        else:
+            return {
+                k: v for k, v in self._captured_sensor_data.items() if k in sensor_names
+            }
 
     def get_qpos(self):
         return torch.deg2rad(
-            torch.tensor(self.robot.follower_arms["main"].read("Present_Position"))
-        )
+            torch.tensor(self.real_robot.follower_arms["main"].read("Present_Position"))
+        ).unsqueeze(0)
 
     def get_qvel(self):
-        return None
+        raise NotImplementedError

@@ -60,20 +60,26 @@ class Sim2RealEnv(gym.Env):
         # robot_uids: BaseRealAgent = None,
     ):
         self.sim_env = sim_env
-        self._base_sim_env: BaseEnv = sim_env.unwrapped
+        self.base_sim_env: BaseEnv = sim_env.unwrapped
+        """the unwrapped simulation environment"""
 
         self._reward_mode = reward_mode
         self._obs_mode = obs_mode
+        self.reward_mode = reward_mode
+        self.obs_mode = obs_mode
+        self.obs_mode_struct = self.base_sim_env.obs_mode_struct
 
         # setup spaces
-        self._orig_single_action_space = self._base_sim_env._orig_single_action_space
+        self._orig_single_action_space = self.base_sim_env._orig_single_action_space
         self.action_space = self.sim_env.action_space
         self.observation_space = self.sim_env.observation_space
 
         # setup step and reset functions and handle wrappers for the user
 
         def default_real_reset_function(self: Sim2RealEnv, seed=None, options=None):
-            # self.agent.reset(qpos=self.sim_env.agent.robot.qpos.cpu())  # TODO (stao): re-enable this
+            self.agent.reset(
+                qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten()
+            )  # TODO (stao): re-enable this
             input("Press enter if the environment is reset")
 
         self.real_reset_function = real_reset_function or default_real_reset_function
@@ -102,14 +108,15 @@ class Sim2RealEnv(gym.Env):
         self._env_with_real_step_reset = RealEnvStepReset()
         """a simple object that defines the real step/reset functions for gym wrappers to call and use."""
 
-        self._sensor_names = list(self._base_sim_env.scene.sensors.keys())
+        self._sensor_names = list(self.base_sim_env.scene.sensors.keys())
         """list of sensors the simulation environment uses"""
 
         # setup the real agent based on the simulation agent
         self.agent = agent
-        self.agent._sim_agent = self._base_sim_env.agent
+        self.agent._sim_agent = self.base_sim_env.agent
         # TODO create real controller class based on sim one?? Or can we just fake the data
         self.agent._sim_agent.controller.qpos
+        self.agent.start()
 
     def _step_action(self, action):
         """Re-implementation of the simulated BaseEnv._step_action function for real environments. This uses the simulation agent's
@@ -118,7 +125,7 @@ class Sim2RealEnv(gym.Env):
         if action.shape == self._orig_single_action_space.shape:
             action = common.batch(action)
             action = common.to_tensor(action)
-        self._base_sim_env.agent.set_action(action)
+        self.base_sim_env.agent.set_action(action)
         # self.sim_env.agent.controller
         self.agent.set_target_qpos(action)
 
@@ -151,12 +158,12 @@ class Sim2RealEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def _get_obs_agent(self):
         # using the original user implemented sim env's _get_obs_agent function in case they modify it e.g. to remove qvel values as they might be too noisy
-        return self._base_sim_env.__class__._get_obs_agent(self)
+        return self.base_sim_env.__class__._get_obs_agent(self)
 
     def _get_obs_extra(self, info: Dict):
         # using the original user implemented sim env's _get_obs_extra function in case they modify it e.g. to include engineered features like the tcp_pose of the robot
         try:
-            return self._base_sim_env.__class__._get_obs_extra(self, info)
+            return self.base_sim_env.__class__._get_obs_extra(self, info)
         except:
             # Print the original error
             import traceback
