@@ -166,6 +166,7 @@ class Sim2RealEnv(gym.Env):
             # Print another message
             print(
                 "If there is an error above a common cause is that the _get_obs_extra function defined in the simulation environment is using information not available in the real environment or real agent."
+                "In this case you can override the _get_obs_extra function in the Sim2RealEnv class to compute the desired information in the real environment via a e.g., perception pipeline."
             )
             exit(-1)
 
