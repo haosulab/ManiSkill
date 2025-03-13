@@ -5,7 +5,7 @@ else
   run_id=$1
 fi
 echo "Using run ID: ${run_id}"
-seeds=(9, 12, 420)
+seeds=(9 12 420)
 steps=(60 160)
 control_modes=(
   "pd_joint_delta_pos"
