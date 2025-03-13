@@ -24,7 +24,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 class RealEnv(gym.Env):
     def __init__(
         self,
-        sim_env_cls: Type[BaseEnv],
+        sim_env: BaseEnv,
         agent_cls: Type[BaseRealAgent],
         obs_mode: str = "rgb",
         # obs_mode: Optional[str] = None,
