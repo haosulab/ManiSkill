@@ -311,7 +311,7 @@ do
     batch_size=4096
     horizon=50
     python sac.py --env_id="$env_id" --seed="$seed" \
-        --total_timesteps=15_000_000 \
+        --total_timesteps=8_000_000 \
         --num_envs=$num_envs \
         --num_eval_envs=16 \
         --control_mode=pd_joint_delta_pos \
@@ -353,7 +353,7 @@ do
     batch_size=4096
     horizon=100
     python sac.py --env_id="$env_id" --seed="$seed" \
-        --total_timesteps=30_000_000 \
+        --total_timesteps=15_000_000 \
         --num_envs=$num_envs \
         --num_eval_envs=16 \
         --control_mode=pd_joint_delta_pos \
@@ -395,7 +395,7 @@ do
     batch_size=2048
     horizon=100
     python sac.py --env_id="$env_id" --seed="$seed" \
-        --total_timesteps=50_000_000 \
+        --total_timesteps=45_000_000 \
         --num_envs=$num_envs \
         --num_eval_envs=16 \
         --control_mode=pd_joint_delta_pos \
