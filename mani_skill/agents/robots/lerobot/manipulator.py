@@ -33,12 +33,11 @@ class LeRobotAgent(BaseRealAgent):
         self.robot.connect()
 
     def stop(self):
-        # TODO do we disable torque here?
         self.robot.disconnect()
 
     def set_target_qpos(self, qpos: Array):
         qpos = common.to_cpu_tensor(qpos)
-        self.robot.send_action(qpos)
+        self.robot.send_action(torch.rad2deg(qpos))
 
     def set_target_qvel(self, qvel: Array):
         qvel = common.to_cpu_tensor(qvel)
@@ -47,6 +46,7 @@ class LeRobotAgent(BaseRealAgent):
     def reset(self, qpos: Array):
         qpos = common.to_cpu_tensor(qpos)
         freq = 60
+        target_pos = self.qpos
         max_rad_per_step = 0.01
         for _ in range(int(5 * freq)):
             start_loop_t = time.perf_counter()
@@ -54,10 +54,9 @@ class LeRobotAgent(BaseRealAgent):
                 min=-max_rad_per_step, max=max_rad_per_step
             )
             if np.linalg.norm(delta_step) <= 1e-4:
-                print("converged to init pose")
                 break
             target_pos += delta_step
-            self.send_qpos(target_pos)
+            self.set_target_qpos(target_pos)
             dt_s = time.perf_counter() - start_loop_t
             busy_wait(1 / freq - dt_s)
 
