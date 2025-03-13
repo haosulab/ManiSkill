@@ -12,7 +12,7 @@ One small difference as well between RealEnv and BaseEnv is that the code for fe
 So for real world deployments you may take an existing implementation of a real robot class and use it as a starting point for your own implementation to add e.g. more cameras
 or generate other kinds of sensor data.
 """
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Type
 
 import gymnasium as gym
 import torch
@@ -24,15 +24,20 @@ from mani_skill.envs.sapien_env import BaseEnv
 class RealEnv(gym.Env):
     def __init__(
         self,
-        obs_mode: Optional[str] = None,
-        reward_mode: Optional[str] = None,
-        control_mode: Optional[str] = None,
-        render_mode: Optional[str] = None,
-        robot_uids: BaseRealAgent = None,
+        sim_env_cls: Type[BaseEnv],
+        agent_cls: Type[BaseRealAgent],
+        obs_mode: str = "rgb",
+        # obs_mode: Optional[str] = None,
+        # reward_mode: Optional[str] = None,
+        # control_mode: Optional[str] = None,
+        # render_mode: Optional[str] = None,
+        # robot_uids: BaseRealAgent = None,
     ):
 
+        self.agent = agent_cls()
+
         # create the real robot objects if needed
-        self.agent = robot_uids
+        # self.agent = robot_uids
 
     def _step_action(self, action):
         pass
