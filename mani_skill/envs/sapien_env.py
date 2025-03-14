@@ -1008,8 +1008,10 @@ class BaseEnv(gym.Env):
                 action = common.batch(action)
             self.agent.set_action(action)
             if self._sim_device.is_cuda():
-                self.scene.px.gpu_apply_articulation_target_position()
-                self.scene.px.gpu_apply_articulation_target_velocity()
+                if self.agent.controller.sets_target_qpos:
+                    self.scene.px.gpu_apply_articulation_target_position()
+                if self.agent.controller.sets_target_qvel:
+                    self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             if self.agent is not None:
