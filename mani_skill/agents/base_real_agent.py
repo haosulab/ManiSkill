@@ -112,7 +112,7 @@ class BaseRealAgent:
         """
         raise NotImplementedError
 
-    def get_sensor_obs(self, sensor_names: Optional[List[str]] = None):
+    def get_sensor_data(self, sensor_names: Optional[List[str]] = None):
         """
         Get the desired sensor observations from the agent based on the given sensor names. If sensor_names is None then all sensor data should be returned. The expected format for cameras is in line with the simulation's
         format for cameras.

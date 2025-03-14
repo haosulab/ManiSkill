@@ -56,6 +56,11 @@ for k in sim_obs.keys():
     print(
         f"{k}: sim_obs shape: {sim_obs[k].shape}, real_obs shape: {real_obs[k].shape}"
     )
+    if 128 in sim_obs[k].shape:
+        import matplotlib.pyplot as plt
+
+        plt.imshow(real_obs[k][0].numpy())
+        plt.show()
 
 # real_env.step(real_env.action_space.sample())
 

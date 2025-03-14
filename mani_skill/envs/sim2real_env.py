@@ -15,10 +15,12 @@ or generate other kinds of sensor data.
 from typing import Any, Callable, Dict, List, Optional
 
 import gymnasium as gym
+import numpy as np
 import torch
 
 from mani_skill.agents.base_real_agent import BaseRealAgent
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.sensors.camera import Camera, CameraConfig
 from mani_skill.utils import common
 
 
@@ -43,6 +45,9 @@ class Sim2RealEnv(gym.Env):
         real_reset_function (Optional[Callable[[Sim2RealEnv, Optional[int], Optional[dict]], None]]): The function to call to reset the real robot. By default this is None and we use a default reset function which
             calls the simulation reset function and resets the agent/robot qpos to whatever the simulation reset function sampled. This function is given access to the Sim2RealEnv instance, the given seed and options dictionary
             similar to a standard gym reset function.
+        sensor_data_processing_function (Optional[Callable[[Dict], Dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function.
+            By default this is None and we use a default processing function which does the following for each sensor type:
+              - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
     """
 
     def __init__(
@@ -53,6 +58,7 @@ class Sim2RealEnv(gym.Env):
         real_reset_function: Optional[
             Callable[["Sim2RealEnv", Optional[int], Optional[dict]], None]
         ] = None,
+        sensor_data_processing_function: Optional[Callable[[Dict], Dict]] = None,
         # obs_mode: Optional[str] = None,
         reward_mode: Optional[str] = None,
         # control_mode: Optional[str] = None,
@@ -77,6 +83,7 @@ class Sim2RealEnv(gym.Env):
         # setup step and reset functions and handle wrappers for the user
 
         def default_real_reset_function(self: Sim2RealEnv, seed=None, options=None):
+            self.sim_env.reset(seed=seed, options=options)
             self.agent.reset(
                 qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten()
             )  # TODO (stao): re-enable this
@@ -90,9 +97,8 @@ class Sim2RealEnv(gym.Env):
                 return ret
 
             def reset(dummy_self, seed=None, options=None):
-                self.real_reset_function(self, seed, options)
-                # reset controller/agent
-                return BaseEnv.get_obs(self), {}
+                # TODO: reset controller/agent
+                return self.get_obs(), {}
 
         cur_env = self.sim_env
         wrappers: List[gym.Wrapper] = []
@@ -117,6 +123,62 @@ class Sim2RealEnv(gym.Env):
         # TODO create real controller class based on sim one?? Or can we just fake the data
         self.agent._sim_agent.controller.qpos
         self.agent.start()
+
+        self.sensor_data_processing_function = sensor_data_processing_function
+
+        # automatically try and generate a visual observation processing function to align a real camera with the simulated camera
+        if sensor_data_processing_function is None:
+            camera_sensor_names = [
+                name
+                for name in self._sensor_names
+                if isinstance(self.base_sim_env.scene.sensors[name], Camera)
+            ]
+
+            def sensor_data_processing_function(sensor_data: Dict):
+                import cv2
+
+                for sensor_name in camera_sensor_names:
+                    sim_sensor_cfg = self.base_sim_env._sensor_configs[sensor_name]
+                    assert isinstance(sim_sensor_cfg, CameraConfig)
+                    target_h, target_w = sim_sensor_cfg.height, sim_sensor_cfg.width
+                    real_sensor_data = sensor_data[sensor_name]
+
+                    # crop to same aspect ratio
+                    for key in ["rgb", "depth"]:
+                        if key in real_sensor_data:
+                            img = real_sensor_data[key][0].numpy()
+                            xy_res = img.shape[:2]
+                            crop_res = np.min(xy_res)
+                            cutoff = (np.max(xy_res) - crop_res) // 2
+                            if xy_res[0] == xy_res[1]:
+                                pass
+                            elif np.argmax(xy_res) == 0:
+                                img = img[cutoff:-cutoff, :, :]
+                            else:
+                                img = img[:, cutoff:-cutoff, :]
+                            real_sensor_data[key] = common.to_tensor(
+                                cv2.resize(img, (target_w, target_h))
+                            ).unsqueeze(0)
+
+                    sensor_data[sensor_name] = real_sensor_data
+                return sensor_data
+
+            self.sensor_data_processing_function = sensor_data_processing_function
+
+            # sample_real_sensor_data = self._get_obs_sensor_data()
+            # for sim_sensor_name, sensor in self.base_sim_env.scene.sensors.items():
+            #     if isinstance(sensor, Camera):
+            #         sensor.config.width
+            #         h, w, c = sample_real_sensor_data[sim_sensor_name][0].shape
+
+            #     else:
+            #         pass
+
+        sample_sim_obs, _ = self.sim_env.reset()
+        sample_real_obs, _ = self.reset()
+
+        # perform checks to avoid errors in alignments
+        self._check_observations(sample_sim_obs, sample_real_obs)
 
     def _step_action(self, action):
         """Re-implementation of the simulated BaseEnv._step_action function for real environments. This uses the simulation agent's
@@ -144,6 +206,7 @@ class Sim2RealEnv(gym.Env):
             return self._env_with_real_step_reset.step(action)
 
     def reset(self, seed=None, options=None):
+        self.real_reset_function(self, seed, options)
         if self._handle_wrappers:
             orig_env = self._last_wrapper.env
             self._last_wrapper.env = self._env_with_real_step_reset
@@ -156,6 +219,10 @@ class Sim2RealEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # reimplementations of simulation BaseEnv observation related functions
     # -------------------------------------------------------------------------- #
+    def get_obs(self):
+        # uses the original environment's get_obs function. Override this only if you want complete control over the returned observations before any wrappers are applied.
+        return self.base_sim_env.__class__.get_obs(self)
+
     def _get_obs_agent(self):
         # using the original user implemented sim env's _get_obs_agent function in case they modify it e.g. to remove qvel values as they might be too noisy
         return self.base_sim_env.__class__._get_obs_agent(self)
@@ -180,14 +247,19 @@ class Sim2RealEnv(gym.Env):
     def _get_obs_sensor_data(self, apply_texture_transforms: bool = True):
         # note apply_texture_transforms is not used for real envs, data is expected to already be transformed to standard texture names, types, and shapes.
         self.agent.capture_sensor_data(self._sensor_names)
-        data = self.agent.get_sensor_obs(self._sensor_names)
+        data = self.agent.get_sensor_data(self._sensor_names)
+        # observation data needs to be processed to be the same shape in simulation
+        # default strategy is to do a center crop to the same shape as simulation and then resize image to the same shape as simulation
+        data = self.sensor_data_processing_function(data)
         return data
 
     def _get_obs_with_sensor_data(
         self, info: Dict, apply_texture_transforms: bool = True
     ) -> dict:
         """Get the observation with sensor data"""
-        return BaseEnv._get_obs_with_sensor_data(self, info, apply_texture_transforms)
+        return self.base_sim_env.__class__._get_obs_with_sensor_data(
+            self, info, apply_texture_transforms
+        )
 
     def get_sensor_params(self):
         return self.agent.get_sensor_params(self._sensor_names)
@@ -219,3 +291,32 @@ class Sim2RealEnv(gym.Env):
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
         raise NotImplementedError()
+
+    # -------------------------------------------------------------------------- #
+    # various checks
+    # -------------------------------------------------------------------------- #
+    def _check_observations(self, sample_sim_obs, sample_real_obs):
+        """checks if the visual observations are aligned in terms of shape and resolution and expected data types"""
+
+        # recursive check if the data is all the same shape
+        def check_observation_match(sim_obs, real_obs, path=[]):
+            """Recursively check if observations match in shape and dtype"""
+            if isinstance(sim_obs, dict):
+                for key in sim_obs.keys():
+                    if key not in real_obs:
+                        raise KeyError(
+                            f"Key obs[\"{'.'.join(path + [key])}]\"] found in simulation observation but not in real observation"
+                        )
+                    check_observation_match(
+                        sim_obs[key], real_obs[key], path=path + [key]
+                    )
+            else:
+                assert (
+                    sim_obs.shape == real_obs.shape
+                ), f"Shape mismatch: obs[\"{'.'.join(path)}\"]: {sim_obs.shape} vs {real_obs.shape}"
+                assert (
+                    sim_obs.dtype == real_obs.dtype
+                ), f"Dtype mismatch: obs[\"{'.'.join(path)}\"]: {sim_obs.dtype} vs {real_obs.dtype}"
+
+        # Call the recursive function to check observations
+        check_observation_match(sample_sim_obs, sample_real_obs)

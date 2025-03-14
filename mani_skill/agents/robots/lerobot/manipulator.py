@@ -73,7 +73,7 @@ class LeRobotAgent(BaseRealAgent):
             sensor_obs[name] = dict(rgb=(common.to_tensor(data)).unsqueeze(0))
         self._captured_sensor_data = sensor_obs
 
-    def get_sensor_obs(self, sensor_names: Optional[List[str]] = None):
+    def get_sensor_data(self, sensor_names: Optional[List[str]] = None):
         if self._captured_sensor_data is None:
             raise RuntimeError(
                 "No sensor data captured yet. Please call capture_sensor_data() first."
