@@ -73,6 +73,23 @@ class Panda(BaseAgent):
     gripper_damping = 1e2
     gripper_force_limit = 100
 
+
+    def get_proprioception(self):
+        """
+        Get the proprioceptive state of the agent, default is the qpos and qvel of the robot and any controller state.
+        """
+        obs = super().get_proprioception()
+
+        # == Added by @jstmn
+        # "link pose data is always in world frame" - StoneT2000 
+        #  -> see https://github.com/haosulab/ManiSkill/discussions/923#discussioncomment-12466511
+        world__T__ee = self.robot.links_map[self.ee_link_name].pose
+        obs["world__T__ee"] = world__T__ee.to_transformation_matrix()
+        # == End of added by @jstmn
+
+        return obs
+
+
     @property
     def _controller_configs(self):
         # -------------------------------------------------------------------------- #
