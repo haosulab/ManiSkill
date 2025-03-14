@@ -12,6 +12,7 @@ One small difference as well between RealEnv and BaseEnv is that the code for fe
 So for real world deployments you may take an existing implementation of a real robot class and use it as a starting point for your own implementation to add e.g. more cameras
 or generate other kinds of sensor data.
 """
+import time
 from typing import Any, Callable, Dict, List, Optional
 
 import gymnasium as gym
@@ -22,6 +23,7 @@ from mani_skill.agents.base_real_agent import BaseRealAgent
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import Camera, CameraConfig
 from mani_skill.utils import common
+from mani_skill.utils.logging_utils import logger
 
 
 class Sim2RealEnv(gym.Env):
@@ -60,12 +62,26 @@ class Sim2RealEnv(gym.Env):
         ] = None,
         sensor_data_processing_function: Optional[Callable[[Dict], Dict]] = None,
         # obs_mode: Optional[str] = None,
-        reward_mode: Optional[str] = None,
+        reward_mode: Optional[str] = "none",
         # control_mode: Optional[str] = None,
         # render_mode: Optional[str] = None,
         # robot_uids: BaseRealAgent = None,
     ):
         self.sim_env = sim_env
+        self.num_envs = 1
+        assert (
+            self.sim_env.backend.sim_backend == "physx_cpu"
+        ), "For the Sim2RealEnv we expect the simulation to be using the physx_cpu simulation backend currently in order to correctly align the robot"
+
+        # copy over some sim parameters/settings
+        self.device = self.sim_env.backend.device
+        self.sim_freq = self.sim_env.sim_freq
+        self.control_freq = self.sim_env.control_freq
+
+        # control timing
+        self.control_dt = 1 / self.control_freq
+        self.last_control_time: Optional[float] = None
+
         self.base_sim_env: BaseEnv = sim_env.unwrapped
         """the unwrapped simulation environment"""
 
@@ -74,6 +90,8 @@ class Sim2RealEnv(gym.Env):
         self.reward_mode = reward_mode
         self.obs_mode = obs_mode
         self.obs_mode_struct = self.base_sim_env.obs_mode_struct
+
+        self._elapsed_steps = torch.zeros((1,), dtype=torch.int32)
 
         # setup spaces
         self._orig_single_action_space = self.base_sim_env._orig_single_action_space
@@ -84,14 +102,16 @@ class Sim2RealEnv(gym.Env):
 
         def default_real_reset_function(self: Sim2RealEnv, seed=None, options=None):
             self.sim_env.reset(seed=seed, options=options)
-            self.agent.reset(
-                qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten()
-            )  # TODO (stao): re-enable this
+            self.agent.reset(qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten())
+            # sets sim to whatever the real agent reset to, necessary as some real world robots are not very precise. Some controllers use the agent's
+            # current qpos and as this is the sim controller we copy the real world agent qpos so it behaves the same
+            self.base_sim_env.agent.robot.set_qpos(self.agent.robot.qpos)
+            self.agent.controller.reset()
             input("Press enter if the environment is reset")
 
         self.real_reset_function = real_reset_function or default_real_reset_function
 
-        class RealEnvStepReset:
+        class RealEnvStepReset(gym.Env):
             def step(dummy_self, action):
                 ret = BaseEnv.step(self, action)
                 return ret
@@ -99,6 +119,11 @@ class Sim2RealEnv(gym.Env):
             def reset(dummy_self, seed=None, options=None):
                 # TODO: reset controller/agent
                 return self.get_obs(), {}
+
+            @property
+            def unwrapped(dummy_self):
+                # reference the Sim2RealEnv instance
+                return self
 
         cur_env = self.sim_env
         wrappers: List[gym.Wrapper] = []
@@ -165,31 +190,44 @@ class Sim2RealEnv(gym.Env):
 
             self.sensor_data_processing_function = sensor_data_processing_function
 
-            # sample_real_sensor_data = self._get_obs_sensor_data()
-            # for sim_sensor_name, sensor in self.base_sim_env.scene.sensors.items():
-            #     if isinstance(sensor, Camera):
-            #         sensor.config.width
-            #         h, w, c = sample_real_sensor_data[sim_sensor_name][0].shape
-
-            #     else:
-            #         pass
-
         sample_sim_obs, _ = self.sim_env.reset()
         sample_real_obs, _ = self.reset()
 
         # perform checks to avoid errors in alignments
         self._check_observations(sample_sim_obs, sample_real_obs)
 
+    @property
+    def elapsed_steps(self):
+        return self._elapsed_steps
+
     def _step_action(self, action):
         """Re-implementation of the simulated BaseEnv._step_action function for real environments. This uses the simulation agent's
         controller to compute the joint targets/velocities without stepping the simulator"""
         # BaseEnv._step_action(self, action)
+        action = common.to_tensor(action)
         if action.shape == self._orig_single_action_space.shape:
             action = common.batch(action)
-            action = common.to_tensor(action)
         self.base_sim_env.agent.set_action(action)
-        # self.sim_env.agent.controller
-        self.agent.set_target_qpos(action)
+
+        # to best ensure whatever signals we send to the simulator robot we also send to the real robot we directly inspect
+        # what drive targets the simulator controller sends and what was set by that controller on the simulated robot
+
+        sim_articulation = self.agent.controller.articulation
+        if self.last_control_time is None:
+            self.last_control_time = time.perf_counter()
+        else:
+            dt = time.perf_counter() - self.last_control_time
+            if dt < self.control_dt:
+                time.sleep(self.control_dt - dt)
+            else:
+                logger.warning(
+                    f"Control dt {self.control_dt} was not reached, actual dt was {dt}"
+                )
+        self.last_control_time = time.perf_counter()
+        if self.agent.controller.sets_target_qpos:
+            self.agent.set_target_qpos(sim_articulation.drive_targets)
+        if self.agent.controller.sets_target_qvel:
+            self.agent.set_target_qvel(sim_articulation.drive_velocities)
 
     def step(self, action):
         """
@@ -219,9 +257,9 @@ class Sim2RealEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # reimplementations of simulation BaseEnv observation related functions
     # -------------------------------------------------------------------------- #
-    def get_obs(self):
+    def get_obs(self, info=None):
         # uses the original environment's get_obs function. Override this only if you want complete control over the returned observations before any wrappers are applied.
-        return self.base_sim_env.__class__.get_obs(self)
+        return self.base_sim_env.__class__.get_obs(self, info)
 
     def _get_obs_agent(self):
         # using the original user implemented sim env's _get_obs_agent function in case they modify it e.g. to remove qvel values as they might be too noisy
@@ -265,10 +303,8 @@ class Sim2RealEnv(gym.Env):
         return self.agent.get_sensor_params(self._sensor_names)
 
     def get_info(self):
-        return (
-            {}
-        )  # TODO (stao): add elapsed steps and other things? document how to write real world success function?
-        # return BaseEnv.get_info(self)
+        info = dict(elapsed_steps=self._elapsed_steps)
+        return info
 
     # TODO (stao): add real world render function for episode recording
     # def render(self):
@@ -278,11 +314,16 @@ class Sim2RealEnv(gym.Env):
     # reimplementations of simulation BaseEnv reward related functions. By default you can leave this alone but if you do want to
     # support computing rewards in the real world you can override these functions.
     # -------------------------------------------------------------------------- #
+    def get_reward(self, obs, action, info):
+        return self.base_sim_env.__class__.get_reward(self, obs, action, info)
+
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         """
         Computes the sparse reward. By default this function tries to use the success/fail information in
         returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise"""
-        return BaseEnv.compute_sparse_reward(self, obs, action, info)
+        return self.base_sim_env.__class__.compute_sparse_reward(
+            self, obs, action, info
+        )
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         raise NotImplementedError()

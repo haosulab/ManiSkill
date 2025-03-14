@@ -22,13 +22,24 @@ except ImportError:
 
 class LeRobotAgent(BaseRealAgent):
     """
-    LeRobotAgent is a class for controlling a real robot. You simply just pass in the ManipulatorRobot instance you create via LeRobot and pass it here to make it work with ManiSkill real environment interfaces.
+    LeRobotAgent is a class for controlling a real robot. You simply just pass in the ManipulatorRobot instance you create via LeRobot and pass it here to make it work with ManiSkill Sim2Real environment interfaces.
+
+    Args:
+        robot (ManipulatorRobot): The ManipulatorRobot instance you create via LeRobot.
+        use_cached_qpos (bool): Whether to cache the fetched qpos values. If True, the qpos will be
+            read from the cache instead of the real robot when possible. This cache is only invalidated when
+            set_target_qpos or set_target_qvel is called. This can be useful if you want to easily have higher frequency (> 30Hz) control since qpos reading from the robot is
+            currently the slowest part of LeRobot for some of the supported motors.
     """
 
-    def __init__(self, robot: ManipulatorRobot, **kwargs):
+    def __init__(
+        self, robot: ManipulatorRobot, use_cached_qpos: bool = False, **kwargs
+    ):
         super().__init__(**kwargs)
         self._captured_sensor_data = None
         self.real_robot = robot
+        self.use_cached_qpos = use_cached_qpos
+        self._cached_qpos = None
 
     def start(self):
         self.real_robot.connect()
@@ -37,10 +48,12 @@ class LeRobotAgent(BaseRealAgent):
         self.real_robot.disconnect()
 
     def set_target_qpos(self, qpos: Array):
+        self._cached_qpos = None
         qpos = common.to_cpu_tensor(qpos).flatten()
         self.real_robot.send_action(torch.rad2deg(qpos))
 
     def set_target_qvel(self, qvel: Array):
+        self._cached_qpos = None
         qvel = common.to_cpu_tensor(qvel).flatten()
         self.real_robot.send_action(qvel)
 
@@ -86,9 +99,15 @@ class LeRobotAgent(BaseRealAgent):
             }
 
     def get_qpos(self):
-        return torch.deg2rad(
-            torch.tensor(self.real_robot.follower_arms["main"].read("Present_Position"))
-        ).unsqueeze(0)
+        # NOTE (stao): the slowest part of inference is reading the qpos from the robot. Each time it takes about 5-6 milliseconds, meaning control frequency is capped at 200Hz.
+        # and if you factor in other operations like policy inference etc. the max control frequency is typically more like 30-60 Hz.
+        # Moreover on the rare occassions reading qpos can take 40 milliseconds which causes the control step to fall behind the desired control frequency.
+        if self.use_cached_qpos and self._cached_qpos is not None:
+            return self._cached_qpos
+        qpos_deg = self.real_robot.follower_arms["main"].read("Present_Position")
+        qpos = torch.deg2rad(torch.tensor(qpos_deg)).unsqueeze(0)
+        self._cached_qpos = qpos
+        return qpos
 
     def get_qvel(self):
         raise NotImplementedError

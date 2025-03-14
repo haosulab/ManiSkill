@@ -13,6 +13,7 @@ import sapien.render
 import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
+from line_profiler import profile
 
 from mani_skill import PACKAGE_ASSET_DIR, logger
 from mani_skill.agents import REGISTERED_AGENTS
@@ -578,6 +579,7 @@ class BaseEnv(gym.Env):
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
         torch.cuda.synchronize()
         return sensor_obs
+
     def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
         """Get the observation with sensor data"""
         return dict(

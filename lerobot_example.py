@@ -41,15 +41,20 @@ robot_config = KochRobotConfig(
 )
 robot = ManipulatorRobot(robot_config)
 
+# max control freq for lerobot really is just 60Hz
 agent = LeRobotAgent(robot, sensor_configs={})
 
 
 wrappers = [FlattenRGBDObservationWrapper]
-sim_env = gym.make("KochPickCubeEnv-v1", obs_mode="rgb")
+sim_env = gym.make(
+    "KochPickCubeEnv-v1",
+    obs_mode="rgb",
+    sim_config={"sim_freq": 120, "control_freq": 60},
+)
 for wrapper in wrappers:
     sim_env = wrapper(sim_env)
 real_env = Sim2RealEnv(sim_env=sim_env, agent=agent, obs_mode="rgb")
-
+sim_env.print_sim_details()
 sim_obs, _ = sim_env.reset()
 real_obs, _ = real_env.reset()
 for k in sim_obs.keys():
@@ -57,6 +62,7 @@ for k in sim_obs.keys():
         f"{k}: sim_obs shape: {sim_obs[k].shape}, real_obs shape: {real_obs[k].shape}"
     )
 
-# real_env.step(real_env.action_space.sample())
+for _ in range(100):
+    real_env.step(real_env.action_space.sample() * 0.3)
 
 real_env.close()
