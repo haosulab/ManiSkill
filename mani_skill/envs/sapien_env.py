@@ -13,7 +13,6 @@ import sapien.render
 import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
-from line_profiler import profile
 
 from mani_skill import PACKAGE_ASSET_DIR, logger
 from mani_skill.agents import REGISTERED_AGENTS
