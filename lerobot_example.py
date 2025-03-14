@@ -39,10 +39,10 @@ robot_config = KochRobotConfig(
     },
     calibration_dir="koch_calibration",
 )
-robot = ManipulatorRobot(robot_config)
+real_robot = ManipulatorRobot(robot_config)
 
 # max control freq for lerobot really is just 60Hz
-agent = LeRobotAgent(robot, sensor_configs={})
+real_agent = LeRobotAgent(real_robot)
 
 
 wrappers = [FlattenRGBDObservationWrapper]
@@ -53,7 +53,7 @@ sim_env = gym.make(
 )
 for wrapper in wrappers:
     sim_env = wrapper(sim_env)
-real_env = Sim2RealEnv(sim_env=sim_env, agent=agent, obs_mode="rgb")
+real_env = Sim2RealEnv(sim_env=sim_env, agent=real_agent, obs_mode="rgb")
 sim_env.print_sim_details()
 sim_obs, _ = sim_env.reset()
 real_obs, _ = real_env.reset()
@@ -62,7 +62,10 @@ for k in sim_obs.keys():
         f"{k}: sim_obs shape: {sim_obs[k].shape}, real_obs shape: {real_obs[k].shape}"
     )
 
-for _ in range(100):
-    real_env.step(real_env.action_space.sample() * 0.3)
-
-real_env.close()
+done = False
+while not done:
+    action = real_env.action_space.sample() * 0.7
+    real_obs, _, terminated, truncated, info = real_env.step(action)
+    done = terminated or truncated
+sim_env.close()
+real_agent.stop()

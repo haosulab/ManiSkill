@@ -18,7 +18,7 @@ class BaseRealAgent:
         sensor_configs (Dict[str, BaseSensorConfig]): the sensor configs to create the agent with.
     """
 
-    def __init__(self, sensor_configs: Dict[str, BaseSensorConfig]):
+    def __init__(self, sensor_configs: Dict[str, BaseSensorConfig] = dict()):
         self.sensor_configs = sensor_configs
 
         self._sim_agent: BaseAgent = None
