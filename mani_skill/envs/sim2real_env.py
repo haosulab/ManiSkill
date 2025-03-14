@@ -320,3 +320,6 @@ class Sim2RealEnv(gym.Env):
 
         # Call the recursive function to check observations
         check_observation_match(sample_sim_obs, sample_real_obs)
+
+    def close(self):
+        self.agent.stop()
