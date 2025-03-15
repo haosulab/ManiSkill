@@ -103,6 +103,9 @@ The goal of the `BaseRealAgent` is to provide a real version of the simulated `B
 
 Note that when creating your real agent the `Sim2RealEnv` will provide it access to the simulation equivalent of that real robot so that when your Sim2Real environment fetches some property such as `self.agent.tcp.pose.raw_pose` (the pose of the tool center point of the robot which is common amongst robots and is provided in the Koch robot example) that normally is simulation only, it will be able to do so in the real environment as well. This is because the `Sim2RealEnv` will automatically update the simulation robot's joint positions to whatever the real robot is at, ensuring we always have a simulation digital twin of the real robot, enabling direct use of features that can be computed based on robot features only.
 
+:::{dropdown} Further details on why a simulation is used when deploying a real robot
+When doing real world deployments there is no need to create a simulation environment. However, from past research and experience with sim2real transfer, we find that it is very important to align as much as possible between the simulation and real world, which even includes some possibly trivial aspects like forward/inverse kinematics. We had past experiments where we find using the hardware provided inverse kinematics code was not a good idea for sim2real transfer because it is just slightly different compared to the simulation inverse kinematics code. Likewise for forward kinematics. Thus we recommend instantiating a simulation environment (the strategy used with the `Sim2RealEnv` class) which would have a simulation version of the real robot which can have its pose/joint positions set to whatever the real robot is at and now you get access to all the same simulation data in the real world with much less sim2real gap (any gap is now due to sensor noise, not minor code differences).
+:::
 
 ## 3 | System ID of Real and Simulated Robot
 
