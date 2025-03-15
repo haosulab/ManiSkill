@@ -1,5 +1,5 @@
 # Generate all motion planning demos for the dataset
-for env_id in PickCube-v1 # PushCube-v1 StackCube-v1 PegInsertionSide-v1 PlugCharger-v1
+for env_id in PickCube-v1 # PickCube-v1 PushCube-v1 StackCube-v1 PlugCharger-v1
 do
     python -m mani_skill.examples.motionplanning.xarm6.run --env-id $env_id \
       --traj-name="trajectory" --only-count-success --save-video -n 1 \
