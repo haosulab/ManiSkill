@@ -50,13 +50,6 @@ class BaseRealAgent:
     def controller(self):
         return self._sim_agent.controller
 
-    # def _setup(self, sim_env: BaseEnv):
-    #     """
-    #     Setup the agent based on the simulation environment's agent
-    #     """
-    #     self._sim_env = sim_env
-    #     self._sim_controller = sim_env.agent.controller
-
     def start(self):
         """
         Start the agent, which include turning on the motors/robot, setting up cameras/sensors etc.
@@ -117,14 +110,14 @@ class BaseRealAgent:
         Get the desired sensor observations from the agent based on the given sensor names. If sensor_names is None then all sensor data should be returned. The expected format for cameras is in line with the simulation's
         format for cameras.
 
-        ```
-        {
-            "sensor_name": {
-                "rgb": torch.uint8 (1, H, W, 3), # red green blue image colors
-                "depth": torch.int16 (1, H, W, 1), # depth in millimeters
+        .. code-block:: python
+
+            {
+                "sensor_name": {
+                    "rgb": torch.uint8 (1, H, W, 3), # red green blue image colors
+                    "depth": torch.int16 (1, H, W, 1), # depth in millimeters
+                }
             }
-        }
-        ```
 
         whether rgb or depth is included depends on the real camera and can be omitted if not supported or not used. Note that a batch dimension is expected in the data.
 
@@ -138,15 +131,15 @@ class BaseRealAgent:
         Get the parameters of the desired sensors based on the given sensor names. If sensor_names is None then all sensor parameters should be returned. The expected format for cameras is in line with the simulation's
         format is:
 
-        ```
-        {
-            "sensor_name": {
-                "cam2world_gl": [4, 4], # transformation from the camera frame to the world frame (OpenGL/Blender convention)
-                "extrinsic_cv": [4, 4], # camera extrinsic (OpenCV convention)
-                "intrinsic_cv": [3, 3], # camera intrinsic (OpenCV convention)
+        .. code-block:: python
+
+            {
+                "sensor_name": {
+                    "cam2world_gl": [4, 4], # transformation from the camera frame to the world frame (OpenGL/Blender convention)
+                    "extrinsic_cv": [4, 4], # camera extrinsic (OpenCV convention)
+                        "intrinsic_cv": [3, 3], # camera intrinsic (OpenCV convention)
+                }
             }
-        }
-        ```
 
 
         If these numbers are not needed/unavailable it is okay to leave the fields blank. Some observation processing modes may need these fields however such as point clouds in the world frame.

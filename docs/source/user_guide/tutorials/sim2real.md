@@ -77,9 +77,14 @@ We note a few common recommendations with respect to these functions:
 
 ## 2 | Setup a Real Agent
 
+For the `Sim2RealEnv` class to work, you need to create a real robot agent that inherits from {py:class}`mani_skill.agents.base_real_agent.BaseRealAgent`. This class essentially is a wrapper around your real robot's hardware interfacing code. For this tutorial we show an example of how to use LeRobot to create the `BaseRealAgent`. You need to implement the following functions
 
 
+:::{literalinclude} mani_skill/agents/base_real_agent.py
+:::
 
+
+Note that when creating your real agent the `Sim2RealEnv` will provide it access to the simulation equivalent of that real robot. This enables you to use the simulation robot (articulation) to compute forward kinematics which can be be useful to generate data like world-frame end-effector poses. Some environments in simulation may benefit adding something like `agent.tcp.pose.raw_pose` to the observation in the `_get_obs_extra` function where `tcp` is a link in the simulation robot.
 
 
 
