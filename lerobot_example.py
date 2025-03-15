@@ -9,7 +9,7 @@ from lerobot.common.robot_devices.robots.configs import KochRobotConfig
 from lerobot.common.robot_devices.robots.manipulator import ManipulatorRobot
 
 import mani_skill.envs.tasks.digital_twins.koch_pickcube
-from mani_skill.agents.robots.lerobot.manipulator import LeRobotAgent
+from mani_skill.agents.robots.lerobot.manipulator import LeRobotRealAgent
 from mani_skill.envs.sim2real_env import Sim2RealEnv
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
 
@@ -42,14 +42,14 @@ robot_config = KochRobotConfig(
 real_robot = ManipulatorRobot(robot_config)
 
 # max control freq for lerobot really is just 60Hz
-real_agent = LeRobotAgent(real_robot)
+real_agent = LeRobotRealAgent(real_robot)
 
 
 wrappers = [FlattenRGBDObservationWrapper]
 sim_env = gym.make(
     "KochPickCubeEnv-v1",
     obs_mode="rgb",
-    sim_config={"sim_freq": 120, "control_freq": 60},
+    sim_config={"sim_freq": 120, "control_freq": 30},
 )
 for wrapper in wrappers:
     sim_env = wrapper(sim_env)
@@ -57,6 +57,7 @@ real_env = Sim2RealEnv(sim_env=sim_env, agent=real_agent, obs_mode="rgb")
 sim_env.print_sim_details()
 sim_obs, _ = sim_env.reset()
 real_obs, _ = real_env.reset()
+
 for k in sim_obs.keys():
     print(
         f"{k}: sim_obs shape: {sim_obs[k].shape}, real_obs shape: {real_obs[k].shape}"

@@ -18,11 +18,12 @@ try:
     from lerobot.common.robot_devices.utils import busy_wait
 except ImportError:
     pass
+from line_profiler import profile
 
 
-class LeRobotAgent(BaseRealAgent):
+class LeRobotRealAgent(BaseRealAgent):
     """
-    LeRobotAgent is a class for controlling a real robot. You simply just pass in the ManipulatorRobot instance you create via LeRobot and pass it here to make it work with ManiSkill Sim2Real environment interfaces.
+    LeRobotRealAgent is a general class for controlling real robots via the LeRobot system. You simply just pass in the ManipulatorRobot instance you create via LeRobot and pass it here to make it work with ManiSkill Sim2Real environment interfaces.
 
     Args:
         robot (ManipulatorRobot): The ManipulatorRobot instance you create via LeRobot.
@@ -32,9 +33,7 @@ class LeRobotAgent(BaseRealAgent):
             currently the slowest part of LeRobot for some of the supported motors.
     """
 
-    def __init__(
-        self, robot: ManipulatorRobot, use_cached_qpos: bool = False, **kwargs
-    ):
+    def __init__(self, robot: ManipulatorRobot, use_cached_qpos: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._captured_sensor_data = None
         self.real_robot = robot
@@ -98,6 +97,7 @@ class LeRobotAgent(BaseRealAgent):
                 k: v for k, v in self._captured_sensor_data.items() if k in sensor_names
             }
 
+    @profile
     def get_qpos(self):
         # NOTE (stao): the slowest part of inference is reading the qpos from the robot. Each time it takes about 5-6 milliseconds, meaning control frequency is capped at 200Hz.
         # and if you factor in other operations like policy inference etc. the max control frequency is typically more like 30-60 Hz.

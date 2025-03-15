@@ -28,11 +28,11 @@ class Sim2RealEnv(gym.Env):
         agent (BaseRealAgent): The real robot agent to control. This must be an object that inherits from BaseRealAgent.
         obs_mode (str): The observation mode to use.
         real_reset_function (Optional[Callable[[Sim2RealEnv, Optional[int], Optional[dict]], None]]): The function to call to reset the real robot. By default this is None and we use a default reset function which
-            calls the simulation reset function and resets the agent/robot qpos to whatever the simulation reset function sampled. This function is given access to the Sim2RealEnv instance, the given seed and options dictionary
-            similar to a standard gym reset function.
+            calls the simulation reset function and resets the agent/robot qpos to whatever the simulation reset function sampled, then prompts the user to press enter before continuing running.
+            This function is given access to the Sim2RealEnv instance, the given seed and options dictionary similar to a standard gym reset function.
         sensor_data_processing_function (Optional[Callable[[Dict], Dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function.
             By default this is None and we use a default processing function which does the following for each sensor type:
-              - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
+            - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
     """
 
     def __init__(
@@ -86,17 +86,13 @@ class Sim2RealEnv(gym.Env):
         def default_real_reset_function(self: Sim2RealEnv, seed=None, options=None):
             self.sim_env.reset(seed=seed, options=options)
             self.agent.reset(qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten())
-            # sets sim to whatever the real agent reset to, necessary as some real world robots are not very precise. Some controllers use the agent's
-            # current qpos and as this is the sim controller we copy the real world agent qpos so it behaves the same
-            self.base_sim_env.agent.robot.set_qpos(self.agent.robot.qpos)
-            self.agent.controller.reset()
             input("Press enter if the environment is reset")
 
         self.real_reset_function = real_reset_function or default_real_reset_function
 
         class RealEnvStepReset(gym.Env):
             def step(dummy_self, action):
-                ret = BaseEnv.step(self, action)
+                ret = self.base_sim_env.__class__.step(self, action)
                 return ret
 
             def reset(dummy_self, seed=None, options=None):
@@ -186,7 +182,6 @@ class Sim2RealEnv(gym.Env):
     def _step_action(self, action):
         """Re-implementation of the simulated BaseEnv._step_action function for real environments. This uses the simulation agent's
         controller to compute the joint targets/velocities without stepping the simulator"""
-        # BaseEnv._step_action(self, action)
         action = common.to_tensor(action)
         if action.shape == self._orig_single_action_space.shape:
             action = common.batch(action)
@@ -222,9 +217,11 @@ class Sim2RealEnv(gym.Env):
             self._last_wrapper.env = self._env_with_real_step_reset
             ret = self._first_wrapper.step(action)
             self._last_wrapper.env = orig_env
-            return ret
         else:
-            return self._env_with_real_step_reset.step(action)
+            ret = self._env_with_real_step_reset.step(action)
+        # ensure sim agent qpos is synced
+        self.base_sim_env.agent.robot.set_qpos(self.agent.robot.qpos)
+        return ret
 
     def reset(self, seed=None, options=None):
         self.real_reset_function(self, seed, options)
@@ -233,9 +230,14 @@ class Sim2RealEnv(gym.Env):
             self._last_wrapper.env = self._env_with_real_step_reset
             ret = self._first_wrapper.reset(seed=seed, options=options)
             self._last_wrapper.env = orig_env
-            return ret
         else:
-            return self._env_with_real_step_reset.reset(seed, options)
+            ret = self._env_with_real_step_reset.reset(seed, options)
+        # sets sim to whatever the real agent reset to in order to sync them. Some controllers use the agent's
+        # current qpos and as this is the sim controller we copy the real world agent qpos so it behaves the same
+        # moreover some properties of the robot like forward kinematic computed poses are done through the simulated robot and so qpos has to be up to date
+        self.base_sim_env.agent.robot.set_qpos(self.agent.robot.qpos)
+        self.agent.controller.reset()
+        return ret
 
     # -------------------------------------------------------------------------- #
     # reimplementations of simulation BaseEnv observation related functions

@@ -67,6 +67,7 @@ This is possibly the hardest part because not everything in the real world can b
 To make a simulation environment compatible with `Sim2RealEnv` class and eventually have some success with sim2real transfer you need to ensure the following:
 
 - The simulation environment's `_get_obs_extra` and `_get_obs_agent` function does not use any simulation only features, only features the real-world setup has reliable access to and is sufficiently accurate.
+- There is a robot class that implements the {py:class}`mani_skill.agents.base_agent.BaseAgent` class, simulating your real robot. Tutorial for importing custom robots can be found [here](./custom_robots.md). Otherwise you can use one of the existing robot implementations provided by ManiSkill and perform system ID to align simulation robot parameters with your real robot.
 
 The `Sim2RealEnv` will re-use the simulation environment's `_get_obs_extra` and `_get_obs_agent` functions to construct the real environment's observations so that you don't have to.
 
@@ -75,18 +76,35 @@ We note a few common recommendations with respect to these functions:
 <!-- - Often users will include end-effector poses (or tool-center-point tcp poses) in the observation via the `_get_obs_extra` function. The Sim2RealEnv will automatically update the simulation environment's robot joint positions to whatever the real robot is at so this kind of data is correct. -->
 <!-- TODO (stao): tcp.pose is supportable but its finnicky because agent.tcp is a property of the simulation agent. Would need a KochRealAgent essentially. But i guess each robot setup needs a seperate real agent class anyway? -->
 
+
+Once you have created your simulation environment, you can first test it by running it with RGB observations as so
+
+```python
+import gymnasium as gym
+import your_env_file
+sim_env = gym.make("MyEnvironment-v1", obs_mode="rgb")
+sim_obs, _ = sim_env.reset()
+print(sim_obs.keys())
+```
+
 ## 2 | Setup a Real Agent
 
-For the `Sim2RealEnv` class to work, you need to create a real robot agent that inherits from {py:class}`mani_skill.agents.base_real_agent.BaseRealAgent`. This class essentially is a wrapper around your real robot's hardware interfacing code. For this tutorial we show an example of how to use LeRobot to create the `BaseRealAgent`. You need to implement the following functions
+For the `Sim2RealEnv` class to work, you need to create a real robot agent that inherits from {py:class}`mani_skill.agents.base_real_agent.BaseRealAgent`. This class essentially is a wrapper around your real robot's hardware interfacing code. For this tutorial we show an example of how to use LeRobot to create the `BaseRealAgent`. The tutorial will be using the low-cost [Koch Robot](https://github.com/jess-moss/koch-v1-1) as an example. You have the following functions to implement:
+
+- `start`: 
+- `get_qpos`
+- `get_qvel` (only needed if your sim environment observations includes joint velocities)
+
+TODO (stao): finish
+
+The goal of the `BaseRealAgent` is to provide a real version of the simulated `BaseAgent` class. This also means that all the implementations are expected to return batched (even if its just a single element) torch tensors in line with the rest of ManiSkill simulation code.
+
+<!-- {literalinclude}`mani_skill/agents/base_real_agent.py` TODO: doesn't work? -->
+
+Note that when creating your real agent the `Sim2RealEnv` will provide it access to the simulation equivalent of that real robot so that when your Sim2Real environment fetches some property such as `self.agent.tcp.pose.raw_pose` (the pose of the tool center point of the robot which is common amongst robots and is provided in the Koch robot example) that normally is simulation only, it will be able to do so in the real environment as well. This is because the `Sim2RealEnv` will automatically update the simulation robot's joint positions to whatever the real robot is at, ensuring we always have a simulation digital twin of the real robot, enabling direct use of features that can be computed based on robot features only.
 
 
-:::{literalinclude} mani_skill/agents/base_real_agent.py
-:::
-
-
-Note that when creating your real agent the `Sim2RealEnv` will provide it access to the simulation equivalent of that real robot. This enables you to use the simulation robot (articulation) to compute forward kinematics which can be be useful to generate data like world-frame end-effector poses. Some environments in simulation may benefit adding something like `agent.tcp.pose.raw_pose` to the observation in the `_get_obs_extra` function where `tcp` is a link in the simulation robot.
-
-
+## 3 | System ID of Real and Simulated Robot
 
 
 ## Dynamics Alignment

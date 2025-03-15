@@ -187,3 +187,16 @@ class BaseRealAgent:
         if len(controller_state) > 0:
             obs.update(controller=controller_state)
         return obs
+
+    def __getattr__(self, name):
+        """
+        Delegate attribute access to self._sim_agent if the attribute doesn't exist in self.
+        This allows accessing sim_agent properties and methods directly from the real agent. Some simulation agent include convenience functions to access e.g. end-effector poses
+        or various properties of the robot.
+        """
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            if hasattr(self, "_sim_agent") and hasattr(self._sim_agent, name):
+                return getattr(self._sim_agent, name)
+            raise AttributeError(f"{self.__class__.__name__} has no attribute '{name}'")

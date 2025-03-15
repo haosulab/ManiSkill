@@ -121,9 +121,10 @@ class KochPickCubeEnv(BaseEnv):
         ).float() * (target_qpos[..., -1] < 0.24)
         obs = dict(
             is_grasped=is_grasped,
-            # tcp_pose=self.agent.tcp.pose.raw_pose,
+            tcp_pose=self.agent.tcp.pose.raw_pose,
             # goal_pos=self.goal_site.pose.p,
         )
+        # print(self.agent.tcp.pose.p)
         if "state" in self.obs_mode:
             obs.update(
                 obj_pose=self.cube.pose.raw_pose,
