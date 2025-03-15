@@ -11,7 +11,7 @@ from mani_skill.utils.structs.types import Array
 
 class BaseRealAgent:
     """
-    Base agent class for representing real robots, sensors, and controlling them in a real environment. This generally should be used with the RealEnv class for deploying policies learned in simulation
+    Base agent class for representing real robots, sensors, and controlling them in a real environment. This generally should be used with the :py:class:`mani_skill.envs.sim2real_env.Sim2RealEnv` class for deploying policies learned in simulation
     to the real world.
 
     Args:

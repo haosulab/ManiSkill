@@ -1,4 +1,4 @@
-``mani_skill.utils.structs`` module
+mani_skill.utils.structs module
 ===================================
 
 Structs in ManiSkill are objects that efficiently wrap around raw SAPIEN objects and manage their data on the GPU in a user-friendly way so you don't have to deal with complex memory management code. The APIs exposed here are the most commonly used structs that you will encounter when using ManiSkill.

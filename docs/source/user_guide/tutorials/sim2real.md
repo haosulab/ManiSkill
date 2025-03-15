@@ -2,7 +2,7 @@
 
 For sim2real one typically needs to align dynamics and visual data. ManiSkill provides a few utilities to help minimize the amount of extra code you need to write and streamline the process. A recommended pre-requisite to making sim2real environments in this tutorial is to first learn how to create simulation tasks in the [custom tasks tutorial](./custom_tasks/intro.md).
 
-We first describe at a high-level some of the features of the `Sim2RealEnv` class that we provide that helps streamline the process of creating sim2real environments. Then the full tutorial will give examples and step-by-step instructions on how to make your own Sim2Real environments using the highly accessible / low-cost [LeRobot](https://github.com/huggingface/lerobot) system for easy robot/sensor setups. Coming soon will also include simple RGB-based sim2real deployment of policies trained with RL entirely in simulation (a demo showcase of that is [in the demo gallery](../demos/gallery.md#vision-based-zero-shot-sim2real-manipulation) if you are interested).
+We first describe at a high-level some of the features of the {py:class}`mani_skill.envs.sim2real_env.Sim2RealEnv` class that we provide that helps streamline the process of creating sim2real environments. Then the full tutorial will give examples and step-by-step instructions on how to make your own Sim2Real environments using the highly accessible / low-cost [LeRobot](https://github.com/huggingface/lerobot) system for easy robot/sensor setups. Coming soon will also include simple RGB-based sim2real deployment of policies trained with RL entirely in simulation (a demo showcase of that is [in the demo gallery](../demos/gallery.md#vision-based-zero-shot-sim2real-manipulation) if you are interested).
 
 ## High Level Overview
 
@@ -72,8 +72,8 @@ The `Sim2RealEnv` will re-use the simulation environment's `_get_obs_extra` and 
 
 We note a few common recommendations with respect to these functions:
 - The default `_get_obs_agent` function will include the robot's joint position (`qpos`), joint velocity (`qvel`), and any controller state (such as joint targets in controllers that use targets). `qpos` on any robot hardware is generally available and accurate. `qvel` is not always available on some real hardware and estimating these values might be too inaccurate for sim2real transfer sometimes.
-- Often users will include end-effector poses (or tool-center-point tcp poses) in the observation via the `_get_obs_extra` function. The Sim2RealEnv will automatically update the simulation environment's robot joint positions to whatever the real robot is at so this kind of data is correct. However 
-
+<!-- - Often users will include end-effector poses (or tool-center-point tcp poses) in the observation via the `_get_obs_extra` function. The Sim2RealEnv will automatically update the simulation environment's robot joint positions to whatever the real robot is at so this kind of data is correct. -->
+<!-- TODO (stao): tcp.pose is supportable but its finnicky because agent.tcp is a property of the simulation agent. Would need a KochRealAgent essentially. But i guess each robot setup needs a seperate real agent class anyway? -->
 
 ## 2 | Setup a Real Agent
 

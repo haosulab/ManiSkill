@@ -1,17 +1,3 @@
-"""
-Gymnasium environment interface for controlling a real robot.
-
-The setup of this environment is the same as the ManiSkill BaseEnv in terms of observation and action spaces, and uses the same
-controller code for the real robot as used in simulation.
-
-Note that as many operations of simulation environments are not available for real environments, we do not inherit from BaseEnv and simply
-reference some of the BaseEnv functions for consistency instead.
-
-One small difference as well between RealEnv and BaseEnv is that the code for fetching raw real world sensor data is robot dependent, not environment dependent.
-
-So for real world deployments you may take an existing implementation of a real robot class and use it as a starting point for your own implementation to add e.g. more cameras
-or generate other kinds of sensor data.
-"""
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -33,12 +19,9 @@ class Sim2RealEnv(gym.Env):
 
     There are some caveats in which you may need to override this class / write your own code instead:
 
-    - If you use privileged features in the simulation environment like an object's pose then we cannot retrieve those poses in the real environment.
-    You can for example override the `_get_obs_extra` function to compute those values in the real environment via a perception pipeline.
+    - If you use privileged features in the simulation environment like an object's pose then we cannot retrieve those poses in the real environment. You can for example override the `_get_obs_extra` function to compute those values in the real environment via a perception pipeline.
 
-    - While we align controllers and observation shapes/ordering as much as possible, there can
-    still be distribution shifts between the simulation and real environment. These can include vision gaps (sim images looking not like the real world)
-    and sensor biases and noise.
+    - While we align controllers and observation shapes/ordering as much as possible, there can still be distribution shifts between the simulation and real environment. These can include vision gaps (sim images looking not like the real world) and sensor biases and noise.
 
     Args:
         sim_env (BaseEnv): The simulation environment that the real environment should be aligned with.
