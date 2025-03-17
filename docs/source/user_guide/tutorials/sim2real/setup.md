@@ -64,7 +64,7 @@ If you need heavy customizations we provide some recommendations in later sectio
 
 ## 1 | Create the Sim Environment for Sim2Real
 
-This is possibly the hardest part because not everything in the real world can be simulated to begin with. To limit the scope we will only focus on rigid-body physics (which do cover a significant number of common robotics tasks).
+This is possibly the hardest part because not everything in the real world can be simulated to begin with. To limit the scope we will only focus on rigid-body physics (which do cover a significant number of common robotics tasks). Moreover for this sim2real tutorial we will be using a green-screening approach to mitigate part of the vision gap between simulation and real world although for more advanced use cases you might not need it.
 
 To make a simulation environment compatible with `Sim2RealEnv` class and eventually have some success with sim2real transfer you need to ensure the following:
 
@@ -75,10 +75,11 @@ The `Sim2RealEnv` will re-use the simulation environment's `_get_obs_extra` and 
 
 We note a few common recommendations with respect to these functions:
 - The default `_get_obs_agent` function will include the robot's joint position (`qpos`), joint velocity (`qvel`), and any controller state (such as joint targets in controllers that use targets). `qpos` on any robot hardware is generally available and accurate. `qvel` is not always available on some real hardware and estimating these values might be too inaccurate for sim2real transfer sometimes. This tutorial purposely removes `qvel` from the observation as the tutorial uses the Koch robot which does not have accurate joint velocity measurements at the moment.
-<!-- - Often users will include end-effector poses (or tool-center-point tcp poses) in the observation via the `_get_obs_extra` function. The Sim2RealEnv will automatically update the simulation environment's robot joint positions to whatever the real robot is at so this kind of data is correct. -->
-<!-- TODO (stao): tcp.pose is supportable but its finnicky because agent.tcp is a property of the simulation agent. Would need a KochRealAgent essentially. But i guess each robot setup needs a seperate real agent class anyway? -->
 
 If you haven't already first follow the [custom tasks tutorial](../custom_tasks/intro.md) to learn how to create a simulation environment, which documents how to load the robot, load objects, setup cameras and more. Once you know how to create a basic environment, for this sim2real tutorial we will be working with a cube picking task, where the goal is to grasp a cube and lift it up.
+
+
+
 
 Once you have created your simulation environment, you can first test it by running it with RGB observations as so
 
@@ -94,19 +95,30 @@ A sample environment is provided in the ManiSkill package/repo: [`mani_skill.env
 
 TODO photo
 
+
+
 ## 2 | Setup a Real Agent
 
 For the `Sim2RealEnv` class to work, you need to create a real robot agent that inherits from {py:class}`mani_skill.agents.base_real_agent.BaseRealAgent`. This class essentially is a wrapper around your real robot's hardware interfacing code. For this tutorial we show an example of how to use LeRobot to create the `BaseRealAgent`. The tutorial will be using the low-cost [Koch Robot](https://github.com/jess-moss/koch-v1-1) as an example. You have the following functions to implement:
 
-- `start`: 
-- `get_qpos`
-- `get_qvel` (only needed if your sim environment observations includes joint velocities)
 
-TODO (stao): finish
+The goal of the `BaseRealAgent` is to provide a real version of the simulated `BaseAgent` class. This also means that all the implementations are expected to return batched (even if its just a single element) torch tensors in line with the rest of ManiSkill simulation code. An example minimal implementation for the Koch robot is shown below which implements all of the required functions
 
-The goal of the `BaseRealAgent` is to provide a real version of the simulated `BaseAgent` class. This also means that all the implementations are expected to return batched (even if its just a single element) torch tensors in line with the rest of ManiSkill simulation code.
+- `start`: Starts the robot and any real sensors
+- `stop`: Stops the robot and any real sensors
+- `set_target_qpos`: Sets the target joint positions of the robot
+- `set_target_qvel`: Sets the target joint velocities of the robot (optional)
+- `capture_sensor_data`: Captures the sensor data of the robot without blocking the main thread
+- `get_sensor_data`: Returns the sensor data fetched by the capture function above.
+- `get_qpos`: Returns the current joint positions of the robot
+- `get_qvel`: Returns the current joint velocities of the robot (optional)
 
-<!-- {literalinclude}`mani_skill/agents/base_real_agent.py` TODO: doesn't work? -->
+See {py:class}`mani_skill.agents.base_real_agent.BaseRealAgent` for docstrings with more details on the typings and expected behaviors.
+
+:::{literalinclude} ../../../../../mani_skill/agents/robots/lerobot/manipulator.py
+    :language: python
+    :linenos:
+:::
 
 Note that when creating your real agent the `Sim2RealEnv` will provide it access to the simulation equivalent of that real robot so that when your Sim2Real environment fetches some property such as `self.agent.tcp.pose.raw_pose` (the pose of the tool center point of the robot which is common amongst robots and is provided in the Koch robot example) that normally is simulation only, it will be able to do so in the real environment as well. This is because the `Sim2RealEnv` will automatically update the simulation robot's joint positions to whatever the real robot is at, ensuring we always have a simulation digital twin of the real robot, enabling direct use of features that can be computed based on robot features only.
 

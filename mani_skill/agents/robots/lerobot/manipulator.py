@@ -18,7 +18,6 @@ try:
     from lerobot.common.robot_devices.utils import busy_wait
 except ImportError:
     pass
-from line_profiler import profile
 
 
 class LeRobotRealAgent(BaseRealAgent):
@@ -50,11 +49,6 @@ class LeRobotRealAgent(BaseRealAgent):
         self._cached_qpos = None
         qpos = common.to_cpu_tensor(qpos).flatten()
         self.real_robot.send_action(torch.rad2deg(qpos))
-
-    def set_target_qvel(self, qvel: Array):
-        self._cached_qpos = None
-        qvel = common.to_cpu_tensor(qvel).flatten()
-        self.real_robot.send_action(qvel)
 
     def reset(self, qpos: Array):
         qpos = common.to_cpu_tensor(qpos)
@@ -97,7 +91,6 @@ class LeRobotRealAgent(BaseRealAgent):
                 k: v for k, v in self._captured_sensor_data.items() if k in sensor_names
             }
 
-    @profile
     def get_qpos(self):
         # NOTE (stao): the slowest part of inference is reading the qpos from the robot. Each time it takes about 5-6 milliseconds, meaning control frequency is capped at 200Hz.
         # and if you factor in other operations like policy inference etc. the max control frequency is typically more like 30-60 Hz.

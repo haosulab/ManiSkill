@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import sapien
@@ -6,6 +6,7 @@ import torch
 
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots import Fetch, Panda, XArm6Robotiq
+from mani_skill.agents.robots.koch.koch import Koch
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -35,7 +36,7 @@ class KochPickCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = [
         "koch-v1.1",
     ]
-    agent: Union[Panda, Fetch, XArm6Robotiq]
+    agent: Koch
     cube_half_size = 0.02
     goal_thresh = 0.025
 
@@ -114,20 +115,15 @@ class KochPickCubeEnv(BaseEnv):
         return obs
 
     def _get_obs_extra(self, info: Dict):
-        # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
         target_qpos = self.agent.controller._target_qpos.clone()
         is_grasped = (
             (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.02
         ).float() * (target_qpos[..., -1] < 0.24)
-        obs = dict(
-            is_grasped=is_grasped,
-            tcp_pose=self.agent.tcp.pose.raw_pose,
-            # goal_pos=self.goal_site.pose.p,
-        )
-        # print(self.agent.tcp.pose.p)
-        if "state" in self.obs_mode:
+        obs = dict(is_grasped=is_grasped)
+        if self.obs_mode_struct.state:
             obs.update(
                 obj_pose=self.cube.pose.raw_pose,
+                tcp_pose=self.agent.tcp.pose.raw_pose,
                 tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
@@ -138,13 +134,11 @@ class KochPickCubeEnv(BaseEnv):
             torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
             <= self.goal_thresh
         )
-        # is_grasped = self.agent.is_grasping(self.cube)
         is_robot_static = self.agent.is_static(0.2)
         return {
             "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
-            # "is_grasped": is_grasped,
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
