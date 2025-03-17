@@ -29,7 +29,15 @@ class Sim2RealEnv(gym.Env):
         obs_mode (str): The observation mode to use.
         real_reset_function (Optional[Callable[[Sim2RealEnv, Optional[int], Optional[dict]], None]]): The function to call to reset the real robot. By default this is None and we use a default reset function which
             calls the simulation reset function and resets the agent/robot qpos to whatever the simulation reset function sampled, then prompts the user to press enter before continuing running.
-            This function is given access to the Sim2RealEnv instance, the given seed and options dictionary similar to a standard gym reset function.
+            This function is given access to the Sim2RealEnv instance, the given seed and options dictionary similar to a standard gym reset function. The default function and example is shown below:
+
+            .. code-block:: python
+
+                def real_reset_function(self, seed=None, options=None):
+                    self.sim_env.reset(seed=seed, options=options)
+                    self.agent.reset(qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten())
+                    input("Press enter if the environment is reset")
+
         sensor_data_processing_function (Optional[Callable[[Dict], Dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function.
             By default this is None and we use a default processing function which does the following for each sensor type:
             - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
