@@ -5,9 +5,8 @@ import sapien
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import Fetch, Panda, XArm6Robotiq
 from mani_skill.agents.robots.koch.koch import Koch
-from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
@@ -17,7 +16,7 @@ from mani_skill.utils.structs.pose import Pose
 
 
 @register_env("KochPickCubeEnv-v1", max_episode_steps=50)
-class KochPickCubeEnv(BaseEnv):
+class KochPickCubeEnv(BaseDigitalTwinEnv):
     """
     **Task Description:**
     A simple task where the objective is to grasp a red cube and move it to a target goal position.
@@ -36,18 +35,24 @@ class KochPickCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = [
         "koch-v1.1",
     ]
+    SUPPORTED_OBS_MODES = ["state", "state_dict", "rgb+segmentation"]
     agent: Koch
     cube_half_size = 0.02
     goal_thresh = 0.025
 
     def __init__(
-        self, *args, robot_uids="koch-v1.1", robot_init_qpos_noise=0.02, **kwargs
+        self,
+        *args,
+        robot_uids="koch-v1.1",
+        greenscreen_overlay_path="figures/environment_demos/greenscreen_overlay.png",
+        **kwargs
     ):
-        self.robot_init_qpos_noise = robot_init_qpos_noise
+        self.greenscreen_overlay_path = greenscreen_overlay_path
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
     def _default_sensor_configs(self):
+        # we just set a default camera pose here for now. For sim2real we will modify this during training accordingly.
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
@@ -82,7 +87,16 @@ class KochPickCubeEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
+        # load the greenscreen image to a torch tensor
+        import cv2
+
+        self.greenscreen_overlay_image = torch.from_numpy(
+            cv2.cvtColor(cv2.imread(self.greenscreen_overlay_path), cv2.COLOR_BGR2RGB)
+        ).to(self.device)
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        # we randomize the cube accordingly so that the policy can learn to pick up the cube from
+        # many different orientations and positions.
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
@@ -107,7 +121,7 @@ class KochPickCubeEnv(BaseEnv):
             )
 
     def _get_obs_agent(self):
-        # remove qvel as koch arm qvel is too noisy
+        # we remove qvel as koch arm qvel is too noisy to learn from and not implemented.
         obs = dict(qpos=self.agent.robot.get_qpos())
         controller_state = self.agent.controller.get_state()
         if len(controller_state) > 0:
@@ -115,6 +129,8 @@ class KochPickCubeEnv(BaseEnv):
         return obs
 
     def _get_obs_extra(self, info: Dict):
+        # we ensure that the observation data is always retrievable in the real world, using only real world
+        # available data (joint positions in this case).
         target_qpos = self.agent.controller._target_qpos.clone()
         is_grasped = (
             (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.02
@@ -128,6 +144,14 @@ class KochPickCubeEnv(BaseEnv):
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
         return obs
+
+    def _get_obs_sensor_data(
+        self, info: Dict, apply_texture_transforms: bool = True
+    ) -> Dict:
+        sensor_data = super()._get_obs_sensor_data(info, apply_texture_transforms)
+        # here we override the default function that generates visual observation data in simulation to apply a green-screen
+        sensor_data["base_camera"]["rgb"]
+        sensor_data["base_camera"]["segmentation"]
 
     def evaluate(self):
         is_obj_placed = (

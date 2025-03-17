@@ -76,9 +76,13 @@ The `Sim2RealEnv` will re-use the simulation environment's `_get_obs_extra` and 
 We note a few common recommendations with respect to these functions:
 - The default `_get_obs_agent` function will include the robot's joint position (`qpos`), joint velocity (`qvel`), and any controller state (such as joint targets in controllers that use targets). `qpos` on any robot hardware is generally available and accurate. `qvel` is not always available on some real hardware and estimating these values might be too inaccurate for sim2real transfer sometimes. This tutorial purposely removes `qvel` from the observation as the tutorial uses the Koch robot which does not have accurate joint velocity measurements at the moment.
 
-If you haven't already first follow the [custom tasks tutorial](../custom_tasks/intro.md) to learn how to create a simulation environment, which documents how to load the robot, load objects, setup cameras and more. Once you know how to create a basic environment, for this sim2real tutorial we will be working with a cube picking task, where the goal is to grasp a cube and lift it up.
+If you haven't already first follow the [custom tasks tutorial](../custom_tasks/intro.md) to learn how to create a simulation environment, which documents how to load the robot, load objects, setup cameras and more. Once you know how to create a basic environment, go ahead and make a cube picking task similar to the example environment below. The objective is to train a robot to grasp a cube and lift it up. You will note that we inherit from `BaseDigitalTwinEnv` instead of the usual `BaseEnv` class for simulation. This is so we can use the green-screeening functionalities provided by `BaseDigitalTwinEnv` already. The example code below is in the ManiSkill package at [`mani_skill.envs.tasks.digital_twins.tabletop.koch_pickcube`](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/digital_twins/tabletop/koch_pickcube.py) and is heavily annotated to explain most of the lines of code (we do recommend reading the file directly instead of through the documentation here). You can skip the code with respect to the reward function for now as we will cover that in the [last section](#4--reward-function-design) of this tutorial.
 
-
+:::{dropdown} Example simulation environment code
+:::{literalinclude} ../../../../../mani_skill/envs/tasks/digital_twins/koch_arm/pickcube.py
+    :language: python
+    :linenos:
+:::
 
 
 Once you have created your simulation environment, you can first test it by running it with RGB observations as so
@@ -90,8 +94,6 @@ sim_env = gym.make("MyEnvironment-v1", obs_mode="rgb")
 sim_obs, _ = sim_env.reset()
 print(sim_obs.keys())
 ```
-
-A sample environment is provided in the ManiSkill package/repo: [`mani_skill.envs.tasks.digital_twins.tabletop.koch_pickcube`](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/digital_twins/tabletop/koch_pickcube.py), which has already modelled the koch robot arm and table top scene with a cube, base camera. There is also reward function already defined and this tutorial will cover some details on reward function design for sim2real manipulation later. The sample environment looks something like this:
 
 TODO photo
 

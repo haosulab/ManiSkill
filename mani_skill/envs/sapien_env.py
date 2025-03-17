@@ -553,7 +553,28 @@ class BaseEnv(gym.Env):
         return params
 
     def _get_obs_sensor_data(self, apply_texture_transforms: bool = True) -> dict:
-        """get only data from sensors. Auto hides any objects that are designated to be hidden"""
+        """
+        Get data from all registered sensors. Auto hides any objects that are designated to be hidden
+
+        Args:
+            apply_texture_transforms (bool): Whether to apply texture transforms to the simulated sensor data to map to standard texture formats. Default is True.
+
+        Returns:
+            dict: A dictionary containing the sensor data mapping sensor name to its respective dictionary of data. The dictionary maps texture names to the data. For example the return could look like
+
+            .. code-block:: python
+
+                {
+                    "sensor_1": {
+                        "rgb": torch.Tensor,
+                        "depth": torch.Tensor
+                    },
+                    "sensor_2": {
+                        "rgb": torch.Tensor,
+                        "depth": torch.Tensor
+                    }
+                }
+        """
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.scene.update_render(update_sensors=True, update_human_render_cameras=False)
