@@ -35,6 +35,8 @@ class Sim2RealEnv(gym.Env):
             - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
     """
 
+    metadata = {"render_modes": ["human", "rgb_array", "sensors", "all"]}
+
     def __init__(
         self,
         sim_env: BaseEnv,
@@ -47,7 +49,7 @@ class Sim2RealEnv(gym.Env):
         # obs_mode: Optional[str] = None,
         reward_mode: Optional[str] = "none",
         # control_mode: Optional[str] = None,
-        # render_mode: Optional[str] = None,
+        render_mode: Optional[str] = "sensors",
         # robot_uids: BaseRealAgent = None,
     ):
         self.sim_env = sim_env
@@ -73,6 +75,7 @@ class Sim2RealEnv(gym.Env):
         self.reward_mode = reward_mode
         self.obs_mode = obs_mode
         self.obs_mode_struct = self.base_sim_env.obs_mode_struct
+        self.render_mode = render_mode
 
         self._elapsed_steps = torch.zeros((1,), dtype=torch.int32)
 
@@ -292,8 +295,8 @@ class Sim2RealEnv(gym.Env):
         return info
 
     # TODO (stao): add real world render function for episode recording
-    # def render(self):
-    #     return BaseEnv.render(self)
+    def render(self):
+        return BaseEnv.render(self)
 
     # -------------------------------------------------------------------------- #
     # reimplementations of simulation BaseEnv reward related functions. By default you can leave this alone but if you do want to
