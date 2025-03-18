@@ -49,7 +49,6 @@ class KochPickCubeEnv(BaseDigitalTwinEnv):
     ):
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
-        self.rgb_always_overlay_objects
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
