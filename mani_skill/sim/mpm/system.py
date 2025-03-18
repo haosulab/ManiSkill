@@ -1,5 +1,7 @@
 import sapien
 import sapien.physx as physx
+import torch
+import warp as wp
 
 from mani_skill.sim.base_system import BaseSystem
 from mani_skill.sim.mpm.config import MPMSystemConfig
@@ -10,9 +12,10 @@ class MPMSystem(BaseSystem):
     MPM system
     """
 
-    def __init__(self):
+    def __init__(self, device: torch.device):
         super().__init__()
         self.config = MPMSystemConfig()
+        self.device = wp.device_from_torch(device)
 
     def add_boundaries_by_sapien_scene(self, scene: sapien.Scene):
         """
@@ -27,6 +30,7 @@ class MPMSystem(BaseSystem):
         """
         for shape in rigid_body_component.collision_shapes:
             # do something
+
             pass
 
     def init(self):

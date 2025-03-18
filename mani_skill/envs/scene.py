@@ -155,6 +155,14 @@ class ManiSkillScene:
         loader.set_scene(self)
         return loader
 
+    def create_mpm_builder(self):
+        """Creates a MPMBuilder object that can be used to build objects simulated via MPM algorithm"""
+        from mani_skill.sim.mpm.builder import MPMBuilder
+
+        builder = MPMBuilder()
+        builder.set_scene(self)
+        return builder
+
     def create_mjcf_loader(self):
         """Creates a MJCFLoader object that can be used to load MJCF files into this scene"""
         from ..utils.building.mjcf_loader import MJCFLoader
