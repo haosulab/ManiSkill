@@ -16,13 +16,23 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 
 
 # there are many ways to parameterize an environment's domain randomization. This is a simple way to do it
 # with dataclasses that can be created and modified by the user and passed into the environment constructor.
 @dataclass
 class KochGraspCubeDomainRandomizationConfig:
-    cube_half_size_range: Tuple[float, float] = (0.01, 0.015)
+    # some task agnostic domain randomizations, many of which you can copy over to your own tasks
+    initial_qpos_noise_scale: float = 0.02
+    randomize_robot_color: bool = True
+
+    # cube related domain randomizations that occur during scene loading
+    cube_half_size_range: Tuple[float, float] = (0.015 / 2, 0.019 / 2)
+    cube_friction_mean: float = 0.3
+    cube_friction_std: float = 0.05
+    cube_friction_bounds: Tuple[float, float] = (0.1, 0.5)
+    randomize_cube_color: bool = True
 
 
 @register_env("KochGraspCube-v1", max_episode_steps=50)
@@ -47,6 +57,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
     ]
     SUPPORTED_OBS_MODES = ["state", "state_dict", "rgb+segmentation"]
     agent: Koch
+    spawn_box_half_size = 0.1 / 2  # cube can spawn in a 10cm x 10cm range
 
     def __init__(
         self,
@@ -54,7 +65,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         robot_uids="koch-v1.1",
         greenscreen_overlay_path="/home/stao/.maniskill/data/tasks/bridge_v2_real2sim_dataset/real_inpainting/bridge_real_eval_1.png",
         domain_randomization_config=KochGraspCubeDomainRandomizationConfig(),
-        domain_randomization=False,
+        domain_randomization=True,
         **kwargs,
     ):
         self.domain_randomization = domain_randomization
@@ -63,6 +74,15 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+
+    def default_sim_config(self):
+        return SimConfig(
+            sim_freq=120,
+            control_freq=15,
+            gpu_memory_config=GPUMemoryConfig(
+                max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
+            ),
+        )
 
     @property
     def _default_sensor_configs(self):
@@ -79,48 +99,75 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
     def _load_agent(self, options: dict):
         # load the koch arm at this initial pose
         super()._load_agent(
-            options, sapien.Pose(p=[-0.615, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+            options, sapien.Pose(p=[-0.737, 0, 0], q=euler2quat(0, 0, np.pi / 2))
         )
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(
-            self, robot_init_qpos_noise=0.02 if self.domain_randomization else 0.0
-        )
+        # we use a predefined table scene builder which simply adds a table and floor to the scene
+        # where the 0, 0, 0 position is the center of the table
+        self.table_scene = TableSceneBuilder(self)
         self.table_scene.build()
 
-        # randomize cube sizes, colors, and frictions # TODO
+        # some default values for cube geometry
+        half_sizes = (
+            np.ones(self.num_envs)
+            * (
+                self.domain_randomization_config.cube_half_size_range[1]
+                + self.domain_randomization_config.cube_half_size_range[0]
+            )
+            / 2
+        )
+        colors = np.zeros((self.num_envs, 3))
+        colors[:, 0] = 1
+        frictions = (
+            np.ones(self.num_envs) * self.domain_randomization_config.cube_friction_mean
+        )
+
+        # randomize cube sizes, colors, and frictions
         if self.domain_randomization:
+            # note that we use self._batched_episode_rng instead of torch.rand or np.random as it ensures even with a different number of parallel
+            # environments the same seed leads to the same RNG, which is important for reproducibility as geometric changes here aren't saveable in environment state
             half_sizes = self._batched_episode_rng.uniform(
                 low=self.domain_randomization_config.cube_half_size_range[0],
                 high=self.domain_randomization_config.cube_half_size_range[1],
             )
-            colors = self._batched_episode_rng.uniform(
-                low=[0, 0, 0], high=[1, 1, 1], size=(self.num_envs, 3)
+            if self.domain_randomization_config.randomize_cube_color:
+                colors = self._batched_episode_rng.uniform(low=0, high=1, size=(3,))
+            frictions = self._batched_episode_rng.normal(
+                self.domain_randomization_config.cube_friction_mean,
+                self.domain_randomization_config.cube_friction_std,
             )
-        else:
-            half_sizes = (
-                np.ones(self.num_envs)
-                * (
-                    self.domain_randomization_config.cube_half_size_range[1]
-                    + self.domain_randomization_config.cube_half_size_range[0]
-                )
-                / 2
+            frictions = frictions.clip(
+                *self.domain_randomization_config.cube_friction_bounds
             )
-            colors = np.zeros((self.num_envs, 3))
-            colors[:, 0] = 1
 
         self.cube_half_sizes = common.to_tensor(half_sizes, device=self.device)
         colors = np.concatenate([colors, np.ones((self.num_envs, 1))], axis=-1)
 
+        # build our cubes
         cubes = []
         for i in range(self.num_envs):
-            cube = actors.build_cube(
-                self.scene,
-                half_size=half_sizes[i],
-                color=colors[i],
-                name=f"cube-{i}",
-                initial_pose=sapien.Pose(p=[0, 0, half_sizes[i]]),
+            # create a different cube in each parallel environment
+            # using our randomized colors, frictions, and sizes
+            builder = self.scene.create_actor_builder()
+            friction = frictions[i]
+            material = sapien.pysapien.physx.PhysxMaterial(
+                static_friction=friction,
+                dynamic_friction=friction,
+                restitution=0,
             )
+            builder.add_box_collision(
+                half_size=[half_sizes[i]] * 3, material=material, density=200  # 25
+            )
+            builder.add_box_visual(
+                half_size=[half_sizes[i]] * 3,
+                material=sapien.render.RenderMaterial(
+                    base_color=colors[i],
+                ),
+            )
+            builder.initial_pose = sapien.Pose(p=[0, 0, half_sizes[i]])
+            builder.set_scene_idxs([i])
+            cube = builder.build(name=f"cube-{i}")
             cubes.append(cube)
             self.remove_from_state_dict_registry(cube)
         self.cube = Actor.merge(cubes)
@@ -130,21 +177,34 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         self.remove_object_from_greenscreen(self.agent.robot)
         self.remove_object_from_greenscreen(self.cube)
 
+        # a hardcoded initial joint configuration for the robot to start from
+        self.rest_qpos = torch.tensor(
+            [0.0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0], device=self.device
+        )
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # we randomize the pose of the cube accordingly so that the policy can learn to pick up the cube from
         # many different orientations and positions.
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+
+            # sample a random initial joint configuration for the robot
+            self.agent.robot.set_qpos(
+                self.rest_qpos + torch.randn(size=self.agent.robot.qpos.size()) * 0.02
+            )
+
+            # initialize the cube at a random position and rotation around the z-axis
+            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.225, 0, 0])
             xyz = torch.zeros((b, 3))
-            xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-            xyz[:, 2] = self.cube_half_sizes
+            xyz[:, :2] = (
+                torch.rand((b, 2)) * self.spawn_box_half_size * 2
+                - self.spawn_box_half_size
+            )
+            xyz[:, :2] += spawn_box_pos[env_idx, :2]
+            xyz[:, 2] = self.cube_half_sizes[env_idx]
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
-
-            self.agent.robot.set_qpos(
-                np.array([0.0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0])
-            )
 
     def _get_obs_agent(self):
         # we remove qvel as koch arm qvel is too noisy to learn from and not implemented.
@@ -172,43 +232,121 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         return obs
 
     def evaluate(self):
-        is_robot_static = self.agent.is_static(0.2)
+        # determine if robot is touching the table. for safety reasons we want the robot to avoid hitting the table when grasping the cube
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.agent.finger1_link, self.table_scene.table
+        )
+        r_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.agent.finger2_link, self.table_scene.table
+        )
+        lforce = torch.linalg.norm(l_contact_forces, axis=1)
+        rforce = torch.linalg.norm(r_contact_forces, axis=1)
+        touching_table = torch.logical_or(
+            lforce >= 1e-2,
+            rforce >= 1e-2,
+        )
+
+        # calculate if the actual agent would grasp the cube here - from empirical testing of robot gripper and cubesize
+        is_grasped = self.agent.is_grasping(self.cube)
+        # end calculate if the actual agent would grasp the cube
+        grippers_distance = torch.linalg.norm(
+            self.agent.tcp.pose.p - self.agent.tcp2.pose.p, axis=-1
+        )
+        tcp_pos = (self.agent.tcp.pose.p + self.agent.tcp2.pose.p) / 2
+        # TODO look into smoother alternative for easier prediction of this, currently binary
+        tcp_isclose = (
+            torch.linalg.norm(tcp_pos - self.cube.pose.p, dim=-1)
+            <= self.cube_half_sizes
+        )
+        # is_properly_grasped = is_grasped * tcp_isclose
+
+        is_properly_grasped = is_grasped * (
+            grippers_distance >= (2 * self.cube_half_sizes * 0.99)
+        )  #################################################### changed
+
+        robot_to_rest_pose_dist = torch.linalg.norm(
+            (self.agent.controller._target_qpos.clone()[..., :-1] / (np.pi))
+            - (self.rest_qpos[:-1] / (np.pi)),
+            axis=1,
+        )
+
+        cube_lifted = (
+            self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
+        ) * is_grasped  # * is_properly_grasped
+        success = cube_lifted
         return {
-            "success": is_robot_static,
-            # "is_obj_placed": is_obj_placed,
-            "is_robot_static": is_robot_static,
+            "is_grasped": is_grasped,
+            "grippers_distance": grippers_distance,
+            "robot_to_grasped_rest_dist": robot_to_rest_pose_dist,
+            "touching_table": touching_table,
+            "tcp_isclose": tcp_isclose,
+            "is_properly_grasped": is_properly_grasped,
+            "cube_lifted": cube_lifted,
+            "success": success,
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        tcp_to_obj_dist = torch.linalg.norm(
-            self.cube.pose.p - self.agent.tcp.pose.p, axis=1
+        # state properties
+        is_properly_grasped = info["is_properly_grasped"]
+        is_close = info["tcp_isclose"]
+        gripper_finger_dist = torch.linalg.norm(
+            self.agent.tcp.pose.p - self.agent.tcp2.pose.p, axis=-1
         )
+        tcp_pos = (self.agent.tcp.pose.p + self.agent.tcp2.pose.p) / 2
+
+        finger2_to_finger1_unitvec = (
+            self.agent.tcp.pose.p - self.agent.tcp2.pose.p
+        ) / gripper_finger_dist.unsqueeze(-1)
+        cube_lifted = info["cube_lifted"]
+
+        # reward
+        reward = 0
+
+        # stage 1, reach tcp to object
+        tcp_to_obj_dist = torch.linalg.norm(
+            self.cube.pose.p - tcp_pos,
+            axis=-1,
+        )
+        # reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reward = reaching_reward
+        reward += reaching_reward
 
-        is_grasped = obs["extra"]["is_grasped"]
-        reward += is_grasped
+        # still stage 1, orient gripper correctly, important for correctly grasping the
+        # we want the between finger vectors to be perpendicular to the z vector, reward when dot product is zero
+        orientation_reward = 1 - (finger2_to_finger1_unitvec[..., -1]).abs().view(
+            self.num_envs
+        )
+        reward += orientation_reward
 
-        # obj_to_goal_dist = torch.linalg.norm(
-        #     self.goal_site.pose.p - self.cube.pose.p, axis=1
-        # )
-        # place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
-        # reward += place_reward * is_grasped
+        # stage 2, grasp the cube
+        # close_gripper_dist = self.agent.controller._target_qpos.clone()[..., -1].abs() # closed at 0
+        close_gripper_dist = (2 * (self.cube_half_sizes) - gripper_finger_dist).abs()
+        reward += (
+            2 * (1 - torch.tanh(50 * close_gripper_dist)) * is_close.float()
+        )  # this used to be a value of 10 ##xx changed
+        reward += is_properly_grasped.float()
 
-        # qvel_without_gripper = self.agent.robot.get_qvel()
-        # if self.robot_uids == "xarm6_robotiq":
-        #     qvel_without_gripper = qvel_without_gripper[..., :-6]
-        # elif self.robot_uids == "panda":
-        #     qvel_without_gripper = qvel_without_gripper[..., :-2]
-        # static_reward = 1 - torch.tanh(
-        #     5 * torch.linalg.norm(qvel_without_gripper, axis=1)
-        # )
-        # reward += static_reward * info["is_obj_placed"]
+        # stage 3, lift the cube
+        reward += cube_lifted.float()
 
-        reward[info["success"]] = 5
+        # stage 4 return to rest position
+        reward += (
+            3 * (1 - torch.tanh(4 * info["robot_to_grasped_rest_dist"])) * cube_lifted
+        )
+
+        gripper_open = self.rest_qpos[-1]  # keep gripper at starting keyframe position
+        to_open_dist = (gripper_open - self.agent.robot.qpos[..., -1]).abs()
+        # allow some leeway of a couple of degrees
+        to_open_dist[to_open_dist <= 0.05] = 0
+        # reward -= 0.25 * torch.tanh(5 * to_open_dist) * ~is_close
+        reward -= 3 * ~is_close * (self.agent.robot.qpos[..., -1] < 0.9)
+
+        # touch table
+        reward -= 2.0 * info["touching_table"].float()
+
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 7
