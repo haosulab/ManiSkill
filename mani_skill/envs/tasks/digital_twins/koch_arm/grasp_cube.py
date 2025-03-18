@@ -231,6 +231,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
             )
         return obs
 
+    # TODO (stao, xander): clean up the evaluate function and reward functions and annotate them to explain why we write those lines
     def evaluate(self):
         # determine if robot is touching the table. for safety reasons we want the robot to avoid hitting the table when grasping the cube
         l_contact_forces = self.scene.get_pairwise_contact_forces(
