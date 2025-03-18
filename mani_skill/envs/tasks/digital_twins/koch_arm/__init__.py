@@ -1,1 +1,1 @@
-from .pickcube import KochPickCubeEnv
+from .grasp_cube import KochGraspCubeEnv
