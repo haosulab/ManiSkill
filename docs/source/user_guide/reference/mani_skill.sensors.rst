@@ -1,4 +1,4 @@
-``mani_skill.sensors`` module
+mani_skill.sensors module
 ===================================
 
 

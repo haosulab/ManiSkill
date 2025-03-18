@@ -12,6 +12,8 @@ from .base_controller import BaseController, ControllerConfig
 # TODO (stao): add GPU support here
 class PDJointVelController(BaseController):
     config: "PDJointVelControllerConfig"
+    sets_target_qpos = False
+    sets_target_qvel = True
 
     def _initialize_action_space(self):
         n = len(self.joints)
