@@ -52,6 +52,9 @@ setup(
         "warp_maniskill.warp": ["native/*", "native/nanovdb/*"],
     },
     extras_require={
+        "warp": [
+            "warp-lang>=1.6.2"
+        ],  # dependencies for nvidia warp and soft body related systems
         "dev": [
             "pytest",
             "black",
