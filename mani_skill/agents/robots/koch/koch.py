@@ -165,26 +165,6 @@ class Koch(BaseAgent):
         )
         return torch.logical_and(lflag, rflag)
 
-    def _compute_undesired_contacts(self, object: Actor, threshold: float = 1e-2):
-        l_contact_forces = self.scene.get_pairwise_contact_forces(
-            self.finger1_link, object
-        )
-        r_contact_forces = self.scene.get_pairwise_contact_forces(
-            self.finger2_link, object
-        )
-        lforce = torch.linalg.norm(l_contact_forces, axis=1)
-        rforce = torch.linalg.norm(r_contact_forces, axis=1)
-
-        return torch.logical_or(
-            lforce >= threshold,
-            rforce >= threshold,
-        )
-
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-1]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
-
-    # remove default qvel from agent observations
-    def get_proprioception(self):
-        # return dict(qpos=self.robot.get_qpos())
-        return dict()
