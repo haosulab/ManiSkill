@@ -576,7 +576,8 @@ class BaseEnv(gym.Env):
                     )
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
-        torch.cuda.synchronize()
+        if self.backend.render_device.is_cuda():
+            torch.cuda.synchronize()
         return sensor_obs
     def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
         """Get the observation with sensor data"""
