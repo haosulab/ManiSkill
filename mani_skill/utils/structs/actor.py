@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Literal, Union
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
 import numpy as np
 import sapien
@@ -60,7 +60,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         entities: List[sapien.Entity],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
-        shared_name: str = None,
+        shared_name: Optional[str] = None,
     ):
 
         if shared_name is None:

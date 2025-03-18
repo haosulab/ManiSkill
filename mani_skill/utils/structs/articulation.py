@@ -80,6 +80,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
         _merged: bool = False,
+        _process_links: bool = True,
     ) -> Articulation:
         """
         Create a managed articulation object given a list of physx articulations. Note that this function requires all given articulations
@@ -116,7 +117,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
         links_map: Dict[str, Link] = dict()
         for articulation in physx_articulations:
-            if not _merged:
+            if _process_links:
                 assert num_links == len(articulation.links) and num_joints == len(
                     articulation.joints
                 ), "Gave different physx articulations. Articulation object created via create_from_physx_articulations can only \
@@ -139,14 +140,13 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             assert wrapped_link.is_root.any() == wrapped_link.is_root.all()
             if wrapped_link.is_root.any():
                 root = wrapped_link
-                if _merged:
+                if not _process_links:
+                    # if not processing links we break early so that we only processed the root link which is always shared between articulations
                     break
         assert root is not None, "root link was not found"
         self.root = root
 
-        # we can only really have links and links maps when this is not a merged articulation.
-        # For merged articulations only the root link can make sense (it holds the root pose)
-        if not _merged:
+        if _process_links:
             self.links = wrapped_links
             self.links_map = links_map
 
@@ -217,7 +217,21 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self
 
     @classmethod
-    def merge(cls, articulations: List["Articulation"], name: str = None):
+    def merge(
+        cls,
+        articulations: List["Articulation"],
+        name: str = None,
+        merge_links: bool = False,
+    ):
+        """
+        Merge a list of articulations into a single articulation for easy access of data across multiple possibly different articulations.
+
+        Args:
+            articulations: A list of articulations objects to merge.
+            name: The name of the merged articulation.
+            merge_links: Whether to merge the links of the articulations. This is by default False as often times you merge articulations
+                that have different number of links. Set this true if you want to try and merge articulations that have the same number of links.
+        """
         objs = []
         scene = articulations[0].scene
         merged_scene_idxs = []
@@ -230,7 +244,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             ), "Each given articulation must have the same number of managed objects"
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_articulation = Articulation.create_from_physx_articulations(
-            objs, scene, merged_scene_idxs, _merged=True
+            objs, scene, merged_scene_idxs, _merged=True, _process_links=merge_links
         )
         merged_articulation.name = name
         scene.articulation_views[merged_articulation.name] = merged_articulation
@@ -350,14 +364,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             meshes.append(mesh)
             if first_only:
                 break
-        if to_world_frame:
-            mat = self.pose
-            for i, mesh in enumerate(meshes):
-                if mat is not None:
-                    if len(mat) > 1:
-                        mesh.apply_transform(mat[i].sp.to_transformation_matrix())
-                    else:
-                        mesh.apply_transform(mat.sp.to_transformation_matrix())
         if first_only:
             return meshes[0]
         return meshes
