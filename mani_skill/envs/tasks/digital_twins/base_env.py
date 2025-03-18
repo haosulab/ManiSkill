@@ -42,11 +42,7 @@ class BaseDigitalTwinEnv(BaseEnv):
         if self.rgb_overlay_paths is not None:
             for camera_name, path in self.rgb_overlay_paths.items():
                 if not os.path.exists(path):
-                    raise FileNotFoundError(
-                        f"rgb_overlay_path {path} is not found."
-                        "If you installed this repo through 'pip install .' , "
-                        "you can download this directory https://github.com/simpler-env/ManiSkill2_real2sim/tree/main/data to get the real-world image overlay assets. "
-                    )
+                    raise FileNotFoundError(f"rgb_overlay_path {path} is not found.")
                 self._rgb_overlay_images[camera_name] = cv2.cvtColor(
                     cv2.imread(path), cv2.COLOR_BGR2RGB
                 )  # (H, W, 3); float32
@@ -143,8 +139,8 @@ class BaseDigitalTwinEnv(BaseEnv):
             rgb = rgb * 0.5 + overlay_img * 0.5
         return rgb
 
-    def get_obs(self, info: dict = None):
-        obs = super().get_obs(info)
+    def _get_obs_sensor_data(self, apply_texture_transforms: bool = True):
+        obs = super()._get_obs_sensor_data(apply_texture_transforms)
 
         # "greenscreen" process
         if (
@@ -156,20 +152,20 @@ class BaseDigitalTwinEnv(BaseEnv):
             for camera_name in self._rgb_overlay_images.keys():
                 # obtain overlay mask based on segmentation info
                 assert (
-                    "segmentation" in obs["sensor_data"][camera_name].keys()
+                    "segmentation" in obs[camera_name].keys()
                 ), "Image overlay requires segment info in the observation!"
                 if (
                     self._rgb_overlay_images[camera_name].device
-                    != obs["sensor_data"][camera_name]["rgb"].device
+                    != obs[camera_name]["rgb"].device
                 ):
                     self._rgb_overlay_images[camera_name] = self._rgb_overlay_images[
                         camera_name
-                    ].to(obs["sensor_data"][camera_name]["rgb"].device)
+                    ].to(obs[camera_name]["rgb"].device)
                 overlay_img = self._rgb_overlay_images[camera_name]
                 green_screened_rgb = self._green_sceen_rgb(
-                    obs["sensor_data"][camera_name]["rgb"],
-                    obs["sensor_data"][camera_name]["segmentation"],
+                    obs[camera_name]["rgb"],
+                    obs[camera_name]["segmentation"],
                     overlay_img,
                 )
-                obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
+                obs[camera_name]["rgb"] = green_screened_rgb
         return obs

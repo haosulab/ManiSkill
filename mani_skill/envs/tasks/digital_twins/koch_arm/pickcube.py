@@ -15,7 +15,7 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 
 
-@register_env("KochPickCubeEnv-v1", max_episode_steps=50)
+@register_env("KochPickCube-v1", max_episode_steps=50)
 class KochPickCubeEnv(BaseDigitalTwinEnv):
     """
     **Task Description:**
@@ -47,7 +47,9 @@ class KochPickCubeEnv(BaseDigitalTwinEnv):
         greenscreen_overlay_path="figures/environment_demos/greenscreen_overlay.png",
         **kwargs
     ):
-        self.greenscreen_overlay_path = greenscreen_overlay_path
+        # set the camera called "base_camera" to use the greenscreen overlay when rendering
+        self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
+        self.rgb_always_overlay_objects
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -65,9 +67,7 @@ class KochPickCubeEnv(BaseDigitalTwinEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(
-            self, robot_init_qpos_noise=self.robot_init_qpos_noise
-        )
+        self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=0.02)
         self.table_scene.build()
         self.cube = actors.build_cube(
             self.scene,
@@ -86,13 +86,6 @@ class KochPickCubeEnv(BaseDigitalTwinEnv):
             initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
-
-        # load the greenscreen image to a torch tensor
-        import cv2
-
-        self.greenscreen_overlay_image = torch.from_numpy(
-            cv2.cvtColor(cv2.imread(self.greenscreen_overlay_path), cv2.COLOR_BGR2RGB)
-        ).to(self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # we randomize the cube accordingly so that the policy can learn to pick up the cube from
@@ -144,14 +137,6 @@ class KochPickCubeEnv(BaseDigitalTwinEnv):
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
         return obs
-
-    def _get_obs_sensor_data(
-        self, info: Dict, apply_texture_transforms: bool = True
-    ) -> Dict:
-        sensor_data = super()._get_obs_sensor_data(info, apply_texture_transforms)
-        # here we override the default function that generates visual observation data in simulation to apply a green-screen
-        sensor_data["base_camera"]["rgb"]
-        sensor_data["base_camera"]["segmentation"]
 
     def evaluate(self):
         is_obj_placed = (
