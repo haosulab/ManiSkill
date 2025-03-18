@@ -120,7 +120,7 @@ class BaseDigitalTwinEnv(BaseEnv):
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
         actor_seg = segmentation[..., 0]
-        mask = torch.ones_like(actor_seg, device=actor_seg.device)
+        mask = torch.ones_like(actor_seg, device=actor_seg.device, dtype=torch.bool)
         if self._segmentation_ids_to_keep.device != actor_seg.device:
             self._segmentation_ids_to_keep = self._segmentation_ids_to_keep.to(
                 actor_seg.device
@@ -137,9 +137,10 @@ class BaseDigitalTwinEnv(BaseEnv):
 
         # perform overlay on the RGB observation image
         if "debug" not in self.rgb_overlay_mode:
-            rgb = rgb * (1 - mask) + overlay_img * mask
+            rgb = rgb * (~mask) + overlay_img * mask
         else:
             rgb = rgb * 0.5 + overlay_img * 0.5
+            rgb = rgb.to(torch.uint8)
         return rgb
 
     def _get_obs_sensor_data(self, apply_texture_transforms: bool = True):

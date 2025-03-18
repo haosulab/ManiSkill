@@ -196,11 +196,11 @@ class Sim2RealEnv(gym.Env):
         action = common.to_tensor(action)
         if action.shape == self._orig_single_action_space.shape:
             action = common.batch(action)
+        # NOTE (stao): this won't work for interpolated target joint position control methods at the moment
         self.base_sim_env.agent.set_action(action)
 
         # to best ensure whatever signals we send to the simulator robot we also send to the real robot we directly inspect
         # what drive targets the simulator controller sends and what was set by that controller on the simulated robot
-
         sim_articulation = self.agent.controller.articulation
         if self.last_control_time is None:
             self.last_control_time = time.perf_counter()
@@ -253,9 +253,12 @@ class Sim2RealEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # reimplementations of simulation BaseEnv observation related functions
     # -------------------------------------------------------------------------- #
-    def get_obs(self, info=None):
+    def get_obs(self, info=None, unflattened=False):
         # uses the original environment's get_obs function. Override this only if you want complete control over the returned observations before any wrappers are applied.
-        return self.base_sim_env.__class__.get_obs(self, info)
+        return self.base_sim_env.__class__.get_obs(self, info, unflattened)
+
+    def _flatten_raw_obs(self, obs: Any):
+        return self.base_sim_env.__class__._flatten_raw_obs(self, obs)
 
     def _get_obs_agent(self):
         # using the original user implemented sim env's _get_obs_agent function in case they modify it e.g. to remove qvel values as they might be too noisy

@@ -47,9 +47,10 @@ real_agent = LeRobotRealAgent(real_robot)
 
 wrappers = [FlattenRGBDObservationWrapper]
 sim_env = gym.make(
-    "KochPickCubeEnv-v1",
-    obs_mode="rgb",
-    sim_config={"sim_freq": 120, "control_freq": 30},
+    "KochGraspCube-v1",
+    obs_mode="rgb+segmentation",
+    sim_config={"sim_freq": 120, "control_freq": 15},
+    max_episode_steps=1000,
 )
 for wrapper in wrappers:
     sim_env = wrapper(sim_env)
