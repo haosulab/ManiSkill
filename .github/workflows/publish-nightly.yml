@@ -20,7 +20,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Build a binary wheel and a source tarball
-        run: >-
+        run: |
+          rm -r dist || true
+          python3 -mpip install wheel
           python3 setup.py bdist_wheel --package-name mani_skill_nightly
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
