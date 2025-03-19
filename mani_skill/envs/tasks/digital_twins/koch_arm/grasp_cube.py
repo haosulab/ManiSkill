@@ -23,11 +23,19 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 # with dataclasses that can be created and modified by the user and passed into the environment constructor.
 @dataclass
 class KochGraspCubeDomainRandomizationConfig:
-    # some task agnostic domain randomizations, many of which you can copy over to your own tasks
+    ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
     randomize_robot_color: bool = True
+    max_camera_offset: Tuple[float, float, float] = (0.025, 0.025, 0.025)
+    """max camera offset from the base camera position in x, y, and z axes"""
+    camera_target_noise: float = 1e-6
+    """scale of noise added to the camera target position"""
+    camera_view_rot_noise: float = 5e-3
+    """scale of noise added to the camera view rotation"""
+    camera_fov_noise: float = np.deg2rad(2)
+    """scale of noise added to the camera fov"""
 
-    # cube related domain randomizations that occur during scene loading
+    ### task-specific related domain randomizations that occur during scene loading ###
     cube_half_size_range: Tuple[float, float] = (0.015 / 2, 0.019 / 2)
     cube_friction_mean: float = 0.3
     cube_friction_std: float = 0.05
@@ -66,10 +74,17 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         greenscreen_overlay_path="/home/stao/.maniskill/data/tasks/bridge_v2_real2sim_dataset/real_inpainting/bridge_real_eval_1.png",
         domain_randomization_config=KochGraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
+        base_camera_settings=dict(
+            fov=52 * np.pi / 180,
+            pos=[0.4, 0.26, 0.2],
+            target=[0.2, 0, 0],
+        ),
         **kwargs,
     ):
         self.domain_randomization = domain_randomization
         self.domain_randomization_config = domain_randomization_config
+        self.base_camera_settings = base_camera_settings
+        """what the camera fov, position and target are when domain randomization is off"""
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
@@ -87,8 +102,23 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
     @property
     def _default_sensor_configs(self):
         # we just set a default camera pose here for now. For sim2real we will modify this during training accordingly.
-        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        # note that we pass in the camera mount which is created in the _load_scene function later. This mount lets us
+        # randomize camera poses at each environment step. Here we just randomize some camera configuration like fov.
+        camera_fov_noise = self.domain_randomization_config.camera_fov_noise * (
+            2 * self._batched_episode_rng.rand() - 1
+        )
+        return [
+            CameraConfig(
+                "base_camera",
+                pose=sapien.Pose(),
+                width=128,
+                height=128,
+                fov=camera_fov_noise + self.base_camera_settings["fov"],
+                near=0.01,
+                far=100,
+                mount=self.camera_mount,
+            )
+        ]
 
     @property
     def _default_human_render_camera_configs(self):
@@ -99,7 +129,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
     def _load_agent(self, options: dict):
         # load the koch arm at this initial pose
         super()._load_agent(
-            options, sapien.Pose(p=[-0.737, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+            options, sapien.Pose(p=[0, 0, 0], q=euler2quat(0, 0, np.pi / 2))
         )
 
     def _load_scene(self, options: dict):
@@ -170,7 +200,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
             cube = builder.build(name=f"cube-{i}")
             cubes.append(cube)
             self.remove_from_state_dict_registry(cube)
-        self.cube = Actor.merge(cubes)
+        self.cube = Actor.merge(cubes, name="cube")
         self.add_to_state_dict_registry(self.cube)
 
         # we want to only keep the robot and the cube in the render, everything else is greenscreened.
@@ -181,6 +211,51 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         self.rest_qpos = torch.tensor(
             [0.0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0], device=self.device
         )
+        # hardcoded pose for the table that places it such that the robot base is at 0 and on the edge of the table.
+        self.table_pose = Pose.create_from_pq(
+            p=[-0.12 + 0.737, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
+        )
+
+        # we build a bunch of camera mounts to put cameras on which let us randomize camera poses at each timestep
+        builder = self.scene.create_actor_builder()
+        self.camera_mount = builder.build_kinematic("camera_mount")
+
+    def sample_camera_poses(self, n: int):
+        # a custom function to sample random camera poses
+        # the way this works is we first sample "eyes", which are the camera positions
+        # then we use the noised_look_at function to sample the full camera poses given the sampled eyes
+        # and a target position the camera is pointing at
+        if self.domain_randomization:
+            # in case these haven't been moved to torch tensors on the environment device
+            self.base_camera_settings["pos"] = common.to_tensor(
+                self.base_camera_settings["pos"], device=self.device
+            )
+            self.base_camera_settings["target"] = common.to_tensor(
+                self.base_camera_settings["target"], device=self.device
+            )
+            self.domain_randomization_config.max_camera_offset = common.to_tensor(
+                self.domain_randomization_config.max_camera_offset, device=self.device
+            )
+
+            eyes = randomization.camera.make_camera_rectangular_prism(
+                n,
+                scale=self.domain_randomization_config.max_camera_offset,
+                center=self.base_camera_settings["pos"],
+                theta=0,
+                device=self.device,
+            )
+            return randomization.camera.noised_look_at(
+                eyes,
+                target=self.base_camera_settings["target"],
+                look_at_noise=self.domain_randomization_config.camera_target_noise,
+                view_axis_rot_noise=self.domain_randomization_config.camera_view_rot_noise,
+                device=self.device,
+            )
+        else:
+            return sapien_utils.look_at(
+                eye=self.base_camera_settings["pos"],
+                target=self.base_camera_settings["target"],
+            )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # we randomize the pose of the cube accordingly so that the policy can learn to pick up the cube from
@@ -188,6 +263,8 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+            # move the table back so that the robot is at 0 and on the edge of the table.
+            self.table_scene.table.set_pose(self.table_pose)
 
             # sample a random initial joint configuration for the robot
             self.agent.robot.set_qpos(
@@ -205,6 +282,15 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
             xyz[:, 2] = self.cube_half_sizes[env_idx]
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
+
+            # randomize the camera poses
+            if self.domain_randomization:
+                self.camera_mount.set_pose(self.sample_camera_poses(n=b))
+
+    def _before_control_step(self):
+        # update the camera poses before agent actions are executed
+        if self.domain_randomization:
+            self.camera_mount.set_pose(self.sample_camera_poses(n=self.num_envs))
 
     def _get_obs_agent(self):
         # we remove qvel as koch arm qvel is too noisy to learn from and not implemented.
