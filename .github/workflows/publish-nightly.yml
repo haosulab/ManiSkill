@@ -25,7 +25,7 @@ jobs:
           python3 -mpip install wheel
           cat setup.py
           python3 setup.py bdist_wheel \
-            --package-name mani_skill-nightly
+            --package_name mani_skill-nightly
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
