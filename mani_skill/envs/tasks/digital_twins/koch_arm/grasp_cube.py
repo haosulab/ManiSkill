@@ -82,9 +82,11 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         **kwargs,
     ):
         self.domain_randomization = domain_randomization
+        """whether randomization is turned on or off."""
         self.domain_randomization_config = domain_randomization_config
+        """domain randomization config"""
         self.base_camera_settings = base_camera_settings
-        """what the camera fov, position and target are when domain randomization is off"""
+        """what the camera fov, position and target are when domain randomization is off. DR is centered around these settings"""
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
