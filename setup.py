@@ -84,6 +84,7 @@ def main(argv):
         version = get_package_version()
 
     sys.argv = [sys.argv[0]] + unknown
+    print(sys.argv)
     setup(
         name=name,
         version=version,
