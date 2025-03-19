@@ -15,7 +15,7 @@ def get_package_version():
 
 def get_nightly_version():
     today = date.today()
-    return f"{today.year}.{today.month}.{today.day}.1"
+    return f"{today.year}.{today.month}.{today.day}.2"
 
 
 def get_python_version():
