@@ -85,6 +85,7 @@ class Panda(BaseAgent):
         #  -> see https://github.com/haosulab/ManiSkill/discussions/923#discussioncomment-12466511
         world__T__ee = self.robot.links_map[self.ee_link_name].pose
         obs["world__T__ee"] = world__T__ee.to_transformation_matrix()
+        obs["world__T__root"] = self.robot.root.pose.to_transformation_matrix()
         # == End of added by @jstmn
 
         return obs
