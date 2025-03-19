@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import sys
 from datetime import date
 from pathlib import Path
@@ -15,7 +16,9 @@ def get_package_version():
 
 def get_nightly_version():
     today = date.today()
-    return f"{today.year}.{today.month}.{today.day}.3"
+    now = datetime.datetime.now()
+    timing = f"{now.hour:02d}{now.minute:02d}"
+    return f"{today.year}.{today.month}.{today.day}.{timing}"
 
 
 def get_python_version():
