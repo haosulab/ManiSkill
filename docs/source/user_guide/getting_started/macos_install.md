@@ -60,7 +60,11 @@ It is possible the first run of the command above will fail with a segmentation 
 After running hello world you can then test ManiSkill by running
 
 ```
-python -m mani_skill.examples.demo_random_action -e PegInsertionSide-v1 --render-mode="human"
+python -m mani_skill.examples.demo_random_action -e PushT-v1 --render-mode="human"
 ```
+
+Some environments are quite complex and thus rendering intensive. Macs with weaker GPUs may struggle to render at a high FPS. To improve performance we recommend
+- Pause the simulation if you want to inspect the scene (Control Tab -> Pause)
+- Make your window smaller (drag the corners of the window)
 
 If you have any issues please let us know by raising a [Github Issue](https://github.com/haosulab/ManiSkill/issues) / open a [Github Discussion](https://github.com/haosulab/ManiSkill/discussions).
