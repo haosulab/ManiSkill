@@ -8,6 +8,13 @@ conda activate ms3
 pip install mani_skill torch
 ```
 
+Currently as we are still testing MacOS the full pypi package of the underlying renderer/physics engine is not available on PyPi so you need to install it from the SAPIEN GitHub releases page. The script below will do it for you:
+
+```
+PY_VERSION=$(python -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
+pip install https://github.com/haosulab/SAPIEN/releases/download/nightly/sapien-3.0.0.dev20250303+291f6a77-$PY_VERSION-$PY_VERSION-macosx_12_0_universal2.whl
+```
+
 After this you need to install Vulkan which is described in the next section.
 
 ## Vulkan Installation

@@ -23,7 +23,6 @@ def get_python_version():
 
 
 def get_dependencies():
-    python_version = get_python_version()
     install_requires = [
         "numpy>=1.22,<2.0.0",
         "scipy",
@@ -45,10 +44,11 @@ def get_dependencies():
         "pynvml",  # gpu monitoring
         "tyro>=0.8.5",  # nice, typed, command line arg parser
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
-        f"sapien @ https://github.com/haosulab/SAPIEN/releases/download/nightly/sapien-3.0.0.dev20250303+291f6a77-{python_version}-{python_version}-macosx_12_0_universal2.whl;platform_system=='Darwin'"
         "sapien>=3.0.0.b1;platform_system=='Linux'",
         "sapien>=3.0.0.b1;platform_system=='Windows'",
     ]
+    # NOTE (stao): until sapien is uploaded to pypi with mac support, users need to install manually below as so
+    # f"sapien @ https://github.com/haosulab/SAPIEN/releases/download/nightly/sapien-3.0.0.dev20250303+291f6a77-{python_version}-{python_version}-macosx_12_0_universal2.whl;platform_system=='Darwin'"
     return install_requires
 
 
