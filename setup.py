@@ -15,7 +15,7 @@ def get_package_version():
 
 def get_nightly_version():
     today = date.today()
-    return f"{today.year}.{today.month}.{today.day}.test"
+    return f"{today.year}.{today.month}.{today.day}.1"
 
 
 def get_python_version():
@@ -70,6 +70,7 @@ def parse_args(argv):
 
 
 def main(argv):
+
     args, unknown = parse_args(argv)
     name = args.package_name
     is_nightly = name == "mani_skill_nightly"
@@ -82,6 +83,7 @@ def main(argv):
     else:
         version = get_package_version()
 
+    sys.argv = [sys.argv[0]] + unknown
     setup(
         name=name,
         version=version,
