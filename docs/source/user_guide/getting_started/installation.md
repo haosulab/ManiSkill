@@ -6,7 +6,7 @@ Installation of ManiSkill is extremely simple, you only need to run a few pip in
 # install the package
 pip install --upgrade mani_skill
 # install a version of torch that is compatible with your system
-pip install torch torchvision torchaudio
+pip install torch
 ```
 
 You can also install the main `mani_skill` package from github/source:
@@ -24,8 +24,7 @@ pip install torch torchvision torchaudio
 ```
 
 :::{note}
-While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu. Furthermore we currently best support linux machines with NVIDIA GPUs, with limited support on other systems, see the [system requirements](#system-support) section for details.
-
+While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu and MacOS. Furthermore we currently best support linux machines with NVIDIA GPUs, with limited support on other systems, see the [system requirements](#system-support) section for details.
 :::
 
 The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Test your installation:
@@ -110,13 +109,13 @@ We currently best support Linux based systems. There is limited support for wind
 | Windows / NVIDIA GPU | ✅      | ❌      | ✅        |
 | Windows / AMD GPU    | ✅      | ❌      | ✅        |
 | WSL / Anything       | ✅      | ❌      | ❌        |
-| MacOS / Anything     | ❌      | ❌      | ❌        |
+| MacOS / Anything     | ✅      | ❌      | ✅        |
 
 ## Troubleshooting
 
-(vulkan)=
-
 ### Vulkan
+
+#### Ubuntu
 
 To install Vulkan on Ubuntu:
 
@@ -214,6 +213,10 @@ ldconfig -p | grep libGLX_nvidia
 ```
 
 If `libGLX_nvidia.so` is not found, then it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
+
+#### MacOS
+
+See the [MacOS Installation](./macos_install.md) page for more details.
 
 ### Uninstallation
 
