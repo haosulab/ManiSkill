@@ -8,13 +8,7 @@ conda activate ms3
 pip install mani_skill torch
 ```
 
-Next install the sapien wheel that is compatible with your MacOS.
-
-```
-pip install path/to/sapien-wheel.whl
-```
-
-This wheel won't work until Vulkan is installed which is described in the next section.
+After this you need to install Vulkan which is described in the next section.
 
 ## Vulkan Installation
 
