@@ -73,7 +73,7 @@ def main(argv):
 
     args, unknown = parse_args(argv)
     name = args.package_name
-    is_nightly = name == "mani_skill_nightly"
+    is_nightly = name == "mani_skill-nightly"
 
     this_directory = Path(__file__).parent
     long_description = (this_directory / "README.md").read_text(encoding="utf8")
