@@ -1,19 +1,21 @@
+import argparse
 import sys
+from datetime import date
 from pathlib import Path
 
 from setuptools import find_packages, setup
 
+# update this version when a new official pypi release is made
 __version__ = "3.0.0b20"
 
-long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/), with a strong focus on manipulation skills. The entire tech stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
-- GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU!
-- GPU parallelized simulation, enabling high throughput state-based synthetic data collection in simulation
-- GPU parallelized heteogeneous simuluation, where every parallel environment has a completely different scene/set of objects
-- Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dextrous manipulation)
-- Flexible and simple task building API that abstracts away much of the complex GPU memory management code via an object oriented design
-- Real2sim environments for scalably evaluating real-world policies 60-100x faster via GPU simulation.
 
-Please refer our [documentation](https://maniskill.readthedocs.io/en/latest) to learn more information."""
+def get_package_version():
+    return __version__
+
+
+def get_nightly_version():
+    today = date.today()
+    return f"{today.year}.{today.month}.{today.day}.test"
 
 
 def get_python_version():
@@ -45,6 +47,7 @@ def get_dependencies():
     ]
     if sys.platform == "darwin":
         python_version = get_python_version()
+        # TODO (stao): update this URL when the official pypi release is made that has mac os supported wheels
         install_requires.append(
             f"sapien @ https://github.com/haosulab/SAPIEN/releases/download/nightly/sapien-3.0.0.dev20250303+291f6a77-{python_version}-{python_version}-macosx_12_0_universal2.whl"
         )
@@ -54,13 +57,34 @@ def get_dependencies():
     return install_requires
 
 
-def main():
+def parse_args(argv):
+    parser = argparse.ArgumentParser(description="ManiSkill setup.py configuration")
+    parser.add_argument(
+        "--package_name",
+        type=str,
+        default="mani_skill",
+        choices=["mani_skill", "mani_skill_nightly"],
+        help="the name of this output wheel. Should be either 'mani_skill' or 'mani_skill_nightly'",
+    )
+    return parser.parse_known_args(argv)
+
+
+def main(argv):
+    args, unknown = parse_args(argv)
+    name = args.package_name
+    is_nightly = name == "mani_skill_nightly"
+
     this_directory = Path(__file__).parent
     long_description = (this_directory / "README.md").read_text(encoding="utf8")
 
+    if is_nightly:
+        version = get_nightly_version()
+    else:
+        version = get_package_version()
+
     setup(
-        name="mani_skill",
-        version=__version__,
+        name=name,
+        version=version,
         description="ManiSkill3: A Unified Benchmark for Generalizable Manipulation Skills",
         long_description=long_description,
         long_description_content_type="text/markdown",
@@ -111,4 +135,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

@@ -1,0 +1,46 @@
+name: Publish nightly pypi distributions
+
+# based on https://github.com/pytorch/rl/blob/main/.github/workflows/nightly_build.yml
+
+on:
+  push:
+    branches:
+      - nightly-builds
+
+jobs:
+  build-nightly:
+    # Don't run on forked repos.
+    if: github.repository_owner == 'haosulab'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python      
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install pypa/build
+        run: >-
+          python3 -m
+          pip install
+          build
+          --user
+      - name: Build a binary wheel and a source tarball
+        run: >-
+          python3 -m
+          build
+          --sdist
+          --wheel
+          --outdir dist/
+          .
+  upload-nightly-wheel:
+    if: github.repository_owner == 'haosulab'
+    needs: build-nightly
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Upload nightly wheel
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
