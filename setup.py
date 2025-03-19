@@ -63,7 +63,7 @@ def parse_args(argv):
         "--package_name",
         type=str,
         default="mani_skill",
-        choices=["mani_skill", "mani_skill_nightly"],
+        choices=["mani_skill", "mani_skill-nightly"],
         help="the name of this output wheel. Should be either 'mani_skill' or 'mani_skill_nightly'",
     )
     return parser.parse_known_args(argv)
