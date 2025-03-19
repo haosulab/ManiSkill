@@ -33,14 +33,24 @@ jobs:
           --wheel
           --outdir dist/
           .
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          
   upload-nightly-wheel:
     if: github.repository_owner == 'haosulab'
     needs: build-nightly
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Upload nightly wheel
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Upload to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist/
