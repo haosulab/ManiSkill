@@ -3,13 +3,9 @@
 ManiSkill supports MacOS but installation is a bit tricky due to complications with rendering on MacOS. We are currently beta testing the MacOS support so for this you will need to git clone the ManiSkill repository and install it from source. We further recommend setting up a new conda/mamba environment with Python 3.11 for this.
 
 ```
-git clone https://github.com/haosulab/ManiSkill.git
-cd ManiSkill
 conda create -n ms3 "python=3.11" # or use mamba
 conda activate ms3
-pip install -e .
-# install a version of torch that is compatible with your system
-pip install torch
+pip install mani_skill torch
 ```
 
 Next install the sapien wheel that is compatible with your MacOS.
