@@ -142,6 +142,8 @@ class PickCubeEnv(BaseEnv):
         reward += place_reward * is_grasped
 
         qvel = self.agent.robot.get_qvel()
+        if self.robot_uids == "panda":
+            qvel = qvel[..., :-2]
         static_reward = 1 - torch.tanh(
             5 * torch.linalg.norm(qvel, axis=1)
         )
