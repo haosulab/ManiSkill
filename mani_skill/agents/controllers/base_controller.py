@@ -172,6 +172,8 @@ class BaseController:
 @dataclass
 class ControllerConfig:
     joint_names: List[str]
+    """the names of the joints to control. Note that some controller configurations might not actually let you directly control all the given joints
+    and will instead have some other implicit control (e.g. Passive controllers or mimic controllers)."""
     # NOTE(jigu): It is a class variable in this base class,
     # but you can inherit it and overwrite with an instance variable.
     controller_cls = BaseController
