@@ -106,9 +106,12 @@ class Sim2RealEnv(gym.Env):
                 ret = self.base_sim_env.__class__.step(self, action)
                 return ret
 
+            def render(dummy_self):
+                return self.render()
+
             def reset(dummy_self, seed=None, options=None):
                 # TODO: reset controller/agent
-                return self.get_obs(), {}
+                return self.get_obs(), {"reconfigure": False}
 
             @property
             def unwrapped(dummy_self):
@@ -305,9 +308,23 @@ class Sim2RealEnv(gym.Env):
         info = dict(elapsed_steps=self._elapsed_steps)
         return info
 
-    # TODO (stao): add real world render function for episode recording
+    # -------------------------------------------------------------------------- #
+    # reimplementations of simulation BaseEnv render related functions.
+    # -------------------------------------------------------------------------- #
     def render(self):
-        return BaseEnv.render(self)
+        return self.base_sim_env.__class__.render(self)
+
+    def render_sensors(self):
+        return self.base_sim_env.__class__.render_sensors(self)
+
+    def get_sensor_images(self):
+        # used by render_sensors
+        obs = self._get_obs_sensor_data()
+        sensor_images = dict()
+        for name, sensor in self.base_sim_env.scene.sensors.items():
+            if isinstance(sensor, Camera):
+                sensor_images[name] = sensor.get_images(obs[name])
+        return sensor_images
 
     # -------------------------------------------------------------------------- #
     # reimplementations of simulation BaseEnv reward related functions. By default you can leave this alone but if you do want to
