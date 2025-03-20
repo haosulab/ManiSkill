@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
@@ -12,6 +13,7 @@ from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors
+from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
@@ -71,7 +73,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         self,
         *args,
         robot_uids="koch-v1.1",
-        greenscreen_overlay_path="/home/stao/.maniskill/data/tasks/bridge_v2_real2sim_dataset/real_inpainting/bridge_real_eval_1.png",
+        greenscreen_overlay_path=None,
         domain_randomization_config=KochGraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
         base_camera_settings=dict(
@@ -87,6 +89,14 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         """domain randomization config"""
         self.base_camera_settings = base_camera_settings
         """what the camera fov, position and target are when domain randomization is off. DR is centered around these settings"""
+
+        if greenscreen_overlay_path is None:
+            logger.warning(
+                "No greenscreen overlay path provided, using default overlay"
+            )
+            greenscreen_overlay_path = os.path.join(
+                os.path.dirname(__file__), "assets/sample_background.png"
+            )
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
@@ -220,6 +230,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
 
         # we build a bunch of camera mounts to put cameras on which let us randomize camera poses at each timestep
         builder = self.scene.create_actor_builder()
+        builder.initial_pose = sapien.Pose()
         self.camera_mount = builder.build_kinematic("camera_mount")
 
     def sample_camera_poses(self, n: int):
