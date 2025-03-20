@@ -43,12 +43,23 @@ class PickCubeEnv(BaseEnv):
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
+
+        self._camera_width = None
+        self._camera_height = None
+        if "camera_width" in kwargs:
+            assert "camera_height" in kwargs
+            self._camera_width = kwargs.pop("camera_width")
+            self._camera_height = kwargs.pop("camera_height")
+
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        if self._camera_width is None:
+            return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
+        else:
+            return [CameraConfig("base_camera", pose, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):
