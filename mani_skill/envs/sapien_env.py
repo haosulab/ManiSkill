@@ -14,7 +14,7 @@ import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
 
-from mani_skill import PACKAGE_ASSET_DIR, logger
+from mani_skill import logger
 from mani_skill.agents import REGISTERED_AGENTS
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
@@ -24,7 +24,7 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
-from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend
+from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend, CPU_SIM_BACKENDS
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -238,7 +238,7 @@ class BaseEnv(gym.Env):
                 physx.enable_gpu()
 
         # raise a number of nicer errors
-        if sim_backend == "cpu" and num_envs > 1:
+        if self.backend.sim_backend in CPU_SIM_BACKENDS and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
