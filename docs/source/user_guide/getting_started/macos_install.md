@@ -63,8 +63,10 @@ After running hello world you can then test ManiSkill by running
 python -m mani_skill.examples.demo_random_action -e PushT-v1 --render-mode="human"
 ```
 
-Some environments are quite complex and thus rendering intensive. Macs with weaker GPUs may struggle to render at a high FPS. To improve performance we recommend
+Some environments are quite complex and thus rendering intensive. Macs with weaker GPUs may struggle to render at a high FPS, especially with the GUI. To improve performance we recommend
 - Pause the simulation if you want to inspect the scene (Control Tab -> Pause)
 - Make your window smaller (drag the corners of the window)
+
+Moreover while MacOS is now supported, it is still strongly recommended to do any rendering intensive workflows (such as visual data generation / RL training) on a machine with a cuda enabled GPU (even Google Colab will likely run much faster). The best use-case for MacOS usage is primarily for inference, local debugging, and development (of e.g. custom tasks/robots).
 
 If you have any issues please let us know by raising a [Github Issue](https://github.com/haosulab/ManiSkill/issues) / open a [Github Discussion](https://github.com/haosulab/ManiSkill/discussions).
