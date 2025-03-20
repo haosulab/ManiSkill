@@ -1,0 +1,1 @@
+from .xarm7_inspire import Xarm7InspireRightHand
