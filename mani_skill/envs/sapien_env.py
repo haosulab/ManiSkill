@@ -14,7 +14,7 @@ import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
 
-from mani_skill import PACKAGE_ASSET_DIR, logger
+from mani_skill import logger
 from mani_skill.agents import REGISTERED_AGENTS
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
@@ -24,7 +24,7 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
-from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend
+from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend, CPU_SIM_BACKENDS
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -238,7 +238,7 @@ class BaseEnv(gym.Env):
                 physx.enable_gpu()
 
         # raise a number of nicer errors
-        if sim_backend == "cpu" and num_envs > 1:
+        if self.backend.sim_backend in CPU_SIM_BACKENDS and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
@@ -370,7 +370,20 @@ class BaseEnv(gym.Env):
     @property
     def _default_sim_config(self):
         return SimConfig()
-    def _load_agent(self, options: dict, initial_agent_poses: Optional[Union[sapien.Pose, Pose]] = None):
+    def _load_agent(self, options: dict, initial_agent_poses: Optional[Union[sapien.Pose, Pose]] = None, build_separate: bool = False):
+        """
+        loads the agent/controllable articulations into the environment. The default function provides a convenient way to setup the agent/robot by a robot_uid
+        (stored in self.robot_uids) without requiring the user to have to write the robot building and controller code themselves. For more
+        advanced use-cases you can override this function to have more control over the agent/robot building process.
+
+        Args:
+            options (dict): The options for the environment.
+            initial_agent_poses (Optional[Union[sapien.Pose, Pose]]): The initial poses of the agent/robot. Providing these poses and ensuring they are picked such that
+                they do not collide with objects if spawned there is highly recommended to ensure more stable simulation (the agent pose can be changed later during episode initialization).
+            build_separate (bool): Whether to build the agent/robot separately. If True, the agent/robot will be built separately for each parallel environment and then merged
+                together to be accessible under one view/object. This is useful for randomizing physical and visual properties of the agent/robot which is only permitted for
+                articulations built separately in each environment.
+        """
         agents = []
         robot_uids = self.robot_uids
         if not isinstance(initial_agent_poses, list):
@@ -396,6 +409,7 @@ class BaseEnv(gym.Env):
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 1 else None,
                     initial_pose=initial_agent_poses[i] if initial_agent_poses is not None else None,
+                    build_separate=build_separate,
                 )
                 agents.append(agent)
         if len(agents) == 1:
@@ -562,7 +576,8 @@ class BaseEnv(gym.Env):
                     )
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
-        torch.cuda.synchronize()
+        if self.backend.render_device.is_cuda():
+            torch.cuda.synchronize()
         return sensor_obs
     def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
         """Get the observation with sensor data"""
@@ -654,6 +669,8 @@ class BaseEnv(gym.Env):
         self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         self._setup_sensors(options)
+        if self.render_mode == "human" and self._viewer is None:
+            self._viewer = create_viewer(self._viewer_camera_config)
         if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq

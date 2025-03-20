@@ -10,8 +10,9 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG
 MP_SOLUTIONS = {
+    "DrawTriangle-v1": solveDrawTriangle,
     "PickCube-v1": solvePickCube,
     "PickCube-v2": solvePickCube, # new
     "StackCube-v1": solveStackCube,
@@ -27,6 +28,7 @@ MP_SOLUTIONS = {
     "LiftPegUpright-v1": solveLiftPegUpright,
     "PullCube-v1": solvePullCube,
     "PullCube-v2": solvePullCube,         # new
+    "DrawSVG-v1" : solveDrawSVG
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -92,6 +94,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
         source_type="motionplanning",
         source_desc="official motion planning solution from ManiSkill contributors",
         video_fps=30,
+        record_reward=False,
         save_on_reset=False
     )
     output_h5_path = env._h5_file.filename

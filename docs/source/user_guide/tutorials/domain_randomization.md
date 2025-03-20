@@ -1,10 +1,10 @@
 # Domain Randomization
 
-One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This document demonstrates a number of simple tools for randomization. In the beta release we currently only have a tutorial on how to do camera randomization.
+One of the benefits of simulation is the ability to chop and change a number of aspects that would otherwise be expensive or time-consuming to do in the real world. This document demonstrates a number of simple tools for randomization.
 
 ## Camera Randomization
 
-For cameras, which are created by adding `CameraConfig` objects to your task's `_default_sensor_configs` property, you can randomize the pose and fov across all parallel sub-scenes. This can be done either during reconfiguration or episode initialization.
+For cameras, which are created by adding {py:class}`mani_skill.sensors.camera.CameraConfig` objects to your task's `_default_sensor_configs` property, you can randomize the pose and fov across all parallel sub-scenes. This can be done either during reconfiguration or episode initialization.
 
 ### During Reconfiguration
 
@@ -51,7 +51,7 @@ It will generate the following result (for 16 parallel environments) on e.g. the
 :::
 
 
-Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks/loading_objects.md#reconfiguring-and-optimization)
+Note that this method of randomization only randomizes during task reconfiguration, not during each episode reset (which calls `_initialize_episode`). In GPU simulation with enough parallel environments it shouldn't matter too much if you never reconfigure again, but if you wish you can set a `reconfiguration_freq` value documented [here](./custom_tasks/loading_objects.md#reconfiguring-and-optimization).
 
 ### During Episode Initialization / Resets
 
@@ -106,7 +106,30 @@ The result is the same as during reconfiguration, but instead every episode rese
 
 ## Actor/Link Physical and Visual Randomizations
 
-By default ManiSkill provides some convenient APIs that accept batched inputs for randomizing some properties of {py:class}`mani_skill.utils.structs.Actor` or {py:class}`mani_skill.utils.structs.Link` objects. In general if you want to randomize properties more granularly or if there isn't a convenience API available, you can do so by modifying each actor/link's components individually. Note at this granular level all values are expected to be python primitives or numpy based, torch tensors are not used. Normally these randomizations should be done during the `_load_scene` function in custom tasks.
+By default ManiSkill builds objects the same way in all parallel environments and share the same physical and visual materials due to engine limits and memory optimization purposes. If you want to randomize these materials such that each parallel environment has a different material, you can do so by building each object separately and then merging them together to be accessible under one view/object. We provide an example below for how to build a box shape in each parallel environment separately and then merge them. More details on how to build objects separately per parallel environment and merge them can be found on the documentation for [scene masks](./custom_tasks/advanced.md#scene-masks) and [object merging](./custom_tasks/advanced.md#merging).
+
+```python
+def _load_scene(self, options: dict):
+    # original code might look like this
+    # builder = self.scene.create_actor_builder()
+    # builder.add_box_collision(half_size=[0.02] * 3)
+    # builder.add_box_visual(half_size=[0.02] * 3, material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
+    # self.object = builder.build(name="object")
+
+    # instead we build each object separately, modify them at a per-environment level, and then merge them together
+    objects = []
+    for i in range(self.num_envs):
+        builder = self.scene.create_actor_builder()
+        # make any randomizations here on geometry/shape, visual/physical materials etc.
+        builder.add_box_collision(half_size=[0.02] * 3)
+        builder.add_box_visual(half_size=[0.02] * 3, material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
+        obj = builder.build(name=f"object_{i}") # build each object separately
+        self.remove_from_state_dict_registry(obj) # remove the individual object from environment state
+        objects.append(obj)
+    self.object = Actor.merge(objects, name="object")
+    self.add_to_state_dict_registry(self.object) # add the merged object to environment state so you can use env.set_state_dict and env.get_state_dict
+```
+You can further change the properties of {py:class}`mani_skill.utils.structs.Actor` or {py:class}`mani_skill.utils.structs.Link` objects after building them provided they were created separately as shown above by modifying the components of the objects. Note at this granular level all values are expected to be python primitives or numpy based, torch tensors are not used. An example shows how to set values for various material properties of the object.
 
 
 ```python
@@ -116,31 +139,30 @@ from sapien.render import RenderBodyComponent
 
 def _load_scene(self, options: dict):
     # ... other code for loading objects
-    actor: Actor | Link
-    for obj in actor._objs:
-        # modify some property of obj's components here, which is one of the actors/links 
-        # managed in parallel by the `actor` object
+    # only works on a merged actor/link as created in the example code above 
+    # or else the changes below will be shared across all objects in parallel environments
+    # due to shared material optimizations
+    actor: Actor | Link 
+    for i, obj in enumerate(actor._objs):
+        # modify the i-th object which is in parallel environment i
         
-        # modifying physical properties
-        rigid_body_component: PhysxRigidBodyComponent = obj.find_component_by_type(PhysxRigidBodyComponent)
-        rigid_body_component.mass = 1.0
-        rigid_body_component.angular_damping = 20.0
-        # modify per collision shape properties
+        # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
+        rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
+        if rigid_body_component is not None:
+            # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
+            rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
+        
+        # modifying per collision shape properties such as friction values
         for shape in obj.collision_shapes:
-            shape.physical_material.dynamic_friction = 0.2
-            shape.physical_material.static_friction = 0.4
-            shape.physical_material.restitution = 0.2
-            shape.density = 1000
-            shape.patch_radius = 0.1
-            shape.min_patch_radius = 0.1
+            shape.physical_material.dynamic_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+            shape.physical_material.static_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+            shape.physical_material.restitution = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
         
-        # modifying visual properties. NOTE that you may need to build
-        # each actor separately instead of all together in each parallel and then merge them to do the following
         render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
         for render_shape in render_body_component.render_shapes:
             for part in render_shape.parts:
                 # you can change color, use texture files etc.
-                part.material.set_base_color(np.array([255, 255, 255, 255]) / 255)
+                part.material.set_base_color(self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1])
                 # note that textures must use the sapien.render.RenderTexture2D 
                 # object which allows passing a texture image file path
                 part.material.set_base_color_texture(None)
@@ -154,8 +176,6 @@ def _load_scene(self, options: dict):
 Similarly joints can also be modified in the same manner by iterating over each the `._objs` list property of {py:class}`mani_skill.utils.structs.ArticulationJoint` objects.
 
 Note that during GPU simulation most physical properties must be set in an environment during the `_load_scene` function which runs before the GPU simulation initialization. Once the GPU simulation is initialized, some properties are fixed and can only be changed again if the environment is reconfigured.
-
-Also note that in GPU simulation, due to rendering optimizations changing the visual property of one actor/link may also change the properties of other actors/links that share the same render material object. To fix this you should build each actor separately instead of all together in each parallel environment using scene masks/idxs (see [Scene Masks](./custom_tasks/advanced.md#scene-masks)) with a different color / `sapien.render.RenderMaterial` object. After doing so then merge the parallel actors to manage them as one object. You can then use the code above for randomizing visual properties
 
 Example of visual randomizations of object colors is shown below for the PushT task.
 
@@ -177,25 +197,55 @@ def _load_scene(self, options: dict):
 ```
 The controller randomizations can also be done on the fly after the GPU simulation has initialized (e.g. during the `_initialize_episode` function). Some controllers may have specific functionalities that can be changed on the fly as well. You can access the currently used controller object of an environment via `env.agent.controller` and modify that.
 
-Other randomizations of the agent/robot outside of controllers revolve around the robot links itself (e.g. gripper frictions) you can do the following
+Other randomizations of the agent/robot outside of controllers revolve around the robot links itself (e.g. gripper frictions, link render materials) you can do the following
 
 ```python
+import numpy as np
+import sapien
+from sapien.physx import PhysxRigidBodyComponent
+from sapien.render import RenderBodyComponent
+
+def _load_agent(self, options: dict):
+    # in addition to setting agent initial poses you can turn on the option to build each agent separately and merge them which enables per-environment randomizations
+    # of all physical and visual properties
+    super()._load_agent(options, initial_agent_poses=sapien.Pose(), build_separate=True)
+
+
 def _load_scene(self, options: dict):
     # iterate over every link in the robot and each managed parallel link and modify the collision shape materials
     # accordingly. Some examples are shown below.
     for link in self.agent.robot.links:
-        for obj in link._objs:
+        for i, obj in enumerate(link._objs):
+            # modify the i-th object which is in parallel environment i
+            
+            # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
+            rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
+            if rigid_body_component is not None:
+                # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
+                rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
+            
+            # modifying per collision shape properties such as friction values
             for shape in obj.collision_shapes:
-                shape.physical_material.dynamic_friction = 0.2
-                shape.physical_material.static_friction = 0.4
-                shape.physical_material.restitution = 0.2
-                shape.density = 1000
-                shape.patch_radius = 0.1
-                shape.min_patch_radius = 0.1
+                shape.physical_material.dynamic_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                shape.physical_material.static_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                shape.physical_material.restitution = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+
+            render_body_component: RenderBodyComponent = obj.entity.find_component_by_type(RenderBodyComponent)
+            if render_body_component is not None:
+                for render_shape in render_body_component.render_shapes:
+                    for part in render_shape.parts:
+                        # you can change color, use texture files etc.
+                        part.material.set_base_color(self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1])
+                        # note that textures must use the sapien.render.RenderTexture2D 
+                        # object which allows passing a texture image file path
+                        part.material.set_base_color_texture(None)
+                        part.material.set_normal_texture(None)
+                        part.material.set_emission_texture(None)
+                        part.material.set_transmission_texture(None)
+                        part.material.set_metallic_texture(None)
+                        part.material.set_roughness_texture(None)
                 
 ```
-
-Note you can do in place changes to physical material properties like above, we do not recommend creating a new PhysxMaterial object as there is a limit to the number of PhysxMaterials that can be created (64K).
 
 ## Lighting/Rendering Randomizations
 

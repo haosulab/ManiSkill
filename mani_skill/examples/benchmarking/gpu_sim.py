@@ -1,11 +1,10 @@
-import argparse
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Optional
 import gymnasium as gym
 import numpy as np
 import torch
-import tqdm
 import tyro
 
 import mani_skill.envs
@@ -81,7 +80,8 @@ def main(args: Args):
                 env = CPUGymWrapper(env, )
                 return env
             return _init
-        env = AsyncVectorEnv([make_env() for _ in range(num_envs)], context="forkserver") if args.num_envs > 1 else make_env()()
+        # mac os system does not work with forkserver when using visual observations
+        env = AsyncVectorEnv([make_env() for _ in range(num_envs)], context="forkserver" if sys.platform == "darwin" else None) if args.num_envs > 1 else make_env()()
         base_env = make_env()().unwrapped
 
     base_env.print_sim_details()
