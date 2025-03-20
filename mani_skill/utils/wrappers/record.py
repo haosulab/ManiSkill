@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 import sapien.physx as physx
 import torch
+from termcolor import cprint
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
@@ -539,7 +540,12 @@ class RecordEpisode(gym.Wrapper):
                 self.max_steps_per_video is not None
                 and self._video_steps >= self.max_steps_per_video
             ):
-                self.flush_video()
+                # @jstmn change
+                cprint((
+                    "Note: skipping flush_video() at the end of this episode. You must manually call flush_video() "
+                    "on your env object. This is so that a 'name' value can be passed to flush_video()"
+                ), "yellow")
+                # self.flush_video()
         self._elapsed_record_steps += 1
         return obs, rew, terminated, truncated, info
 
