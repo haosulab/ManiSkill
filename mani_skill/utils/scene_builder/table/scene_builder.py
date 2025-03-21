@@ -151,7 +151,7 @@ class TableSceneBuilder(SceneBuilder):
                 + qpos
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.45, 0, 0]))
+            self.env.agent.robot.set_pose(sapien.Pose([-0.522, 0, 0]))
         elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [
