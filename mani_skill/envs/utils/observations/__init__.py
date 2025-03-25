@@ -23,6 +23,8 @@ class ObservationModeStruct:
     """whether to include flattened state data which generally means including privileged information such as object poses"""
     visual: CameraObsTextures
     """textures to capture from cameras"""
+    asymmetric: bool
+    """whether to split state observations into actor and critic states"""
 
     @property
     def use_state(self):
@@ -49,6 +51,7 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
                 normal=False,
                 albedo=False,
             ),
+            asymmetric=False,
         )
     elif obs_mode == "pointcloud":
         return ObservationModeStruct(
@@ -62,6 +65,7 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
                 normal=False,
                 albedo=False,
             ),
+            asymmetric=False,
         )
     elif obs_mode == "sensor_data":
         return ObservationModeStruct(
@@ -75,6 +79,7 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
                 normal=False,
                 albedo=False,
             ),
+            asymmetric=False,
         )
     else:
         # Parse obs mode into individual texture types
@@ -85,12 +90,19 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
             textures.append("rgb")
             textures.append("segmentation")
         for texture in textures:
-            if texture == "state" or texture == "state_dict" or texture == "none":
+            if (
+                texture == "state"
+                or texture == "state_dict"
+                or texture == "none"
+                or texture == "asymmetric"
+            ):
                 # allows fetching privileged state data in addition to visual data.
                 continue
             assert (
                 texture in ALL_VISUAL_TEXTURES
             ), f"Invalid texture type '{texture}' requested in the obs mode '{obs_mode}'. Each individual texture must be one of {ALL_VISUAL_TEXTURES}"
+        if "asymmetric" in textures:
+            assert "state_dict" in textures, "asymmetric mode requires state_dict"
         return ObservationModeStruct(
             state_dict="state_dict" in textures,
             state="state" in textures,
@@ -102,4 +114,5 @@ def parse_obs_mode_to_struct(obs_mode: str) -> ObservationModeStruct:
                 normal="normal" in textures,
                 albedo="albedo" in textures,
             ),
+            asymmetric="asymmetric" in textures,
         )

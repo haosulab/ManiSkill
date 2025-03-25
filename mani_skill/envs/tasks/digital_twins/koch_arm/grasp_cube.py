@@ -65,7 +65,13 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
     SUPPORTED_ROBOTS = [
         "koch-v1.1",
     ]
-    SUPPORTED_OBS_MODES = ["state", "state_dict", "rgb+segmentation"]
+    SUPPORTED_OBS_MODES = [
+        "state",
+        "state_dict",
+        "rgb+segmentation",
+        "state+rgb+segmentation",
+        "state_dict+asymmetric+rgb+segmentation",
+    ]
     agent: Koch
     spawn_box_half_size = 0.1 / 2  # cube can spawn in a 10cm x 10cm range
 
@@ -321,13 +327,20 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
             (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.02
         ).float() * (target_qpos[..., -1] < 0.24)
         obs = dict(is_grasped=is_grasped)
-        if self.obs_mode_struct.state:
+        tcp_pos = (self.agent.tcp.pose.p + self.agent.tcp2.pose.p) / 2
+        if self.obs_mode_struct.state or self.obs_mode_struct.state_dict:
             # state based policies can gain access to more information that helps learning
-            obs.update(
+            state_obs = dict(
                 obj_pose=self.cube.pose.raw_pose,
                 tcp_pose=self.agent.tcp.pose.raw_pose,
-                tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp.pose.p,
+                tcp2_pose=self.agent.tcp2.pose.raw_pose,
+                tcp_to_obj_pos=self.cube.pose.p - tcp_pos,
             )
+            if self.obs_mode_struct.asymmetric:
+                # flattenrgbdobservationwrapper separates on actor and critic states
+                obs.update(critic=state_obs)
+            else:
+                obs.update(state_obs)
         return obs
 
     # TODO (stao, xander): clean up the evaluate function and reward functions and annotate them to explain why we write those lines
@@ -438,8 +451,8 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         to_open_dist = (gripper_open - self.agent.robot.qpos[..., -1]).abs()
         # allow some leeway of a couple of degrees
         to_open_dist[to_open_dist <= 0.05] = 0
-        # reward -= 0.25 * torch.tanh(5 * to_open_dist) * ~is_close
-        reward -= 3 * ~is_close * (self.agent.robot.qpos[..., -1] < 0.9)
+        reward -= 0.25 * torch.tanh(5 * to_open_dist) * ~is_close
+        # reward -= 3 * ~is_close * (self.agent.robot.qpos[..., -1] < 0.9)
 
         # touch table
         reward -= 2.0 * info["touching_table"].float()

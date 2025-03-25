@@ -23,6 +23,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
 
     Note that the returned observations will have a "rgb" or "depth" key depending on the rgb/depth bool flags, and will
     always have a "state" key. If sep_depth is False, rgb and depth will be merged into a single "rgbd" key.
+    If the environment's obs_mode includes "asymmetric", state will be split into "actor-state" and "critic-state" keys.
     """
 
     def __init__(self, env, rgb=True, depth=True, state=True, sep_depth=True) -> None:
@@ -42,6 +43,42 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
+    def _separate_actor_critic_state(
+        self, observation: Dict
+    ) -> tuple[Dict, Dict, Dict]:
+        """Recursively separate observation into base, actor, and critic states.
+
+        Args:
+            observation: Dictionary of observations that may contain nested actor/critic states
+
+        Returns:
+            tuple[Dict, Dict, Dict]: (base_state, actor_state, critic_state)
+        """
+        base_state = {}
+        actor_state = {}
+        critic_state = {}
+
+        for k, v in observation.items():
+            if k == "actor":
+                actor_state.update(v)
+            elif k == "critic":
+                critic_state.update(v)
+            elif isinstance(v, dict):
+                # Recursively process nested dictionaries
+                (
+                    nested_base,
+                    nested_actor,
+                    nested_critic,
+                ) = self._separate_actor_critic_state(v)
+                base_state[k] = nested_base
+                actor_state.update(nested_actor)
+                critic_state.update(nested_critic)
+            else:
+                # Leaf node - add to base state
+                base_state[k] = v
+
+        return base_state, actor_state, critic_state
+
     def observation(self, observation: Dict):
         sensor_data = observation.pop("sensor_data")
         del observation["sensor_param"]
@@ -57,13 +94,45 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
             rgb_images = torch.concat(rgb_images, axis=-1)
         if len(depth_images) > 0:
             depth_images = torch.concat(depth_images, axis=-1)
-        # flatten the rest of the data which should just be state data
-        observation = common.flatten_state_dict(
-            observation, use_torch=True, device=self.base_env.device
-        )
+
+        # Handle state data
+        if self.include_state:
+            if self.base_env.obs_mode_struct.asymmetric:
+                # Recursively separate actor and critic states
+                (
+                    base_state,
+                    actor_state,
+                    critic_state,
+                ) = self._separate_actor_critic_state(observation)
+
+                # Flatten base state
+                base_state = common.flatten_state_dict(
+                    base_state, use_torch=True, device=self.base_env.device
+                )
+                # Add actor-specific state if it exist
+                actor_extra = common.flatten_state_dict(
+                    actor_state, use_torch=True, device=self.base_env.device
+                )
+                actor_state = torch.cat([base_state.clone(), actor_extra], dim=-1)
+
+                # Add critic-specific state if it exists
+                critic_extra = common.flatten_state_dict(
+                    critic_state, use_torch=True, device=self.base_env.device
+                )
+                critic_state = torch.cat([base_state.clone(), critic_extra], dim=-1)
+            else:
+                # Original behavior - flatten all state data
+                observation = common.flatten_state_dict(
+                    observation, use_torch=True, device=self.base_env.device
+                )
+
         ret = dict()
         if self.include_state:
-            ret["state"] = observation
+            if self.base_env.obs_mode_struct.asymmetric:
+                ret["actor-state"] = actor_state
+                ret["critic-state"] = critic_state
+            else:
+                ret["state"] = observation
         if self.include_rgb and not self.include_depth:
             ret["rgb"] = rgb_images
         elif self.include_rgb and self.include_depth:
