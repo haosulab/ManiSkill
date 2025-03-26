@@ -148,7 +148,7 @@
     type="revolute">
     <origin
       xyz="0 0.1025 0.0306"
-      rpy="0 0 0" />
+      rpy="1.5708 0 0" />
     <parent
       link="Rotation_Pitch" />
     <child
@@ -156,7 +156,7 @@
     <axis
       xyz="-1 0 0" />
     <limit
-      lower="0"
+      lower="-0.1"
       upper="3.45"
       effort="0"
       velocity="0" />
@@ -203,16 +203,21 @@
   </link>
   <joint
     name="Elbow"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0 0.11257 0.028"
-      rpy="0 0 0" />
+      rpy="-1.5708 0 0" />
     <parent
       link="Upper_Arm" />
     <child
       link="Lower_Arm" />
     <axis
       xyz="1 0 0" />
+    <limit 
+      lower="-0.2"
+      upper="3.14159"
+      effort="0"
+      velocity="0" />
   </joint>
   <link
     name="Wrist_Pitch_Roll">
@@ -256,16 +261,21 @@
   </link>
   <joint
     name="Wrist_Pitch"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0 0.0052 0.1349"
-      rpy="0 0 0" />
+      rpy="-1.5708 0 0" />
     <parent
       link="Lower_Arm" />
     <child
       link="Wrist_Pitch_Roll" />
     <axis
       xyz="1 0 0" />
+    <limit 
+      lower="-1.8"
+      upper="1.8"
+      effort="0"
+      velocity="0" />
   </joint>
   <link
     name="Fixed_Jaw">
@@ -309,16 +319,21 @@
   </link>
   <joint
     name="Wrist_Roll"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0 -0.0601 0"
-      rpy="0 0 0" />
+      rpy="0 -1.5708 0" />
     <parent
       link="Wrist_Pitch_Roll" />
     <child
       link="Fixed_Jaw" />
     <axis
       xyz="0 1 0" />
+    <limit 
+      lower="-3.14159"
+      upper="3.14159"
+      effort="0"
+      velocity="0" />
   </joint>
   <link
     name="Moving Jaw">
@@ -362,15 +377,20 @@
   </link>
   <joint
     name="Jaw"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="-0.0202 -0.0244 0"
-      rpy="3.1416 0 3.1416" />
+      rpy="3.1416 0 3.33" />
     <parent
       link="Fixed_Jaw" />
     <child
       link="Moving Jaw" />
     <axis
       xyz="0 0 1" />
+    <limit 
+      lower="0"
+      upper="1.7"
+      effort="0"
+      velocity="0" />
   </joint>
 </robot>
