@@ -80,7 +80,6 @@ class BaseDigitalTwinEnv(BaseEnv):
     def _load_scene(self, options: dict):
         """
         Load assets for a digital twin scene in
-
         """
 
     def remove_object_from_greenscreen(self, object: Union[Articulation, Actor, Link]):
@@ -101,6 +100,7 @@ class BaseDigitalTwinEnv(BaseEnv):
         for object in self._objects_to_remove_from_greenscreen:
             per_scene_ids.append(object.per_scene_id)
         self._segmentation_ids_to_keep = torch.unique(torch.concatenate(per_scene_ids))
+        self._objects_to_remove_from_greenscreen = []
 
         # load the overlay images
         for camera_name in self.rgb_overlay_paths.keys():
