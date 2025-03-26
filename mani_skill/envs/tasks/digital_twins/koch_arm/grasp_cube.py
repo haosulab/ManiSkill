@@ -45,7 +45,7 @@ class KochGraspCubeDomainRandomizationConfig:
     randomize_cube_color: bool = True
 
 
-@register_env("KochGraspCube-v1", max_episode_steps=50)
+@register_env("KochGraspCube-v1", max_episode_steps=75)
 class KochGraspCubeEnv(BaseDigitalTwinEnv):
     """
     **Task Description:**
@@ -332,9 +332,16 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
             # state based policies can gain access to more information that helps learning
             state_obs = dict(
                 obj_pose=self.cube.pose.raw_pose,
-                tcp_pose=self.agent.tcp.pose.raw_pose,
-                tcp2_pose=self.agent.tcp2.pose.raw_pose,
+                finger1_pose=self.agent.tcp.pose.raw_pose,
+                finger2_pose=self.agent.tcp2.pose.raw_pose,
+                tcp_pose=tcp_pos,
+                true_is_grasped=info["is_grasped"],
+                touching_table=info["touching_table"],
+                is_properly_grasped=info["is_properly_grasped"],
+                cube_side_length=2 * self.cube_half_sizes,
+                grippers_distance=info["grippers_distance"],
                 tcp_to_obj_pos=self.cube.pose.p - tcp_pos,
+                cube_lifted=info["cube_lifted"],
             )
             if self.obs_mode_struct.asymmetric:
                 # flattenrgbdobservationwrapper separates on actor and critic states
@@ -421,7 +428,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
             axis=-1,
         )
         # reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+        reaching_reward = 1 - torch.tanh(15 * tcp_to_obj_dist)
         reward += reaching_reward
 
         # still stage 1, orient gripper correctly, important for correctly grasping the

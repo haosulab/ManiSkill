@@ -106,6 +106,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 ) = self._separate_actor_critic_state(observation)
 
                 # Flatten base state
+                # TODO: (xhin) state_dict obs are on cpu?
                 base_state = common.flatten_state_dict(
                     base_state, use_torch=True, device=self.base_env.device
                 )
@@ -113,13 +114,15 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 actor_extra = common.flatten_state_dict(
                     actor_state, use_torch=True, device=self.base_env.device
                 )
-                actor_state = torch.cat([base_state.clone(), actor_extra], dim=-1)
+                actor_state = torch.cat([base_state, actor_extra], dim=-1)
 
                 # Add critic-specific state if it exists
                 critic_extra = common.flatten_state_dict(
                     critic_state, use_torch=True, device=self.base_env.device
                 )
-                critic_state = torch.cat([base_state.clone(), critic_extra], dim=-1)
+                critic_state = torch.cat(
+                    [base_state, critic_extra.to(self.base_env.device)], dim=-1
+                )
             else:
                 # Original behavior - flatten all state data
                 observation = common.flatten_state_dict(
