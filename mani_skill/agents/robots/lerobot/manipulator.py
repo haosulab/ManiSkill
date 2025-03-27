@@ -55,7 +55,7 @@ class LeRobotRealAgent(BaseRealAgent):
         freq = 60
         target_pos = self.qpos
         max_rad_per_step = 0.01
-        for _ in range(int(5 * freq)):
+        for _ in range(int(20 * freq)):
             start_loop_t = time.perf_counter()
             delta_step = (qpos - target_pos).clip(
                 min=-max_rad_per_step, max=max_rad_per_step
