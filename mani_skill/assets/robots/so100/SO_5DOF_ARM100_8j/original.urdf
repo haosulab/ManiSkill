@@ -307,13 +307,31 @@
           rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
           filename="meshes/Fixed_Jaw.STL" />
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Fixed_Jaw_part1.ply" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Fixed_Jaw_part2.ply" />
       </geometry>
     </collision>
   </link>
@@ -371,7 +389,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Moving Jaw.STL" />
+          filename="meshes/Moving_Jaw_part1.ply" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Moving_Jaw_part2.ply" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Moving_Jaw_part3.ply" />
       </geometry>
     </collision>
   </link>

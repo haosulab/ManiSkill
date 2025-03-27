@@ -24,6 +24,9 @@ class SO100(BaseAgent):
     #         gripper=dict(material="gripper", patch_radius=0.1, min_patch_radius=0.1),
     #     ),
     # )
+    # load_multiple_collisions = True
+    # self = True
+    # disable_self_collision = True
 
     keyframes = dict(
         rest=Keyframe(
@@ -64,8 +67,8 @@ class SO100(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             [-0.05, -0.05, -0.05, -0.05, -0.1, -0.05],
             [0.05, 0.05, 0.05, 0.05, 0.1, 0.05],
-            stiffness=[123, 50, 102.68, 145, 108.37, 93.3],
-            damping=[15.85, 6, 15.34, 16, 16.31, 16.3],
+            stiffness=[1e3] * 5 + [1e2],
+            damping=[1e2] * 5 + [1e0],
             force_limit=100,
             use_delta=True,
             use_target=True,
