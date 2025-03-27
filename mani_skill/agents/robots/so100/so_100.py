@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import sapien
 import sapien.render
@@ -57,26 +59,29 @@ class SO100(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             lower=None,
             upper=None,
-            stiffness=[1e3] * 5 + [1e2],
-            damping=[1e2] * 5 + [1e0],
+            stiffness=[1e3] * 6,
+            damping=[1e2] * 6,
             force_limit=100,
             normalize_action=False,
         )
 
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            [-0.05, -0.05, -0.05, -0.05, -0.1, -0.05],
-            [0.05, 0.05, 0.05, 0.05, 0.1, 0.05],
-            stiffness=[1e3] * 5 + [1e2],
-            damping=[1e2] * 5 + [1e0],
+            -0.1,
+            0.1,
+            stiffness=[1e3] * 6,
+            damping=[1e2] * 6,
             force_limit=100,
             use_delta=True,
             use_target=True,
         )
+        pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
+        pd_joint_target_delta_pos.use_target = True
 
         controller_configs = dict(
             pd_joint_delta_pos=pd_joint_delta_pos,
             pd_joint_pos=pd_joint_pos,
+            pd_joint_target_delta_pos=pd_joint_target_delta_pos,
         )
         return deepcopy_dict(controller_configs)
 
