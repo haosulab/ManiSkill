@@ -43,23 +43,13 @@ class PickCubeEnv(BaseEnv):
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-
-        self._camera_width = None
-        self._camera_height = None
-        if "camera_width" in kwargs:
-            assert "camera_height" in kwargs
-            self._camera_width = kwargs.pop("camera_width")
-            self._camera_height = kwargs.pop("camera_height")
-
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
     def _default_sensor_configs(self):
+        # assert False, "This should not be called"
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        if self._camera_width is None:
-            return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
-        else:
-            return [CameraConfig("base_camera", pose, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100)]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):
@@ -70,6 +60,7 @@ class PickCubeEnv(BaseEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
+        # assert False, "This should not be called"
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -93,6 +84,7 @@ class PickCubeEnv(BaseEnv):
         self._hidden_objects.append(self.goal_site)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        # assert False, "This should not be called"
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
