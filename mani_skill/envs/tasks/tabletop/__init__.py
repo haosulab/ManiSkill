@@ -4,6 +4,7 @@ from .peg_insertion_side import PegInsertionSideEnv
 from .pick_clutter_ycb import PickClutterYCBEnv
 from .pick_cube import PickCubeEnv
 from .pick_cube_v2 import PickCubeV2Env
+from .pick_cube_MP_v1 import PickCubeMPEnv
 from .pick_single_ycb import PickSingleYCBEnv
 from .plug_charger import PlugChargerEnv
 from .plug_charger_v2 import PlugChargerV2Env # new

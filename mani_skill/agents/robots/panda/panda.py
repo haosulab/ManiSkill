@@ -118,6 +118,7 @@ class Panda(BaseAgent):
         arm_pd_joint_target_delta_pos.use_target = True
 
         # PD ee position
+        # POSITION ONLY
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=-0.1,
@@ -128,18 +129,22 @@ class Panda(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+
+        # DELTA POSE
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=-0.1,
             pos_upper=0.1,
             rot_lower=-0.1,
             rot_upper=0.1,
-            stiffness=self.arm_stiffness,
+            # stiffness=self.arm_stiffness,
+            stiffness=3.0*self.arm_stiffness, # increased stiffness results in more precise tracking
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+        # ABSOLUTE POSE
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=None,

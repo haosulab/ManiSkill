@@ -16,8 +16,8 @@ REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
 REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
 
 
-@register_env("PickCube-v2", max_episode_steps=100)
-class PickCubeV2Env(PickCubeEnv):
+@register_env("PickCubeMP-v1", max_episode_steps=100)
+class PickCubeMPEnv(PickCubeEnv):
     """
     **Task Description:**
     Nearly exacty copy of PickCubeEnv, but with the following change:
@@ -43,52 +43,55 @@ class PickCubeV2Env(PickCubeEnv):
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
 
-        self._distractor_spheres = []
-        self._n_distractor_spheres = 0
-        self._distractor_spheres_radius_range = (0.01, 0.025)
-        self._distractor_spheres_color_range = [[0.25, 0.25, 0.25], [1.0, 1.0, 1.0]]
-
-        # Just visualizing the coordinate axes
-        self.coordinate_axes_pts = []
-        self.target_site_xy_projection = None
-
         # Env configuration
-        self.cube_half_size = 0.02
-        self.goal_thresh = self.cube_half_size + 0.05
+        self._cube_half_size = 0.02
 
+        self._goal_site_cfg = {
+            "radius": self._cube_half_size + 0.05,
+            "color": [0, 1, 0, 0.75],
+            "pose": sapien.Pose(p=[0.0, 0.4, 0.25]),
+        }
+        self._cube_cfg = {
+            "color": [1, 0, 0, 1],
+            "x_bounds": (-0.1, 0.1),
+            "y_bounds": (-0.3, -0.4),
+        }
+
+        self._obstacle_cfgs = [
+            {
+                "half_size": [0.05, 0.05, 0.15],
+                "color": [0, 1, 1, 1.0],
+                "pose": sapien.Pose(p=[-0.1, 0, 0.05]),
+            },
+            {
+                "half_size": [0.05, 0.05, 0.1],
+                "color": [0, 1, 1, 1.0],
+                "pose": sapien.Pose(p=[0.1, 0, 0.05]),
+            }
+        ]
+        self._obstacles = []
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # print("Initializing episode, env_idx:", env_idx)
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
             xyz = torch.zeros((b, 3))
-            xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-
-            # TEMP DEBUGGING - Fixed cube start position
-            # xyz[:, 0] = -0.08
-            # xyz[:, 1] = -0.08
-            # END OF: TEMP DEBUGGING
-
-            xyz[:, 2] = self.cube_half_size
+            x_range = self._cube_cfg["x_bounds"][1] - self._cube_cfg["x_bounds"][0]
+            y_range = self._cube_cfg["y_bounds"][1] - self._cube_cfg["y_bounds"][0]
+            xyz[:, 0] = torch.rand((b)) * x_range + self._cube_cfg["x_bounds"][0]
+            xyz[:, 1] = torch.rand((b)) * y_range + self._cube_cfg["y_bounds"][0]
+            xyz[:, 2] = self._cube_half_size
+            print("xyz:", xyz)
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
             # Fixed target position
-            goal_xyz = torch.zeros((b, 3))
-            goal_xyz[:, 0] = 0.05
-            goal_xyz[:, 1] = 0.05
-            goal_xyz[:, 2] = 0.25
-            self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
-
-            # New distractor spheres
-            for i in range(self._n_distractor_spheres):
-                sphere_xyz = torch.zeros((b, 3))
-                sphere_xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-                sphere_xyz[:, 2] = 0.05
-                self._distractor_spheres[i].set_pose(Pose.create_from_pq(p=sphere_xyz))
+            self.goal_site.set_pose(self._goal_site_cfg["pose"])
+            #
+            # for i, cfg in enumerate(self._obstacle_cfgs):
+            #     self._obstacles[i].set_pose(cfg["pose"])
 
 
     def _load_scene(self, options: dict):
@@ -98,15 +101,15 @@ class PickCubeV2Env(PickCubeEnv):
         self.table_scene.build()
         self.cube = actors.build_cube(
             self.scene,
-            half_size=self.cube_half_size,
+            half_size=self._cube_half_size,
             color=[1, 0, 0, 1],
             name="cube",
-            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
+            initial_pose=sapien.Pose(p=[0, 0, self._cube_half_size]),
         )
         self.goal_site = actors.build_sphere(
             self.scene,
-            radius=self.goal_thresh,
-            color=[0, 1, 0, 0.75],
+            radius=self._goal_site_cfg["radius"],
+            color=self._goal_site_cfg["color"],
             name="goal_site",
             body_type="kinematic",
             add_collision=False,
@@ -114,15 +117,14 @@ class PickCubeV2Env(PickCubeEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
-        # New distractor spheres
-        for i in range(self._n_distractor_spheres):
-            radius_i = np.random.uniform(*self._distractor_spheres_radius_range)
-            self._distractor_spheres.append(actors.build_sphere(
+        # 
+        for i, cfg in enumerate(self._obstacle_cfgs):
+            self._obstacles.append(actors.build_box(
                 self.scene,
-                initial_pose=sapien.Pose(p=[0.1, 0.1, radius_i]),
-                name=f"distractor_sphere_{i}",
-                radius=radius_i,
-                color=np.random.uniform(*self._distractor_spheres_color_range).tolist() + [1.0], # alpha=1.0
+                half_sizes=cfg["half_size"],
+                color=cfg["color"],
+                name=f"obstacle_{i}",
+                initial_pose=cfg["pose"],
             ))
 
 
@@ -141,11 +143,9 @@ class PickCubeV2Env(PickCubeEnv):
         """
 
         pose = sapien_utils.look_at([0.35, 0.45, 0.4], [0.0, 0.0, 0.15])
-        # pose = sapien_utils.look_at([0.3, 0.4, 0.4], [0.0, 0.0, 0.25])
         # SHADER = "rt" # doesn't work with parallel rendering
         SHADER = "default"
         # SHADER = "minimal" # negligible time difference between 'default' and 'minimal', so 
-        # print(f"Using shader '{SHADER}' for human render camera")
         return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
 
     @property
