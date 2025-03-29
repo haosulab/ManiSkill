@@ -1,4 +1,4 @@
-``mani_skill.utils.sapien_utils`` module
+mani_skill.utils.sapien_utils module
 ========================================
 
 .. currentmodule:: mani_skill.utils.sapien_utils
