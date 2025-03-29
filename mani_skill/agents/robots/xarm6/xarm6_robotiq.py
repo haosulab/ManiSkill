@@ -36,12 +36,12 @@ class XArm6Robotiq(BaseAgent):
         rest=Keyframe(
             qpos=np.array(
                 [
-                    1.56280772e-03,
-                    -1.10912404e00,
-                    -9.71343926e-02,
-                    1.52969832e-04,
-                    1.20606723e00,
-                    1.66234924e-03,
+                    0,
+                    0.22,
+                    -1.23,
+                    0,
+                    1.01,
+                    0,
                     0,
                     0,
                     0,
@@ -77,7 +77,7 @@ class XArm6Robotiq(BaseAgent):
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j6=Keyframe(
-            qpos=np.array([0, 0, 0, 0, 0, np.pi / 2]),
+            qpos=np.array([0, 0, 0, 0, 0, np.pi / 2, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
     )
