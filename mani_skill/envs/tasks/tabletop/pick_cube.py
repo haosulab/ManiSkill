@@ -141,13 +141,11 @@ class PickCubeEnv(BaseEnv):
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * is_grasped
 
-        qvel_without_gripper = self.agent.robot.get_qvel()
-        if self.robot_uids == "xarm6_robotiq":
-            qvel_without_gripper = qvel_without_gripper[..., :-6]
-        elif self.robot_uids == "panda":
-            qvel_without_gripper = qvel_without_gripper[..., :-2]
+        qvel = self.agent.robot.get_qvel()
+        if self.robot_uids == "panda":
+            qvel = qvel[..., :-2]
         static_reward = 1 - torch.tanh(
-            5 * torch.linalg.norm(qvel_without_gripper, axis=1)
+            5 * torch.linalg.norm(qvel, axis=1)
         )
         reward += static_reward * info["is_obj_placed"]
 
