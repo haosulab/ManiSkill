@@ -219,6 +219,7 @@ class RenderCamera:
     def set_local_pose(self, arg0: sapien.Pose) -> None:
         for obj in self._render_cameras:
             obj.set_local_pose(arg0)
+        self._cached_local_pose = None
 
     def set_near(self, near: float) -> None:
         for obj in self._render_cameras:
