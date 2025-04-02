@@ -11,6 +11,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
+from mani_skill.envs.distraction_set import DistractionSet
 
 REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
 REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
@@ -40,17 +41,10 @@ class PickCubeV2Env(PickCubeEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         assert "camera_width" in kwargs, "camera_width must be provided"
         assert "camera_height" in kwargs, "camera_height must be provided"
+        assert "distraction_set" in kwargs, "distraction_set must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
-
-        self._distractor_spheres = []
-        self._n_distractor_spheres = 0
-        self._distractor_spheres_radius_range = (0.01, 0.025)
-        self._distractor_spheres_color_range = [[0.25, 0.25, 0.25], [1.0, 1.0, 1.0]]
-
-        # Just visualizing the coordinate axes
-        self.coordinate_axes_pts = []
-        self.target_site_xy_projection = None
+        self._distraction_set: DistractionSet = kwargs.pop("distraction_set")
 
         # Env configuration
         self.cube_half_size = 0.02
@@ -60,18 +54,14 @@ class PickCubeV2Env(PickCubeEnv):
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        # print("Initializing episode, env_idx:", env_idx)
+        print("Initializing episode, env_idx:", env_idx)
         with torch.device(self.device):
-            b = len(env_idx)
+            b = len(env_idx) # number of environments. env_idx is [0, 1, 2, ..., n_envs-1]
             self.table_scene.initialize(env_idx)
+
+            # Random cube position
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-
-            # TEMP DEBUGGING - Fixed cube start position
-            # xyz[:, 0] = -0.08
-            # xyz[:, 1] = -0.08
-            # END OF: TEMP DEBUGGING
-
             xyz[:, 2] = self.cube_half_size
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
@@ -83,12 +73,8 @@ class PickCubeV2Env(PickCubeEnv):
             goal_xyz[:, 2] = 0.25
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
-            # New distractor spheres
-            for i in range(self._n_distractor_spheres):
-                sphere_xyz = torch.zeros((b, 3))
-                sphere_xyz[:, :2] = torch.rand((b, 2)) * 0.2 - 0.1
-                sphere_xyz[:, 2] = 0.05
-                self._distractor_spheres[i].set_pose(Pose.create_from_pq(p=sphere_xyz))
+            # Initialize distraction set
+            self._distraction_set._initialize_episode_hook(b, xyz)
 
 
     def _load_scene(self, options: dict):
@@ -113,17 +99,7 @@ class PickCubeV2Env(PickCubeEnv):
             initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
-
-        # New distractor spheres
-        for i in range(self._n_distractor_spheres):
-            radius_i = np.random.uniform(*self._distractor_spheres_radius_range)
-            self._distractor_spheres.append(actors.build_sphere(
-                self.scene,
-                initial_pose=sapien.Pose(p=[0.1, 0.1, radius_i]),
-                name=f"distractor_sphere_{i}",
-                radius=radius_i,
-                color=np.random.uniform(*self._distractor_spheres_color_range).tolist() + [1.0], # alpha=1.0
-            ))
+        self._distraction_set._load_scene_hook(self.scene)
 
 
     @property

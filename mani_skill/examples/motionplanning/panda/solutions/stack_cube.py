@@ -30,7 +30,7 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     obb = get_actor_obb(env.cubeA)
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,
@@ -76,8 +76,8 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Stack
     # -------------------------------------------------------------------------- #
-    goal_pose = env.cubeB.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
-    offset = (goal_pose.p - env.cubeA.pose.p).numpy()[0] # remember that all data in ManiSkill is batched and a torch tensor
+    goal_pose = env.cubeB.pose * sapien.Pose([0, 0, (env.cube_half_size[2] * 2).item()])
+    offset = (goal_pose.p - env.cubeA.pose.p).cpu().numpy()[0] # remember that all data in ManiSkill is batched and a torch tensor
     align_pose = sapien.Pose(lift_pose.p + offset, lift_pose.q)
     planner.move_to_pose_with_screw(align_pose)
 
