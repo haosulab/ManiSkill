@@ -14,23 +14,19 @@ from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, so
 MP_SOLUTIONS = {
     "DrawTriangle-v1": solveDrawTriangle,
     "PickCube-v1": solvePickCube,
-    "PickCube-v2": solvePickCube, # new
     "PickCubeMP-v1": solvePickCube,
     "StackCube-v1": solveStackCube,
-    "StackCube-v2": solveStackCube, # new
     "PegInsertionSide-v1": solvePegInsertionSide,
     "PlugCharger-v1": solvePlugCharger,
     "PlaceSphere-v1": solvePlaceSphere,
     "PushCube-v1": solvePushCube,
-    "PushCube-v2": solvePushCube, # new
-    "PullCube-v2": solvePullCube,         # new
     "PullCubeTool-v1": solvePullCubeTool,
-    "PullCubeTool-v2": solvePullCubeTool, # new
     "LiftPegUpright-v1": solveLiftPegUpright,
     "PullCube-v1": solvePullCube,
     "DrawSVG-v1" : solveDrawSVG,
     "StackPyramid-v1": solveStackPyramid,
 }
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1", help=f"Environment to run motion planning solver on. Available options are {list(MP_SOLUTIONS.keys())}")
