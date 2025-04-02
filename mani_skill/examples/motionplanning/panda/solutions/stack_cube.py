@@ -30,7 +30,7 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     obb = get_actor_obb(env.cubeA)
 
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
     grasp_info = compute_grasp_info_by_obb(
         obb,
         approaching=approaching,

@@ -44,7 +44,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
 
     obb = get_actor_obb(env.peg)
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
 
     peg_init_pose = env.peg.pose
 
