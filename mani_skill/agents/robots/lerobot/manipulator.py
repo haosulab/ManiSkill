@@ -96,7 +96,7 @@ class LeRobotRealAgent(BaseRealAgent):
         # and if you factor in other operations like policy inference etc. the max control frequency is typically more like 30-60 Hz.
         # Moreover on the rare occassions reading qpos can take 40 milliseconds which causes the control step to fall behind the desired control frequency.
         if self.use_cached_qpos and self._cached_qpos is not None:
-            return self._cached_qpos
+            return self._cached_qpos.clone()
         qpos_deg = self.real_robot.follower_arms["main"].read("Present_Position")
         qpos = torch.deg2rad(torch.tensor(qpos_deg)).unsqueeze(0)
         self._cached_qpos = qpos
