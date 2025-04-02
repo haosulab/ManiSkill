@@ -76,8 +76,8 @@ def solve(env: StackCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Stack
     # -------------------------------------------------------------------------- #
-    goal_pose = env.cubeB.pose * sapien.Pose([0, 0, env.cube_half_size[2] * 2])
-    offset = (goal_pose.p - env.cubeA.pose.p).numpy()[0] # remember that all data in ManiSkill is batched and a torch tensor
+    goal_pose = env.cubeB.pose * sapien.Pose([0, 0, (env.cube_half_size[2] * 2).item()])
+    offset = (goal_pose.p - env.cubeA.pose.p).cpu().numpy()[0] # remember that all data in ManiSkill is batched and a torch tensor
     align_pose = sapien.Pose(lift_pose.p + offset, lift_pose.q)
     planner.move_to_pose_with_screw(align_pose)
 
