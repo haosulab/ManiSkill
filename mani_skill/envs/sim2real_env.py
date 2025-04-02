@@ -140,7 +140,6 @@ class Sim2RealEnv(gym.Env):
         self.agent._sim_agent = self.base_sim_env.agent
         # TODO create real controller class based on sim one?? Or can we just fake the data
         self.agent._sim_agent.controller.qpos
-        self.agent.start()
 
         self.sensor_data_processing_function = sensor_data_processing_function
 

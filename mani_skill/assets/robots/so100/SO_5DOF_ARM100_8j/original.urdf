@@ -340,13 +340,13 @@
     type="revolute">
     <origin
       xyz="0 -0.0601 0"
-      rpy="0 -1.5708 0" />
+      rpy="0 1.5708 0" />
     <parent
       link="Wrist_Pitch_Roll" />
     <child
       link="Fixed_Jaw" />
     <axis
-      xyz="0 1 0" />
+      xyz="0 -1 0" />
     <limit 
       lower="-3.14159"
       upper="3.14159"
