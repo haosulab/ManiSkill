@@ -354,7 +354,7 @@
       velocity="0" />
   </joint>
   <link
-    name="Moving Jaw">
+    name="Moving_Jaw">
     <inertial>
       <origin
         xyz="-0.00161744605468241 -0.0303472584046471 0.000449645961853651"
@@ -420,7 +420,7 @@
     <parent
       link="Fixed_Jaw" />
     <child
-      link="Moving Jaw" />
+      link="Moving_Jaw" />
     <axis
       xyz="0 0 1" />
     <limit 
