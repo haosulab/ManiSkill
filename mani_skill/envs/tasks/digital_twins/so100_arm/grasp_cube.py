@@ -66,7 +66,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     SUPPORTED_ROBOTS = [
         "so100",
     ]
-    SUPPORTED_OBS_MODES = ["state", "state_dict", "rgb+segmentation"]
+    SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgb+segmentation"]
     agent: SO100
     spawn_box_half_size = 0.1 / 2  # cube can spawn in a 10cm x 10cm range
 
@@ -79,8 +79,8 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         domain_randomization=True,
         base_camera_settings=dict(
             fov=52 * np.pi / 180,
-            pos=[0.4, 0.26, 0.2],
-            target=[0.2, 0, 0],
+            pos=[0.5, 0.3, 0.35],
+            target=[0.3, 0.0, 0.1],
         ),
         **kwargs,
     ):
@@ -136,8 +136,10 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     @property
     def _default_human_render_camera_configs(self):
         # this camera and angle is simply used for visualization purposes, not policy observations
-        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
-        return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
+        pose = sapien_utils.look_at([0.5, 0.3, 0.35], [0.3, 0.0, 0.1])
+        return CameraConfig(
+            "render_camera", pose, 512, 512, 52 * np.pi / 180, 0.01, 100
+        )
 
     def _load_agent(self, options: dict):
         # load the koch arm at this initial pose
@@ -286,7 +288,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             )
 
             # initialize the cube at a random position and rotation around the z-axis
-            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.225, 0, 0])
+            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.3, 0, 0])
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = (
                 torch.rand((b, 2)) * self.spawn_box_half_size * 2

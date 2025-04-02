@@ -124,18 +124,13 @@ class SO100(BaseAgent):
         # self.set_colors()
         self.finger1_link = self.robot.links_map["Fixed_Jaw"]
         self.finger2_link = self.robot.links_map["Moving_Jaw"]
-        # self.tcp = self.robot.links_map["gripper_tcp"]
-        # self.tcp2 = self.robot.links_map["gripper_tcp2"]
-        # self.back_tcp = self.robot.links_map["back_tcp"]
+        self.finger1_tip = self.robot.links_map["Fixed_Jaw_tip"]
+        self.finger2_tip = self.robot.links_map["Moving_Jaw_tip"]
 
     @property
     def tcp_pos(self):
         # computes the tool center point as the mid point between the the fixed and moving jaw's tips
-        fixed_jaw_offset = torch.tensor([0.0, 0.0, 0.0], device=self.device)
-        moving_jaw_offset = torch.tensor([0.0, 0.0, 0.0], device=self.device)
-        fixed_jaw_pos = self.finger1_link.pose.p + fixed_jaw_offset
-        moving_jaw_pos = self.finger2_link.pose.p + moving_jaw_offset
-        return (fixed_jaw_pos + moving_jaw_pos) / 2
+        return (self.finger1_tip.pose.p + self.finger2_tip.pose.p) / 2
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object
