@@ -74,7 +74,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         robot_uids="so100",
         greenscreen_overlay_path=None,
         domain_randomization_config=KochGraspCubeDomainRandomizationConfig(),
-        domain_randomization=False,
+        domain_randomization=True,
         base_camera_settings=dict(
             fov=52 * np.pi / 180,
             pos=[0.5, 0.3, 0.35],
@@ -386,7 +386,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             axis=-1,
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reached_object = tcp_to_obj_dist < 0.03
+        reached_object = tcp_to_obj_dist < 0.04
 
         open_gripper_pos = self.rest_qpos[
             -1
@@ -409,10 +409,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         )
         close_gripper_reward = 1 - torch.tanh(to_close_gripper_dist * 3)
         reward[stage_1_passed] = (
-            1.0
-            + (reaching_reward + 2 * is_grasped + 2 * close_gripper_reward)[
-                stage_1_passed
-            ]
+            1.0 + (reaching_reward + is_grasped + close_gripper_reward)[stage_1_passed]
         )
         stage_2_passed = is_grasped * stage_1_passed
 
@@ -432,14 +429,14 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             )
         ).sum(dim=-1) / self.rest_qpos[:-1].shape[-1]
         reward[stage_2_passed] = (
-            6.0
+            4.0
             + (
                 (1 - torch.tanh(4 * info["distance_to_rest_qpos"]))
                 + 2 * per_joint_return_to_rest_reward
             )[stage_2_passed]
         )
 
-        reward[info["success"]] = 16
+        reward[info["success"]] = 8
 
         # rest is some general penalties and failure modes
         # penalize for touching table
@@ -453,4 +450,4 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 16
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
