@@ -148,10 +148,12 @@ class PDJointPosMimicController(PDJointPosController):
 
         self._multiplier = torch.ones(
             len(self.config.mimic_targets), device=self.device
-        )
+        )  # this is parallel to self.mimic_joint_indices
         self._offset = torch.zeros(len(self.config.mimic_targets), device=self.device)
 
-        for mimic_joint_name, control_joint_name in self.config.mimic_targets.items():
+        for i, (mimic_joint_name, control_joint_name) in enumerate(
+            self.config.mimic_targets.items()
+        ):
             assert (
                 self.articulation.joints_map[mimic_joint_name].active_index is not None
             ), f"Mimic joint {mimic_joint_name} is not active, cannot be used as a mimic joint in a mimic controller"
@@ -176,13 +178,9 @@ class PDJointPosMimicController(PDJointPosController):
             )
 
             if isinstance(self.config.multiplier, dict):
-                self._multiplier[self.mimic_joint_indices[-1]] = self.config.multiplier[
-                    mimic_joint_name
-                ]
+                self._multiplier[i] = self.config.multiplier[mimic_joint_name]
             if isinstance(self.config.offset, dict):
-                self._offset[self.mimic_joint_indices[-1]] = self.config.offset[
-                    mimic_joint_name
-                ]
+                self._offset[i] = self.config.offset[mimic_joint_name]
 
         self.mimic_joint_indices = torch.tensor(
             self.mimic_joint_indices, dtype=torch.int32, device=self.device
@@ -203,7 +201,7 @@ class PDJointPosMimicController(PDJointPosController):
 
     def _get_joint_limits(self):
         joint_limits = super()._get_joint_limits()
-        return joint_limits[0:1]
+        return joint_limits[self.control_joint_indices]
 
     def set_action(self, action: Array):
         action = self._preprocess_action(action)
@@ -212,22 +210,17 @@ class PDJointPosMimicController(PDJointPosController):
         if self.config.use_delta:
             if self.config.use_target:
                 self._target_qpos[:, self.control_joint_indices] += action
-                self._target_qpos[:, self.mimic_joint_indices] = (
-                    self._target_qpos[:, self.mimic_control_joint_indices]
-                    * self.config.multiplier[None, :]
-                    + self.config.offset[None, :]
-                )
             else:
                 self._target_qpos[:, self.control_joint_indices] = (
                     self._start_qpos[:, self.control_joint_indices] + action
                 )
         else:
             self._target_qpos[:, self.control_joint_indices] = action
-            self._target_qpos[:, self.mimic_joint_indices] = (
-                self._target_qpos[:, self.mimic_control_joint_indices]
-                * self._multiplier[None, :]
-                + self._offset[None, :]
-            )
+        self._target_qpos[:, self.mimic_joint_indices] = (
+            self._target_qpos[:, self.mimic_control_joint_indices]
+            * self._multiplier[None, :]
+            + self._offset[None, :]
+        )
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:

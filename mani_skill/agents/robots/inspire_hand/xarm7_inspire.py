@@ -203,15 +203,17 @@ class Xarm7InspireRightHand(BaseAgent):
                 "right_joint53": "right_joint51",
             },
         )
+        hand_mimic_pos = deepcopy(hand_mimic_delta_pos)
+        hand_mimic_pos.use_delta = False
 
         controller_configs = dict(
             pd_joint_delta_pos=dict(
                 arm=arm_pd_joint_delta_pos, gripper=hand_mimic_delta_pos
             ),
-            pd_joint_mimic_delta_pos=dict(
-                arm=arm_pd_joint_delta_pos, gripper=hand_mimic_delta_pos
-            ),
-            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=hand_mimic_delta_pos),
+            # pd_joint_mimic_delta_pos=dict(
+            #     arm=arm_pd_joint_delta_pos, gripper=hand_mimic_delta_pos
+            # ),
+            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=hand_mimic_pos),
             pd_ee_delta_pose=dict(
                 arm=arm_pd_ee_delta_pose, gripper=hand_mimic_delta_pos
             ),
@@ -285,14 +287,3 @@ class Xarm7InspireRightHand(BaseAgent):
         )
 
         self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
-
-    def _before_reset(self, num_envs=0):
-        pass
-
-    def is_grasping(self, object: Actor = None):
-        # TODO: Implement this function
-        pass
-
-    def is_static(self, threshold: float = 0.2):
-        qvel = self.robot.get_qvel()[..., :-2]
-        return torch.max(torch.abs(qvel), 1)[0] <= threshold
