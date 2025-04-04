@@ -11,6 +11,7 @@ import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG
+from mani_skill.envs.distraction_set import DistractionSet
 
 MP_SOLUTIONS = {
     "DrawTriangle-v1": solveDrawTriangle,
@@ -35,6 +36,33 @@ MP_SOLUTIONS = {
     "PegInsertionSide-v2": solvePegInsertionSide, # new
 }
 
+DISTRACTION_SETS = {
+    "none".upper(): DistractionSet(),
+    "dev".upper(): DistractionSet(
+        distractor_object_cfg={
+            "n_spheres": 1,
+            # "radius_range": (0.01, 0.05),
+            "radius_range": (0.015, 0.015 + 1e-6),  # fails 2/6
+            # "radius_range": (0.025, 0.025 + 1e-6), # fails 5/6
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+            "x_lims": (-0.1, 0.1),
+            "y_lims": (-0.1, 0.1),
+        },
+        MO_color_cfg ={
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+        },
+        MO_texture_cfg = {
+            "textures_directory": osp.join(osp.dirname(__file__), "../../../assets/textures"),
+        },
+        table_color_cfg = {
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+        },
+        table_texture_cfg = {
+            "textures_directory": osp.join(osp.dirname(__file__), "../../../assets/textures"),
+        },
+    )
+}
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PickCube-v1", help=f"Environment to run motion planning solver on. Available options are {list(MP_SOLUTIONS.keys())}")
@@ -52,6 +80,7 @@ def parse_args(args=None):
     parser.add_argument("--num-procs", type=int, default=1, help="Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing and only works with the CPU simulation backend at the moment.")
     parser.add_argument("--camera-width", type=int, required=False, help="Width of the camera.")
     parser.add_argument("--camera-height", type=int,  required=False, help="Height of the camera.")
+    parser.add_argument("--distraction-set", type=str, required=True, help=f"Distraction set to use. Available options are {list(DISTRACTION_SETS.keys())}")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
@@ -63,12 +92,13 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             control_mode="pd_joint_pos",
             render_mode=args.render_mode,
             reward_mode="dense" if args.reward_mode is None else args.reward_mode,
-        sensor_configs=dict(shader_pack=args.shader),
-        human_render_camera_configs=dict(shader_pack=args.shader),
-        viewer_camera_configs=dict(shader_pack=args.shader),
-        sim_backend=args.sim_backend,
-        camera_width=args.camera_width,
-            camera_height=args.camera_height
+            sensor_configs=dict(shader_pack=args.shader),
+            human_render_camera_configs=dict(shader_pack=args.shader),
+            viewer_camera_configs=dict(shader_pack=args.shader),
+            sim_backend=args.sim_backend,
+            camera_width=args.camera_width,
+            camera_height=args.camera_height,
+            distraction_set=DISTRACTION_SETS[args.distraction_set.upper()]
         )
     else:
         env = gym.make(
