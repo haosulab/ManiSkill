@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
@@ -18,9 +20,16 @@ class FloatingInspireHand(BaseAgent):
     #         ),
     #     ),
     # )
-    disable_self_collisions = True
+    # disable_self_collisions = True
 
-    finger_joint = []
+    root_joint_names = [
+        "root_x_axis_joint",
+        "root_y_axis_joint",
+        "root_z_axis_joint",
+        "root_x_rot_joint",
+        "root_y_rot_joint",
+        "root_z_rot_joint",
+    ]
 
     @property
     def _controller_configs(self):
@@ -32,53 +41,84 @@ class FloatingInspireHand(BaseAgent):
             ],
             lower=None,
             upper=None,
-            stiffness=1e3,
-            damping=1e2,
-            force_limit=100,
+            stiffness=2e4,
+            damping=3e2,
+            force_limit=20,
+            normalize_action=False,
         )
-        mimic_joint_pos = PDJointPosMimicControllerConfig(
+        fingers_joint_pos = PDJointPosMimicControllerConfig(
             joint_names=[
                 "right_hand_thumb_MCP_joint",
                 "right_hand_thumb_IP_joint",
                 "right_hand_index_PIP_joint",
                 "right_hand_middle_PIP_joint",
+                "right_hand_ring_PIP_joint",
                 "right_hand_pinky_PIP_joint",
                 "right_hand_thumb_CMC_pitch_joint",
                 "right_hand_index_MCP_joint",
                 "right_hand_middle_MCP_joint",
+                "right_hand_ring_MCP_joint",
                 "right_hand_pinky_MCP_joint",
             ],
             lower=None,
             upper=None,
-            stiffness=1e3,
-            damping=1e2,
-            force_limit=100,
+            stiffness=2e4,
+            damping=3e2,
+            force_limit=20,
             mimic={
                 "right_hand_thumb_MCP_joint": {
                     "joint": "right_hand_thumb_CMC_pitch_joint",
-                    "multiplier": 1.0,
-                    "offset": 0.0,
+                    "multiplier": 1.3333333333333335,
+                    "offset": -0.08144869842640205,
                 },
                 "right_hand_thumb_IP_joint": {
                     "joint": "right_hand_thumb_CMC_pitch_joint",
-                    "multiplier": 1.0,
-                    "offset": 0.0,
+                    "multiplier": 0.6666666666666667,
+                    "offset": -0.040724349213201026,
                 },
                 "right_hand_index_PIP_joint": {
                     "joint": "right_hand_index_MCP_joint",
-                    "multiplier": 1.0,
-                    "offset": 0.0,
+                    "multiplier": 1.06399,
+                    "offset": -0.16734800000000002,
                 },
                 "right_hand_middle_PIP_joint": {
                     "joint": "right_hand_middle_MCP_joint",
-                    "multiplier": 1.0,
-                    "offset": 0.0,
+                    "multiplier": 1.06399,
+                    "offset": -0.16734800000000002,
+                },
+                "right_hand_ring_PIP_joint": {
+                    "joint": "right_hand_ring_MCP_joint",
+                    "multiplier": 1.06399,
+                    "offset": -0.16734800000000002,
                 },
                 "right_hand_pinky_PIP_joint": {
                     "joint": "right_hand_pinky_MCP_joint",
-                    "multiplier": 1.0,
-                    "offset": 0.0,
+                    "multiplier": 1.06399,
+                    "offset": -0.16734800000000002,
                 },
             },
+            normalize_action=False,
         )
-        return dict(pd_joint_pos=dict(hand=hand_joint_pos, mimic=mimic_joint_pos))
+
+        hand_joint_delta_pos = deepcopy(hand_joint_pos)
+        hand_joint_delta_pos.use_delta = True
+        hand_joint_delta_pos.normalize_action = True
+        hand_joint_delta_pos.lower = -0.1
+        hand_joint_delta_pos.upper = 0.1
+
+        fingers_joint_delta_pos = deepcopy(fingers_joint_pos)
+        fingers_joint_delta_pos.use_delta = True
+        fingers_joint_delta_pos.normalize_action = True
+        fingers_joint_delta_pos.lower = -0.1
+        fingers_joint_delta_pos.upper = 0.1
+
+        return dict(
+            pd_joint_pos=dict(
+                hand=hand_joint_pos,
+                fingers=fingers_joint_pos,
+            ),
+            pd_joint_delta_pos=dict(
+                hand=hand_joint_delta_pos,
+                fingers=fingers_joint_delta_pos,
+            ),
+        )
