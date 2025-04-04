@@ -16,6 +16,8 @@ class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
     _start_qpos = None
     _target_qpos = None
+    sets_target_qpos = True
+    sets_target_qvel = False
 
     def _get_joint_limits(self):
         qlimits = (
