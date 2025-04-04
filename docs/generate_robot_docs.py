@@ -8,8 +8,7 @@ metadata/robots.json file which adds details about the robot not really needed i
 
 GLOBAL_ROBOT_DOCS_HEADER = """<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
 """
-
-from importlib.metadata import requires
+import shutil
 from typing import List
 
 import numpy as np
@@ -52,6 +51,10 @@ def capture_images(env: EmptyEnv):
 def main():
     print("Classes exported in mani_skill.agents.robots:")
     base_dir = Path(__file__).parent / "source/robots"
+    # Remove all files in base_dir
+    if base_dir.exists():
+        shutil.rmtree(base_dir)
+    base_dir.mkdir(parents=True, exist_ok=True)
 
 
     agent_classes: List[BaseAgent] = []
