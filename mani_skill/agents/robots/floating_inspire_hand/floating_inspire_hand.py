@@ -7,20 +7,55 @@ from mani_skill.agents.registration import register_agent
 
 
 @register_agent()
-class FloatingInspireHand(BaseAgent):
-    uid = "floating_inspire_hand"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/inspire_hand/urdf/end_effector/inspire_hand/inspire_hand_right.urdf"
-    # urdf_config = dict(
-    #     _materials=dict(
-    #         gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
-    #     ),
-    #     link=dict(
-    #         right_link11=dict(
-    #             material="gripper", patch_radius=0.05, min_patch_radius=0.04
-    #         ),
-    #     ),
-    # )
-    # disable_self_collisions = True
+class FloatingInspireHandRight(BaseAgent):
+    uid = "floating_inspire_hand_right"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/inspire_hand/urdf/end_effector/inspire_hand/inspire_hand_right_floating.urdf"
+    urdf_config = dict(
+        _materials=dict(
+            finger=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
+        ),
+        link=dict(
+            right_hand_hand_base_link=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_thumb_distal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_thumb_metacarpal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_thumb_proximal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_index_proximal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_index_middle=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_middle_proximal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_middle_middle=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_ring_proximal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_ring_middle=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_pinky_proximal=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+            right_hand_pinky_middle=dict(
+                material="finger", patch_radius=0.1, min_patch_radius=0.1
+            ),
+        ),
+    )
+    disable_self_collisions = True
+    # you could model all of the fingers and disable certain impossible self collisions that occur
+    # but it is simpler and faster to just disable all self collisions. It is highly unlikely the hand self-collides to begin with.
 
     root_joint_names = [
         "root_x_axis_joint",
@@ -33,6 +68,15 @@ class FloatingInspireHand(BaseAgent):
 
     @property
     def _controller_configs(self):
+        float_pd_joint_pos = PDJointPosControllerConfig(
+            joint_names=self.root_joint_names,
+            lower=None,
+            upper=None,
+            stiffness=1e3,
+            damping=1e2,
+            force_limit=100,
+            normalize_action=False,
+        )
         hand_joint_pos = PDJointPosControllerConfig(
             joint_names=[
                 "right_hand_wrist_pitch_joint",
@@ -112,12 +156,20 @@ class FloatingInspireHand(BaseAgent):
         fingers_joint_delta_pos.lower = -0.1
         fingers_joint_delta_pos.upper = 0.1
 
+        float_pd_joint_delta_pos = deepcopy(float_pd_joint_pos)
+        float_pd_joint_delta_pos.use_delta = True
+        float_pd_joint_delta_pos.normalize_action = True
+        float_pd_joint_delta_pos.lower = -0.1
+        float_pd_joint_delta_pos.upper = 0.1
+
         return dict(
             pd_joint_pos=dict(
+                root=float_pd_joint_pos,
                 hand=hand_joint_pos,
                 fingers=fingers_joint_pos,
             ),
             pd_joint_delta_pos=dict(
+                root=float_pd_joint_delta_pos,
                 hand=hand_joint_delta_pos,
                 fingers=fingers_joint_delta_pos,
             ),
