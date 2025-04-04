@@ -3,12 +3,13 @@ import numpy as np
 import torch
 import sapien
 
+from mani_skill.utils.structs import Link, Actor
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.envs.tasks.tabletop.pick_cube import PickCubeEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table import TableSceneBuilder
+from mani_skill.utils.scene_builder.table import TableSceneBuilder, TableOnlyBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
 from mani_skill.envs.distraction_set import DistractionSet
@@ -50,14 +51,18 @@ class PickCubeV2Env(PickCubeEnv):
         self.cube_half_size = 0.02
         self.goal_thresh = self.cube_half_size + 0.05
 
+        self._table_scenes: list[TableSceneBuilder] = []
+
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
+        print(" --> Created PickCubeV2Env")
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        print("Initializing episode, env_idx:", env_idx)
+        print(" --> Initializing episode, env_idx:", env_idx)
         with torch.device(self.device):
             b = len(env_idx) # number of environments. env_idx is [0, 1, 2, ..., n_envs-1]
-            self.table_scene.initialize(env_idx)
+            for ts in self._table_scenes:
+                ts.initialize(env_idx)
 
             # Random cube position
             xyz = torch.zeros((b, 3))
@@ -78,17 +83,39 @@ class PickCubeV2Env(PickCubeEnv):
 
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(
-            self, robot_init_qpos_noise=self.robot_init_qpos_noise
-        )
-        self.table_scene.build()
-        self.cube = actors.build_cube(
-            self.scene,
-            half_size=self.cube_half_size,
-            color=[1, 0, 0, 1],
-            name="cube",
-            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
-        )
+        """ Load the scene.
+        """
+        self._table_scenes = []
+        add_visual_from_file = not self._distraction_set.table_color_enabled()
+        for i in range(self.num_envs):
+            table_scene = TableSceneBuilder(self, robot_init_qpos_noise=self.robot_init_qpos_noise)
+            table_scene.build(remove_table_from_state_dict_registry=True, scene_idx=i, name_suffix=f"env-{i}", add_visual_from_file=add_visual_from_file)
+            self._table_scenes.append(table_scene)
+        self.table_scene = Actor.merge([ts.table for ts in self._table_scenes], name="table_scene")
+        self.add_to_state_dict_registry(self.table_scene)
+
+
+        # Create cube actors
+        cube_actors = []
+        for i in range(self.num_envs):
+            builder = self.scene.create_actor_builder()
+            builder.add_box_collision(half_size=[self.cube_half_size] * 3)
+            builder.add_box_visual(
+                half_size=[self.cube_half_size] * 3,
+                material=sapien.render.RenderMaterial(
+                    base_color=[1, 0, 0, 1],
+                ),
+            )
+            builder.set_scene_idxs([i])
+            builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
+            actor = builder.build_kinematic(name=f"cube_{i}")
+            self.remove_from_state_dict_registry(actor)
+            cube_actors.append(actor)
+        self.cube = Actor.merge(cube_actors, name="cube")
+        self.add_to_state_dict_registry(self.cube)
+
+
+        # Create goal site
         self.goal_site = actors.build_sphere(
             self.scene,
             radius=self.goal_thresh,
@@ -99,7 +126,7 @@ class PickCubeV2Env(PickCubeEnv):
             initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
-        self._distraction_set._load_scene_hook(self.scene)
+        self._distraction_set._load_scene_hook(self.scene, manipulation_object=self.cube, table=self.table_scene)
 
 
     @property
@@ -115,13 +142,8 @@ class PickCubeV2Env(PickCubeEnv):
 
             -> https://maniskill.readthedocs.io/en/latest/user_guide/concepts/sensors.html#shaders-and-textures
         """
-
         pose = sapien_utils.look_at([0.35, 0.45, 0.4], [0.0, 0.0, 0.15])
-        # pose = sapien_utils.look_at([0.3, 0.4, 0.4], [0.0, 0.0, 0.25])
-        # SHADER = "rt" # doesn't work with parallel rendering
         SHADER = "default"
-        # SHADER = "minimal" # negligible time difference between 'default' and 'minimal', so 
-        # print(f"Using shader '{SHADER}' for human render camera")
         return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
 
     @property
