@@ -2,6 +2,10 @@
 
 # anymal_c
 
+Robot UID: `anymal_c`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/anymal/anymal_c.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/anymal/anymal_c.py)
+
 ## Visuals and Collision Models
 
 <div>

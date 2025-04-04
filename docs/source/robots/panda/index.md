@@ -1,6 +1,10 @@
 <!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
 
-# panda
+# Franka Emika Panda
+
+Robot UID: `panda`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py)
 
 ## Visuals and Collision Models
 

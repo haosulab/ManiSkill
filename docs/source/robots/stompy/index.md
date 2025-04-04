@@ -2,6 +2,10 @@
 
 # stompy
 
+Robot UID: `stompy`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/stompy/stompy.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/stompy/stompy.py)
+
 ## Visuals and Collision Models
 
 <div>

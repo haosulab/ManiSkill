@@ -1,6 +1,10 @@
 <!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
 
-# fetch
+# Fetch Mobile Manipulator
+
+Robot UID: `fetch`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/fetch/fetch.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/fetch/fetch.py)
 
 ## Visuals and Collision Models
 

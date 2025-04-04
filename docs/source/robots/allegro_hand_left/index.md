@@ -2,6 +2,10 @@
 
 # allegro_hand_left
 
+Robot UID: `allegro_hand_left`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro.py)
+
 ## Visuals and Collision Models
 
 <div>

@@ -2,6 +2,10 @@
 
 # unitree_g1_simplified_upper_body
 
+Robot UID: `unitree_g1_simplified_upper_body`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_g1/g1_upper_body.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_g1/g1_upper_body.py)
+
 ## Visuals and Collision Models
 
 <div>

@@ -8,6 +8,7 @@ metadata/robots.json file which adds details about the robot not really needed i
 
 GLOBAL_ROBOT_DOCS_HEADER = """<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
 """
+import json
 import shutil
 from typing import List
 
@@ -51,6 +52,7 @@ def capture_images(env: EmptyEnv):
 def main():
     print("Classes exported in mani_skill.agents.robots:")
     base_dir = Path(__file__).parent / "source/robots"
+    robot_metadata = json.load(open(Path(__file__).parent / "metadata/robot.json"))
     # Remove all files in base_dir
     if base_dir.exists():
         shutil.rmtree(base_dir)
@@ -205,9 +207,13 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
         )
 
         # generate robot specific documentation
-
+        metadata = robot_metadata.get(agent.uid, {})
         robot_page_markdown_str = GLOBAL_ROBOT_DOCS_HEADER + f"""
-# {agent.uid}
+# {metadata.get("name", agent.uid)}
+
+Robot UID: `{agent.uid}`
+
+Agent Class Code: [{agent_class_code_link}]({agent_class_code_link})
 
 ## Visuals and Collision Models
 

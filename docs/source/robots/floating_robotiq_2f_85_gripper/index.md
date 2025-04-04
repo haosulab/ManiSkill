@@ -2,6 +2,10 @@
 
 # floating_robotiq_2f_85_gripper
 
+Robot UID: `floating_robotiq_2f_85_gripper`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_robotiq_2f_85_gripper/floating_robotiq_2f_85_gripper.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_robotiq_2f_85_gripper/floating_robotiq_2f_85_gripper.py)
+
 ## Visuals and Collision Models
 
 <div>

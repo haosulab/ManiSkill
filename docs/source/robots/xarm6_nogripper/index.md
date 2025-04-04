@@ -2,6 +2,10 @@
 
 # xarm6_nogripper
 
+Robot UID: `xarm6_nogripper`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/xarm6/xarm6_nogripper.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/xarm6/xarm6_nogripper.py)
+
 ## Visuals and Collision Models
 
 <div>

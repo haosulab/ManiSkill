@@ -2,6 +2,10 @@
 
 # unitree_go2
 
+Robot UID: `unitree_go2`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_go/unitree_go2.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_go/unitree_go2.py)
+
 ## Visuals and Collision Models
 
 <div>

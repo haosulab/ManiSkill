@@ -2,6 +2,10 @@
 
 # floating_inspire_hand_right
 
+Robot UID: `floating_inspire_hand_right`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_inspire_hand/floating_inspire_hand.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_inspire_hand/floating_inspire_hand.py)
+
 ## Visuals and Collision Models
 
 <div>

@@ -2,6 +2,10 @@
 
 # humanoid
 
+Robot UID: `humanoid`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/humanoid/humanoid.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/humanoid/humanoid.py)
+
 ## Visuals and Collision Models
 
 <div>

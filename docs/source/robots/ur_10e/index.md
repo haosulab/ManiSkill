@@ -2,6 +2,10 @@
 
 # ur_10e
 
+Robot UID: `ur_10e`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/ur_e/ur_10e.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/ur_e/ur_10e.py)
+
 ## Visuals and Collision Models
 
 <div>

@@ -2,6 +2,10 @@
 
 # widowx250s
 
+Robot UID: `widowx250s`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/widowx/widowx.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/widowx/widowx.py)
+
 ## Visuals and Collision Models
 
 <div>

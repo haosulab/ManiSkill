@@ -1,6 +1,10 @@
 <!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
 
-# panda_stick
+# Franka Emika Panda Arm with Stick Tool
+
+Robot UID: `panda_stick`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda_stick.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda_stick.py)
 
 ## Visuals and Collision Models
 

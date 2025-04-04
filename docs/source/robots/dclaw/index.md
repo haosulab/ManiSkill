@@ -2,6 +2,10 @@
 
 # dclaw
 
+Robot UID: `dclaw`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/dclaw/dclaw.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/dclaw/dclaw.py)
+
 ## Visuals and Collision Models
 
 <div>

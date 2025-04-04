@@ -2,6 +2,10 @@
 
 # xarm6_robotiq
 
+Robot UID: `xarm6_robotiq`
+
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/xarm6/xarm6_robotiq.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/xarm6/xarm6_robotiq.py)
+
 ## Visuals and Collision Models
 
 <div>
