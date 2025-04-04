@@ -26,12 +26,12 @@ MP_SOLUTIONS = {
     "PullCube-v1": solvePullCube,
     "DrawSVG-v1" : solveDrawSVG,
     "LiftPegUpright-v2": solveLiftPegUpright,
-    "PickCube-v2": solvePickCube, # new
-    "StackCube-v2": solveStackCube, # new
-    "PlugCharger-v2": solvePlugCharger, # new
-    "PushCube-v2": solvePushCube, # new
-    "PullCube-v2": solvePullCube,         # new
-    "PullCubeTool-v2": solvePullCubeTool, # new
+    "PickCube-v2": solvePickCube,           # new
+    "StackCube-v2": solveStackCube,         # new
+    "PlugCharger-v2": solvePlugCharger,     # new
+    "PushCube-v2": solvePushCube,           # new
+    "PullCube-v2": solvePullCube,           # new
+    "PullCubeTool-v2": solvePullCubeTool,   # new
     "PullCube-v2": solvePullCube,         # new
     "PegInsertionSide-v2": solvePegInsertionSide, # new
 }
@@ -60,6 +60,10 @@ DISTRACTION_SETS = {
         table_texture_cfg = {
             "textures_directory": osp.join(osp.dirname(__file__), "../../../assets/textures"),
         },
+        camera_pose_cfg = {
+            "rpy_range": ((-0.035, -0.035, -0.035), (0.035, 0.035, 0.035)), # aproximately 2 degrees
+            "xyz_range": ((-0.01, -0.01, 0.01), (0.01, 0.01, 0.01)),        # 1cm
+        }
     )
 }
 
@@ -142,6 +146,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     failed_motion_plans = 0
     passed = 0
     while True:
+        env.reset(seed=seed, options={"reconfigure": True}) # reconfigure so distractor variations are resampled
         try:
             res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
         except Exception as e:
