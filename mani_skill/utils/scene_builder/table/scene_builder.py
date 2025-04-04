@@ -1,5 +1,6 @@
 import os.path as osp
 from pathlib import Path
+from typing import List, Optional
 
 import numpy as np
 import sapien
@@ -14,43 +15,50 @@ from mani_skill.utils.scene_builder import SceneBuilder
 
 
 class TableSceneBuilder(SceneBuilder):
-    """A simple scene builder that adds a table to the scene such that the height of the table is at 0, and
-    gives reasonable initial poses for robots."""
 
-    def build(self):
+    def build(self, remove_table_from_state_dict_registry: bool = False, scene_idx: Optional[int] = None, name_suffix: str = "", add_visual_from_file: bool = True):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
-        table_model_file = str(model_dir / "table.glb")
-        scale = 1.75
-
-        table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
         # builder.add_nonconvex_collision_from_file(
         #     filename=table_model_file,
         #     scale=[scale] * 3,
         #     pose=table_pose,
         # )
+        half_size = (2.418 / 2, 1.209 / 2, 0.9196429 / 2)
+        box_pose = sapien.Pose(p=[0, 0, 0.9196429 / 2])
         builder.add_box_collision(
-            pose=sapien.Pose(p=[0, 0, 0.9196429 / 2]),
-            half_size=(2.418 / 2, 1.209 / 2, 0.9196429 / 2),
+            pose=box_pose,
+            half_size=half_size,
         )
-        builder.add_visual_from_file(
-            filename=table_model_file, scale=[scale] * 3, pose=table_pose
-        )
+
+        if add_visual_from_file:
+            table_model_file = str(model_dir / "table.glb")
+            scale = 1.75
+            builder.add_visual_from_file(
+                filename=table_model_file, scale=[scale] * 3, pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
+            )
+        else:
+            builder.add_box_visual(
+                half_size=half_size,
+                pose=box_pose,
+                material=sapien.render.RenderMaterial(
+                    base_color=[1, 0, 0, 1],
+                ),
+            )
         builder.initial_pose = sapien.Pose(
             p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
         )
-        table = builder.build_kinematic(name="table-workspace")
-        # aabb = (
-        #     table._objs[0]
-        #     .find_component_by_type(sapien.render.RenderBodyComponent)
-        #     .compute_global_aabb_tight()
-        # )
-        # value of the call above is saved below
-        aabb = np.array(
-            [
-                [-0.7402168, -1.2148621, -0.91964257],
-                [0.4688596, 1.2030163, 3.5762787e-07],
-            ]
+        if scene_idx is not None:
+            builder.set_scene_idxs([scene_idx])
+
+        table = builder.build_kinematic(name=f"table-{name_suffix}")
+        if remove_table_from_state_dict_registry:
+            self.env.remove_from_state_dict_registry(table)
+
+        aabb = (
+            table._objs[0]
+            .find_component_by_type(sapien.render.RenderBodyComponent)
+            .compute_global_aabb_tight()
         )
         self.table_length = aabb[1, 0] - aabb[0, 0]
         self.table_width = aabb[1, 1] - aabb[0, 1]
@@ -59,7 +67,7 @@ class TableSceneBuilder(SceneBuilder):
         if self.scene.parallel_in_single_scene:
             floor_width = 500
         self.ground = build_ground(
-            self.scene, floor_width=floor_width, altitude=-self.table_height
+            self.scene, floor_width=floor_width, altitude=-self.table_height, name=f"ground-{name_suffix}"
         )
         self.table = table
         self.scene_objects: list[sapien.Entity] = [self.table, self.ground]
@@ -291,3 +299,41 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.robot.set_pose(
                 sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
             )
+
+
+# TODO (stao): make the build and initialize api consistent with other scenes
+class TableOnlyBuilder(SceneBuilder):
+    def build(self, scene_idx: int):
+        builder = self.scene.create_actor_builder()
+        model_dir = Path(osp.dirname(__file__)) / "assets"
+        table_model_file = str(model_dir / "table.glb")
+        scale = 1.75
+
+        table_pose = sapien.Pose(q=euler2quat(0, 0, np.pi / 2))
+        builder.add_box_collision(
+            pose=sapien.Pose(p=[0, 0, 0.9196429 / 2]),
+            half_size=(2.418 / 2, 1.209 / 2, 0.9196429 / 2),
+        )
+        builder.add_visual_from_file(
+            filename=table_model_file, scale=[scale] * 3, pose=table_pose
+        )
+        builder.initial_pose = sapien.Pose(
+            p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
+        )
+        table = builder.build_kinematic(name="table-workspace")
+        aabb = (
+            table._objs[0]
+            .find_component_by_type(sapien.render.RenderBodyComponent)
+            .compute_global_aabb_tight()
+        )
+        self.table_length = aabb[1, 0] - aabb[0, 0]
+        self.table_width = aabb[1, 1] - aabb[0, 1]
+        self.table_height = aabb[1, 2] - aabb[0, 2]
+        self.table = table
+        self.table.set_pose(
+            sapien.Pose(p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2))
+        )
+        self.scene_objects: List[sapien.Entity] = [self.table]
+
+    def initialize(self, env_idx: torch.Tensor):
+        pass
