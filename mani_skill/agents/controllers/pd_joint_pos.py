@@ -195,7 +195,10 @@ class PDJointPosMimicController(PDJointPosController):
 
     def _get_joint_limits(self):
         joint_limits = super()._get_joint_limits()
-        return joint_limits[self.control_joint_indices]
+        joint_limits = joint_limits[self.control_joint_indices]
+        if len(joint_limits.shape) == 1:
+            joint_limits = joint_limits[None, :]
+        return joint_limits
 
     def set_action(self, action: Array):
         action = self._preprocess_action(action)
