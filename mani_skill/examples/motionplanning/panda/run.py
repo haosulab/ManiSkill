@@ -51,6 +51,10 @@ DISTRACTION_SETS = {
         table_texture_cfg = {
             "textures_directory": osp.join(osp.dirname(__file__), "../../../assets/textures"),
         },
+        camera_pose_cfg = {
+            "rpy_range": ((-0.035, -0.035, -0.035), (0.035, 0.035, 0.035)), # aproximately 2 degrees
+            "xyz_range": ((-0.01, -0.01, 0.01), (0.01, 0.01, 0.01)),        # 1cm
+        }
     )
 }
 
@@ -133,6 +137,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     failed_motion_plans = 0
     passed = 0
     while True:
+        env.reset(seed=seed, options={"reconfigure": True}) # reconfigure so distractor variations are resampled
         try:
             res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
         except Exception as e:

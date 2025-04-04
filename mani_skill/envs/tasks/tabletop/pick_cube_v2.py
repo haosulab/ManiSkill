@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Union
 
 import torch
 import sapien
@@ -45,7 +46,10 @@ class PickCubeV2Env(PickCubeEnv):
         assert "distraction_set" in kwargs, "distraction_set must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
-        self._distraction_set: DistractionSet = kwargs.pop("distraction_set")
+        self._distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
+        # In this situation, the DistractionSet has serialized as a dict so we now need to deserialize it.
+        if isinstance(self._distraction_set, dict):
+            self._distraction_set = DistractionSet(**self._distraction_set)
 
         # Env configuration
         self.cube_half_size = 0.02
@@ -79,7 +83,7 @@ class PickCubeV2Env(PickCubeEnv):
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
             # Initialize distraction set
-            self._distraction_set._initialize_episode_hook(b, xyz)
+            self._distraction_set.initialize_episode_hook(b, xyz)
 
 
     def _load_scene(self, options: dict):
@@ -108,7 +112,7 @@ class PickCubeV2Env(PickCubeEnv):
             )
             builder.set_scene_idxs([i])
             builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
-            actor = builder.build_kinematic(name=f"cube_{i}")
+            actor = builder.build_dynamic(name=f"cube_{i}")
             self.remove_from_state_dict_registry(actor)
             cube_actors.append(actor)
         self.cube = Actor.merge(cube_actors, name="cube")
@@ -126,7 +130,7 @@ class PickCubeV2Env(PickCubeEnv):
             initial_pose=sapien.Pose(),
         )
         self._hidden_objects.append(self.goal_site)
-        self._distraction_set._load_scene_hook(self.scene, manipulation_object=self.cube, table=self.table_scene)
+        self._distraction_set.load_scene_hook(self.scene, manipulation_object=self.cube, table=self.table_scene)
 
 
     @property
@@ -152,7 +156,7 @@ class PickCubeV2Env(PickCubeEnv):
         pose_left = sapien_utils.look_at(eye=[0.0, -0.3, 0.6], target=[-0.1, 0, 0.1])
         pose_right = sapien_utils.look_at(eye=[0.0, 0.3, 0.6], target=[-0.1, 0, 0.1])
         SHADER = "default"
-        return [
+        cfgs = [
             CameraConfig(
                 uid="camera_center",
                 pose=pose_center,
@@ -184,3 +188,5 @@ class PickCubeV2Env(PickCubeEnv):
                 shader_pack=SHADER,
             ),
         ]
+        cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
+        return cfgs_adjusted
