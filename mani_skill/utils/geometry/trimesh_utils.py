@@ -54,14 +54,32 @@ def get_render_body_meshes(visual_body: sapien.render.RenderBodyComponent):
 
 def get_render_shape_meshes(render_shape: sapien.render.RenderShape):
     meshes = []
-    if type(render_shape) == sapien.render.RenderShapeTriangleMesh:
+    if type(render_shape) == sapien.render.RenderShapeBox:
+        mesh = trimesh.creation.box(extents=2 * render_shape.half_size)
+        meshes.append(mesh)
+    elif type(render_shape) == sapien.render.RenderShapeCapsule:
+        mesh = trimesh.creation.capsule(
+            height=2 * render_shape.half_length, radius=render_shape.radius
+        )
+        meshes.append(mesh)
+    elif type(render_shape) == sapien.render.RenderShapeCylinder:
+        mesh = trimesh.creation.cylinder(
+            radius=render_shape.radius, height=2 * render_shape.half_length
+        )
+        meshes.append(mesh)
+    elif type(render_shape) == sapien.render.RenderShapeSphere:
+        mesh = trimesh.creation.icosphere(radius=render_shape.radius)
+        meshes.append(mesh)
+    elif type(render_shape) == sapien.render.RenderShapePlane:
+        pass
+    elif type(render_shape) == sapien.render.RenderShapeTriangleMesh:
         for part in render_shape.parts:
             vertices = part.vertices * render_shape.scale  # [n, 3]
             faces = part.triangles
-            # faces = render_shape.mesh.indices.reshape(-1, 3)  # [m * 3]
             mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-            mesh.apply_transform(render_shape.local_pose.to_transformation_matrix())
             meshes.append(mesh)
+    for mesh in meshes:
+        mesh.apply_transform(render_shape.local_pose.to_transformation_matrix())
     return meshes
 
 
