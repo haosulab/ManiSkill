@@ -133,13 +133,13 @@ class PDJointPosMimicController(PDJointPosController):
 
         self.mimic_joint_indices = []
         self.mimic_control_joint_indices = []
-        if len(self.config.mimic_targets) == 0:
+        if len(self.config.mimic) == 0:
             if len(self.config.joint_names) == 2:
                 logger.warning(
                     f"Mimic targets dictionary is missing for controller config for {self.articulation.name}. Assuming the first joint is the control joint and the second joint is the mimic joint"
                 )
-                self.config.mimic_targets = {
-                    self.config.joint_names[0]: self.config.joint_names[1]
+                self.config.mimic = {
+                    self.config.joint_names[0]: {"joint": self.config.joint_names[1]}
                 }
             else:
                 raise ValueError(
@@ -147,13 +147,14 @@ class PDJointPosMimicController(PDJointPosController):
                 )
 
         self._multiplier = torch.ones(
-            len(self.config.mimic_targets), device=self.device
+            len(self.config.mimic), device=self.device
         )  # this is parallel to self.mimic_joint_indices
-        self._offset = torch.zeros(len(self.config.mimic_targets), device=self.device)
+        self._offset = torch.zeros(len(self.config.mimic), device=self.device)
 
-        for i, (mimic_joint_name, control_joint_name) in enumerate(
-            self.config.mimic_targets.items()
-        ):
+        for i, (mimic_joint_name, mimic_data) in enumerate(self.config.mimic.items()):
+            control_joint_name = mimic_data["joint"]
+            multiplier = mimic_data.get("multiplier", 1.0)
+            offset = mimic_data.get("offset", 0.0)
             assert (
                 self.articulation.joints_map[mimic_joint_name].active_index is not None
             ), f"Mimic joint {mimic_joint_name} is not active, cannot be used as a mimic joint in a mimic controller"
@@ -177,10 +178,8 @@ class PDJointPosMimicController(PDJointPosController):
                 )
             )
 
-            if isinstance(self.config.multiplier, dict):
-                self._multiplier[i] = self.config.multiplier[mimic_joint_name]
-            if isinstance(self.config.offset, dict):
-                self._offset[i] = self.config.offset[mimic_joint_name]
+            self._multiplier[i] = multiplier
+            self._offset[i] = offset
 
         self.mimic_joint_indices = torch.tensor(
             self.mimic_joint_indices, dtype=torch.int32, device=self.device
@@ -193,11 +192,6 @@ class PDJointPosMimicController(PDJointPosController):
             torch.int32
         )
         """list of all directly controlled joint indices"""
-
-        if isinstance(self.config.multiplier, float):
-            self._multiplier[:] = self.config.multiplier
-        if isinstance(self.config.offset, float):
-            self._offset[:] = self.config.offset
 
     def _get_joint_limits(self):
         joint_limits = super()._get_joint_limits()
@@ -235,22 +229,15 @@ class PDJointPosMimicControllerConfig(PDJointPosControllerConfig):
 
     The `joint_names` field is expected to be a list of all the joints, whether they are the joints to be controlled or the joints that are controlled via mimicing.
 
-    `mimic_targets` is a dictionary that maps the mimic joint name to the controlling joint name and is required. All given joints in
-    `joint_names` must be in the `mimic_targets` dictionary as either a key or a value. The ones that are keys are referred to as the control joints and the ones that are values
-    are referred to as the mimic joints. Control joints are the ones directly controlled by the agent/user and mimic joints are implicitly controlled by following the control joints via the following equation:
+    `mimic` is a dictionary that maps the mimic joint name to a dictionary of the format dict(joint: str, multiplier: float, offset: float). `joint` is the controlling joint name and is required. All given joints in
+    `joint_names` must be in the `mimic` dictionary as either a key or a value. The ones that are keys are referred to as the mimic joints and the ones that are values
+    are referred to as the control joints. Mimic joints are the ones directly controlled by the agent/user and control joints are implicitly controlled by following the mimic joints via the following equation:
 
     q_mimic = q_controlling * multiplier + offset
 
-
-    To set multiplier you can either provide a single float to set a global multiplier or a dictionary to set a per-mimic-joint multiplier, which maps the mimic joint name to its multiplier.
-
-    To set offset you can either provide a single float to set a global offset or a dictionary to set a per-mimic-joint offset, which maps the mimic joint name to its offset.
+    By default, the multiplier is 1.0 and the offset is 0.0.
     """
 
     controller_cls = PDJointPosMimicController
-    mimic_targets: Dict[str, str] = field(default_factory=dict)
-    """the mimic targets. Maps the actual mimic joint name to the controlling joint name"""
-    multiplier: Union[float, Dict[str, float]] = 1.0
-    """the multiplier for the mimic control. Defaults to 1.0. Can also be a dictionary to define per-mimic-joint multipliers"""
-    offset: Union[float, Dict[str, float]] = 0.0
-    """the offset for the mimic control. Defaults to 0.0. Can also be a dictionary to define per-mimic-joint offsets"""
+    mimic: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    """the mimic targets. Maps the actual mimic joint name to a dictionary of the format dict(joint: str, multiplier: float, offset: float)"""

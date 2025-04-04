@@ -194,7 +194,7 @@ class Xarm7InspireRightHand(BaseAgent):
                 right_joint52=-0.43612072892938497,
                 right_joint53=-0.4544236902050113,
             ),
-            mimic_targets={
+            mimic={
                 "right_joint11": "right_joint1",
                 "right_joint22": "right_joint2",
                 "right_joint33": "right_joint3",
