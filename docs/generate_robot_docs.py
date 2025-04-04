@@ -1,5 +1,12 @@
 """
 Code to automatically generate robot documentation from the robot classes exported in the mani_skill.agents.robots module.
+
+In the docs/ folder run generate_robot_docs.py to update the robot documentation. If a new robot is added make sure to add a entry to the
+metadata/robots.json file which adds details about the robot not really needed in the code like the modelling quality.
+"""
+
+
+GLOBAL_ROBOT_DOCS_HEADER = """<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
 """
 
 from importlib.metadata import requires
@@ -56,7 +63,7 @@ def main():
             if obj.__module__.startswith('mani_skill.agents.robots'):
                 print(f"- {name}")
                 agent_classes.append(obj)
-    robots_table_markdown_str = """
+    robot_index_markdown_str = GLOBAL_ROBOT_DOCS_HEADER + """
 # Robots
 ```{figure} images/robot-grid.png
 ```
@@ -64,21 +71,23 @@ def main():
 This sections here show the already built/modelled robots ready for simulation across a number of different categories. Some of them are displayed above in an empty environment using a predefined keyframe. Note that not all of these robots are used in tasks in ManiSkill, and some are not tuned for maximum efficiency yet or for sim2real transfer. You can generally assume robots that are used in existing tasks in ManiSkill are of the highest quality and already tuned.
 
 To learn about how to load your own custom robots see [the tutorial](../user_guide/tutorials/custom_robots.md).
+
+## Robots Table
+Table of all robots modelled in ManiSkill. Click the robot's picture to see more details on the robot, including more views, collision models, controllers implemented and more.
+
+A quality rating is also given for each robot which rates the robot on how well modelled it is. It follows the same scale as [Mujoco Menagerie](https://github.com/google-deepmind/mujoco_menagerie?tab=readme-ov-file#model-quality-and-contributing)
+
+| Grade | Description                                                 |
+|-------|-------------------------------------------------------------|
+| A+    | Values are the product of proper system identification      |
+| A     | Values are realistic, but have not been properly identified |
+| B     | Stable, but some values are unrealistic                     |
+| C     | Conditionally stable, can be significantly improved         |
+
+Robots that are cannot be stably simulated are not included in ManiSkill at all.
+
+<div class="gallery" style="display: flex; flex-wrap: wrap; gap: 10px;">
 """
-    robots_table_markdown_str += "\n## Robots Table\n"
-    robots_table_markdown_str += "Table of all robots modelled in ManiSkill"
-    robots_table_markdown_str += '\n<table class="table">'
-    robots_table_markdown_str += "\n<thead>"
-    robots_table_markdown_str += '\n<tr class="row-odd">'
-    robots_table_markdown_str += '\n<th class="head"><p>Robot UID</p></th>'
-    robots_table_markdown_str += '\n<th class="head"><p>Preview</p></th>'
-    robots_table_markdown_str += '\n<th class="head"><p>Requires Download</p></th>'
-    robots_table_markdown_str += '\n<th class="head"><p>Quality</p></th>'
-    robots_table_markdown_str += "\n</tr>"
-    robots_table_markdown_str += "\n</thead>"
-    robots_table_markdown_str += "\n<tbody>"
-
-
     for row_idx, agent in enumerate(agent_classes):
         ### generate images of the robot ###
         # try:
@@ -180,27 +189,57 @@ To learn about how to load your own custom robots see [the tutorial](../user_gui
         if requires_downloading_assets:
             # note (stao): asset download location might move away from github to another place in the future
             pass
+        quality = "C"
+        robot_index_markdown_str += (f"""
+<div class="gallery-item">
+    <img src="/_static/robot_images/{agent.uid}/thumbnail.png" style='min-width:min(50%, 100px);max-width:256px;height:auto' alt="{agent.uid}">
+    <div class="gallery-item-caption">
+        <p style="margin-bottom: 0px; word-wrap: break-word; max-width: 256px;">{agent.uid}</p>
+        <p style="margin-top: 0px;">Quality: {quality}</p>
+    </div>
+</div>
+"""
+        )
 
+        # generate robot specific documentation
 
-        robots_table_markdown_str += (
-            f"\n<tr class=\"row-{'even' if row_idx % 2 == 1 else 'odd'}\">"
-        )
-        robots_table_markdown_str += (
-            f'\n<td><p><a href="#{agent.uid.lower()}">{agent.uid}</a></p></td>'
-        )
-        thumbnail_path = f"/_static/robot_images/{agent.uid}/thumbnail.png"
-        thumbnail = f"<img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='{thumbnail_path}' alt='{agent.uid}'>"
-        robots_table_markdown_str += (
-            f"\n<td><div style='display:flex;gap:4px;align-items:center'>{thumbnail}</div></td>"
-        )
-        demos = "✅" if requires_downloading_assets else "❌"
-        robots_table_markdown_str += (f"\n<td><p>{demos}</p></td>")
-        robots_table_markdown_str += (f"\n<td><p>C</p></td>")
-        robots_table_markdown_str += (f"\n</tr>")
-    robots_table_markdown_str += "\n</tbody>\n</table>"
+        robot_page_markdown_str = GLOBAL_ROBOT_DOCS_HEADER + f"""
+# {agent.uid}
+
+## Visuals and Collision Models
+
+<div>
+    <div style="max-width: 100%; display: flex; justify-content: center;">
+        <img src="/_static/robot_images/{agent.uid}/front_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+        <img src="/_static/robot_images/{agent.uid}/side_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+    </div>
+    <p style="text-align: center; font-size: 1.2rem;">Visual Meshes</p>
+    <br/>
+    <div style="max-width: 100%; display: flex; justify-content: center;">
+        <img src="/_static/robot_images/{agent.uid}/front_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+        <img src="/_static/robot_images/{agent.uid}/side_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+    </div>
+    <p style="text-align: center; font-size: 1.2rem;">Collision Meshes (Green = Convex Mesh, Blue = Primitive Shape Mesh)</p>
+</div>
+"""
+        Path(f"{base_dir}/{agent.uid}").mkdir(parents=True, exist_ok=True)
+        with open(
+            f"{base_dir}/{agent.uid}/index.md", "w"
+        ) as f:
+            f.write(robot_page_markdown_str)
+    robot_index_markdown_str += """\n</div>
+
+```{toctree}
+:caption: Directory
+"""
+    for agent in agent_classes:
+        robot_index_markdown_str += f"{agent.uid}/index\n"
+    robot_index_markdown_str += """
+```"""
+
     with open(
         f"{base_dir}/index.md", "w"
     ) as f:
-        f.write(robots_table_markdown_str)
+        f.write(robot_index_markdown_str)
 if __name__ == "__main__":
     main()

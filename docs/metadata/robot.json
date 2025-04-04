@@ -1,0 +1,18 @@
+{
+  "panda": {
+    "quality": "A",
+    "name": "Franka Emika Panda"
+  },
+  "panda_stick": {
+    "quality": "A",
+    "name": "Franka Emika Panda Arm with Stick Tool"
+  },
+  "panda_wristcam": {
+    "quality": "A",
+    "name": "Franka Emika Panda with Wrist Camera"
+  },
+  "fetch": {
+    "quality": "B",
+    "name": "Fetch Mobile Manipulator"
+  }
+}

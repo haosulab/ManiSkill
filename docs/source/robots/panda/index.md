@@ -1,0 +1,19 @@
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+
+# panda
+
+## Visuals and Collision Models
+
+<div>
+    <div style="max-width: 100%; display: flex; justify-content: center;">
+        <img src="/_static/robot_images/panda/front_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+        <img src="/_static/robot_images/panda/side_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+    </div>
+    <p style="text-align: center; font-size: 1.2rem;">Visual Meshes</p>
+    <br/>
+    <div style="max-width: 100%; display: flex; justify-content: center;">
+        <img src="/_static/robot_images/panda/front_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+        <img src="/_static/robot_images/panda/side_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+    </div>
+    <p style="text-align: center; font-size: 1.2rem;">Collision Meshes (Green = Convex Mesh, Blue = Primitive Shape Mesh)</p>
+</div>
