@@ -1,7 +1,11 @@
 from copy import deepcopy
 
+import numpy as np
+import sapien
+from transforms3d.euler import euler2quat
+
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 
@@ -65,6 +69,13 @@ class FloatingInspireHandRight(BaseAgent):
         "root_y_rot_joint",
         "root_z_rot_joint",
     ]
+
+    keyframes = dict(
+        palm_side=Keyframe(
+            qpos=np.zeros(20),
+            pose=sapien.Pose(p=[0, 0, 0.4], q=euler2quat(0, 0, -np.pi / 2)),
+        )
+    )
 
     @property
     def _controller_configs(self):

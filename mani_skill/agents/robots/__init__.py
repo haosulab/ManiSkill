@@ -17,4 +17,3 @@ from .ur_e import UR10e
 from .widowx import *
 from .xarm import XArm7Ability
 from .xarm6 import *
-from .xmate3 import Xmate3Robotiq

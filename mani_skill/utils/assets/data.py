@@ -138,12 +138,6 @@ def initialize_data_sources():
     )
 
     # Robots
-    DATA_SOURCES["xmate3_robotiq"] = DataSource(
-        source_type="robot",
-        url="https://storage1.ucsd.edu/datasets/ManiSkill2022-assets/xmate3_robotiq.zip",
-        target_path="robots/xmate3_robotiq",
-        checksum="ddda102a20eb41e28a0a501702e240e5d7f4084221a44f580e729f08b7c12d1a",
-    )
     DATA_SOURCES["ur10e"] = DataSource(
         source_type="robot",
         url="https://github.com/haosulab/ManiSkill-UR10e/archive/refs/tags/v0.1.0.zip",
