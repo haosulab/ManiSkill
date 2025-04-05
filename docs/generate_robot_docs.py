@@ -197,7 +197,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
         agent_name = metadata.get("name", agent.uid)
         robot_index_markdown_str += (f"""
 <div class="gallery-item">
-    <a href="/robots/{agent.uid}">
+    <a href="{agent.uid}">
         <img src="../_static/robot_images/{agent.uid}/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="{agent_name}">
     </a>
     <div class="gallery-item-caption">
@@ -231,14 +231,14 @@ Controllers: {", ".join([f"`{c}`" for c in controllers])}
 
 <div>
     <div style="max-width: 100%; display: flex; justify-content: center;">
-        <img src="../_static/robot_images/{agent.uid}/front_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
-        <img src="../_static/robot_images/{agent.uid}/side_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+        <img src="../../_static/robot_images/{agent.uid}/front_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+        <img src="../../_static/robot_images/{agent.uid}/side_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
     </div>
     <p style="text-align: center; font-size: 1.2rem;">Visual Meshes</p>
     <br/>
     <div style="max-width: 100%; display: flex; justify-content: center;">
-        <img src="../_static/robot_images/{agent.uid}/front_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
-        <img src="../_static/robot_images/{agent.uid}/side_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+        <img src="../../_static/robot_images/{agent.uid}/front_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
+        <img src="../../_static/robot_images/{agent.uid}/side_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="{agent.uid}">
     </div>
     <p style="text-align: center; font-size: 1.2rem;">Collision Meshes (Green = Convex Mesh, Blue = Primitive Shape Mesh)</p>
 </div>
