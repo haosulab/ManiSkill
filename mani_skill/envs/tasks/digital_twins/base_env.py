@@ -1,16 +1,15 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import cv2
-import gymnasium as gym
-import numpy as np
-import sapien.physx as physx
 import torch
 
-from mani_skill import ASSET_DIR
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.types import SimConfig
 
 
@@ -20,33 +19,45 @@ class BaseDigitalTwinEnv(BaseEnv):
     This is based on the [SIMPLER](https://simpler-env.github.io/) and currently has the following tricks for
     making accurate simulated environments of real world datasets
 
-    Greenscreening: Add a greenscreened real image to the background to make the images more realistic and more closer to the distribution
-    of real world data.
+    Greenscreening: Add a greenscreened real image to the background to make the images more realistic and closer to the distribution
+    of real world data. To use the functionality in your own custom task you can do the following:
 
-    Note that this is not a general purpose system for building digital twins you can train and then transfer
-    to the real world. This is designed to support fast evaluation in simulation of real world policies.
+    .. code-block:: python
+
+        class MyTask(BaseDigitalTwinEnv):
+            def __init__(self, **kwargs):
+                self.rgb_overlay_paths = {"camera_name": "path/to/greenscreen/image.png"}
+                super().__init__(**kwargs)
+            def _load_scene(self, options: dict):
+                # load your objects as usual e.g. a cube at self.cube
+
+                # exclude the robot and cube from the greenscreen process
+                self.remove_object_from_greenscreen(self.robot)
+                self.remove_object_from_greenscreen(self.cube)
+
+
+    Use `self.remove_object_from_greenscreen(object: Actor | Link | Articulation)` to exclude those objects from the greenscreen process.
     """
 
     rgb_overlay_paths: Dict[str, str] = None
     """dict mapping camera name to the file path of the greenscreening image"""
     _rgb_overlay_images: Dict[str, torch.Tensor] = dict()
-    rgb_always_overlay_objects: List[str] = []
-    """List of names of actors/links that should be covered by the greenscreen"""
-    rgb_overlay_mode: str = (
-        "background"  # 'background' or 'object' or 'debug' or combinations of them
-    )
-    """which RGB overlay mode to use during the greenscreen process"""
+    """dict mapping camera name to the image torch tensor"""
+    rgb_overlay_mode: str = "background"
+    """which RGB overlay mode to use during the greenscreen process. The default is 'background' which enables greenscreening like normal. The other option is 'debug' mode which
+    will make the opacity of the original render and greenscreen overlay both 50%. The third option is "none" which will not perform any greenscreening."""
+
+    _objects_to_remove_from_greenscreen: List[Union[Actor, Link]] = []
+    """list of articulations/actors/links that should be removed from the greenscreen process"""
+    _segmentation_ids_to_keep: torch.Tensor = None
+    """torch tensor of segmentation ids that reference the objects that should not be greenscreened"""
 
     def __init__(self, **kwargs):
         # Load the "greenscreen" image, which is used to overlay the background portions of simulation observation
         if self.rgb_overlay_paths is not None:
             for camera_name, path in self.rgb_overlay_paths.items():
                 if not os.path.exists(path):
-                    raise FileNotFoundError(
-                        f"rgb_overlay_path {path} is not found."
-                        "If you installed this repo through 'pip install .' , "
-                        "you can download this directory https://github.com/simpler-env/ManiSkill2_real2sim/tree/main/data to get the real-world image overlay assets. "
-                    )
+                    raise FileNotFoundError(f"rgb_overlay_path {path} is not found.")
                 self._rgb_overlay_images[camera_name] = cv2.cvtColor(
                     cv2.imread(path), cv2.COLOR_BGR2RGB
                 )  # (H, W, 3); float32
@@ -69,28 +80,29 @@ class BaseDigitalTwinEnv(BaseEnv):
     def _load_scene(self, options: dict):
         """
         Load assets for a digital twin scene in
-
         """
 
-    def _after_reconfigure(self, options: dict):
-        target_object_actor_ids = [
-            x._objs[0].per_scene_id
-            for x in self.scene.actors.values()
-            if x.name
-            not in ["ground", "goal_site", "", "arena"]
-            + self.rgb_always_overlay_objects
-        ]
-        self.target_object_actor_ids = torch.tensor(
-            target_object_actor_ids, dtype=torch.int16, device=self.device
-        )
-        # get the robot link ids
-        robot_links = self.agent.robot.get_links()
-        self.robot_link_ids = torch.tensor(
-            [x._objs[0].entity.per_scene_id for x in robot_links],
-            dtype=torch.int16,
-            device=self.device,
-        )
+    def remove_object_from_greenscreen(self, object: Union[Articulation, Actor, Link]):
+        """remove an actor/articulation/link from the greenscreen process"""
+        if isinstance(object, Articulation):
+            for link in object.get_links():
+                self._objects_to_remove_from_greenscreen.append(link)
+        elif isinstance(object, Actor):
+            self._objects_to_remove_from_greenscreen.append(object)
+        elif isinstance(object, Link):
+            self._objects_to_remove_from_greenscreen.append(object)
 
+    def _after_reconfigure(self, options: dict):
+        super()._after_reconfigure(options)
+        # after reconfiguration in CPU/GPU sim we have initialized all ids of objects in the scene.
+        # and can now get the list of segmentation ids to keep
+        per_scene_ids = []
+        for object in self._objects_to_remove_from_greenscreen:
+            per_scene_ids.append(object.per_scene_id)
+        self._segmentation_ids_to_keep = torch.unique(torch.concatenate(per_scene_ids))
+        self._objects_to_remove_from_greenscreen = []
+
+        # load the overlay images
         for camera_name in self.rgb_overlay_paths.keys():
             sensor = self._sensor_configs[camera_name]
             if isinstance(sensor, CameraConfig):
@@ -106,47 +118,35 @@ class BaseDigitalTwinEnv(BaseEnv):
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
         actor_seg = segmentation[..., 0]
-        mask = torch.ones_like(actor_seg, device=actor_seg.device)
-        if actor_seg.device != self.robot_link_ids.device:
-            # if using CPU simulation, the device of the robot_link_ids and target_object_actor_ids will be CPU first
-            # but for most users who use the sapien_cuda render backend image data will be on the GPU.
-            self.robot_link_ids = self.robot_link_ids.to(actor_seg.device)
-            self.target_object_actor_ids = self.target_object_actor_ids.to(
+        mask = torch.ones_like(actor_seg, device=actor_seg.device, dtype=torch.bool)
+        if self._segmentation_ids_to_keep.device != actor_seg.device:
+            self._segmentation_ids_to_keep = self._segmentation_ids_to_keep.to(
                 actor_seg.device
             )
-        if ("background" in self.rgb_overlay_mode) or (
-            "debug" in self.rgb_overlay_mode
-        ):
-            if ("object" not in self.rgb_overlay_mode) or (
-                "debug" in self.rgb_overlay_mode
-            ):
-                # only overlay the background and keep the foregrounds (robot and target objects) rendered in simulation
-                mask[
-                    torch.isin(
-                        actor_seg,
-                        torch.concatenate(
-                            [self.robot_link_ids, self.target_object_actor_ids]
-                        ),
-                    )
-                ] = 0
-            else:
-                # overlay everything except the robot links
-                mask[np.isin(actor_seg, self.robot_link_ids)] = 0.0
-        else:
-            raise NotImplementedError(self.rgb_overlay_mode)
+        if self.rgb_overlay_mode == "background":
+            # only overlay the background and keep the foregrounds (robot and target objects) rendered in simulation
+            mask[
+                torch.isin(
+                    actor_seg,
+                    self._segmentation_ids_to_keep,
+                )
+            ] = 0
         mask = mask[..., None]
 
         # perform overlay on the RGB observation image
         if "debug" not in self.rgb_overlay_mode:
-            rgb = rgb * (1 - mask) + overlay_img * mask
+            rgb = rgb * (~mask) + overlay_img * mask
         else:
             rgb = rgb * 0.5 + overlay_img * 0.5
+            rgb = rgb.to(torch.uint8)
         return rgb
 
-    def get_obs(self, info: dict = None):
-        obs = super().get_obs(info)
+    def _get_obs_sensor_data(self, apply_texture_transforms: bool = True):
+        obs = super()._get_obs_sensor_data(apply_texture_transforms)
 
         # "greenscreen" process
+        if self.rgb_overlay_mode == "none":
+            return obs
         if (
             self.obs_mode_struct.visual.rgb
             and self.obs_mode_struct.visual.segmentation
@@ -156,20 +156,20 @@ class BaseDigitalTwinEnv(BaseEnv):
             for camera_name in self._rgb_overlay_images.keys():
                 # obtain overlay mask based on segmentation info
                 assert (
-                    "segmentation" in obs["sensor_data"][camera_name].keys()
+                    "segmentation" in obs[camera_name].keys()
                 ), "Image overlay requires segment info in the observation!"
                 if (
                     self._rgb_overlay_images[camera_name].device
-                    != obs["sensor_data"][camera_name]["rgb"].device
+                    != obs[camera_name]["rgb"].device
                 ):
                     self._rgb_overlay_images[camera_name] = self._rgb_overlay_images[
                         camera_name
-                    ].to(obs["sensor_data"][camera_name]["rgb"].device)
+                    ].to(obs[camera_name]["rgb"].device)
                 overlay_img = self._rgb_overlay_images[camera_name]
                 green_screened_rgb = self._green_sceen_rgb(
-                    obs["sensor_data"][camera_name]["rgb"],
-                    obs["sensor_data"][camera_name]["segmentation"],
+                    obs[camera_name]["rgb"],
+                    obs[camera_name]["segmentation"],
                     overlay_img,
                 )
-                obs["sensor_data"][camera_name]["rgb"] = green_screened_rgb
+                obs[camera_name]["rgb"] = green_screened_rgb
         return obs

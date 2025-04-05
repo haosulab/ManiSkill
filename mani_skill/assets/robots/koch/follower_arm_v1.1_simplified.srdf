@@ -1,0 +1,9 @@
+<robot name="koch-v1.1">
+  <disable_collisions link1="link_6" link2="link_4" reason="Default"/>
+  <disable_collisions link1="link_1" link2="link_3" reason="Default"/>
+  <disable_collisions link1="gripper" link2="link_3" reason="Default"/>
+  <disable_collisions link1="gripper" link2="link_4" reason="Default"/>
+  <disable_collisions link1="gripper" link2="link_5" reason="Default"/>
+  <disable_collisions link1="link_1" link2="link_2" reason="Default"/>
+  <disable_collisions link1="link_2" link2="link_3" reason="Default"/>
+</robot>
