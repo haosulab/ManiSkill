@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
-# xarm7_ability
+# XArm7 Ability
 
 Robot UID: `xarm7_ability`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/xarm/xarm7_ability.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/xarm/xarm7_ability.py)
+
+Quality: A (Values are realistic, but have not been properly identified)
 
 ## Visuals and Collision Models
 

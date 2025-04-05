@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
-# unitree_g1
+# Unitree G1
 
 Robot UID: `unitree_g1`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_g1/g1.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_g1/g1.py)
+
+Quality: B (Stable, but some values are unrealistic)
 
 ## Visuals and Collision Models
 

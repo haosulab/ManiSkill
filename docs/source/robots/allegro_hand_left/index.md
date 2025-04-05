@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
-# allegro_hand_left
+# Allegro Hand Left
 
 Robot UID: `allegro_hand_left`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/allegro_hand/allegro.py)
+
+Quality: B (Stable, but some values are unrealistic)
 
 ## Visuals and Collision Models
 

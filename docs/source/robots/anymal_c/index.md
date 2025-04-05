@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
-# anymal_c
+# Anymal C
 
 Robot UID: `anymal_c`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/anymal/anymal_c.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/anymal/anymal_c.py)
+
+Quality: B (Stable, but some values are unrealistic)
 
 ## Visuals and Collision Models
 

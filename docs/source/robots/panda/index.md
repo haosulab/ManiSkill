@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
 # Franka Emika Panda
 
 Robot UID: `panda`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/panda/panda.py)
+
+Quality: A (Values are realistic, but have not been properly identified)
 
 ## Visuals and Collision Models
 

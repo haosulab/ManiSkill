@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
-# unitree_h1_simplified
+# Unitree H1 Simplified Legs
 
 Robot UID: `unitree_h1_simplified`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/unitree_h1/h1.py)
+
+Quality: B (Stable, but some values are unrealistic)
 
 ## Visuals and Collision Models
 

@@ -1,10 +1,12 @@
-<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE -->
+<!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
-# floating_panda_gripper
+# Floating Panda Gripper
 
 Robot UID: `floating_panda_gripper`
 
 Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_panda_gripper/floating_panda_gripper.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_panda_gripper/floating_panda_gripper.py)
+
+Quality: B (Stable, but some values are unrealistic)
 
 ## Visuals and Collision Models
 
