@@ -1,8 +1,8 @@
 <!-- THIS IS ALL GENERATED DOCUMENTATION via generate_robot_docs.py. DO NOT MODIFY THIS FILE DIRECTLY. -->
 
 # Robots
-```{figure} images/robot-grid.png
-```
+<img src="/_static/robot_images/robot-grid.png" alt="Robot Grid" style="width: 100%; height: auto;">
+
 
 This sections here show the already built/modelled robots ready for simulation across a number of different categories. Some of them are displayed above in an empty environment using a predefined keyframe. Note that not all of these robots are used in tasks in ManiSkill, and some are not tuned for maximum efficiency yet or for sim2real transfer. You can generally assume robots that are used in existing tasks in ManiSkill are of the highest quality and already tuned.
 
@@ -20,7 +20,7 @@ A quality rating is also given for each robot which rates the robot on how well 
 | B     | Stable, but some values are unrealistic                     |
 | C     | Conditionally stable, can be significantly improved         |
 
-Robots that are cannot be stably simulated are not included in ManiSkill at all.
+Robots that are cannot be stably simulated are not included in ManiSkill at all. Most robots will have a grade of B (essentially does it look normal in simulation). While some robots may have grades of A/A+ we still strongly recommend you perform your own system ID as each robot might be a bit different.
 
 <div class="gallery" style="display: flex; flex-wrap: wrap; gap: 10px;">
 
@@ -308,7 +308,8 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 
 ```{toctree}
 :caption: Directory
-maxdepth: 1
+:maxdepth: 1
+
 anymal_c/index
 allegro_hand_left/index
 allegro_hand_right/index
