@@ -96,6 +96,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
         print(f"Generating docs for {agent.uid}")
         env = EmptyEnv(robot_uids=agent.uid, render_mode="rgb_array", human_render_camera_configs=dict(shader_pack="rt", width=1024, height=1024))
         env.reset()
+        print(env.agent.controller)
         robot_dof = env.agent.robot.dof.item()
         controllers = list(env.agent._controller_configs.keys())
 

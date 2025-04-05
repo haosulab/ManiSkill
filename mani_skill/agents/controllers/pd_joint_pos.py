@@ -193,6 +193,8 @@ class PDJointPosMimicController(PDJointPosController):
         )
         """list of all directly controlled joint indices"""
 
+        self.effective_dof = len(self.control_joint_indices)
+
     def _get_joint_limits(self):
         joint_limits = super()._get_joint_limits()
         joint_limits = joint_limits[self.control_joint_indices]
@@ -222,6 +224,15 @@ class PDJointPosMimicController(PDJointPosController):
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:
             self.set_drive_targets(self._target_qpos)
+
+    def __repr__(self):
+        data = {k: v["joint"] for k, v in self.config.mimic.items()}
+        main_str = "{\n"
+        for k, v in data.items():
+            main_str += f"    {k}: {v},\n"
+        main_str += "}"
+        data = main_str
+        return f"PDJointPosMimicController(dof={self.single_action_space.shape[0]}, active_joints={len(self.joints)}, mimic_to_control_joint_map={main_str})"
 
 
 @dataclass
