@@ -44,7 +44,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
 
     obb = get_actor_obb(env.peg)
     approaching = np.array([0, 0, -1])
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].numpy()
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
 
     peg_init_pose = env.peg.pose
 
@@ -53,7 +53,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     grasp_pose = env.agent.build_grasp_pose(approaching, closing, center)
-    offset = sapien.Pose([-max(0.05, env.peg_half_sizes[0, 0] / 2 + 0.01), 0, 0])
+    offset = sapien.Pose([-max(0.05, env.peg_half_sizes[0, 0].item() / 2 + 0.01), 0, 0])
     grasp_pose = grasp_pose * (offset)
 
     # -------------------------------------------------------------------------- #
@@ -75,7 +75,7 @@ def solve(env: PegInsertionSideEnv, seed=None, debug=False, vis=False):
 
     # align the peg with the hole
     insert_pose = env.goal_pose * peg_init_pose.inv() * grasp_pose
-    offset = sapien.Pose([-0.01 - env.peg_half_sizes[0, 0], 0, 0])
+    offset = sapien.Pose([-0.01 - env.peg_half_sizes[0, 0].item(), 0, 0])
     pre_insert_pose = insert_pose * (offset)
     res = planner.move_to_pose_with_screw(pre_insert_pose)
     if res == -1: return res

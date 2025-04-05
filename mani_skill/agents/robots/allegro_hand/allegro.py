@@ -37,29 +37,14 @@ class AllegroHandRight(BaseAgent):
         },
     )
     keyframes = dict(
+        palm_side=Keyframe(
+            qpos=np.zeros(16),
+            pose=sapien.Pose([0, 0, 0.5], q=[1, 0, 0, 0]),
+        ),
         palm_up=Keyframe(
-            qpos=np.array(
-                [
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                ]
-            ),
+            qpos=np.zeros(16),
             pose=sapien.Pose([0, 0, 0.5], q=[-0.707, 0, 0.707, 0]),
-        )
+        ),
     )
 
     def __init__(self, *args, **kwargs):

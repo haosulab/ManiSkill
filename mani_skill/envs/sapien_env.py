@@ -14,7 +14,7 @@ import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
 
-from mani_skill import PACKAGE_ASSET_DIR, logger
+from mani_skill import logger
 from mani_skill.agents import REGISTERED_AGENTS
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.multi_agent import MultiAgent
@@ -24,7 +24,10 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
-from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend
+from mani_skill.envs.utils.system.backend import (
+    CPU_SIM_BACKENDS,
+    parse_sim_and_render_backend,
+)
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -238,7 +241,7 @@ class BaseEnv(gym.Env):
                 physx.enable_gpu()
 
         # raise a number of nicer errors
-        if sim_backend == "cpu" and num_envs > 1:
+        if self.backend.sim_backend in CPU_SIM_BACKENDS and num_envs > 1:
             raise RuntimeError("""Cannot set the sim backend to 'cpu' and have multiple environments.
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
@@ -480,7 +483,7 @@ class BaseEnv(gym.Env):
         """The current observation mode. This affects the observation returned by env.get_obs()"""
         return self._obs_mode
 
-    def get_obs(self, info: Optional[Dict] = None):
+    def get_obs(self, info: Optional[Dict] = None, unflattened: bool = False):
         """
         Return the current observation of the environment. User may call this directly to get the current observation
         as opposed to taking a step with actions in the environment.
@@ -493,6 +496,7 @@ class BaseEnv(gym.Env):
         Args:
             info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
                 If this is None (the default), this function will call `self.get_info()` itself
+            unflattened (bool): Whether to return the observation without flattening even if the observation mode (`self.obs_mode`) asserts to return a flattened observation.
         """
         if info is None:
             info = self.get_info()
@@ -500,8 +504,7 @@ class BaseEnv(gym.Env):
             # Some cases do not need observations, e.g., MPC
             return dict()
         elif self._obs_mode == "state":
-            state_dict = self._get_obs_state_dict(info)
-            obs = common.flatten_state_dict(state_dict, use_torch=True, device=self.device)
+            obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "state_dict":
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "pointcloud":
@@ -512,8 +515,13 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
         else:
             obs = self._get_obs_with_sensor_data(info)
+        return obs if unflattened else self._flatten_raw_obs(obs)
 
+    def _flatten_raw_obs(self, obs: Any):
         # flatten parts of the state observation if requested
+        if self._obs_mode == "state":
+            return common.flatten_state_dict(obs, use_torch=True, device=self.device)
+
         if self.obs_mode_struct.state:
             if isinstance(obs, dict):
                 data = dict(agent=obs.pop("agent"), extra=obs.pop("extra"))
@@ -553,7 +561,28 @@ class BaseEnv(gym.Env):
         return params
 
     def _get_obs_sensor_data(self, apply_texture_transforms: bool = True) -> dict:
-        """get only data from sensors. Auto hides any objects that are designated to be hidden"""
+        """
+        Get data from all registered sensors. Auto hides any objects that are designated to be hidden
+
+        Args:
+            apply_texture_transforms (bool): Whether to apply texture transforms to the simulated sensor data to map to standard texture formats. Default is True.
+
+        Returns:
+            dict: A dictionary containing the sensor data mapping sensor name to its respective dictionary of data. The dictionary maps texture names to the data. For example the return could look like
+
+            .. code-block:: python
+
+                {
+                    "sensor_1": {
+                        "rgb": torch.Tensor,
+                        "depth": torch.Tensor
+                    },
+                    "sensor_2": {
+                        "rgb": torch.Tensor,
+                        "depth": torch.Tensor
+                    }
+                }
+        """
         for obj in self._hidden_objects:
             obj.hide_visual()
         self.scene.update_render(update_sensors=True, update_human_render_cameras=False)
@@ -576,8 +605,10 @@ class BaseEnv(gym.Env):
                     )
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
-        torch.cuda.synchronize()
+        if self.backend.render_device.is_cuda():
+            torch.cuda.synchronize()
         return sensor_obs
+
     def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
         """Get the observation with sensor data"""
         return dict(
@@ -600,6 +631,15 @@ class BaseEnv(gym.Env):
         return self._reward_mode
 
     def get_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        """
+        Compute the reward for environment at its current state. observation data, the most recent action, and the info dictionary (generated by the self.evaluate() function)
+        are provided as inputs. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
+
+        Args:
+            obs (Any): The observation data.
+            action (torch.Tensor): The most recent action.
+            info (Dict): The info dictionary.
+        """
         if self._reward_mode == "sparse":
             reward = self.compute_sparse_reward(obs=obs, action=action, info=info)
         elif self._reward_mode == "dense":
@@ -616,8 +656,15 @@ class BaseEnv(gym.Env):
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         """
+
         Computes the sparse reward. By default this function tries to use the success/fail information in
-        returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise"""
+        returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise.
+
+        Args:
+            obs (Any): The observation data. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
+            action (torch.Tensor): The most recent action.
+            info (Dict): The info dictionary.
+        """
         if "success" in info:
             if "fail" in info:
                 if isinstance(info["success"], torch.Tensor):
@@ -634,11 +681,27 @@ class BaseEnv(gym.Env):
         return reward
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        """
+        Compute the dense reward.
+
+        Args:
+            obs (Any): The observation data. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
+            action (torch.Tensor): The most recent action.
+            info (Dict): The info dictionary.
+        """
         raise NotImplementedError()
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
+        """
+        Compute the normalized dense reward.
+
+        Args:
+            obs (Any): The observation data. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
+            action (torch.Tensor): The most recent action.
+            info (Dict): The info dictionary.
+        """
         raise NotImplementedError()
 
     # -------------------------------------------------------------------------- #
@@ -948,10 +1011,10 @@ class BaseEnv(gym.Env):
         action = self._step_action(action)
         self._elapsed_steps += 1
         info = self.get_info()
-        obs = self.get_obs(info)
+        obs = self.get_obs(info, unflattened=True)
         reward = self.get_reward(obs=obs, action=action, info=info)
+        obs = self._flatten_raw_obs(obs)
         if "success" in info:
-
             if "fail" in info:
                 terminated = torch.logical_or(info["success"], info["fail"])
             else:
@@ -1009,8 +1072,10 @@ class BaseEnv(gym.Env):
                 action = common.batch(action)
             self.agent.set_action(action)
             if self._sim_device.is_cuda():
-                self.scene.px.gpu_apply_articulation_target_position()
-                self.scene.px.gpu_apply_articulation_target_velocity()
+                if self.agent.controller.sets_target_qpos:
+                    self.scene.px.gpu_apply_articulation_target_position()
+                if self.agent.controller.sets_target_qvel:
+                    self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             if self.agent is not None:

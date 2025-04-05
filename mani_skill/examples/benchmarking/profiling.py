@@ -31,14 +31,19 @@ class Profiler:
         self.output_format = output_format
         self.synchronize_torch = synchronize_torch
         self.stats = dict()
+        
         # Initialize NVML
-        pynvml.nvmlInit()
-
-        # Get handle for the first GPU (index 0)
-        self.handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        self._gpu_handle = None
+        try:
+            pynvml.nvmlInit()
+            # Get handle for the first GPU (index 0)
+            self._gpu_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        except pynvml.NVMLError_LibraryNotFound as e:
+            print(f"NVML could not be initialized for pynvml: {e}. Not tracking GPU memory anymore.")
 
         # Get the PID of the current process
         self.current_pid = os.getpid()
+        self._torch_cuda_available = torch.cuda.is_available()
 
     def log(self, msg):
         """log a message to stdout"""
@@ -88,7 +93,8 @@ class Profiler:
         process = psutil.Process(os.getpid())
         cpu_mem_use = process.memory_info().rss
         gpu_mem_use = self.get_current_process_gpu_memory()
-        torch.cuda.synchronize()
+        if self._torch_cuda_available:
+            torch.cuda.synchronize()
         stime = time.time()
         yield
         dt = time.time() - stime
@@ -103,26 +109,29 @@ class Profiler:
             cpu_mem_use=cpu_mem_use,
             gpu_mem_use=gpu_mem_use,
         )
-        torch.cuda.synchronize()
+        if self._torch_cuda_available:
+            torch.cuda.synchronize()
 
     def log_stats(self, name: str):
         stats = self.stats[name]
+        gpu_use_str = f"{stats['gpu_mem_use'] / (1024**2):0.3f} MB" if stats['gpu_mem_use'] is not None else 'N/A'
         self.log(
             f"{name}: {stats['fps']:0.3f} steps/s, {stats['psps']:0.3f} parallel steps/s, {stats['total_steps']} steps in {stats['dt']:0.3f}s"
         )
         self.log(
-            f"{' ' * 4}CPU mem: {stats['cpu_mem_use'] / (1024**2):0.3f} MB, GPU mem: {stats['gpu_mem_use'] / (1024**2):0.3f} MB"
+            f"{' ' * 4}CPU mem: {stats['cpu_mem_use'] / (1024**2):0.3f} MB, GPU mem: {gpu_use_str}"
         )
 
     def get_current_process_gpu_memory(self):
         # Get all processes running on the GPU
-        processes = pynvml.nvmlDeviceGetComputeRunningProcesses(self.handle)
-
-        # Iterate through the processes to find the current process
-        for process in processes:
-            if process.pid == self.current_pid:
-                memory_usage = process.usedGpuMemory
-                return memory_usage
+        if self._gpu_handle is not None:
+            processes = pynvml.nvmlDeviceGetComputeRunningProcesses(self._gpu_handle)
+            # Iterate through the processes to find the current process
+            for process in processes:
+                if process.pid == self.current_pid:
+                    memory_usage = process.usedGpuMemory
+                    return memory_usage
+        return None
 def images_to_video(
     images: List[np.ndarray],
     output_dir: str,

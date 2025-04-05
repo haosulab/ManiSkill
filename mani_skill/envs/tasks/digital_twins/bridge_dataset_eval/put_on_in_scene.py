@@ -16,6 +16,10 @@ from mani_skill.utils.registration import register_env
 )
 class PutCarrotOnPlateInScene(BaseBridgeEnv):
     scene_setting = "flat_table"
+    objects_excluded_from_greenscreening = [
+        "bridge_carrot_generated_modified",
+        "bridge_plate_objaverse_larger",
+    ]
 
     def __init__(self, **kwargs):
         xy_center = np.array([-0.16, 0.00])
@@ -74,7 +78,7 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
 )
 class PutEggplantInBasketScene(BaseBridgeEnv):
     scene_setting = "sink"
-    rgb_always_overlay_objects = ["sink", "dummy_sink_target_plane"]
+    objects_excluded_from_greenscreening = ["eggplant"]
 
     def __init__(self, **kwargs):
         source_obj_name = "eggplant"
@@ -154,6 +158,10 @@ class PutEggplantInBasketScene(BaseBridgeEnv):
 )
 class StackGreenCubeOnYellowCubeBakedTexInScene(BaseBridgeEnv):
     MODEL_JSON = "info_bridge_custom_baked_tex_v0.json"
+    objects_excluded_from_greenscreening = [
+        "baked_green_cube_3cm",
+        "baked_yellow_cube_3cm",
+    ]
 
     def __init__(
         self,
@@ -213,6 +221,11 @@ class StackGreenCubeOnYellowCubeBakedTexInScene(BaseBridgeEnv):
     asset_download_ids=["bridge_v2_real2sim"],
 )
 class PutSpoonOnTableClothInScene(BaseBridgeEnv):
+    objects_excluded_from_greenscreening = [
+        "table_cloth_generated_shorter",
+        "bridge_spoon_generated_modified",
+    ]
+
     def __init__(
         self,
         **kwargs,

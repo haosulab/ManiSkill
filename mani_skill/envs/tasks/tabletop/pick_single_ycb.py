@@ -8,7 +8,6 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.robots.fetch.fetch import Fetch
 from mani_skill.agents.robots.panda.panda import Panda
 from mani_skill.agents.robots.panda.panda_wristcam import PandaWristCam
-from mani_skill.agents.robots.xmate3.xmate3 import Xmate3Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils.randomization.pose import random_quaternions
 from mani_skill.sensors.camera import CameraConfig
@@ -196,13 +195,6 @@ class PickSingleYCBEnv(BaseEnv):
                 )
                 self.agent.reset(qpos)
                 self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
-            elif self.robot_uids == "xmate3_robotiq":
-                qpos = np.array([0, 0.6, 0, 1.3, 0, 1.3, -1.57, 0, 0])
-                qpos[:-2] += self._episode_rng.normal(
-                    0, self.robot_init_qpos_noise, len(qpos) - 2
-                )
-                self.agent.reset(qpos)
-                self.agent.robot.set_root_pose(sapien.Pose([-0.562, 0, 0]))
             else:
                 raise NotImplementedError(self.robot_uids)
 

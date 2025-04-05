@@ -181,6 +181,7 @@ class Panda(BaseAgent):
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
+            mimic={"panda_finger_joint2": {"joint": "panda_finger_joint1"}},
         )
 
         controller_configs = dict(

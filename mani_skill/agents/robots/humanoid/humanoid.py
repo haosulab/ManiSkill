@@ -42,7 +42,7 @@ class Humanoid(BaseAgent):
                     0.0,
                 ]
             ),
-            pose=sapien.Pose(p=[0, 0, -0.375]),
+            pose=sapien.Pose(p=[0, 0, 1.13]),
         )
     )
 

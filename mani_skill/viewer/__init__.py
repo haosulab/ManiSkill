@@ -1,5 +1,6 @@
 import sapien
 from sapien.utils import Viewer
+import sys
 
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.camera import CameraConfig
@@ -30,6 +31,8 @@ def create_viewer(viewer_camera_config: CameraConfig):
         viewer = Viewer(
             resolutions=(viewer_camera_config.width, viewer_camera_config.height)
         )
+        if sys.platform == 'darwin':  # macOS
+            viewer.window.set_content_scale(1)
     elif SAPIEN_RENDER_SYSTEM == "3.1":
         # TODO (stao): figure out how shader pack configs can be set at run time
         viewer = Viewer(
@@ -38,5 +41,6 @@ def create_viewer(viewer_camera_config: CameraConfig):
                 viewer_camera_config.shader_config.shader_pack
             ),
         )
+        
 
     return viewer
