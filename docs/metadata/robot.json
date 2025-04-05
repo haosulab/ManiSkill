@@ -51,6 +51,14 @@
     "quality": "B",
     "name": "Google Robot"
   },
+  "koch-v1.1": {
+    "quality": "A",
+    "name": "Koch v1.1 Arm"
+  },
+  "so100": {
+    "quality": "A",
+    "name": "Standard Open Arm 100 (SO100)"
+  },
   "stompy": {
     "quality": "C",
     "name": "Stompy"
