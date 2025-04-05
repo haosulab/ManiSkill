@@ -4,6 +4,7 @@ import numpy as np
 import sapien
 import sapien.render
 import torch
+from transforms3d.euler import euler2quat
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
@@ -30,23 +31,15 @@ class SO100(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             qpos=np.array([0, 2.2, 3.017, -0.25, 0, 0.6044]),
-            pose=sapien.Pose(),
+            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         ),
         elevated_turn=Keyframe(
             qpos=np.array([0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]),
-            pose=sapien.Pose(),
-        ),
-        to_push=Keyframe(
-            qpos=np.array([0, 2.2, 3.017, -0.25, -np.pi / 2, 0.6044]),
-            pose=sapien.Pose(),
-        ),
-        closed_gripper=Keyframe(
-            qpos=np.array([0, 2.2, 3.017, -0.25, -np.pi / 2, 0]),
-            pose=sapien.Pose(),
+            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         ),
         zero=Keyframe(
             qpos=np.array([0.0] * 6),
-            pose=sapien.Pose(),
+            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         ),
     )
 

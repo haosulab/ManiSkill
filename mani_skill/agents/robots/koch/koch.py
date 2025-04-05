@@ -35,10 +35,6 @@ class Koch(BaseAgent):
             qpos=np.array([0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]),
             pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         ),
-        to_push=Keyframe(
-            qpos=np.array([0, 2.2, 3.017, -0.25, -np.pi / 2, 0.6044]),
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
-        ),
         zero=Keyframe(
             qpos=np.array([0.0] * 6),
             pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
