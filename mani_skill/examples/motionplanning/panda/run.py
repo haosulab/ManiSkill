@@ -5,6 +5,7 @@ import time
 import traceback
 import argparse
 import gymnasium as gym
+import json
 import numpy as np
 from tqdm import tqdm
 import os.path as osp
@@ -27,14 +28,37 @@ MP_SOLUTIONS = {
     "StackPyramid-v1": solveStackPyramid,
 }
 
+all_distractor_set = DistractionSet(
+    distractor_object_cfg={
+        "n_spheres": 1,
+        "radius_range": (0.01, 0.02),"color_range": ((0, 0, 0), (1, 1, 1)),
+        "x_lims": (-0.1, 0.1),
+        "y_lims": (-0.1, 0.1),
+    },
+    MO_color_cfg ={
+        "color_range": ((0, 0, 0), (1, 1, 1)),
+    },
+    MO_texture_cfg = {
+        "textures_directory": osp.join(osp.dirname(__file__), "../../../assets/textures"),
+    },
+    table_color_cfg = {
+        "color_range": ((0, 0, 0), (1, 1, 1)),
+    },
+    table_texture_cfg = {
+        "textures_directory": osp.join(osp.dirname(__file__), "../../../assets/textures"),
+    },
+    camera_pose_cfg = {
+        "rpy_range": ((-0.035, -0.035, -0.035), (0.035, 0.035, 0.035)), # aproximately 2 degrees
+        "xyz_range": ((-0.025, -0.025, 0.025), (0.025, 0.025, 0.025)),        # 2.5 cm
+    }
+)
+
 DISTRACTION_SETS = {
     "none".upper(): DistractionSet(),
     "dev".upper(): DistractionSet(
         distractor_object_cfg={
             "n_spheres": 1,
-            # "radius_range": (0.01, 0.05),
-            "radius_range": (0.015, 0.015 + 1e-6),  # fails 2/6
-            # "radius_range": (0.025, 0.025 + 1e-6), # fails 5/6
+            "radius_range": (0.01, 0.02),
             "color_range": ((0, 0, 0), (1, 1, 1)),
             "x_lims": (-0.1, 0.1),
             "y_lims": (-0.1, 0.1),
@@ -53,10 +77,18 @@ DISTRACTION_SETS = {
         },
         camera_pose_cfg = {
             "rpy_range": ((-0.035, -0.035, -0.035), (0.035, 0.035, 0.035)), # aproximately 2 degrees
-            "xyz_range": ((-0.01, -0.01, 0.01), (0.01, 0.01, 0.01)),        # 1cm
+            "xyz_range": ((-0.025, -0.025, 0.025), (0.025, 0.025, 0.025)),        # 2.5 cm
         }
-    )
+    ),
+    "all".upper(): deepcopy(all_distractor_set),
+    "distractor_object_cfg".upper(): all_distractor_set.get_partial_copy(["distractor_object_cfg"]),
+    "MO_color_cfg".upper(): all_distractor_set.get_partial_copy(["MO_color_cfg"]),
+    "MO_texture_cfg".upper(): all_distractor_set.get_partial_copy(["MO_texture_cfg"]),
+    "table_color_cfg".upper(): all_distractor_set.get_partial_copy(["table_color_cfg"]),
+    "table_texture_cfg".upper(): all_distractor_set.get_partial_copy(["table_texture_cfg"]),
+    "camera_pose_cfg".upper(): all_distractor_set.get_partial_copy(["camera_pose_cfg"]),
 }
+
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -81,6 +113,9 @@ def parse_args(args=None):
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
     if args.camera_width is not None and args.camera_height is not None:
+        distraction_set = DISTRACTION_SETS[args.distraction_set.upper()]
+        print("Distraction set:")
+        print(json.dumps(distraction_set.to_dict(), indent=4))
         env = gym.make(
             env_id,
             obs_mode=args.obs_mode,
@@ -93,7 +128,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             sim_backend=args.sim_backend,
             camera_width=args.camera_width,
             camera_height=args.camera_height,
-            distraction_set=DISTRACTION_SETS[args.distraction_set.upper()]
+            distraction_set=distraction_set
         )
     else:
         env = gym.make(

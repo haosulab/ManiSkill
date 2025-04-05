@@ -51,7 +51,7 @@ class TableSceneBuilder(SceneBuilder):
         if scene_idx is not None:
             builder.set_scene_idxs([scene_idx])
 
-        table = builder.build_kinematic(name=f"table-{name_suffix}")
+        table = builder.build_kinematic(name=f"table{name_suffix}")
         if remove_table_from_state_dict_registry:
             self.env.remove_from_state_dict_registry(table)
 
@@ -67,7 +67,7 @@ class TableSceneBuilder(SceneBuilder):
         if self.scene.parallel_in_single_scene:
             floor_width = 500
         self.ground = build_ground(
-            self.scene, floor_width=floor_width, altitude=-self.table_height, name=f"ground-{name_suffix}"
+            self.scene, floor_width=floor_width, altitude=-self.table_height, name=f"ground{name_suffix}"
         )
         self.table = table
         self.scene_objects: list[sapien.Entity] = [self.table, self.ground]
