@@ -16,7 +16,6 @@ QUALITY_KEY_TO_DESCRIPTION = {
     "C": "Conditionally stable, can be significantly improved",
 }
 import json
-import shutil
 from typing import List
 
 import numpy as np

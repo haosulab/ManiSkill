@@ -61,7 +61,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     """
 
     _cached_joint_target_indices: Dict[int, torch.Tensor] = field(default_factory=dict)
-    """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets"""
+    """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets in GPU sims."""
 
     _net_contact_force_queries: Dict[
         Tuple, physx.PhysxGpuContactBodyImpulseQuery
@@ -481,6 +481,47 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         """
         return self.get_net_contact_impulses(link_names) / self.scene.timestep
 
+    def get_joint_target_indices(self, joint_indices):
+        if joint_indices not in self._cached_joint_target_indices:
+            self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
+                self._data_index, joint_indices, indexing="ij"
+            )
+        return self._cached_joint_target_indices[joint_indices]
+
+    def get_drive_targets(self):
+        return self.drive_targets
+
+    def get_drive_velocities(self):
+        return self.drive_velocities
+
+    @property
+    def drive_targets(self):
+        """
+        The current drive targets of the active joints. Also known as the target joint positions. Returns a tensor
+        of shape (N, M) where N is the number of environments and M is the number of active joints.
+        """
+        if self.scene.gpu_sim_enabled:
+            return self.px.cuda_articulation_target_qpos[
+                self.get_joint_target_indices(self.active_joints)
+            ]
+        else:
+            return torch.cat([x.drive_target for x in self.active_joints], dim=-1)
+
+    @property
+    def drive_velocities(self):
+        """
+        The current drive velocity targets of the active joints. Also known as the target joint velocities. Returns a tensor
+        of shape (N, M) where N is the number of environments and M is the number of active joints.
+        """
+        if self.scene.gpu_sim_enabled:
+            return self.px.cuda_articulation_target_qvel[
+                self.get_joint_target_indices(self.active_joints)
+            ]
+        else:
+            return torch.cat(
+                [x.drive_velocity_target for x in self.active_joints], dim=-1
+            )
+
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulation
     # -------------------------------------------------------------------------- #
@@ -769,9 +810,6 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         else:
             return self._objs[0].create_pinocchio_model()
 
-    # def _get_joint_indices(self, joints: List[Joint]):
-    #     if
-
     def set_joint_drive_targets(
         self,
         targets: Array,
@@ -780,16 +818,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     ):
         """
         Set drive targets on active joints. Joint indices are required to be given for GPU sim, and joint objects are required for the CPU sim
-
-        TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
         if self.scene.gpu_sim_enabled:
             targets = common.to_tensor(targets, device=self.device)
-            if joint_indices not in self._cached_joint_target_indices:
-                self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
-                    self._data_index, joint_indices, indexing="ij"
-                )
-            gx, gy = self._cached_joint_target_indices[joint_indices]
+            gx, gy = self.get_joint_target_indices(joint_indices)
             self.px.cuda_articulation_target_qpos.torch()[gx, gy] = targets
         else:
             for i, joint in enumerate(joints):
@@ -803,16 +835,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     ):
         """
         Set drive velocity targets on active joints. Joint indices are required to be given for GPU sim, and joint objects are required for the CPU sim
-
-        TODO (stao): can we use joint indices for the CPU sim as well? Some global joint indices?
         """
         if self.scene.gpu_sim_enabled:
             targets = common.to_tensor(targets, device=self.device)
-            if joint_indices not in self._cached_joint_target_indices:
-                self._cached_joint_target_indices[joint_indices] = torch.meshgrid(
-                    self._data_index, joint_indices, indexing="ij"
-                )
-            gx, gy = self._cached_joint_target_indices[joint_indices]
+            gx, gy = self.get_joint_target_indices(joint_indices)
             self.px.cuda_articulation_target_qvel.torch()[gx, gy] = targets
         else:
             for i, joint in enumerate(joints):

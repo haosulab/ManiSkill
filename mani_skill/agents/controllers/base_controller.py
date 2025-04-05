@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import numpy as np
 import sapien
@@ -39,12 +39,17 @@ class BaseController:
     _original_single_action_space: spaces.Space
     """The unbatched, original action space without any additional processing like normalization"""
 
+    sets_target_qpos: bool
+    """Whether the controller sets the target qpos of the articulation"""
+    sets_target_qvel: bool
+    """Whether the controller sets the target qvel of the articulation"""
+
     def __init__(
         self,
         config: "ControllerConfig",
         articulation: Articulation,
         control_freq: int,
-        sim_freq: int = None,
+        sim_freq: Optional[int] = None,
         scene: ManiSkillScene = None,
     ):
         self.config = config
@@ -212,6 +217,12 @@ class DictController(BaseController):
             self.action_space = batch_space(
                 self.single_action_space, n=self.scene.num_envs
             )
+
+        self.sets_target_qpos = False
+        self.sets_target_qvel = False
+        for controller in self.controllers.values():
+            self.sets_target_qpos = self.sets_target_qpos or controller.sets_target_qpos
+            self.sets_target_qvel = self.sets_target_qvel or controller.sets_target_qvel
 
     def before_simulation_step(self):
         for controller in self.controllers.values():
