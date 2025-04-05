@@ -57,6 +57,9 @@ class DistractionSet:
         "background_texture"
     }
 
+    def get_partial_copy(self, keys: list[str]) -> "DistractionSet":
+        return DistractionSet(**{k: v for k, v in self.__dict__.items() if k in keys})
+
     def MO_color_enabled(self) -> bool:
         return len(self.MO_color_cfg) > 0
 
@@ -234,7 +237,6 @@ class DistractionSet:
                             part.material.set_base_color_texture(texture)
                         else:
                             use_color = np.random.random() < 0.5
-                            print(f"[TABLE] {'color'.upper() if use_color else 'texture'.upper()}", flush=True)
                             if use_color:
                                 part.material.set_base_color(color)
                             else:
@@ -251,7 +253,8 @@ class DistractionSet:
                 for render_shape in render_body_component.render_shapes:
                     for part in render_shape.parts:
                         # part.material: sapien.core.pysapien.RenderMaterial
-                        color = get_random_color(self.MO_color_cfg["color_range"])
+                        if self.MO_color_enabled():
+                            color = get_random_color(self.MO_color_cfg["color_range"])
                         if self.MO_texture_enabled():
                             texture = get_random_texture(self.MO_texture_cfg["textures_directory"])
 
@@ -261,7 +264,6 @@ class DistractionSet:
                             part.material.set_base_color_texture(texture)
                         else:
                             use_color = np.random.random() < 0.5
-                            print(f"[MO]    {'color'.upper() if use_color else 'texture'.upper()}", flush=True)
                             if use_color:
                                 part.material.set_base_color(color)
                             else:
