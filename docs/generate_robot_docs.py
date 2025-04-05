@@ -68,7 +68,7 @@ def main():
                 agent_classes.append(obj)
     robot_index_markdown_str = GLOBAL_ROBOT_DOCS_HEADER + """
 # Robots
-<img src="/_static/robot_images/robot-grid.png" alt="Robot Grid" style="width: 100%; height: auto;">
+<img src="../_static/robot_images/robot-grid.png" alt="Robot Grid" style="width: 100%; height: auto;">
 
 
 This sections here show the already built/modelled robots ready for simulation across a number of different categories. Some of them are displayed above in an empty environment using a predefined keyframe. Note that not all of these robots are used in tasks in ManiSkill, and some are not tuned for maximum efficiency yet or for sim2real transfer. You can generally assume robots that are used in existing tasks in ManiSkill are of the highest quality and already tuned.
