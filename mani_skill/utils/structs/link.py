@@ -134,12 +134,28 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         """
         all_render_shapes: List[List[sapien.render.RenderShape]] = []
         for obj in self._objs:
-            all_render_shapes.append(
-                obj.entity.find_component_by_type(
-                    sapien.render.RenderBodyComponent
-                ).render_shapes
+            rb_comp = obj.entity.find_component_by_type(
+                sapien.render.RenderBodyComponent
             )
+            if rb_comp is not None:
+                all_render_shapes.append(rb_comp.render_shapes)
         return all_render_shapes
+
+    def get_visual_meshes(
+        self, to_world_frame: bool = True, first_only: bool = False
+    ) -> List[trimesh.Trimesh]:
+        """
+        Returns the visual mesh of each managed link object. Note results of this are not cached or optimized at the moment
+        so this function can be slow if called too often
+        """
+        merged_meshes = []
+        for link, link_render_shapes in zip(self._objs, self.render_shapes):
+            meshes = []
+            for render_shape in link_render_shapes:
+                if filter(link, render_shape):
+                    meshes.extend(get_render_shape_meshes(render_shape))
+            merged_meshes.append(merge_meshes(meshes))
+        return merged_meshes
 
     def generate_mesh(
         self,

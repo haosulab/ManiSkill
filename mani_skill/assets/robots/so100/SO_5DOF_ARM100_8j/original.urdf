@@ -354,7 +354,7 @@
       velocity="0" />
   </joint>
   <link
-    name="Moving Jaw">
+    name="Moving_Jaw">
     <inertial>
       <origin
         xyz="-0.00161744605468241 -0.0303472584046471 0.000449645961853651"
@@ -420,7 +420,7 @@
     <parent
       link="Fixed_Jaw" />
     <child
-      link="Moving Jaw" />
+      link="Moving_Jaw" />
     <axis
       xyz="0 0 1" />
     <limit 
@@ -429,4 +429,42 @@
       effort="0"
       velocity="0" />
   </joint>
+
+  <!-- fake joints for useful data -->
+  <joint name="Fixed_Jaw_tip_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.01 -0.097 0"/>
+    <parent link="Fixed_Jaw"/>
+    <child link="Fixed_Jaw_tip"/>
+  </joint>
+  <link name="Fixed_Jaw_tip">
+    <!-- <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 0.5"/>
+      </material>
+    </visual> -->
+  </link>
+  <joint name="Moving_Jaw_tip_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.01 -0.073 0"/>
+    <parent link="Moving_Jaw"/>
+    <child link="Moving_Jaw_tip"/>
+  </joint>
+  <link name="Moving_Jaw_tip">
+    <!-- <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.01" />
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 0.5"/>
+      </material>
+    </visual> -->
+  </link>
 </robot>

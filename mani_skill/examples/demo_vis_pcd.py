@@ -41,8 +41,8 @@ def main(args):
     while True:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
-        xyz = obs["pointcloud"]["xyzw"][0, ..., :3]
-        colors = obs["pointcloud"]["rgb"][0]
+        xyz = obs["pointcloud"]["xyzw"][0, ..., :3].cpu().numpy()
+        colors = obs["pointcloud"]["rgb"][0].cpu().numpy()
         pcd = trimesh.points.PointCloud(xyz, colors)
 
 

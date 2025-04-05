@@ -6,3 +6,5 @@ Changes made:
 - Fixed joint limits to reflect real world behavior
 - Fixed joint tags from continuous to revolute which permit joint limits
 - Fixed joint directions and orientations to match the real robot's joints
+- removed spaces in link names
+- manual decomposition of gripper link collision meshes into simpler meshes

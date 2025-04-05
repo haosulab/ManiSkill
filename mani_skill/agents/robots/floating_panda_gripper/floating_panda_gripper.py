@@ -29,14 +29,14 @@ class FloatingPandaGripper(BaseAgent):
         ),
     )
     keyframes = dict(
+        open_facing_down=Keyframe(
+            qpos=[0, 0, 0, 0, np.pi, 0, 0.04, 0.04], pose=sapien.Pose(p=[0, 0, 0.5])
+        ),
         open_facing_up=Keyframe(
             qpos=[0, 0, 0, 0, 0, 0, 0.04, 0.04], pose=sapien.Pose(p=[0, 0, 0.5])
         ),
         open_facing_side=Keyframe(
             qpos=[0, 0, 0, 0, np.pi / 2, 0, 0.04, 0.04], pose=sapien.Pose(p=[0, 0, 0.5])
-        ),
-        open_facing_down=Keyframe(
-            qpos=[0, 0, 0, 0, np.pi, 0, 0.04, 0.04], pose=sapien.Pose(p=[0, 0, 0.5])
         ),
     )
     root_joint_names = [

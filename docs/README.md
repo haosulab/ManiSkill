@@ -30,3 +30,10 @@ For github links for the time being must double check they link the right branch
 # In docs/
 python generate_task_docs.py
 ```
+
+## Auto Generate Robot Docs
+
+```bash
+# In docs/
+python generate_robot_docs.py
+```
