@@ -57,11 +57,6 @@ def capture_images(env: EmptyEnv):
 def main():
     base_dir = Path(__file__).parent / "source/robots"
     robot_metadata = json.load(open(Path(__file__).parent / "metadata/robot.json"))
-    # Remove all files in base_dir
-    if base_dir.exists():
-        shutil.rmtree(base_dir)
-    base_dir.mkdir(parents=True, exist_ok=True)
-
 
     agent_classes: List[BaseAgent] = []
     # Get all attributes in the robots module
@@ -101,6 +96,9 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
         print(f"Generating docs for {agent.uid}")
         env = EmptyEnv(robot_uids=agent.uid, render_mode="rgb_array", human_render_camera_configs=dict(shader_pack="rt", width=1024, height=1024))
         env.reset()
+        robot_dof = env.agent.robot.dof.item()
+        controllers = list(env.agent._controller_configs.keys())
+
         kf = env.agent.keyframes
         # Get the first keyframe if available
         if kf and len(kf) > 0:
@@ -225,6 +223,10 @@ Robot UID: `{agent.uid}`
 Agent Class Code: [{agent_class_code_link}]({agent_class_code_link})
 
 Quality: {quality_desc}
+
+Degrees of Freedom: {robot_dof}
+
+Controllers: {", ".join([f"`{c}`" for c in controllers])}
 
 ## Visuals and Collision Models
 

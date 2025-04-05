@@ -8,6 +8,10 @@ Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/ag
 
 Quality: A (Values are realistic, but have not been properly identified)
 
+Degrees of Freedom: 17
+
+Controllers: `pd_joint_delta_pos`, `pd_joint_pos`, `pd_ee_delta_pose`, `pd_ee_target_delta_pose`
+
 ## Visuals and Collision Models
 
 <div>
