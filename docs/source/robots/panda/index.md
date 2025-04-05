@@ -16,14 +16,14 @@ Controllers: `pd_joint_delta_pos`, `pd_joint_pos`, `pd_ee_delta_pos`, `pd_ee_del
 
 <div>
     <div style="max-width: 100%; display: flex; justify-content: center;">
-        <img src="../_static/robot_images/panda/front_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
-        <img src="../_static/robot_images/panda/side_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+        <img src="../../_static/robot_images/panda/front_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+        <img src="../../_static/robot_images/panda/side_visual.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
     </div>
     <p style="text-align: center; font-size: 1.2rem;">Visual Meshes</p>
     <br/>
     <div style="max-width: 100%; display: flex; justify-content: center;">
-        <img src="../_static/robot_images/panda/front_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
-        <img src="../_static/robot_images/panda/side_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+        <img src="../../_static/robot_images/panda/front_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
+        <img src="../../_static/robot_images/panda/side_collision.png" style='min-width:min(50%, 100px);max-width:50%;height:auto' alt="panda">
     </div>
     <p style="text-align: center; font-size: 1.2rem;">Collision Meshes (Green = Convex Mesh, Blue = Primitive Shape Mesh)</p>
 </div>

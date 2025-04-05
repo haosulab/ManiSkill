@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import sapien
 import sapien.render
@@ -73,12 +75,15 @@ class Koch(BaseAgent):
             damping=[15.85, 6, 15.34, 16, 16.31, 16.3],
             force_limit=100,
             use_delta=True,
-            use_target=True,
+            use_target=False,
         )
+        pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
+        pd_joint_target_delta_pos.use_target = True
 
         controller_configs = dict(
             pd_joint_delta_pos=pd_joint_delta_pos,
             pd_joint_pos=pd_joint_pos,
+            pd_joint_target_delta_pos=pd_joint_target_delta_pos,
         )
         return deepcopy_dict(controller_configs)
 

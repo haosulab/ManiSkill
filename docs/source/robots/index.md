@@ -25,7 +25,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 <div class="gallery" style="display: flex; flex-wrap: wrap; gap: 10px;">
 
 <div class="gallery-item">
-    <a href="/robots/anymal_c">
+    <a href="anymal_c">
         <img src="../_static/robot_images/anymal_c/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Anymal C">
     </a>
     <div class="gallery-item-caption">
@@ -35,7 +35,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/allegro_hand_left">
+    <a href="allegro_hand_left">
         <img src="../_static/robot_images/allegro_hand_left/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Left">
     </a>
     <div class="gallery-item-caption">
@@ -45,7 +45,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/allegro_hand_right">
+    <a href="allegro_hand_right">
         <img src="../_static/robot_images/allegro_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Right">
     </a>
     <div class="gallery-item-caption">
@@ -55,7 +55,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/allegro_hand_right_touch">
+    <a href="allegro_hand_right_touch">
         <img src="../_static/robot_images/allegro_hand_right_touch/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Right with Touch Sensing">
     </a>
     <div class="gallery-item-caption">
@@ -65,7 +65,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/dclaw">
+    <a href="dclaw">
         <img src="../_static/robot_images/dclaw/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="D'Claw">
     </a>
     <div class="gallery-item-caption">
@@ -75,7 +75,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/fetch">
+    <a href="fetch">
         <img src="../_static/robot_images/fetch/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Fetch Mobile Manipulator">
     </a>
     <div class="gallery-item-caption">
@@ -85,7 +85,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/floating_inspire_hand_right">
+    <a href="floating_inspire_hand_right">
         <img src="../_static/robot_images/floating_inspire_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Inspire Hand Right">
     </a>
     <div class="gallery-item-caption">
@@ -95,7 +95,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/floating_panda_gripper">
+    <a href="floating_panda_gripper">
         <img src="../_static/robot_images/floating_panda_gripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Panda Gripper">
     </a>
     <div class="gallery-item-caption">
@@ -105,7 +105,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/floating_robotiq_2f_85_gripper">
+    <a href="floating_robotiq_2f_85_gripper">
         <img src="../_static/robot_images/floating_robotiq_2f_85_gripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Robotiq 2F-85 Gripper">
     </a>
     <div class="gallery-item-caption">
@@ -115,7 +115,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/googlerobot">
+    <a href="googlerobot">
         <img src="../_static/robot_images/googlerobot/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Google Robot">
     </a>
     <div class="gallery-item-caption">
@@ -125,7 +125,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/humanoid">
+    <a href="humanoid">
         <img src="../_static/robot_images/humanoid/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Mujoco Humanoid">
     </a>
     <div class="gallery-item-caption">
@@ -135,17 +135,17 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/koch-v1.1">
-        <img src="../_static/robot_images/koch-v1.1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="koch-v1.1">
+    <a href="koch-v1.1">
+        <img src="../_static/robot_images/koch-v1.1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Koch v1.1 Arm">
     </a>
     <div class="gallery-item-caption">
-        <a href="koch-v1.1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">koch-v1.1</p></a>
-        <p style="margin-top: 0px;">Quality: N/A</p>
+        <a href="koch-v1.1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Koch v1.1 Arm</p></a>
+        <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/panda">
+    <a href="panda">
         <img src="../_static/robot_images/panda/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda">
     </a>
     <div class="gallery-item-caption">
@@ -155,7 +155,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/panda_stick">
+    <a href="panda_stick">
         <img src="../_static/robot_images/panda_stick/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda Arm with Stick Tool">
     </a>
     <div class="gallery-item-caption">
@@ -165,7 +165,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/panda_wristcam">
+    <a href="panda_wristcam">
         <img src="../_static/robot_images/panda_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda with Wrist Camera">
     </a>
     <div class="gallery-item-caption">
@@ -175,17 +175,17 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/so100">
-        <img src="../_static/robot_images/so100/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="so100">
+    <a href="so100">
+        <img src="../_static/robot_images/so100/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Standard Open Arm 100 (SO100)">
     </a>
     <div class="gallery-item-caption">
-        <a href="so100"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">so100</p></a>
-        <p style="margin-top: 0px;">Quality: N/A</p>
+        <a href="so100"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Standard Open Arm 100 (SO100)</p></a>
+        <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/stompy">
+    <a href="stompy">
         <img src="../_static/robot_images/stompy/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Stompy">
     </a>
     <div class="gallery-item-caption">
@@ -195,7 +195,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/trifingerpro">
+    <a href="trifingerpro">
         <img src="../_static/robot_images/trifingerpro/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Trifinger Pro">
     </a>
     <div class="gallery-item-caption">
@@ -205,7 +205,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/ur_10e">
+    <a href="ur_10e">
         <img src="../_static/robot_images/ur_10e/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="UR10e">
     </a>
     <div class="gallery-item-caption">
@@ -215,7 +215,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/unitree_g1">
+    <a href="unitree_g1">
         <img src="../_static/robot_images/unitree_g1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1">
     </a>
     <div class="gallery-item-caption">
@@ -225,7 +225,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/unitree_g1_simplified_legs">
+    <a href="unitree_g1_simplified_legs">
         <img src="../_static/robot_images/unitree_g1_simplified_legs/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1 Simplified Legs">
     </a>
     <div class="gallery-item-caption">
@@ -235,7 +235,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/unitree_g1_simplified_upper_body">
+    <a href="unitree_g1_simplified_upper_body">
         <img src="../_static/robot_images/unitree_g1_simplified_upper_body/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1 Simplified Upper Body">
     </a>
     <div class="gallery-item-caption">
@@ -245,7 +245,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/unitree_go2">
+    <a href="unitree_go2">
         <img src="../_static/robot_images/unitree_go2/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree Go2">
     </a>
     <div class="gallery-item-caption">
@@ -255,7 +255,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/unitree_h1">
+    <a href="unitree_h1">
         <img src="../_static/robot_images/unitree_h1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree H1">
     </a>
     <div class="gallery-item-caption">
@@ -265,7 +265,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/unitree_h1_simplified">
+    <a href="unitree_h1_simplified">
         <img src="../_static/robot_images/unitree_h1_simplified/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree H1 Simplified Legs">
     </a>
     <div class="gallery-item-caption">
@@ -275,7 +275,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/widowx250s">
+    <a href="widowx250s">
         <img src="../_static/robot_images/widowx250s/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX 250S">
     </a>
     <div class="gallery-item-caption">
@@ -285,7 +285,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/xarm6_nogripper">
+    <a href="xarm6_nogripper">
         <img src="../_static/robot_images/xarm6_nogripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with No Gripper">
     </a>
     <div class="gallery-item-caption">
@@ -295,7 +295,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/xarm6_robotiq">
+    <a href="xarm6_robotiq">
         <img src="../_static/robot_images/xarm6_robotiq/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with Robotiq Gripper">
     </a>
     <div class="gallery-item-caption">
@@ -305,7 +305,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/xarm6_robotiq_wristcam">
+    <a href="xarm6_robotiq_wristcam">
         <img src="../_static/robot_images/xarm6_robotiq_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with Robotiq Gripper and Wrist Camera">
     </a>
     <div class="gallery-item-caption">
@@ -315,7 +315,7 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="/robots/xarm7_ability">
+    <a href="xarm7_ability">
         <img src="../_static/robot_images/xarm7_ability/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm7 Ability">
     </a>
     <div class="gallery-item-caption">
