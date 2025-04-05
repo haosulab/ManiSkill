@@ -73,6 +73,7 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
         self,
         *args,
         robot_uids="koch-v1.1",
+        control_mode="pd_joint_target_delta_pos",
         greenscreen_overlay_path=None,
         domain_randomization_config=KochGraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
@@ -100,7 +101,9 @@ class KochGraspCubeEnv(BaseDigitalTwinEnv):
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        super().__init__(
+            *args, robot_uids=robot_uids, control_mode=control_mode, **kwargs
+        )
 
     def default_sim_config(self):
         return SimConfig(
