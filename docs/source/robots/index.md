@@ -135,6 +135,16 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
+    <a href="/robots/koch-v1.1">
+        <img src="../_static/robot_images/koch-v1.1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="koch-v1.1">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="koch-v1.1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">koch-v1.1</p></a>
+        <p style="margin-top: 0px;">Quality: N/A</p>
+    </div>
+</div>
+
+<div class="gallery-item">
     <a href="/robots/panda">
         <img src="../_static/robot_images/panda/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda">
     </a>
@@ -161,6 +171,16 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
     <div class="gallery-item-caption">
         <a href="panda_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda with Wrist Camera</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
+    </div>
+</div>
+
+<div class="gallery-item">
+    <a href="/robots/so100">
+        <img src="../_static/robot_images/so100/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="so100">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="so100"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">so100</p></a>
+        <p style="margin-top: 0px;">Quality: N/A</p>
     </div>
 </div>
 
@@ -321,9 +341,11 @@ floating_panda_gripper/index
 floating_robotiq_2f_85_gripper/index
 googlerobot/index
 humanoid/index
+koch-v1.1/index
 panda/index
 panda_stick/index
 panda_wristcam/index
+so100/index
 stompy/index
 trifingerpro/index
 ur_10e/index
