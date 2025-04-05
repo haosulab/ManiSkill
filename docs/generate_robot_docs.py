@@ -199,10 +199,10 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
         robot_index_markdown_str += (f"""
 <div class="gallery-item">
     <a href="/robots/{agent.uid}">
-        <img src="/_static/robot_images/{agent.uid}/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="{agent_name}">
+        <img src="../_static/robot_images/{agent.uid}/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="{agent_name}">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/{agent.uid}"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">{agent_name}</p></a>
+        <a href="{agent.uid}"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">{agent_name}</p></a>
         <p style="margin-top: 0px;">Quality: {quality if quality is not None else "N/A"}</p>
     </div>
 </div>

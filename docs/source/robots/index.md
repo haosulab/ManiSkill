@@ -26,280 +26,280 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 
 <div class="gallery-item">
     <a href="/robots/anymal_c">
-        <img src="/_static/robot_images/anymal_c/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Anymal C">
+        <img src="../_static/robot_images/anymal_c/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Anymal C">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/anymal_c"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Anymal C</p></a>
+        <a href="anymal_c"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Anymal C</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/allegro_hand_left">
-        <img src="/_static/robot_images/allegro_hand_left/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Left">
+        <img src="../_static/robot_images/allegro_hand_left/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Left">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/allegro_hand_left"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Allegro Hand Left</p></a>
+        <a href="allegro_hand_left"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Allegro Hand Left</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/allegro_hand_right">
-        <img src="/_static/robot_images/allegro_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Right">
+        <img src="../_static/robot_images/allegro_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Right">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/allegro_hand_right"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Allegro Hand Right</p></a>
+        <a href="allegro_hand_right"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Allegro Hand Right</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/allegro_hand_right_touch">
-        <img src="/_static/robot_images/allegro_hand_right_touch/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Right with Touch Sensing">
+        <img src="../_static/robot_images/allegro_hand_right_touch/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Allegro Hand Right with Touch Sensing">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/allegro_hand_right_touch"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Allegro Hand Right with Touch Sensing</p></a>
+        <a href="allegro_hand_right_touch"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Allegro Hand Right with Touch Sensing</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/dclaw">
-        <img src="/_static/robot_images/dclaw/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="D'Claw">
+        <img src="../_static/robot_images/dclaw/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="D'Claw">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/dclaw"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">D'Claw</p></a>
+        <a href="dclaw"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">D'Claw</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/fetch">
-        <img src="/_static/robot_images/fetch/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Fetch Mobile Manipulator">
+        <img src="../_static/robot_images/fetch/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Fetch Mobile Manipulator">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/fetch"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Fetch Mobile Manipulator</p></a>
+        <a href="fetch"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Fetch Mobile Manipulator</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/floating_inspire_hand_right">
-        <img src="/_static/robot_images/floating_inspire_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Inspire Hand Right">
+        <img src="../_static/robot_images/floating_inspire_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Inspire Hand Right">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/floating_inspire_hand_right"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Inspire Hand Right</p></a>
+        <a href="floating_inspire_hand_right"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Inspire Hand Right</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/floating_panda_gripper">
-        <img src="/_static/robot_images/floating_panda_gripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Panda Gripper">
+        <img src="../_static/robot_images/floating_panda_gripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Panda Gripper">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/floating_panda_gripper"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Panda Gripper</p></a>
+        <a href="floating_panda_gripper"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Panda Gripper</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/floating_robotiq_2f_85_gripper">
-        <img src="/_static/robot_images/floating_robotiq_2f_85_gripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Robotiq 2F-85 Gripper">
+        <img src="../_static/robot_images/floating_robotiq_2f_85_gripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Robotiq 2F-85 Gripper">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/floating_robotiq_2f_85_gripper"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Robotiq 2F-85 Gripper</p></a>
+        <a href="floating_robotiq_2f_85_gripper"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Robotiq 2F-85 Gripper</p></a>
         <p style="margin-top: 0px;">Quality: C</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/googlerobot">
-        <img src="/_static/robot_images/googlerobot/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Google Robot">
+        <img src="../_static/robot_images/googlerobot/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Google Robot">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/googlerobot"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Google Robot</p></a>
+        <a href="googlerobot"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Google Robot</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/humanoid">
-        <img src="/_static/robot_images/humanoid/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Mujoco Humanoid">
+        <img src="../_static/robot_images/humanoid/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Mujoco Humanoid">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/humanoid"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Mujoco Humanoid</p></a>
+        <a href="humanoid"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Mujoco Humanoid</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/panda">
-        <img src="/_static/robot_images/panda/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda">
+        <img src="../_static/robot_images/panda/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/panda"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda</p></a>
+        <a href="panda"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/panda_stick">
-        <img src="/_static/robot_images/panda_stick/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda Arm with Stick Tool">
+        <img src="../_static/robot_images/panda_stick/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda Arm with Stick Tool">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/panda_stick"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda Arm with Stick Tool</p></a>
+        <a href="panda_stick"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda Arm with Stick Tool</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/panda_wristcam">
-        <img src="/_static/robot_images/panda_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda with Wrist Camera">
+        <img src="../_static/robot_images/panda_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Franka Emika Panda with Wrist Camera">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/panda_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda with Wrist Camera</p></a>
+        <a href="panda_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Franka Emika Panda with Wrist Camera</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/stompy">
-        <img src="/_static/robot_images/stompy/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Stompy">
+        <img src="../_static/robot_images/stompy/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Stompy">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/stompy"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Stompy</p></a>
+        <a href="stompy"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Stompy</p></a>
         <p style="margin-top: 0px;">Quality: C</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/trifingerpro">
-        <img src="/_static/robot_images/trifingerpro/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Trifinger Pro">
+        <img src="../_static/robot_images/trifingerpro/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Trifinger Pro">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/trifingerpro"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Trifinger Pro</p></a>
+        <a href="trifingerpro"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Trifinger Pro</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/ur_10e">
-        <img src="/_static/robot_images/ur_10e/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="UR10e">
+        <img src="../_static/robot_images/ur_10e/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="UR10e">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/ur_10e"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">UR10e</p></a>
+        <a href="ur_10e"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">UR10e</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/unitree_g1">
-        <img src="/_static/robot_images/unitree_g1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1">
+        <img src="../_static/robot_images/unitree_g1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/unitree_g1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree G1</p></a>
+        <a href="unitree_g1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree G1</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/unitree_g1_simplified_legs">
-        <img src="/_static/robot_images/unitree_g1_simplified_legs/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1 Simplified Legs">
+        <img src="../_static/robot_images/unitree_g1_simplified_legs/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1 Simplified Legs">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/unitree_g1_simplified_legs"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree G1 Simplified Legs</p></a>
+        <a href="unitree_g1_simplified_legs"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree G1 Simplified Legs</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/unitree_g1_simplified_upper_body">
-        <img src="/_static/robot_images/unitree_g1_simplified_upper_body/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1 Simplified Upper Body">
+        <img src="../_static/robot_images/unitree_g1_simplified_upper_body/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree G1 Simplified Upper Body">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/unitree_g1_simplified_upper_body"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree G1 Simplified Upper Body</p></a>
+        <a href="unitree_g1_simplified_upper_body"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree G1 Simplified Upper Body</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/unitree_go2">
-        <img src="/_static/robot_images/unitree_go2/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree Go2">
+        <img src="../_static/robot_images/unitree_go2/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree Go2">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/unitree_go2"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree Go2</p></a>
+        <a href="unitree_go2"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree Go2</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/unitree_h1">
-        <img src="/_static/robot_images/unitree_h1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree H1">
+        <img src="../_static/robot_images/unitree_h1/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree H1">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/unitree_h1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree H1</p></a>
+        <a href="unitree_h1"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree H1</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/unitree_h1_simplified">
-        <img src="/_static/robot_images/unitree_h1_simplified/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree H1 Simplified Legs">
+        <img src="../_static/robot_images/unitree_h1_simplified/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Unitree H1 Simplified Legs">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/unitree_h1_simplified"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree H1 Simplified Legs</p></a>
+        <a href="unitree_h1_simplified"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Unitree H1 Simplified Legs</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/widowx250s">
-        <img src="/_static/robot_images/widowx250s/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX 250S">
+        <img src="../_static/robot_images/widowx250s/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX 250S">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/widowx250s"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">WidowX 250S</p></a>
+        <a href="widowx250s"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">WidowX 250S</p></a>
         <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/xarm6_nogripper">
-        <img src="/_static/robot_images/xarm6_nogripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with No Gripper">
+        <img src="../_static/robot_images/xarm6_nogripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with No Gripper">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/xarm6_nogripper"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm6 with No Gripper</p></a>
+        <a href="xarm6_nogripper"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm6 with No Gripper</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/xarm6_robotiq">
-        <img src="/_static/robot_images/xarm6_robotiq/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with Robotiq Gripper">
+        <img src="../_static/robot_images/xarm6_robotiq/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with Robotiq Gripper">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/xarm6_robotiq"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm6 with Robotiq Gripper</p></a>
+        <a href="xarm6_robotiq"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm6 with Robotiq Gripper</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/xarm6_robotiq_wristcam">
-        <img src="/_static/robot_images/xarm6_robotiq_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with Robotiq Gripper and Wrist Camera">
+        <img src="../_static/robot_images/xarm6_robotiq_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with Robotiq Gripper and Wrist Camera">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/xarm6_robotiq_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm6 with Robotiq Gripper and Wrist Camera</p></a>
+        <a href="xarm6_robotiq_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm6 with Robotiq Gripper and Wrist Camera</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
 
 <div class="gallery-item">
     <a href="/robots/xarm7_ability">
-        <img src="/_static/robot_images/xarm7_ability/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm7 Ability">
+        <img src="../_static/robot_images/xarm7_ability/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm7 Ability">
     </a>
     <div class="gallery-item-caption">
-        <a href="/robots/xarm7_ability"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm7 Ability</p></a>
+        <a href="xarm7_ability"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">XArm7 Ability</p></a>
         <p style="margin-top: 0px;">Quality: A</p>
     </div>
 </div>
