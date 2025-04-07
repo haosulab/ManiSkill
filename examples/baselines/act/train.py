@@ -1,4 +1,4 @@
-ALGO_NAME = 'BC_ACT_state'
+ALGO_NAME = "BC_ACT_state"
 
 import argparse
 import os
@@ -30,6 +30,8 @@ from act.detr.detr_vae import build_encoder, DETRVAE
 from dataclasses import dataclass, field
 from typing import Optional, List
 import tyro
+from mani_skill.envs.distraction_set import DistractionSet
+
 
 @dataclass
 class Args:
@@ -52,7 +54,7 @@ class Args:
 
     env_id: str = "PickCube-v1"
     """the id of the environment"""
-    demo_path: str = 'pickcube.trajectory.state.pd_joint_delta_pos.cpu.h5'
+    demo_path: str = "pickcube.trajectory.state.pd_joint_delta_pos.cpu.h5"
     """the path of demo dataset (pkl or h5)"""
     num_demos: Optional[int] = None
     """number of trajectories to load from the demo dataset"""
@@ -70,8 +72,8 @@ class Args:
     """if toggled, temporal ensembling will be performed"""
 
     # Backbone
-    position_embedding: str = 'sine'
-    backbone: str = 'resnet18'
+    position_embedding: str = "sine"
+    backbone: str = "resnet18"
     lr_backbone: float = 1e-5
     masks: bool = False
     dilation: bool = False
@@ -104,19 +106,27 @@ class Args:
     """the simulation backend to use for evaluation environments. can be "physx_cpu" or "physx_cuda" """
     num_dataload_workers: int = 0
     """the number of workers to use for loading the training data in the torch dataloader"""
-    control_mode: str = 'pd_joint_delta_pos'
+    control_mode: str = "pd_joint_delta_pos"
     """the control mode to use for the evaluation environments. Must match the control mode of the demonstration dataset."""
 
     # additional tags/configs for logging purposes to wandb and shared comparisons with other algorithms
     demo_type: Optional[str] = None
 
+    camera_width: int = 128
+    camera_height: int = 128
+    distraction_set: str = "none"
 
-class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
+
+DISTRACTION_SETS = {"none".upper(): DistractionSet()}
+
+
+class SmallDemoDataset_ACTPolicy(Dataset):  # Load everything into GPU memory
     def __init__(self, data_path, num_queries, device, num_traj):
-        if data_path[-4:] == '.pkl':
+        if data_path[-4:] == ".pkl":
             raise NotImplementedError()
         else:
             from act.utils import load_demo_dataset
+
             trajectories = load_demo_dataset(data_path, num_traj=num_traj, concat=False)
             # trajectories['observations'] is a list of np.ndarray (L+1, obs_dim)
             # trajectories['actions'] is a list of np.ndarray (L, act_dim)
@@ -126,47 +136,45 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
                 trajectories[k][i] = torch.Tensor(v[i]).to(device)
 
         # When the robot reaches the goal state, its joints and gripper fingers need to remain stationary
-        if 'delta_pos' in args.control_mode or args.control_mode == 'base_pd_joint_vel_arm_pd_joint_vel':
-            self.pad_action_arm = torch.zeros((trajectories['actions'][0].shape[1]-1,), device=device)
+        if "delta_pos" in args.control_mode or args.control_mode == "base_pd_joint_vel_arm_pd_joint_vel":
+            self.pad_action_arm = torch.zeros((trajectories["actions"][0].shape[1] - 1,), device=device)
             # to make the arm stay still, we pad the action with 0 in 'delta_pos' control mode
             # gripper action needs to be copied from the last action
         # else:
         #     raise NotImplementedError(f'Control Mode {args.control_mode} not supported')
 
         self.slices = []
-        self.num_traj = len(trajectories['actions'])
+        self.num_traj = len(trajectories["actions"])
         for traj_idx in range(self.num_traj):
-            episode_len = trajectories['actions'][traj_idx].shape[0]
-            self.slices += [
-                (traj_idx, ts) for ts in range(episode_len)
-            ]
+            episode_len = trajectories["actions"][traj_idx].shape[0]
+            self.slices += [(traj_idx, ts) for ts in range(episode_len)]
 
         print(f"Length of Dataset: {len(self.slices)}")
 
         self.num_queries = num_queries
         self.trajectories = trajectories
-        self.delta_control = 'delta' in args.control_mode
+        self.delta_control = "delta" in args.control_mode
         self.norm_stats = self.get_norm_stats() if not self.delta_control else None
 
     def __getitem__(self, index):
         traj_idx, ts = self.slices[index]
 
         # get observation at ts only
-        obs = self.trajectories['observations'][traj_idx][ts]
+        obs = self.trajectories["observations"][traj_idx][ts]
         # get num_queries actions
-        act_seq = self.trajectories['actions'][traj_idx][ts:ts+self.num_queries]
+        act_seq = self.trajectories["actions"][traj_idx][ts : ts + self.num_queries]
         action_len = act_seq.shape[0]
 
         # Pad after the trajectory, so all the observations are utilized in training
         if action_len < self.num_queries:
-            if 'delta_pos' in args.control_mode or args.control_mode == 'base_pd_joint_vel_arm_pd_joint_vel':
+            if "delta_pos" in args.control_mode or args.control_mode == "base_pd_joint_vel_arm_pd_joint_vel":
                 gripper_action = act_seq[-1, -1]
                 pad_action = torch.cat((self.pad_action_arm, gripper_action[None]), dim=0)
-                act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries-action_len, 1)], dim=0)
+                act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries - action_len, 1)], dim=0)
                 # making the robot (arm and gripper) stay still
             elif not self.delta_control:
                 target = act_seq[-1]
-                act_seq = torch.cat([act_seq, target.repeat(self.num_queries-action_len, 1)], dim=0)
+                act_seq = torch.cat([act_seq, target.repeat(self.num_queries - action_len, 1)], dim=0)
 
         # normalize obs and act_seq
         if not self.delta_control:
@@ -174,8 +182,8 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
             act_seq = (act_seq - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
 
         return {
-            'observations': obs,
-            'actions': act_seq,
+            "observations": obs,
+            "actions": act_seq,
         }
 
     def __len__(self):
@@ -185,21 +193,21 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
         traj_idx, ts = self.slices[index]
 
         # get observation at start_ts only
-        obs = self.trajectories['observations'][traj_idx][ts]
+        obs = self.trajectories["observations"][traj_idx][ts]
         # get num_queries actions
-        act_seq = self.trajectories['actions'][traj_idx][ts:ts+self.num_queries]
+        act_seq = self.trajectories["actions"][traj_idx][ts : ts + self.num_queries]
         action_len = act_seq.shape[0]
 
         # Pad after the trajectory, so all the observations are utilized in training
         if action_len < self.num_queries:
-            if 'delta_pos' in args.control_mode or args.control_mode == 'base_pd_joint_vel_arm_pd_joint_vel':
+            if "delta_pos" in args.control_mode or args.control_mode == "base_pd_joint_vel_arm_pd_joint_vel":
                 gripper_action = act_seq[-1, -1]
                 pad_action = torch.cat((self.pad_action_arm, gripper_action[None]), dim=0)
-                act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries-action_len, 1)], dim=0)
+                act_seq = torch.cat([act_seq, pad_action.repeat(self.num_queries - action_len, 1)], dim=0)
                 # making the robot (arm and gripper) stay still
             elif not self.delta_control:
                 target = act_seq[-1]
-                act_seq = torch.cat([act_seq, target.repeat(self.num_queries-action_len, 1)], dim=0)
+                act_seq = torch.cat([act_seq, target.repeat(self.num_queries - action_len, 1)], dim=0)
 
         # normalize obs and act_seq
         if not self.delta_control:
@@ -207,17 +215,17 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into GPU memory
             act_seq = (act_seq - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
 
         return {
-            'observations': obs,
-            'actions': act_seq,
+            "observations": obs,
+            "actions": act_seq,
         }
 
 
 class Agent(nn.Module):
     def __init__(self, env, args):
         super().__init__()
-        assert len(env.single_observation_space.shape) == 1 # (obs_dim,)
-        assert len(env.single_action_space.shape) == 1 # (act_dim,)
-        #assert (env.single_action_space.high == 1).all() and (env.single_action_space.low == -1).all()
+        assert len(env.single_observation_space.shape) == 1  # (obs_dim,)
+        assert len(env.single_action_space.shape) == 1  # (act_dim,)
+        # assert (env.single_action_space.high == 1).all() and (env.single_action_space.low == -1).all()
 
         self.kl_weight = args.kl_weight
         self.state_dim = env.single_observation_space.shape[0]
@@ -248,19 +256,19 @@ class Agent(nn.Module):
 
         # compute l1 loss and kl loss
         total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
-        all_l1 = F.l1_loss(action_seq, a_hat, reduction='none')
+        all_l1 = F.l1_loss(action_seq, a_hat, reduction="none")
         l1 = all_l1.mean()
 
         # store all loss
         loss_dict = dict()
-        loss_dict['l1'] = l1
-        loss_dict['kl'] = total_kld[0]
-        loss_dict['loss'] = loss_dict['l1'] + loss_dict['kl'] * self.kl_weight
+        loss_dict["l1"] = l1
+        loss_dict["kl"] = total_kld[0]
+        loss_dict["loss"] = loss_dict["l1"] + loss_dict["kl"] * self.kl_weight
         return loss_dict
 
     def get_action(self, obs):
         # forward pass
-        a_hat, (_, _) = self.model(obs) # no action, sample from prior
+        a_hat, (_, _) = self.model(obs)  # no action, sample from prior
         return a_hat
 
 
@@ -279,14 +287,19 @@ def kl_divergence(mu, logvar):
 
     return total_kld, dimension_wise_kld, mean_kld
 
+
 def save_ckpt(run_name, tag):
-    os.makedirs(f'runs/{run_name}/checkpoints', exist_ok=True)
+    os.makedirs(f"runs/{run_name}/checkpoints", exist_ok=True)
     ema.copy_to(ema_agent.parameters())
-    torch.save({
-        'norm_stats': dataset.norm_stats,
-        'agent': agent.state_dict(),
-        'ema_agent': ema_agent.state_dict(),
-    }, f'runs/{run_name}/checkpoints/{tag}.pt')
+    torch.save(
+        {
+            "norm_stats": dataset.norm_stats,
+            "agent": agent.state_dict(),
+            "ema_agent": ema_agent.state_dict(),
+        },
+        f"runs/{run_name}/checkpoints/{tag}.pt",
+    )
+
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -296,18 +309,21 @@ if __name__ == "__main__":
     else:
         run_name = args.exp_name
 
-    if args.demo_path.endswith('.h5'):
+    if args.demo_path.endswith(".h5"):
         import json
-        json_file = args.demo_path[:-2] + 'json'
-        with open(json_file, 'r') as f:
+
+        json_file = args.demo_path[:-2] + "json"
+        with open(json_file, "r") as f:
             demo_info = json.load(f)
-            if 'control_mode' in demo_info['env_info']['env_kwargs']:
-                control_mode = demo_info['env_info']['env_kwargs']['control_mode']
-            elif 'control_mode' in demo_info['episodes'][0]:
-                control_mode = demo_info['episodes'][0]['control_mode']
+            if "control_mode" in demo_info["env_info"]["env_kwargs"]:
+                control_mode = demo_info["env_info"]["env_kwargs"]["control_mode"]
+            elif "control_mode" in demo_info["episodes"][0]:
+                control_mode = demo_info["episodes"][0]["control_mode"]
             else:
-                raise Exception('Control mode not found in json')
-            assert control_mode == args.control_mode, f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
+                raise Exception("Control mode not found in json")
+            assert control_mode == args.control_mode, (
+                f"Control mode mismatched. Dataset has control mode {control_mode}, but args has control mode {args.control_mode}"
+            )
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -318,11 +334,26 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="state", render_mode="rgb_array")
+    env_kwargs = dict(
+        control_mode=args.control_mode,
+        reward_mode="sparse",
+        obs_mode="state",
+        render_mode="rgb_array",
+        camera_width=args.camera_width,
+        camera_height=args.camera_height,
+        distraction_set=DISTRACTION_SETS[args.distraction_set.upper()],
+    )
     if args.max_episode_steps is not None:
         env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = None
-    envs = make_eval_envs(args.env_id, args.num_eval_envs, args.sim_backend, env_kwargs, other_kwargs, video_dir=f'runs/{run_name}/videos' if args.capture_video else None)
+    envs = make_eval_envs(
+        args.env_id,
+        args.num_eval_envs,
+        args.sim_backend,
+        env_kwargs,
+        other_kwargs,
+        video_dir=f"runs/{run_name}/videos" if args.capture_video else None,
+    )
 
     # dataloader setup
     dataset = SmallDemoDataset_ACTPolicy(args.demo_path, args.num_queries, device, num_traj=args.num_demos)
@@ -340,8 +371,11 @@ if __name__ == "__main__":
 
     if args.track:
         import wandb
+
         config = vars(args)
-        config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps)
+        config["eval_env_cfg"] = dict(
+            **env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=args.max_episode_steps
+        )
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
@@ -350,7 +384,7 @@ if __name__ == "__main__":
             name=run_name,
             save_code=True,
             group="ACT",
-            tags=["act"]
+            tags=["act"],
         )
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
@@ -372,7 +406,7 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=1e-4)
 
     # LR drop by a factor of 10 after lr_drop iters
-    lr_drop = int((2/3)*args.total_iters)
+    lr_drop = int((2 / 3) * args.total_iters)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, lr_drop)
 
     # Exponential Moving Average
@@ -382,13 +416,17 @@ if __name__ == "__main__":
     ema_agent = Agent(envs, args).to(device)
 
     # Evaluation
-    #eval_kwargs = dict(
+    # eval_kwargs = dict(
     #    stats=dataset.norm_stats, num_queries=args.num_queries, temporal_agg=args.temporal_agg,
     #    max_timesteps=gym_utils.find_max_episode_steps_value(envs), device=device, sim_backend=args.sim_backend
-    #)
+    # )
     eval_kwargs = dict(
-        stats=dataset.norm_stats, num_queries=args.num_queries, temporal_agg=args.temporal_agg,
-        max_timesteps=args.max_episode_steps, device=device, sim_backend=args.sim_backend
+        stats=dataset.norm_stats,
+        num_queries=args.num_queries,
+        temporal_agg=args.temporal_agg,
+        max_timesteps=args.max_episode_steps,
+        device=device,
+        sim_backend=args.sim_backend,
     )
 
     # ---------------------------------------------------------------------------- #
@@ -404,16 +442,16 @@ if __name__ == "__main__":
         last_tick = time.time()
         # forward and compute loss
         loss_dict = agent.compute_loss(
-            obs=data_batch['observations'],  # (B, obs_dim)
-            action_seq=data_batch['actions'],  # (B, num_queries, act_dim)
+            obs=data_batch["observations"],  # (B, obs_dim)
+            action_seq=data_batch["actions"],  # (B, num_queries, act_dim)
         )
-        total_loss = loss_dict['loss']  # total_loss = l1 + kl * self.kl_weight
+        total_loss = loss_dict["loss"]  # total_loss = l1 + kl * self.kl_weight
 
         # backward
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
-        lr_scheduler.step() # step lr scheduler every batch, this is different from standard pytorch behavior
+        lr_scheduler.step()  # step lr scheduler every batch, this is different from standard pytorch behavior
 
         # update Exponential Moving Average of the model weights
         ema.step(agent.parameters())
@@ -428,7 +466,6 @@ if __name__ == "__main__":
             eval_metrics = evaluate(args.num_eval_episodes, ema_agent, envs, eval_kwargs)
             timings["eval"] += time.time() - last_tick
 
-
             print(f"Evaluated {len(eval_metrics['success_at_end'])} episodes")
             for k in eval_metrics.keys():
                 eval_metrics[k] = np.mean(eval_metrics[k])
@@ -440,7 +477,7 @@ if __name__ == "__main__":
                 if k in eval_metrics and eval_metrics[k] > best_eval_metrics[k]:
                     best_eval_metrics[k] = eval_metrics[k]
                     save_ckpt(run_name, f"best_eval_{k}")
-                    print(f'New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.')
+                    print(f"New best {k}_rate: {eval_metrics[k]:.4f}. Saving checkpoint.")
 
         if cur_iter % args.log_freq == 0:
             print(f"Iteration {cur_iter}, loss: {total_loss.item()}")
