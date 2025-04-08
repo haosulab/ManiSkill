@@ -123,5 +123,7 @@ class SO100(BaseAgent):
         return torch.logical_and(lflag, rflag)
 
     def is_static(self, threshold=0.2):
-        qvel = self.robot.get_qvel()
+        qvel = self.robot.get_qvel()[
+            :, :-2
+        ]  # exclude the gripper joint and gripper rotation joint.
         return torch.max(torch.abs(qvel), 1)[0] <= threshold

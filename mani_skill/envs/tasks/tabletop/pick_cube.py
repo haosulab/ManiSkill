@@ -177,6 +177,8 @@ class PickCubeEnv(BaseEnv):
         qvel = self.agent.robot.get_qvel()
         if self.robot_uids == "panda":
             qvel = qvel[..., :-2]
+        elif self.robot_uids == "so100":
+            qvel = qvel[..., :-1]
         static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
         reward += static_reward * info["is_obj_placed"]
 
