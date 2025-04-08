@@ -33,9 +33,22 @@ from act.detr.detr_vae import build_encoder, DETRVAE
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 import tyro
+from mani_skill.envs.distraction_set import DISTRACTION_SETS
+
+# Note(@jstmn): 'world__T__ee', 'world__T__root' were added to the observation space of the Panda agent as a 
+# convenience feature. We remove it here because it isn't included in the default ACT method. Additionally, it 
+# causes at torch shape mismatch error, because the configuration space is [batch x ndof], but these values are
+# [batch x 4 x 4]
+OBS_KEYS_TO_REMOVE = {"world__T__ee", "world__T__root"}
+
 
 @dataclass
 class Args:
+
+    camera_width: int
+    camera_height: int
+    distraction_set: str
+
     exp_name: Optional[str] = None
     """the name of this experiment"""
     seed: int = 1
@@ -144,6 +157,12 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
     def observation(self, observation: Dict):
         sensor_data = observation.pop("sensor_data")
         del observation["sensor_param"]
+        for key in OBS_KEYS_TO_REMOVE:
+            try:
+                del observation["agent"][key]
+            except KeyError:
+                pass
+
         images_rgb = []
         images_depth = []
         for cam_data in sensor_data.values():
@@ -275,6 +294,13 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
         return len(self.slices)
 
     def process_obs(self, obs_dict):
+        # remove keys that shouldn't be included in the observation space
+        for key in OBS_KEYS_TO_REMOVE:
+            try:
+                del obs_dict["agent"][key]
+            except KeyError:
+                pass
+
         # get rgbd data
         sensor_data = obs_dict.pop("sensor_data")
         del obs_dict["sensor_param"]
@@ -466,7 +492,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd" if args.include_depth else "rgb", render_mode="rgb_array")
+    env_kwargs = dict(
+        control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd" if args.include_depth else "rgb", render_mode="rgb_array",
+        camera_width=args.camera_width,
+        camera_height=args.camera_height,
+        distraction_set=DISTRACTION_SETS[args.distraction_set.upper()],
+    )
     if args.max_episode_steps is not None:
         env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = None

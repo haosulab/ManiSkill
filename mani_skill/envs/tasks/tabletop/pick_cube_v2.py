@@ -62,7 +62,6 @@ class PickCubeV2Env(PickCubeEnv):
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        print(" --> Initializing episode, env_idx:", env_idx)
         with torch.device(self.device):
             b = len(env_idx) # number of environments. env_idx is [0, 1, 2, ..., n_envs-1]
             for ts in self._table_scenes:
