@@ -1,5 +1,6 @@
 ALGO_NAME = 'BC_ACT_rgbd'
 
+from collections import defaultdict
 import argparse
 import os
 import random
@@ -19,8 +20,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils
 from mani_skill.utils.registration import REGISTERED_ENVS
 
-from collections import defaultdict
-
+import tqdm
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
@@ -217,14 +217,14 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
 
         # Pre-process the observations, make them align with the obs returned by the FlattenRGBDObservationWrapper
         obs_traj_dict_list = []
-        for obs_traj_dict in trajectories['observations']:
+        for obs_traj_dict in tqdm.tqdm(trajectories['observations'], desc='Pre-processing observations'):
             obs_traj_dict = self.process_obs(obs_traj_dict)
             obs_traj_dict_list.append(obs_traj_dict)
         trajectories['observations'] = obs_traj_dict_list
         self.obs_keys = list(obs_traj_dict.keys())
 
         # Pre-process the actions
-        for i in range(len(trajectories['actions'])):
+        for i in tqdm.tqdm(range(len(trajectories['actions'])), desc='Pre-processing actions'):
             trajectories['actions'][i] = torch.Tensor(trajectories['actions'][i])
         print('Obs/action pre-processing is done.')
 
@@ -238,7 +238,7 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
 
         self.slices = []
         self.num_traj = len(trajectories['actions'])
-        for traj_idx in range(self.num_traj):
+        for traj_idx in tqdm.tqdm(range(self.num_traj), desc='Pre-processing trajectories'):
             episode_len = trajectories['actions'][traj_idx].shape[0]
             self.slices += [
                 (traj_idx, ts) for ts in range(episode_len)
@@ -581,7 +581,7 @@ if __name__ == "__main__":
     best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
-    for cur_iter, data_batch in enumerate(train_dataloader):
+    for cur_iter, data_batch in tqdm.tqdm(enumerate(train_dataloader), desc='Training', total=args.total_iters):
         last_tick = time.time()
         # copy data from cpu to gpu
         obs_batch_dict = data_batch['observations']
