@@ -73,13 +73,6 @@ class PullCubeV2Env(PullCubeEnv):
         self.table_scene = Actor.merge([ts.table for ts in self._table_scenes], name="table")
         self.add_to_state_dict_registry(self.table_scene)
 
-        # PREVIOUS
-        # self.table_scene = TableSceneBuilder(
-        #     env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
-        # )
-        # self.table_scene.build()
-
-
         # Create cube
         cube_actors = []
         for i in range(self.num_envs):
