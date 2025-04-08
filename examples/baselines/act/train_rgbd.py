@@ -1,6 +1,5 @@
 ALGO_NAME = 'BC_ACT_rgbd'
 
-from collections import defaultdict
 import argparse
 import os
 import random
@@ -20,7 +19,8 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils
 from mani_skill.utils.registration import REGISTERED_ENVS
 
-import tqdm
+from collections import defaultdict
+
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
@@ -45,6 +45,8 @@ OBS_KEYS_TO_REMOVE = {"world__T__ee", "world__T__root"}
 @dataclass
 class Args:
 
+    camera_width: int
+    camera_height: int
     distraction_set: str
 
     exp_name: Optional[str] = None
@@ -215,14 +217,14 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
 
         # Pre-process the observations, make them align with the obs returned by the FlattenRGBDObservationWrapper
         obs_traj_dict_list = []
-        for obs_traj_dict in tqdm.tqdm(trajectories['observations'], desc='Pre-processing observations'):
+        for obs_traj_dict in trajectories['observations']:
             obs_traj_dict = self.process_obs(obs_traj_dict)
             obs_traj_dict_list.append(obs_traj_dict)
         trajectories['observations'] = obs_traj_dict_list
         self.obs_keys = list(obs_traj_dict.keys())
 
         # Pre-process the actions
-        for i in tqdm.tqdm(range(len(trajectories['actions'])), desc='Pre-processing actions'):
+        for i in range(len(trajectories['actions'])):
             trajectories['actions'][i] = torch.Tensor(trajectories['actions'][i])
         print('Obs/action pre-processing is done.')
 
@@ -236,7 +238,7 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
 
         self.slices = []
         self.num_traj = len(trajectories['actions'])
-        for traj_idx in tqdm.tqdm(range(self.num_traj), desc='Pre-processing trajectories'):
+        for traj_idx in range(self.num_traj):
             episode_len = trajectories['actions'][traj_idx].shape[0]
             self.slices += [
                 (traj_idx, ts) for ts in range(episode_len)
@@ -492,6 +494,8 @@ if __name__ == "__main__":
     # env setup
     env_kwargs = dict(
         control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd" if args.include_depth else "rgb", render_mode="rgb_array",
+        camera_width=args.camera_width,
+        camera_height=args.camera_height,
         distraction_set=DISTRACTION_SETS[args.distraction_set.upper()],
     )
     if args.max_episode_steps is not None:
@@ -577,7 +581,7 @@ if __name__ == "__main__":
     best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
-    for cur_iter, data_batch in tqdm.tqdm(enumerate(train_dataloader), desc='Training', total=args.total_iters):
+    for cur_iter, data_batch in enumerate(train_dataloader):
         last_tick = time.time()
         # copy data from cpu to gpu
         obs_batch_dict = data_batch['observations']

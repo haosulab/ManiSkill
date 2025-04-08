@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Optional
 import os
@@ -289,3 +290,66 @@ class DistractionSet:
                 xyz[:, 1] = y_range * xyz[:, 1] + y_lims[0]
                 xyz[:, 2] = radii[i]
                 sphere.set_pose(Pose.create_from_pq(p=xyz))
+
+
+_ASSETS_DIR = os.path.join(os.path.dirname(__file__), "../assets")
+all_distractor_set = DistractionSet(
+    distractor_object_cfg={
+        "n_spheres": 1,
+        "radius_range": (0.01, 0.02),"color_range": ((0, 0, 0), (1, 1, 1)),
+        "x_lims": (-0.1, 0.1),
+        "y_lims": (-0.1, 0.1),
+    },
+    MO_color_cfg ={
+        "color_range": ((0, 0, 0), (1, 1, 1)),
+    },
+    MO_texture_cfg = {
+        "textures_directory": os.path.join(_ASSETS_DIR, "textures"),
+    },
+    table_color_cfg = {
+        "color_range": ((0, 0, 0), (1, 1, 1)),
+    },
+    table_texture_cfg = {
+        "textures_directory": os.path.join(_ASSETS_DIR, "textures"),
+    },
+    camera_pose_cfg = {
+        "rpy_range": ((-0.035, -0.035, -0.035), (0.035, 0.035, 0.035)), # aproximately 2 degrees
+        "xyz_range": ((-0.025, -0.025, 0.025), (0.025, 0.025, 0.025)),        # 2.5 cm
+    }
+)
+
+DISTRACTION_SETS = {
+    "none".upper(): DistractionSet(),
+    "dev".upper(): DistractionSet(
+        distractor_object_cfg={
+            "n_spheres": 1,
+            "radius_range": (0.01, 0.02),
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+            "x_lims": (-0.1, 0.1),
+            "y_lims": (-0.1, 0.1),
+        },
+        MO_color_cfg ={
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+        },
+        MO_texture_cfg = {
+            "textures_directory": os.path.join(_ASSETS_DIR, "textures"),
+        },
+        table_color_cfg = {
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+        },
+        table_texture_cfg = {
+            "textures_directory": os.path.join(_ASSETS_DIR, "textures"),
+        },
+        camera_pose_cfg = {
+            "rpy_range": ((-0.035, -0.035, -0.035), (0.035, 0.035, 0.035)), # aproximately 2 degrees
+            "xyz_range": ((-0.025, -0.025, 0.025), (0.025, 0.025, 0.025)),        # 2.5 cm
+        }
+    ),
+    "all".upper(): deepcopy(all_distractor_set),
+    "distractor_object_cfg".upper(): all_distractor_set.get_partial_copy(["distractor_object_cfg"]),
+    "MO_color_cfg".upper(): all_distractor_set.get_partial_copy(["MO_color_cfg"]),
+    "MO_texture_cfg".upper(): all_distractor_set.get_partial_copy(["MO_texture_cfg"]),
+    "table_color_cfg".upper(): all_distractor_set.get_partial_copy(["table_color_cfg"]),
+    "table_texture_cfg".upper(): all_distractor_set.get_partial_copy(["table_texture_cfg"]),
+    "camera_pose_cfg".upper(): all_distractor_set.get_partial_copy(["camera_pose_cfg"]),
+}
