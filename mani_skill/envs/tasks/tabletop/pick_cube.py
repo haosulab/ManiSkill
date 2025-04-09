@@ -193,5 +193,8 @@ class PickCubeEnv(BaseEnv):
 
 @register_env("PickCubeSO100-v1", max_episode_steps=50)
 class PickCubeSO100Env(PickCubeEnv):
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeSO100-v1_rt.mp4"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, robot_uids="so100", **kwargs)
