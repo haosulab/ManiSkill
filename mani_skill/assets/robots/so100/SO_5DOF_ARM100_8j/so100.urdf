@@ -31,7 +31,7 @@
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/base_link.glb" />
+        <mesh filename="meshes/Base.stl" />
       </geometry>
       <material name="white">
       </material>
@@ -42,7 +42,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/base_link_motor.glb" />
+          filename="meshes/Base_Motor.stl" />
       </geometry>
       <material name="motor">
       </material>
@@ -53,7 +53,16 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/base_link.glb" />
+          filename="meshes/Base.stl" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Base_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -79,7 +88,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/rotation_pitch.glb" />
+          filename="meshes/Rotation_Pitch.stl" />
       </geometry>
       <material name="white">
       </material>
@@ -90,7 +99,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/rotation_pitch_motor.glb" />
+          filename="meshes/Rotation_Pitch_Motor.stl" />
       </geometry>
       <material name="motor">
       </material>
@@ -101,7 +110,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/rotation_pitch.glb" />
+          filename="meshes/Rotation_Pitch.stl" />
       </geometry>
     </collision>
     <collision>
@@ -110,7 +119,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/rotation_pitch_motor.glb" />
+          filename="meshes/Rotation_Pitch_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -155,7 +164,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/upper_arm.glb" />
+          filename="meshes/Upper_Arm.stl" />
       </geometry>
       <material name="white">
       </material>
@@ -166,7 +175,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/upper_arm_motor.glb" />
+          filename="meshes/Upper_Arm_Motor.stl" />
       </geometry>
       <material name="motor">
       </material>
@@ -177,7 +186,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/upper_arm.glb" />
+          filename="meshes/Upper_Arm.stl" />
       </geometry>
     </collision>
     <collision>
@@ -186,7 +195,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/upper_arm_motor.glb" />
+          filename="meshes/Upper_Arm_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -230,7 +239,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/lower_arm.glb" />
+          filename="meshes/Lower_Arm.stl" />
       </geometry>
       <material name="white">
       </material>
@@ -241,7 +250,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/lower_arm_motor.glb" />
+          filename="meshes/Lower_Arm_Motor.stl" />
       </geometry>
       <material name="motor">
       </material>
@@ -252,7 +261,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/lower_arm.glb" />
+          filename="meshes/Lower_Arm.stl" />
       </geometry>
     </collision>
     <collision>
@@ -261,7 +270,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/lower_arm_motor.glb" />
+          filename="meshes/Lower_Arm_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -305,7 +314,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/wrist_pitch_roll.glb" />
+          filename="meshes/Wrist_Pitch_Roll.stl" />
       </geometry>
       <material name="white">
       </material>
@@ -316,7 +325,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/wrist_pitch_roll_motor.glb" />
+          filename="meshes/Wrist_Pitch_Roll_Motor.stl" />
       </geometry>
       <material name="motor">
       </material>
@@ -327,7 +336,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/wrist_pitch_roll.glb" />
+          filename="meshes/Wrist_Pitch_Roll.stl" />
       </geometry>
     </collision>
     <collision>
@@ -336,7 +345,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/wrist_pitch_roll_motor.glb" />
+          filename="meshes/Wrist_Pitch_Roll_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -380,7 +389,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/fixed_jaw.glb" />
+          filename="meshes/Fixed_Jaw.stl" />
       </geometry>
       <material name="white">
       </material>
@@ -391,7 +400,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/fixed_jaw_motor.glb" />
+          filename="meshes/Fixed_Jaw_Motor.stl" />
       </geometry>
       <material name="motor">
       </material>
@@ -455,7 +464,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Moving Jaw.STL" />
+          filename="meshes/Moving_Jaw.stl" />
       </geometry>
       <material name="white">
       </material>
