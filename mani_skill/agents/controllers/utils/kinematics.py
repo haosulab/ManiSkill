@@ -1,6 +1,7 @@
 """
 Code for kinematics utilities on CPU/GPU
 """
+
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
 from typing import List
@@ -12,6 +13,7 @@ except ImportError:
         "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
     )
 import torch
+from lxml import etree as ET
 from sapien.wrapper.pinocchio_model import PinocchioModel
 
 from mani_skill.utils import common
@@ -58,7 +60,17 @@ class Kinematics:
                 active_ancestor_joints.append(cur_link.joint)
             cur_link = cur_link.joint.parent_link
         active_ancestor_joints = active_ancestor_joints[::-1]
-        self.active_ancestor_joints = active_ancestor_joints
+
+        # NOTE (arth): some robots, like Fetch, have dummy joints that can mess with IK solver.
+        #   we assume that the urdf_path provides a valid kinematic chain, and prune joints
+        #   which are in the ManiSkill articulation but not in the kinematic chain
+        with open(self.urdf_path, "r") as f:
+            urdf_string = f.read()
+        xml = ET.fromstring(urdf_string.encode("utf-8"))
+        urdf_joints = set(node.get("name") for node in xml if node.tag == "joint")
+        self.active_ancestor_joints = [
+            x for x in active_ancestor_joints if x.name in urdf_joints
+        ]
 
         # initially self.active_joint_indices references active joints that are controlled.
         # we also make the assumption that the active index is the same across all parallel managed joints
@@ -167,9 +179,13 @@ class Kinematics:
                 if pos_only:
                     jacobian = jacobian[:, 0:3]
 
+                # NOTE (arth): use only the parts of the jacobian that correspond to the active joints
+                jacobian = jacobian[:, :, self.qmask]
+
                 # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
                 delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
-                return q0 + delta_joint_pos.squeeze(-1)
+
+                return q0[:, self.qmask] + delta_joint_pos.squeeze(-1)
         else:
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.end_link_idx,

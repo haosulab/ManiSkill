@@ -137,10 +137,10 @@ def main():
                 base_action[0] = 1
             elif key == "s":  # backward
                 base_action[0] = -1
-            elif key == "q":  # rotate counter
-                base_action[2] = 1
-            elif key == "e":  # rotate clockwise
-                base_action[2] = -1
+            elif key == "a":  # rotate counter
+                base_action[1] = 1
+            elif key == "d":  # rotate clockwise
+                base_action[1] = -1
             elif key == "z":  # lift
                 body_action[2] = 1
             elif key == "x":  # lower
