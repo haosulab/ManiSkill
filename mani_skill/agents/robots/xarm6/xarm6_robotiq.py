@@ -407,6 +407,14 @@ class XArm6Robotiq(BaseAgent):
         qvel = self.robot.get_qvel()[..., :-6]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
+    @property
+    def tcp_pos(self):
+        return self.tcp.pose.p
+
+    @property
+    def tcp_pose(self):
+        return self.tcp.pose
+
 
 @register_agent(asset_download_ids=["xarm6"])
 class XArm6RobotiqWristCamera(XArm6Robotiq):

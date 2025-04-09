@@ -268,6 +268,14 @@ class Panda(BaseAgent):
         qvel = self.robot.get_qvel()[..., :-2]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
+    @property
+    def tcp_pos(self):
+        return self.tcp.pose.p
+
+    @property
+    def tcp_pose(self):
+        return self.tcp.pose
+
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
         """Build a grasp pose (panda_hand_tcp)."""
