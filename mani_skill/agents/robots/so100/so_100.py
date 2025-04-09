@@ -18,7 +18,7 @@ from mani_skill.utils.structs.pose import Pose
 @register_agent()
 class SO100(BaseAgent):
     uid = "so100"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/so100/SO_5DOF_ARM100_8j/original.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/so100/SO_5DOF_ARM100_8j/so100.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2, dynamic_friction=2, restitution=0.0)
