@@ -66,7 +66,7 @@ Table of all tasks/environments in this category. Task column is the environment
 </tr>
 <tr class="row-even">
 <td><p><a href="#pickcubeso100-v1">PickCubeSO100-v1</a></p></td>
-<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCube-v1_rt_thumb_first.png' alt='PickCubeSO100-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCube-v1_rt_thumb_last.png' alt='PickCubeSO100-v1'></div></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCubeSO100-v1_rt_thumb_first.png' alt='PickCubeSO100-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCubeSO100-v1_rt_thumb_last.png' alt='PickCubeSO100-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
 <td><p>❌</p></td>
