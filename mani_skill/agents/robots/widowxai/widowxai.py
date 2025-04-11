@@ -72,106 +72,34 @@ class WidowXAI(BaseAgent):
 
     @property
     def _controller_configs(self):
-        # -------------------------------------------------------------------------- #
-        # Arm 
-        # -------------------------------------------------------------------------- #
-        arm_pd_joint_delta_pos = PDJointPosControllerConfig(
-            self.arm_joint_names,
-            lower=-0.1,
-            upper=0.1,
+        pd_joint_pos = PDJointPosControllerConfig(
+            [joint.name for joint in self.robot.active_joints],
+            lower=None,
+            upper=None,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             use_delta=True,
         )
-        arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
-        arm_pd_joint_target_delta_pos.use_target = True
 
-        # PD ee position
-        arm_pd_ee_delta_pos = PDEEPosControllerConfig(
-            joint_names=self.arm_joint_names,
-            pos_lower=-0.1,
-            pos_upper=0.1,
-            stiffness=self.arm_stiffness,
-            damping=self.arm_damping,
-            force_limit=self.arm_force_limit,
-            ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
-        )
-        arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
-            joint_names=self.arm_joint_names,
-            pos_lower=-0.1,
-            pos_upper=0.1,
-            rot_lower=-0.1,
-            rot_upper=0.1,
-            stiffness=self.arm_stiffness,
-            damping=self.arm_damping,
-            force_limit=self.arm_force_limit,
-            ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
-        )
-
-        arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
-        arm_pd_ee_target_delta_pos.use_target = True
-        arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_target_delta_pose.use_target = True
-
-        # PD joint velocity
-        arm_pd_joint_vel = PDJointVelControllerConfig(
-            self.arm_joint_names,
-            -1.0,
-            1.0,
-            self.arm_damping,  # this might need to be tuned separately
-            self.arm_force_limit,
-        )
-
-        # PD joint position and velocity
-        arm_pd_joint_pos_vel = PDJointPosVelControllerConfig(
-            self.arm_joint_names,
-            None,
-            None,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
-            normalize_action=False,
-        )
-        arm_pd_joint_delta_pos_vel = PDJointPosVelControllerConfig(
-            self.arm_joint_names,
+        pd_joint_delta_pos = PDJointPosControllerConfig(
+            [joint.name for joint in self.robot.active_joints],
             -0.1,
             0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
             use_delta=True,
+            use_target=False,
         )
-
-        # -------------------------------------------------------------------------- #
-        # Gripper
-        # -------------------------------------------------------------------------- #
-        # NOTE(jigu): IssacGym uses large P and D but with force limit
-        # However, tune a good force limit to have a good mimic behavior
-        gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
-            self.gripper_joint_names,
-            lower=-0.01,  # a trick to have force when the object is thin
-            upper=0.04,
-            stiffness=self.gripper_stiffness,
-            damping=self.gripper_damping,
-            force_limit=self.gripper_force_limit,
-        )
+        pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
+        pd_joint_target_delta_pos.use_target = True
 
         controller_configs = dict(
-            pd_joint_delta_pos=dict(arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos),
-            pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos),
-            pd_ee_delta_pose=dict(arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos),
-            pd_joint_target_delta_pos=dict(arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos),
-            pd_ee_target_delta_pos=dict(arm=arm_pd_ee_target_delta_pos, gripper=gripper_pd_joint_pos),
-            pd_ee_target_delta_pose=dict(arm=arm_pd_ee_target_delta_pose, gripper=gripper_pd_joint_pos),
-            pd_joint_vel=dict(arm=arm_pd_joint_vel, gripper=gripper_pd_joint_pos),
-            pd_joint_pos_vel=dict(arm=arm_pd_joint_pos_vel, gripper=gripper_pd_joint_pos),
-            pd_joint_delta_pos_vel=dict(arm=arm_pd_joint_delta_pos_vel, gripper=gripper_pd_joint_pos),
+            pd_joint_delta_pos=pd_joint_delta_pos,
+            pd_joint_pos=pd_joint_pos,
+            pd_joint_target_delta_pos=pd_joint_target_delta_pos,
         )
-
-        # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
 
     def _after_loading_articulation(self):
