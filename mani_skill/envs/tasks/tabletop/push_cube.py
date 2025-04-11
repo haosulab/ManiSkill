@@ -23,7 +23,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, WidowXAI
+from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
@@ -50,10 +50,10 @@ class PushCubeEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushCube-v1_rt.mp4"
 
-    SUPPORTED_ROBOTS = ["panda", "fetch", "widowxai"]
+    SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch, WidowXAI]
+    agent: Union[Panda, Fetch]
 
     # set some commonly used values
     goal_radius = 0.1
