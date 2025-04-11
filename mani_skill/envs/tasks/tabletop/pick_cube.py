@@ -176,7 +176,7 @@ class PickCubeEnv(BaseEnv):
         reward += place_reward * is_grasped
 
         qvel = self.agent.robot.get_qvel()
-        if self.robot_uids == "panda":
+        if self.robot_uids in ["panda", "widowxai"]:
             qvel = qvel[..., :-2]
         elif self.robot_uids == "so100":
             qvel = qvel[..., :-1]
