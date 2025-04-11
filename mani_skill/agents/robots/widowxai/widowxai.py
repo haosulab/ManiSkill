@@ -99,6 +99,7 @@ class WidowXAI(BaseAgent):
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
+            mimic={"left_carriage_joint": {"joint": "right_carriage_joint"}},
         )
 
         controller_configs = dict(
