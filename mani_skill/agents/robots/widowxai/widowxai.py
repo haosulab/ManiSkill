@@ -61,14 +61,9 @@ class WidowXAI(BaseAgent):
         "left_carriage_joint",
     ]
     ee_link_name = "ee_gripper_link"
-
-    # NOTE(hupo): these are mostly copied from Panda, need to be tuned for real robot
     arm_stiffness = 1e3
     arm_damping = 1e2
     arm_force_limit = 100
-    gripper_stiffness = 1e3
-    gripper_damping = 1e2
-    gripper_force_limit = 100
 
     @property
     def _controller_configs(self):
