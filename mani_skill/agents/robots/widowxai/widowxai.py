@@ -35,13 +35,13 @@ class WidowXAI(BaseAgent):
             qpos=np.array(
                 [
                     0.0,
-                    2.0,
-                    1.12,
-                    0.7,
+                    np.pi/12,
+                    np.pi/12,
                     0.0,
                     0.0,
-                    0.03,
-                    0.03,
+                    0.0,
+                    0.026,
+                    0.026,
                 ]
             ),
             pose=sapien.Pose(),
