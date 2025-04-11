@@ -179,6 +179,14 @@ class WidowXAI(BaseAgent):
         self.finger2_link = self.robot.links_map["gripper_right"]
         self.tcp = sapien_utils.get_obj_by_name(self.robot.get_links(), self.ee_link_name)
 
+    @property
+    def tcp_pos(self):
+        return self.tcp.pose.p
+
+    @property
+    def tcp_pose(self):
+        return self.tcp.pose
+
     def is_grasping(self, object: Actor, min_force=0.2, max_angle=85):
         """Check if the robot is grasping an object
 
