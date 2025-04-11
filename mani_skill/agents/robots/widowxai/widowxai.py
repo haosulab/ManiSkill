@@ -35,9 +35,9 @@ class WidowXAI(BaseAgent):
             qpos=np.array(
                 [
                     0.0,
-                    np.pi/12,
-                    np.pi/12,
-                    0.0,
+                    np.pi/6,
+                    np.pi/6,
+                    -np.pi/6,
                     0.0,
                     0.0,
                     0.026,
