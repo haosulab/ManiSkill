@@ -57,9 +57,9 @@ PICK_CUBE_CONFIGS = {
         "human_cam_target_pos": [-0.46, 0.0, 0.1],
     },
     "widowxai": {
-        "cube_half_size": 0.0125,
-        "goal_thresh": 0.0125 * 1.25,
-        "cube_spawn_half_size": 0.05,
+        "cube_half_size": 0.0165,
+        "goal_thresh": 0.0165 * 1.25,
+        "cube_spawn_half_size": 0.03,
         "cube_spawn_center": (-0.25, 0),
         "max_goal_height": 0.1,
         "sensor_cam_eye_pos": [0.2, 0, 0.5],

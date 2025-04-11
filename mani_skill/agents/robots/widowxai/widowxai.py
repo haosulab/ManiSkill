@@ -92,24 +92,29 @@ class WidowXAI(BaseAgent):
         arm_pd_joint_target_delta_pos = copy.deepcopy(arm_pd_joint_delta_pos)
         arm_pd_joint_target_delta_pos.use_target = True
 
-        gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
-            self.gripper_joint_names,
-            lower=-0.01,  # a trick to have force when the object is thin
-            upper=0.04,
-            stiffness=self.gripper_stiffness,
-            damping=self.gripper_damping,
-            force_limit=self.gripper_force_limit,
-            mimic={"left_carriage_joint": {"joint": "right_carriage_joint"}},
-        )
+        # gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
+        #     self.gripper_joint_names,
+        #     lower=-0.01,  # a trick to have force when the object is thin
+        #     upper=0.04,
+        #     stiffness=self.gripper_stiffness,
+        #     damping=self.gripper_damping,
+        #     force_limit=self.gripper_force_limit,
+        #     mimic={"left_carriage_joint": {"joint": "right_carriage_joint"}},
+        # )
 
+        # controller_configs = dict(
+        #     pd_joint_delta_pos=dict(
+        #         arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos,
+        #     ),
+        #     pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
+        #     pd_joint_target_delta_pos=dict(
+        #         arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos,
+        #     ),
+        # )
         controller_configs = dict(
-            pd_joint_delta_pos=dict(
-                arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos,
-            ),
-            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
-            pd_joint_target_delta_pos=dict(
-                arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos,
-            ),
+            pd_joint_delta_pos=arm_pd_joint_delta_pos,
+            pd_joint_pos=arm_pd_joint_pos,
+            pd_joint_target_delta_pos=arm_pd_joint_target_delta_pos,
         )
         return deepcopy_dict(controller_configs)
 
