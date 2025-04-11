@@ -1,4 +1,4 @@
-# `mani_skill.agents.base_agent`
+# mani_skill.agents.base_agent
 
 ```{eval-rst}  
 .. automodule:: mani_skill.agents.base_agent

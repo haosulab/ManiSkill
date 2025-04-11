@@ -1,0 +1,122 @@
+{
+  "panda": {
+    "quality": "A",
+    "name": "Franka Emika Panda"
+  },
+  "panda_stick": {
+    "quality": "A",
+    "name": "Franka Emika Panda Arm with Stick Tool"
+  },
+  "panda_wristcam": {
+    "quality": "A",
+    "name": "Franka Emika Panda with Wrist Camera"
+  },
+  "fetch": {
+    "quality": "B",
+    "name": "Fetch Mobile Manipulator"
+  },
+  "anymal_c": {
+    "quality": "B",
+    "name": "Anymal C"
+  },
+  "allegro_hand_left": {
+    "quality": "B",
+    "name": "Allegro Hand Left"
+  },
+  "allegro_hand_right": {
+    "quality": "B",
+    "name": "Allegro Hand Right"
+  },
+  "allegro_hand_right_touch": {
+    "quality": "B",
+    "name": "Allegro Hand Right with Touch Sensing"
+  },
+  "dclaw": {
+    "quality": "B",
+    "name": "D'Claw"
+  },
+  "floating_inspire_hand_right": {
+    "quality": "B",
+    "name": "Floating Inspire Hand Right"
+  },
+  "floating_robotiq_2f_85_gripper": {
+    "quality": "C",
+    "name": "Floating Robotiq 2F-85 Gripper"
+  },
+  "floating_panda_gripper": {
+    "quality": "B",
+    "name": "Floating Panda Gripper"
+  },
+  "googlerobot": {
+    "quality": "B",
+    "name": "Google Robot"
+  },
+  "koch-v1.1": {
+    "quality": "A",
+    "name": "Koch v1.1 Arm"
+  },
+  "so100": {
+    "quality": "A",
+    "name": "Standard Open Arm 100 (SO100)"
+  },
+  "stompy": {
+    "quality": "C",
+    "name": "Stompy"
+  },
+  "humanoid": {
+    "quality": "A",
+    "name": "Mujoco Humanoid"
+  },
+  "trifingerpro": {
+    "quality": "B",
+    "name": "Trifinger Pro"
+  },
+  "ur_10e": {
+    "quality": "B",
+    "name": "UR10e"
+  },
+  "unitree_g1": {
+    "quality": "B",
+    "name": "Unitree G1"
+  },
+  "unitree_g1_simplified_legs": {
+    "quality": "B",
+    "name": "Unitree G1 Simplified Legs"
+  },
+  "unitree_g1_simplified_upper_body": {
+    "quality": "B",
+    "name": "Unitree G1 Simplified Upper Body"
+  },
+  "unitree_go2": {
+    "quality": "B",
+    "name": "Unitree Go2"
+  },
+  "unitree_h1": {
+    "quality": "B",
+    "name": "Unitree H1"
+  },
+  "unitree_h1_simplified": {
+    "quality": "B",
+    "name": "Unitree H1 Simplified Legs"
+  },
+  "widowx250s": {
+    "quality": "B",
+    "name": "WidowX 250S"
+  },
+  "xarm6_nogripper": {
+    "quality": "A",
+    "name": "XArm6 with No Gripper"
+  },
+  "xarm6_robotiq": {
+    "quality": "A",
+    "name": "XArm6 with Robotiq Gripper"
+  },
+  "xarm6_robotiq_wristcam": {
+    "quality": "A",
+    "name": "XArm6 with Robotiq Gripper and Wrist Camera"
+  },
+  "xarm7_ability": {
+    "quality": "A",
+    "name": "XArm7 Ability"
+  }
+}

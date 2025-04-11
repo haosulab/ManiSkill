@@ -36,12 +36,12 @@ class XArm6Robotiq(BaseAgent):
         rest=Keyframe(
             qpos=np.array(
                 [
-                    1.56280772e-03,
-                    -1.10912404e00,
-                    -9.71343926e-02,
-                    1.52969832e-04,
-                    1.20606723e00,
-                    1.66234924e-03,
+                    0,
+                    0.22,
+                    -1.23,
+                    0,
+                    1.01,
+                    0,
                     0,
                     0,
                     0,
@@ -77,7 +77,7 @@ class XArm6Robotiq(BaseAgent):
             pose=sapien.Pose([0, 0, 0]),
         ),
         stretch_j6=Keyframe(
-            qpos=np.array([0, 0, 0, 0, 0, np.pi / 2]),
+            qpos=np.array([0, 0, 0, 0, 0, np.pi / 2, 0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose([0, 0, 0]),
         ),
     )
@@ -406,6 +406,14 @@ class XArm6Robotiq(BaseAgent):
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-6]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
+    @property
+    def tcp_pos(self):
+        return self.tcp.pose.p
+
+    @property
+    def tcp_pose(self):
+        return self.tcp.pose
 
 
 @register_agent(asset_download_ids=["xarm6"])

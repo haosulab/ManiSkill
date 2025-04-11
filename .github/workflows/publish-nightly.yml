@@ -1,0 +1,54 @@
+name: Publish nightly pypi distributions
+
+# based on https://github.com/pytorch/rl/blob/main/.github/workflows/nightly_build.yml
+
+on:
+  schedule:
+    # runs at 23:59 PST every day
+    - cron:  '59 7 * * *'
+  # or manually trigger it
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  build-nightly:
+    # Don't run on forked repos.
+    if: github.repository_owner == 'haosulab'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python      
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Build a binary wheel and a source tarball
+        run: |
+          rm -r dist || true # remove dist folder if it exists
+          python3 -mpip install wheel
+          cat setup.py
+          python3 setup.py bdist_wheel \
+            --package_name mani_skill-nightly
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          
+  upload-nightly-wheel:
+    if: github.repository_owner == 'haosulab'
+    needs: build-nightly
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Upload to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_NIGHTLY_API_TOKEN }}
+          packages-dir: dist/

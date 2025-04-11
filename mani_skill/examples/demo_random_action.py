@@ -80,6 +80,8 @@ def main(args: Args):
     )
     if args.robot_uids is not None:
         env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))
+        if len(env_kwargs["robot_uids"]) == 1:
+            env_kwargs["robot_uids"] = env_kwargs["robot_uids"][0]
     env: BaseEnv = gym.make(
         args.env_id,
         **env_kwargs

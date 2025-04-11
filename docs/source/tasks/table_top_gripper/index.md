@@ -64,6 +64,14 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>✅</p></td>
 <td><p>50</p></td>
 </tr>
+<tr class="row-even">
+<td><p><a href="#pickcubeso100-v1">PickCubeSO100-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCubeSO100-v1_rt_thumb_first.png' alt='PickCubeSO100-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCubeSO100-v1_rt_thumb_last.png' alt='PickCubeSO100-v1'></div></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>❌</p></td>
+<td><p>50</p></td>
+</tr>
 <tr class="row-odd">
 <td><p><a href="#picksingleycb-v1">PickSingleYCB-v1</a></p></td>
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_first.png' alt='PickSingleYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_last.png' alt='PickSingleYCB-v1'></div></td>
@@ -261,7 +269,8 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 :color: primary
 
 **Task Description:**
-A simple task where the objective is to grasp a red cube and move it to a target goal position.
+A simple task where the objective is to grasp a red cube and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
+capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
 
 **Randomizations:**
 - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table

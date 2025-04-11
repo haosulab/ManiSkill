@@ -2,11 +2,14 @@ from .allegro_hand import *
 from .anymal import ANYmalC
 from .dclaw import DClaw
 from .fetch import Fetch
+from .floating_inspire_hand import FloatingInspireHandRight
 from .floating_panda_gripper import FloatingPandaGripper
 from .floating_robotiq_2f_85_gripper import *
 from .googlerobot import *
 from .humanoid import Humanoid
+from .koch import *
 from .panda import *
+from .so100 import *
 from .stompy import Stompy
 from .trifingerpro import TriFingerPro
 from .unitree_g1 import *
@@ -17,4 +20,4 @@ from .widowx import *
 from .widowxai import *
 from .xarm6 import *
 from .xarm import XArm7Ability
-from .xmate3 import Xmate3Robotiq
+from .xarm6 import *

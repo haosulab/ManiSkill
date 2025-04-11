@@ -64,6 +64,7 @@ def main():
                 break
         if kf.qpos is not None:
             env.agent.robot.set_qpos(kf.qpos)
+            env.agent.controller.reset()
         if kf.qvel is not None:
             env.agent.robot.set_qvel(kf.qvel)
         env.agent.robot.set_pose(kf.pose)
