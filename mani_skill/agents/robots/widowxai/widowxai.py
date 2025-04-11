@@ -35,9 +35,9 @@ class WidowXAI(BaseAgent):
             qpos=np.array(
                 [
                     0.0,
-                    np.pi/8,
-                    np.pi/4,
-                    np.pi/4,
+                    2.08,
+                    0.41,
+                    1.57,
                     0.0,
                     0.0,
                     0.03,
@@ -89,7 +89,7 @@ class WidowXAI(BaseAgent):
             use_delta=True,
             use_target=False,
         )
-        arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
+        arm_pd_joint_target_delta_pos = copy.deepcopy(arm_pd_joint_delta_pos)
         arm_pd_joint_target_delta_pos.use_target = True
 
         gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
@@ -99,7 +99,6 @@ class WidowXAI(BaseAgent):
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
-            mimic={"panda_finger_joint2": {"joint": "panda_finger_joint1"}},
         )
 
         controller_configs = dict(

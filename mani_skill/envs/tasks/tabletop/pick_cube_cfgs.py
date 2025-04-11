@@ -60,7 +60,7 @@ PICK_CUBE_CONFIGS = {
         "cube_half_size": 0.02,
         "goal_thresh": 0.025,
         "cube_spawn_half_size": 0.05,
-        "cube_spawn_center": (-0.3, 0),
+        "cube_spawn_center": (-0.2, 0),
         "max_goal_height": 0.1,
         "sensor_cam_eye_pos": [0.2, 0, 0.5],
         "sensor_cam_target_pos": [-0.1, 0, 0.1],
