@@ -40,8 +40,8 @@ class WidowXAI(BaseAgent):
                     -1.26,
                     0.0,
                     0.0,
-                    0.032,
-                    0.032,
+                    0.026,
+                    0.026,
                 ]
             ),
             pose=sapien.Pose(),
