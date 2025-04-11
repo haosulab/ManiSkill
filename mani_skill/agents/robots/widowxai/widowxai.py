@@ -1,4 +1,4 @@
-from copy import deepcopy
+import copy
 
 import numpy as np
 import sapien
