@@ -65,7 +65,7 @@ class WidowXAI(BaseAgent):
     arm_damping = 1e2
     arm_force_limit = 100
     gripper_stiffness = 1e3
-    gripper_damping = 1e3
+    gripper_damping = 1e2
     gripper_force_limit = 100
 
     @property
