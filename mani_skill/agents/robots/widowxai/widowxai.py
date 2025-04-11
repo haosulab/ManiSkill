@@ -18,7 +18,7 @@ class WidowXAI(BaseAgent):
     urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai.urdf"
     urdf_config = dict(
         _materials=dict(
-            gripper=dict(static_friction=4.0, dynamic_friction=4.0, restitution=0.0)
+            gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
         ),
         link=dict(
             gripper_left=dict(
@@ -35,13 +35,13 @@ class WidowXAI(BaseAgent):
             qpos=np.array(
                 [
                     0.0,
-                    np.pi/6,
-                    np.pi/6,
-                    -np.pi/6,
+                    np.pi/8,
+                    np.pi/4,
+                    np.pi/4,
                     0.0,
                     0.0,
-                    0.026,
-                    0.026,
+                    0.03,
+                    0.03,
                 ]
             ),
             pose=sapien.Pose(),
@@ -64,36 +64,52 @@ class WidowXAI(BaseAgent):
     arm_stiffness = 1e3
     arm_damping = 1e2
     arm_force_limit = 100
+    gripper_stiffness = 1e3
+    gripper_damping = 1e2
+    gripper_force_limit = 100
 
     @property
     def _controller_configs(self):
-        pd_joint_pos = PDJointPosControllerConfig(
-            [joint.name for joint in self.robot.active_joints],
+        arm_pd_joint_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
             lower=None,
             upper=None,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
-            use_delta=True,
+            normalize_action=False,
         )
-
-        pd_joint_delta_pos = PDJointPosControllerConfig(
-            [joint.name for joint in self.robot.active_joints],
-            -0.1,
-            0.1,
+        arm_pd_joint_delta_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
+            lower=-0.1,
+            upper=0.1,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             use_delta=True,
             use_target=False,
         )
-        pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
-        pd_joint_target_delta_pos.use_target = True
+        arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
+        arm_pd_joint_target_delta_pos.use_target = True
+
+        gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
+            self.gripper_joint_names,
+            lower=-0.01,  # a trick to have force when the object is thin
+            upper=0.04,
+            stiffness=self.gripper_stiffness,
+            damping=self.gripper_damping,
+            force_limit=self.gripper_force_limit,
+            mimic={"panda_finger_joint2": {"joint": "panda_finger_joint1"}},
+        )
 
         controller_configs = dict(
-            pd_joint_delta_pos=pd_joint_delta_pos,
-            pd_joint_pos=pd_joint_pos,
-            pd_joint_target_delta_pos=pd_joint_target_delta_pos,
+            pd_joint_delta_pos=dict(
+                arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos,
+            ),
+            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
+            pd_joint_target_delta_pos=dict(
+                arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos,
+            ),
         )
         return deepcopy_dict(controller_configs)
 
