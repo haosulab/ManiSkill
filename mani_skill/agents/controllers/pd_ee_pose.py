@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import Literal, Sequence, Union
+from typing import Literal, Optional, Sequence, Union
 
 import numpy as np
 import torch
 from gymnasium import spaces
 
 from mani_skill.agents.controllers.utils.kinematics import Kinematics
-from mani_skill.utils import gym_utils
+from mani_skill.utils import gym_utils, sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
@@ -45,6 +45,13 @@ class PDEEPosController(PDJointPosController):
 
         self.ee_link = self.kinematics.end_link
 
+        if self.config.root_link_name is not None:
+            self.root_link = sapien_utils.get_obj_by_name(
+                self.articulation.get_links(), self.config.root_link_name
+            )
+        else:
+            self.root_link = self.articulation.root
+
     def _initialize_action_space(self):
         low = np.float32(np.broadcast_to(self.config.pos_lower, 3))
         high = np.float32(np.broadcast_to(self.config.pos_upper, 3))
@@ -60,7 +67,7 @@ class PDEEPosController(PDJointPosController):
 
     @property
     def ee_pose_at_base(self):
-        to_base = self.articulation.pose.inv()
+        to_base = self.root_link.pose.inv()
         return to_base * (self.ee_pose)
 
     def reset(self):
@@ -69,9 +76,9 @@ class PDEEPosController(PDJointPosController):
             self._target_pose = self.ee_pose_at_base
         else:
             # TODO (stao): this is a strange way to mask setting individual batched pose parts
-            self._target_pose.raw_pose[
-                self.scene._reset_mask
-            ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
+            self._target_pose.raw_pose[self.scene._reset_mask] = (
+                self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
+            )
 
     def compute_target_pose(self, prev_ee_pose_at_base, action):
         # Keep the current rotation and change the position
@@ -156,6 +163,8 @@ class PDEEPosControllerConfig(ControllerConfig):
     ] = "root_translation"
     """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
+    root_link_name: Optional[str] = None
+    """Optionally set different root link for root translation control (e.g. if root is different than base)"""
     use_delta: bool = True
     """Whether to use delta-action control. If true then actions indicate the delta/change in position via translation and orientation via
     rotation. If false, then actions indicate in the base frame (typically wherever the root link of the robot is) what pose the end effector

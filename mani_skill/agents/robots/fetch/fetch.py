@@ -151,6 +151,7 @@ class Fetch(BaseAgent):
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_stationary_path,
+            root_link_name="base_link",
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
@@ -163,6 +164,7 @@ class Fetch(BaseAgent):
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_stationary_path,
+            root_link_name="base_link",
         )
 
         arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
