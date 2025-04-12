@@ -46,12 +46,18 @@ class Kinematics:
             articulation (Articulation): the articulation object
             active_joint_indices (torch.Tensor): indices of the active joints that can be controlled
         """
+
+        # NOTE (arth): urdf path with feasible kinematic chain. may not be same urdf used to
+        #   build the sapien articulation (e.g. sapien articulation may have added joints for
+        #   mobile base which should not be used in IK)
         self.urdf_path = urdf_path
         self.end_link = articulation.links_map[end_link_name]
-        self.end_link_idx = articulation.links.index(self.end_link)
-        self.active_joint_indices = active_joint_indices
+
         self.articulation = articulation
         self.device = articulation.device
+
+        self.active_joint_indices = active_joint_indices
+
         # note that everything past the end-link is ignored. Any joint whose ancestor is self.end_link is ignored
         cur_link = self.end_link
         active_ancestor_joints: List[ArticulationJoint] = []
@@ -67,20 +73,18 @@ class Kinematics:
         with open(self.urdf_path, "r") as f:
             urdf_string = f.read()
         xml = ET.fromstring(urdf_string.encode("utf-8"))
-        urdf_joints = set(node.get("name") for node in xml if node.tag == "joint")
+        self._kinematic_chain_joint_names = set(
+            node.get("name") for node in xml if node.tag == "joint"
+        )
+        self._kinematic_chain_link_names = set(
+            node.get("name") for node in xml if node.tag == "link"
+        )
         self.active_ancestor_joints = [
-            x for x in active_ancestor_joints if x.name in urdf_joints
+            x
+            for x in active_ancestor_joints
+            if x.name in self._kinematic_chain_joint_names
         ]
 
-        # initially self.active_joint_indices references active joints that are controlled.
-        # we also make the assumption that the active index is the same across all parallel managed joints
-        self.active_ancestor_joint_idxs = [
-            (x.active_index[0]).cpu().item() for x in self.active_ancestor_joints
-        ]
-        self.controlled_joints_idx_in_qmask = [
-            self.active_ancestor_joint_idxs.index(idx)
-            for idx in self.active_joint_indices
-        ]
         if self.device.type == "cuda":
             self.use_gpu_ik = True
             self._setup_gpu()
@@ -91,14 +95,49 @@ class Kinematics:
     def _setup_cpu(self):
         """setup the kinematics solvers on the CPU"""
         self.use_gpu_ik = False
-        # NOTE (stao): currently using the pinnochio that comes packaged with SAPIEN
-        self.qmask = torch.zeros(
-            self.articulation.max_dof, dtype=bool, device=self.device
+
+        with open(self.urdf_path, "r") as f:
+            xml = f.read()
+
+        joint_order = [
+            j.name  # f"joint_{j.child_link.index}"
+            for j in self.articulation.active_joints
+            if j.name in self._kinematic_chain_joint_names
+            # for j in sapien_articulation.active_joints
+        ]
+        link_order = [
+            l.name  # f"link_{l.index}"
+            for l in self.articulation.links
+            if l.name in self._kinematic_chain_link_names
+            # for l in sapien_articulation.links
+        ]
+
+        self.pmodel = PinocchioModel(xml, [0, 0, -9.81])
+        self.pmodel.set_joint_order(joint_order)
+        self.pmodel.set_link_order(link_order)
+
+        controlled_joint_names = [
+            self.articulation.active_joints[i].name for i in self.active_joint_indices
+        ]
+        self.pmodel_controlled_joint_indices = torch.tensor(
+            [joint_order.index(cj) for cj in controlled_joint_names],
+            dtype=torch.int,
+            device=self.device,
         )
-        self.pmodel: PinocchioModel = self.articulation._objs[
-            0
-        ].create_pinocchio_model()
-        self.qmask[self.active_joint_indices] = 1
+
+        articulation_active_joint_names_to_idx = dict(
+            (j.name, i) for i, j in enumerate(self.articulation.active_joints)
+        )
+        self.pmodel_active_joint_indices = torch.tensor(
+            [articulation_active_joint_names_to_idx[jn] for jn in joint_order],
+            dtype=torch.int,
+            device=self.device,
+        )
+
+        # NOTE (arth): pmodel will use urdf_path, set values based on this xml
+        self.end_link_idx = link_order.index(self.end_link.name)
+        self.qmask = torch.zeros(len(joint_order), dtype=bool, device=self.device)
+        self.qmask[self.pmodel_controlled_joint_indices] = 1
 
     def _setup_gpu(self):
         """setup the kinematics solvers on the GPU"""
@@ -127,6 +166,16 @@ class Kinematics:
             max_iterations=200,
             num_retries=1,
         )
+
+        # initially self.active_joint_indices references active joints that are controlled.
+        # we also make the assumption that the active index is the same across all parallel managed joints
+        self.active_ancestor_joint_idxs = [
+            (x.active_index[0]).cpu().item() for x in self.active_ancestor_joints
+        ]
+        self.controlled_joints_idx_in_qmask = [
+            self.active_ancestor_joint_idxs.index(idx)
+            for idx in self.active_joint_indices
+        ]
 
         self.qmask = torch.zeros(
             len(self.active_ancestor_joints), dtype=bool, device=self.device
@@ -187,6 +236,7 @@ class Kinematics:
 
                 return q0[:, self.qmask] + delta_joint_pos.squeeze(-1)
         else:
+            q0 = q0[:, self.pmodel_active_joint_indices]
             result, success, error = self.pmodel.compute_inverse_kinematics(
                 self.end_link_idx,
                 target_pose.sp,
@@ -196,7 +246,7 @@ class Kinematics:
             )
             if success:
                 return common.to_tensor(
-                    [result[self.active_ancestor_joint_idxs]], device=self.device
+                    [result[self.pmodel_controlled_joint_indices]], device=self.device
                 )
             else:
                 return None
