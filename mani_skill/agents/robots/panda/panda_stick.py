@@ -37,7 +37,7 @@ class PandaStick(BaseAgent):
         "panda_joint6",
         "panda_joint7",
     ]
-    
+
     ee_link_name = "panda_hand_tcp"
 
     arm_stiffness = 1e3
@@ -93,6 +93,18 @@ class PandaStick(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+        arm_pd_ee_pose = PDEEPoseControllerConfig(
+            joint_names=self.arm_joint_names,
+            pos_lower=None,
+            pos_upper=None,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            ee_link=self.ee_link_name,
+            urdf_path=self.urdf_path,
+            use_delta=False,
+            normalize_action=False,
+        )
 
         arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
         arm_pd_ee_target_delta_pos.use_target = True
@@ -138,6 +150,7 @@ class PandaStick(BaseAgent):
             pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos),
             pd_ee_delta_pose=dict(arm=arm_pd_ee_delta_pose),
             pd_ee_delta_pose_align=dict(arm=arm_pd_ee_delta_pose_align),
+            pd_ee_pose=dict(arm=arm_pd_ee_pose),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(arm=arm_pd_joint_target_delta_pos),
             pd_ee_target_delta_pos=dict(arm=arm_pd_ee_target_delta_pos),
@@ -150,7 +163,6 @@ class PandaStick(BaseAgent):
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
-    
 
     def _after_init(self):
         self.tcp = sapien_utils.get_obj_by_name(
