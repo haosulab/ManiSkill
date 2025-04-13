@@ -28,6 +28,7 @@ MP_SOLUTIONS = {
     "DrawSVG-v1" : solveDrawSVG,
     "LiftPegUpright-v2": solveLiftPegUpright,
     "PickCube-v2": solvePickCube,           # new
+    "PickCube-v3": solvePickCube,           # new
     "StackCube-v2": solveStackCube,         # new
     "PlugCharger-v2": solvePlugCharger,     # new
     "PushCube-v2": solvePushCube,           # new

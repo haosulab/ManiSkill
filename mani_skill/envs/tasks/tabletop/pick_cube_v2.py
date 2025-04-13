@@ -18,6 +18,7 @@ from mani_skill.envs.distraction_set import DistractionSet
 REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
 REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
 
+DEFAULT_GOAL_THRESH_MARGIN = 0.05
 
 @register_env("PickCube-v2", max_episode_steps=100)
 class PickCubeV2Env(PickCubeEnv):
@@ -27,33 +28,23 @@ class PickCubeV2Env(PickCubeEnv):
         1. 3 cameras instead of 1
         2. Cameras have a higher resolution
         3. Target position is fixed to (0.05, 0.05, 0.25)
-        4. Goal_thresh is the cube half size plus a small margin
-
-    Distractor axes:
-        1. Cube visual. In build_cube(...) add args to RenderMaterial:
-            builder.add_box_visual(
-                half_size=[half_size] * 3,
-                material=sapien.render.RenderMaterial(
-                    base_color=color,
-                ),
-            )
-            (https://sapien.ucsd.edu/docs/latest/apidoc/sapien.core.html#sapien.core.pysapien.RenderMaterial)
-        2.
+        4. Goal_thresh is the cube half size plus a configurable margin
     """
-    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, goal_thresh_margin=DEFAULT_GOAL_THRESH_MARGIN, **kwargs):
         assert "camera_width" in kwargs, "camera_width must be provided"
         assert "camera_height" in kwargs, "camera_height must be provided"
         assert "distraction_set" in kwargs, "distraction_set must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
         self._distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
+        self._goal_thresh_margin = goal_thresh_margin
         # In this situation, the DistractionSet has serialized as a dict so we now need to deserialize it.
         if isinstance(self._distraction_set, dict):
             self._distraction_set = DistractionSet(**self._distraction_set)
 
         # Env configuration
         self.cube_half_size = 0.02
-        self.goal_thresh = self.cube_half_size + 0.05
+        self.goal_thresh = self.cube_half_size + self._goal_thresh_margin
 
         self._table_scenes: list[TableSceneBuilder] = []
 
