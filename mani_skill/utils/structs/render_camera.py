@@ -168,10 +168,18 @@ class RenderCamera:
             elif SAPIEN_RENDER_SYSTEM == "3.1":
                 return [x.torch() for x in self.camera_group.get_cuda_pictures(names)]
         else:
-            return [
-                common.to_tensor(self._render_cameras[0].get_picture(name))[None, ...]
-                for name in names
-            ]
+            if self.scene.backend.render_backend == "sapien_cuda":
+                return [
+                    self._render_cameras[0].get_picture_cuda(name).torch()[None, ...]
+                    for name in names
+                ]
+            else:
+                return [
+                    common.to_tensor(self._render_cameras[0].get_picture(name))[
+                        None, ...
+                    ]
+                    for name in names
+                ]
 
     # def get_picture_cuda(self, name: str):
     #     return self._render_cameras[0].get_picture_cuda(name)
@@ -211,6 +219,7 @@ class RenderCamera:
     def set_local_pose(self, arg0: sapien.Pose) -> None:
         for obj in self._render_cameras:
             obj.set_local_pose(arg0)
+        self._cached_local_pose = None
 
     def set_near(self, near: float) -> None:
         for obj in self._render_cameras:

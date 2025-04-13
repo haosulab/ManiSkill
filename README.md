@@ -64,7 +64,7 @@ We currently best support Linux based systems. There is limited support for wind
 | Windows / NVIDIA GPU | ✅      | ❌      | ✅        |
 | Windows / AMD GPU    | ✅      | ❌      | ✅        |
 | WSL / Anything       | ✅      | ❌      | ❌        |
-| MacOS / Anything     | ❌      | ❌      | ❌        |
+| MacOS / Anything     | ✅      | ❌      | ✅        |
 
 ## Citation
 

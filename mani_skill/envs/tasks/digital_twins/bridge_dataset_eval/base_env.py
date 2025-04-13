@@ -158,6 +158,8 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
+    objects_excluded_from_greenscreening: List[str] = []
+    """object ids that should not be greenscreened"""
 
     obj_static_friction = 0.5
     obj_dynamic_friction = 0.5
@@ -343,6 +345,10 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             else:
                 raise ValueError(f"Model {model_id} does not have bbox info.")
         self.episode_model_bbox_sizes = model_bbox_sizes
+
+        for obj_name in self.objects_excluded_from_greenscreening:
+            self.remove_object_from_greenscreen(self.objs[obj_name])
+        self.remove_object_from_greenscreen(self.agent.robot)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # NOTE: this part of code is not GPU parallelized

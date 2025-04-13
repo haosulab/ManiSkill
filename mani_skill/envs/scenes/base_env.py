@@ -110,7 +110,10 @@ class SceneManipulationEnv(BaseEnv):
         return super()._load_lighting(options)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(options, sapien.Pose())
+        super()._load_agent(
+            options,
+            self.scene_builder.robot_initial_pose,
+        )
 
     def _load_scene(self, options: dict):
         if self.scene_builder.build_configs is not None:

@@ -514,7 +514,6 @@ class RecordEpisode(gym.Wrapper):
                 )
             else:
                 self._trajectory_buffer.fail = None
-            self._last_info = common.to_numpy(info)
 
         if self.save_video:
             self._video_steps += 1
@@ -703,7 +702,7 @@ class RecordEpisode(gym.Wrapper):
                         dtype=np.float32,
                     )
 
-                self._json_data["episodes"].append(episode_info)
+                self._json_data["episodes"].append(common.to_numpy(episode_info))
                 dump_json(self._json_path, self._json_data, indent=2)
                 if verbose:
                     if flush_count == 1:

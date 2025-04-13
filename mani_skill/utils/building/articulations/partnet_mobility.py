@@ -1,10 +1,6 @@
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils import sapien_utils
-from mani_skill.utils.geometry.trimesh_utils import (
-    get_articulation_meshes,
-    merge_meshes,
-)
 from mani_skill.utils.io_utils import load_json
 
 PARTNET_MOBILITY = None

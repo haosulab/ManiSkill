@@ -44,25 +44,7 @@ class Fetch(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             pose=sapien.Pose(),
-            qpos=np.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0.386,
-                    0,
-                    -0.370,
-                    0.562,
-                    -1.032,
-                    0.695,
-                    0.955,
-                    -0.1,
-                    2.077,
-                    0,
-                    0.015,
-                    0.015,
-                ]
-            ),
+            qpos=np.array([0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015]),  # fmt: skip
         )
     )
 
@@ -433,6 +415,10 @@ class Fetch(BaseAgent):
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
         return sapien.Pose(T)
+
+    @property
+    def tcp_pos(self) -> Pose:
+        return (self.finger1_link.pose.p + self.finger2_link.pose.p) / 2
 
     @property
     def tcp_pose(self) -> Pose:

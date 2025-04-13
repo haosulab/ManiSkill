@@ -1,4 +1,4 @@
-``mani_skill.utils.common`` module
+mani_skill.utils.common module
 ===================================
 
 .. currentmodule:: mani_skill.utils.common

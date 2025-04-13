@@ -8,7 +8,7 @@ As part of these baselines we establish standardized [reinforcement learning ben
 
 ## Online Reinforcement Learning Baselines
 
-List of already implemented and tested online reinforcement learning baselines. The results link take you to the respective wandb pages for the results. You can change filters/views in the wandb workspace to view results with other settings (e.g. state based or RGB based training). Note that there are also reinforcement learning (offline RL, online imitation learning) baselines that leverage demonstrations, see the [learning from demos page](../learning_from_demos/index.md) for more information.
+List of already implemented and tested online reinforcement learning baselines. The results link takes you to the respective wandb pages for the results. You can change filters/views in the wandb workspace to view results with other settings (e.g. state based or RGB based training). Note that there are also reinforcement learning (offline RL, online imitation learning) baselines that leverage demonstrations, see the [learning from demos page](../learning_from_demos/index.md) for more information.
 
 | Baseline                                                            | Code                                                                           | Results | Paper                                    |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------- | ---------------------------------------- |

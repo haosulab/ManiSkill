@@ -3,29 +3,20 @@
 Installation of ManiSkill is extremely simple, you only need to run a few pip installs
 
 ```bash
-# install the package
-pip install --upgrade mani_skill
-# install a version of torch that is compatible with your system
-pip install torch torchvision torchaudio
+# install the package and a version of torch that is compatible with your system
+pip install --upgrade mani_skill torch
 ```
 
-You can also install the main `mani_skill` package from github/source:
+We also provide a more frequently updated nightly version updated daily whenever there are changes to ManiSkill:
 
 ```bash
-# GitHub
-pip install --upgrade git+https://github.com/haosulab/ManiSkill.git
-
-# Source
-git clone https://github.com/haosulab/ManiSkill.git
-cd ManiSkill && pip install -e .
-
-# remember to install a version of torch that is compatible with your system
-pip install torch torchvision torchaudio
+pip install mani_skill-nightly torch
 ```
+
+For the majority of MacOS users there is a bit more setup needed for installing the Vulkan driver which is required, please see the [MacOS Installation](./macos_install.md) page for details.
 
 :::{note}
 While state-based simulation does not require any additional dependencies, a GPU with the Vulkan driver installed is required to enable rendering in ManiSkill. See [here](#vulkan) for how to install and configure Vulkan on Ubuntu. Furthermore we currently best support linux machines with NVIDIA GPUs, with limited support on other systems, see the [system requirements](#system-support) section for details.
-
 :::
 
 The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Test your installation:
@@ -39,6 +30,18 @@ python -m mani_skill.examples.demo_random_action
 A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
 
 Once you are done here, you can head over to the [quickstart page](./quickstart.md) to try out some live demos and start to program with ManiSkill.
+
+There are also 2 environment variables that you may want to set. There are many assets, demonstration datasets etc. that are not downloaded by default. Modify `MS_ASSET_DIR` to the directory where you want to save all the data for ManiSkill, which by default is `~/.maniskill/data`.
+
+```bash
+export MS_ASSET_DIR=path/to/where/to/save/all/mani_skill_data
+```
+
+You can also do the following to skip the prompt to download the assets, meaning if you run code that needs access to assets that are not found, it will no longer prompt you to download them.
+```bash
+export MS_SKIP_ASSET_DOWNLOAD_PROMPT=1
+```
+
 <!-- 
 ## Soft-body tasks / Warp (ManiSkill-version)
 
@@ -98,13 +101,13 @@ We currently best support Linux based systems. There is limited support for wind
 | Windows / NVIDIA GPU | ✅      | ❌      | ✅        |
 | Windows / AMD GPU    | ✅      | ❌      | ✅        |
 | WSL / Anything       | ✅      | ❌      | ❌        |
-| MacOS / Anything     | ❌      | ❌      | ❌        |
+| MacOS / Anything     | ✅      | ❌      | ✅        |
 
 ## Troubleshooting
 
-(vulkan)=
-
 ### Vulkan
+
+#### Ubuntu
 
 To install Vulkan on Ubuntu:
 
@@ -202,6 +205,10 @@ ldconfig -p | grep libGLX_nvidia
 ```
 
 If `libGLX_nvidia.so` is not found, then it is likely that you have installed an incorrect driver. To get the right driver on linux, it is recommended to install `nvidia-driver-xxx` (do not use the ones with server in the package name) and to avoid using any other method of installation like a runfile
+
+#### MacOS
+
+See the [MacOS Installation](./macos_install.md) page for more details.
 
 ### Uninstallation
 

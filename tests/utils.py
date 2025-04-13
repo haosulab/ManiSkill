@@ -30,10 +30,10 @@ OBS_MODES = [
     "state_dict",
     "state",
     "rgb",
-    "rgbd",
     "rgb+depth+segmentation",
-    "depth+segmentation",
     "pointcloud",
+    "depth+state",
+    "state+rgb+segmentation"
     # "rgbd_robot_seg",
     # "pointcloud_robot_seg",
 ]

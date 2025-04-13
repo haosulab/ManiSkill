@@ -211,7 +211,9 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
                 return self._body_data[self._body_data_index, 7:10]
             return self._body_data[self._body_data_index, 10:13]
         else:
-            return torch.from_numpy(self._bodies[0].angular_velocity[None, :])
+            return torch.tensor(
+                np.array([body.angular_velocity for body in self._bodies])
+            )
 
     @property
     def auto_compute_mass(self) -> torch.Tensor:
@@ -275,12 +277,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @mass.setter
     @before_gpu_init
     def mass(self, arg1: float) -> None:
-        if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Setting mass is not supported on GPU sim at the moment."
-            )
-        else:
-            self._bodies[0].mass = arg1
+        for body in self._bodies:
+            body.set_mass(arg1)
 
     # @property
     # def max_contact_impulse(self) -> float:
@@ -436,7 +434,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
                 return self._body_data[self._body_data_index, 10:13]
             return self._body_data[self._body_data_index, 7:10]
         else:
-            return torch.from_numpy(self._bodies[0].linear_velocity[None, :])
+            return torch.tensor(
+                np.array([body.linear_velocity for body in self._bodies])
+            )
 
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):

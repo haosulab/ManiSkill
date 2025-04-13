@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 from gymnasium import spaces
 
@@ -86,10 +85,12 @@ class BaseAgent:
         control_mode: Optional[str] = None,
         agent_idx: Optional[str] = None,
         initial_pose: Optional[Union[sapien.Pose, Pose]] = None,
+        build_separate: bool = False,
     ):
         self.scene = scene
         self._control_freq = control_freq
         self._agent_idx = agent_idx
+        self.build_separate = build_separate
 
         self.robot: Articulation = None
         """The robot object, which is an Articulation. Data like pose, qpos etc. can be accessed from this object."""
@@ -152,51 +153,74 @@ class BaseAgent:
         """
         Loads the robot articulation
         """
-        if self.urdf_path is not None:
-            loader = self.scene.create_urdf_loader()
-            asset_path = format_path(str(self.urdf_path))
-        elif self.mjcf_path is not None:
-            loader = self.scene.create_mjcf_loader()
-            asset_path = format_path(str(self.mjcf_path))
 
-        loader.name = self.uid
-        if self._agent_idx is not None:
-            loader.name = f"{self.uid}-agent-{self._agent_idx}"
-        loader.fix_root_link = self.fix_root_link
-        loader.load_multiple_collisions_from_file = self.load_multiple_collisions
-        loader.disable_self_collisions = self.disable_self_collisions
+        def build_articulation(scene_idxs: Optional[List[int]] = None):
+            if self.urdf_path is not None:
+                loader = self.scene.create_urdf_loader()
+                asset_path = format_path(str(self.urdf_path))
+            elif self.mjcf_path is not None:
+                loader = self.scene.create_mjcf_loader()
+                asset_path = format_path(str(self.mjcf_path))
 
-        if self.urdf_config is not None:
-            urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)
-            sapien_utils.check_urdf_config(urdf_config)
-            sapien_utils.apply_urdf_config(loader, urdf_config)
+            loader.name = self.uid
+            if self._agent_idx is not None:
+                loader.name = f"{self.uid}-agent-{self._agent_idx}"
+            loader.fix_root_link = self.fix_root_link
+            loader.load_multiple_collisions_from_file = self.load_multiple_collisions
+            loader.disable_self_collisions = self.disable_self_collisions
 
-        if not os.path.exists(asset_path):
-            print(f"Robot {self.uid} definition file not found at {asset_path}")
-            if self.uid in assets.DATA_GROUPS or len(assets.DATA_GROUPS[self.uid]) > 0:
-                response = download_asset.prompt_yes_no(
-                    f"Robot {self.uid} has assets available for download. Would you like to download them now?"
-                )
-                if response:
-                    for (
-                        asset_id
-                    ) in assets.expand_data_group_into_individual_data_source_ids(
-                        self.uid
-                    ):
-                        download_asset.download(assets.DATA_SOURCES[asset_id])
+            if self.urdf_config is not None:
+                urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)
+                sapien_utils.check_urdf_config(urdf_config)
+                sapien_utils.apply_urdf_config(loader, urdf_config)
+
+            if not os.path.exists(asset_path):
+                print(f"Robot {self.uid} definition file not found at {asset_path}")
+                if (
+                    self.uid in assets.DATA_GROUPS
+                    or len(assets.DATA_GROUPS[self.uid]) > 0
+                ):
+                    response = download_asset.prompt_yes_no(
+                        f"Robot {self.uid} has assets available for download. Would you like to download them now?"
+                    )
+                    if response:
+                        for (
+                            asset_id
+                        ) in assets.expand_data_group_into_individual_data_source_ids(
+                            self.uid
+                        ):
+                            download_asset.download(assets.DATA_SOURCES[asset_id])
+                    else:
+                        print(
+                            f"Exiting as assets for robot {self.uid} are not downloaded"
+                        )
+                        exit()
                 else:
-                    print(f"Exiting as assets for robot {self.uid} are not downloaded")
+                    print(
+                        f"Exiting as assets for robot {self.uid} are not found. Check that this agent is properly registered with the appropriate download asset ids"
+                    )
                     exit()
-            else:
-                print(
-                    f"Exiting as assets for robot {self.uid} are not found. Check that this agent is properly registered with the appropriate download asset ids"
-                )
-                exit()
-        builder = loader.parse(asset_path)["articulation_builders"][0]
-        builder.initial_pose = initial_pose
-        self.robot = builder.build()
-        assert self.robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
+            builder = loader.parse(asset_path)["articulation_builders"][0]
+            builder.initial_pose = initial_pose
+            if scene_idxs is not None:
+                builder.set_scene_idxs(scene_idxs)
+                builder.set_name(f"{self.uid}-agent-{self._agent_idx}-{scene_idxs}")
+            robot = builder.build()
+            assert robot is not None, f"Fail to load URDF/MJCF from {asset_path}"
+            return robot
 
+        if self.build_separate:
+            arts = []
+            for scene_idx in range(self.scene.num_envs):
+                robot = build_articulation([scene_idx])
+                self.scene.remove_from_state_dict_registry(robot)
+                arts.append(robot)
+            self.robot = Articulation.merge(
+                arts, name=f"{self.uid}-agent-{self._agent_idx}", merge_links=True
+            )
+            self.scene.add_to_state_dict_registry(self.robot)
+        else:
+            self.robot = build_articulation()
         # Cache robot link names
         self.robot_link_names = [link.name for link in self.robot.get_links()]
 

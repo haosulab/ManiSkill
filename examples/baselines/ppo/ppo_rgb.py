@@ -108,7 +108,7 @@ class Args:
     """evaluation frequency in terms of iterations"""
     save_train_video_freq: Optional[int] = None
     """frequency to save training videos in terms of iterations"""
-    finite_horizon_gae: bool = True
+    finite_horizon_gae: bool = False
 
     # to be filled in runtime
     batch_size: int = 0
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgb", render_mode=args.render_mode, sim_backend="gpu")
+    env_kwargs = dict(obs_mode="rgb", render_mode=args.render_mode, sim_backend="physx_cuda")
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
@@ -372,7 +372,6 @@ if __name__ == "__main__":
     next_obs, _ = envs.reset(seed=args.seed)
     eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
-    eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
@@ -383,12 +382,15 @@ if __name__ == "__main__":
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
 
+    cumulative_times = defaultdict(float)
+
     for iteration in range(1, args.num_iterations + 1):
         print(f"Epoch: {iteration}, global_step={global_step}")
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
             print("Evaluating")
+            stime = time.perf_counter()
             eval_obs, _ = eval_envs.reset()
             eval_metrics = defaultdict(list)
             num_episodes = 0
@@ -406,6 +408,10 @@ if __name__ == "__main__":
                 if logger is not None:
                     logger.add_scalar(f"eval/{k}", mean, global_step)
                 print(f"eval_{k}_mean={mean}")
+            if logger is not None:
+                eval_time = time.perf_counter() - stime
+                cumulative_times["eval_time"] += eval_time
+                logger.add_scalar("time/eval_time", eval_time, global_step)
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
@@ -417,7 +423,7 @@ if __name__ == "__main__":
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-        rollout_time = time.time()
+        rollout_time = time.perf_counter()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
@@ -445,7 +451,8 @@ if __name__ == "__main__":
                     infos["final_observation"][k] = infos["final_observation"][k][done_mask]
                 with torch.no_grad():
                     final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
-        rollout_time = time.time() - rollout_time
+        rollout_time = time.perf_counter() - rollout_time
+        cumulative_times["rollout_time"] += rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
@@ -501,7 +508,7 @@ if __name__ == "__main__":
         agent.train()
         b_inds = np.arange(args.batch_size)
         clipfracs = []
-        update_time = time.time()
+        update_time = time.perf_counter()
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
@@ -555,7 +562,8 @@ if __name__ == "__main__":
 
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
-        update_time = time.time() - update_time
+        update_time = time.perf_counter() - update_time
+        cumulative_times["update_time"] += update_time
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -574,6 +582,9 @@ if __name__ == "__main__":
         logger.add_scalar("time/update_time", update_time, global_step)
         logger.add_scalar("time/rollout_time", rollout_time, global_step)
         logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
+        for k, v in cumulative_times.items():
+            logger.add_scalar(f"time/total_{k}", v, global_step)
+        logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
     if args.save_model and not args.evaluate:
         model_path = f"runs/{run_name}/final_ckpt.pt"
         torch.save(agent.state_dict(), model_path)

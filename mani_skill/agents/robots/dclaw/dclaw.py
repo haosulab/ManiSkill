@@ -32,7 +32,7 @@ class DClaw(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             pose=sapien.Pose(p=[0, 0, 0.5], q=[0, 0, -1, 0]),
-            qpos=np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            qpos=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
         )
     )
 

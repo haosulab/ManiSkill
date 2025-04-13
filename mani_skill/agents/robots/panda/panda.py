@@ -181,6 +181,7 @@ class Panda(BaseAgent):
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
+            mimic={"panda_finger_joint2": {"joint": "panda_finger_joint1"}},
         )
 
         controller_configs = dict(
@@ -266,6 +267,14 @@ class Panda(BaseAgent):
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
+    @property
+    def tcp_pos(self):
+        return self.tcp.pose.p
+
+    @property
+    def tcp_pose(self):
+        return self.tcp.pose
 
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
