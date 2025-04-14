@@ -258,7 +258,7 @@ def replay_cpu_sim(
         reset_kwargs = episode["reset_kwargs"]
         ori_control_mode = episode["control_mode"]
         if pbar is not None:
-            pbar.set_description(f"Replaying {traj_id}")
+            pbar.set_description(f"Replaying {traj_id}, Number successful replays: {successful_replays}/{len(episodes)}")
         if traj_id not in trajectories:
             tqdm.write(f"{traj_id} does not exist in {args.traj_path}")
             continue

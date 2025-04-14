@@ -17,14 +17,13 @@ REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
 @register_env("PickCube-v3", max_episode_steps=100)
 class PickCubeV3Env(PickCubeV2Env):
 
-    goal_thresh_margin = 0.01 # used during training
+    goal_thresh_margin = 0.01
 
     """
     **Task Description:**
     Copy of PickCubeEnvV2, but the cameras are closer to the cube.
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
-        
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, goal_thresh_margin=self.goal_thresh_margin, **kwargs)
         print(" --> Created PickCubeV3Env")
 
