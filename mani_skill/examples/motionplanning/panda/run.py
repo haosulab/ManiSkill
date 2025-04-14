@@ -27,15 +27,17 @@ MP_SOLUTIONS = {
     "PullCube-v1": solvePullCube,
     "DrawSVG-v1" : solveDrawSVG,
     "LiftPegUpright-v2": solveLiftPegUpright,
-    "PickCube-v2": solvePickCube,           # new
-    "PickCube-v3": solvePickCube,           # new
-    "StackCube-v2": solveStackCube,         # new
-    "PlugCharger-v2": solvePlugCharger,     # new
-    "PushCube-v2": solvePushCube,           # new
-    "PullCube-v2": solvePullCube,           # new
-    "PullCubeTool-v2": solvePullCubeTool,   # new
-    "PullCube-v2": solvePullCube,         # new
-    "PegInsertionSide-v2": solvePegInsertionSide, # new
+    # 
+    "PickCube-v2": solvePickCube,                   # new
+    "PickCube-v3": solvePickCube,                   # new
+    "PickCube-v3-VisibleSphere": solvePickCube,     # new
+    "StackCube-v2": solveStackCube,                 # new
+    "PlugCharger-v2": solvePlugCharger,             # new
+    "PushCube-v2": solvePushCube,                   # new
+    "PullCube-v2": solvePullCube,                   # new
+    "PullCubeTool-v2": solvePullCubeTool,           # new
+    "PullCube-v2": solvePullCube,                   # new
+    "PegInsertionSide-v2": solvePegInsertionSide,   # new
 }
 
 
@@ -64,7 +66,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     if args.camera_width is not None and args.camera_height is not None:
         distraction_set = DISTRACTION_SETS[args.distraction_set.upper()]
         print("Distraction set:")
-        print(json.dumps(distraction_set.to_dict(), indent=4))
+        print(json.dumps(distraction_set.to_dict(), indent=2))
         env = gym.make(
             env_id,
             obs_mode=args.obs_mode,
@@ -155,7 +157,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
                     failed_motion_plan_rate=failed_motion_plans / (seed + 1),
                     avg_episode_length=np.mean(solution_episode_lengths),
                     max_episode_length=np.max(solution_episode_lengths),
-                    # min_episode_length=np.min(solution_episode_lengths)
+                    min_episode_length=np.min(solution_episode_lengths)
                 )
             )
             seed += 1
@@ -188,7 +190,5 @@ def main(args):
         _main(args)
 
 if __name__ == "__main__":
-    # start = time.time()
     mp.set_start_method("spawn")
     main(parse_args())
-    # print(f"Total time taken: {time.time() - start}")
