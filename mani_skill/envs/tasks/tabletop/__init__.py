@@ -20,6 +20,7 @@ from .pull_cube_tool import PullCubeToolEnv
 # New environments
 from .pick_cube_v2 import PickCubeV2Env
 from .pick_cube_v3 import PickCubeV3Env
+from .pick_cube_v4 import PickCubeV4Env
 from .pick_cube_v3_vsphere import PickCubeV3VisibleSphereEnv
 from .pick_cube_MP_v1 import PickCubeMPEnv
 from .plug_charger_v2 import PlugChargerV2Env             # new
