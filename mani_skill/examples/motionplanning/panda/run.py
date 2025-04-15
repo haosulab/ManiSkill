@@ -42,6 +42,7 @@ def parse_args(args=None):
     parser.add_argument("--render-mode", type=str, default="rgb_array", help="can be 'sensors' or 'rgb_array' which only affect what is saved to videos")
     parser.add_argument("--vis", action="store_true", help="whether or not to open a GUI to visualize the solution live")
     parser.add_argument("--save-video", action="store_true", help="whether or not to save videos locally")
+    parser.add_argument("--random-seed", action="store_true", help="whether or not to randomize the seed for each process")
     parser.add_argument("--traj-name", type=str, help="The name of the trajectory .h5 file that will be created.")
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str, default="demos", help="where to save the recorded trajectories")
@@ -105,9 +106,9 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     )
     output_h5_path = env._h5_file.filename
     solve = MP_SOLUTIONS[env_id]
-    print(f"Motion Planning Running on {env_id}")
     pbar = tqdm(range(args.num_traj), desc=f"proc_id: {proc_id}")
     seed = start_seed
+    print(f"Motion Planning Running on {env_id} with seed {seed}")
     successes = []
     solution_episode_lengths = []
     failed_motion_plans = 0
@@ -177,7 +178,11 @@ def main(args):
             tqdm.write(f"Remove {json_path}")
             os.remove(json_path)
     else:
-        _main(args)
+        if args.random_seed:
+            seed = np.random.randint(0, int(2**32-1))
+        else:
+            seed = 0
+        _main(args, start_seed=seed)
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")

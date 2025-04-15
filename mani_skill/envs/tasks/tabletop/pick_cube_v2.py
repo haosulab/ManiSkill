@@ -110,6 +110,7 @@ class PickCubeV2Env(PickCubeEnv):
 
 
         # Create goal site
+        print(f"PickCubeV2Env: Creating goal site with radius: {self.goal_thresh}")
         self.goal_site = actors.build_sphere(
             self.scene,
             radius=self.goal_thresh,

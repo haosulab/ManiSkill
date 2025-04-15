@@ -117,7 +117,7 @@ class PullCubeV2Env(PullCubeEnv):
 
     @property
     def _default_sensor_configs(self):
-        target=[0, 0, 0.1]
+        target=[0, 0, -0.1]
         pose_center = sapien_utils.look_at(eye=[0.2, 0, 0.3],  target=target)
         pose_left = sapien_utils.look_at(eye=[0.0, -0.2, 0.3], target=target)
         pose_right = sapien_utils.look_at(eye=[0.0, 0.2, 0.3], target=target)
