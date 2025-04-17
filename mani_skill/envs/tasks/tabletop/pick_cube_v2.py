@@ -53,6 +53,7 @@ class PickCubeV2Env(PickCubeEnv):
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        print("  PickCubeV2Env: _initialize_episode()")
         with torch.device(self.device):
             b = len(env_idx) # number of environments. env_idx is [0, 1, 2, ..., n_envs-1]
             for ts in self._table_scenes:
@@ -79,6 +80,7 @@ class PickCubeV2Env(PickCubeEnv):
     def _load_scene(self, options: dict):
         """ Load the scene.
         """
+        print("  PickCubeV2Env: _load_scene()")
         self._table_scenes = []
         add_visual_from_file = not self._distraction_set.table_color_enabled()
         for i in range(self.num_envs):
@@ -137,12 +139,14 @@ class PickCubeV2Env(PickCubeEnv):
 
             -> https://maniskill.readthedocs.io/en/latest/user_guide/concepts/sensors.html#shaders-and-textures
         """
+        print("  PickCubeV2Env: _default_human_render_camera_configs()")
         pose = sapien_utils.look_at([0.35, 0.45, 0.4], [0.0, 0.0, 0.15])
         SHADER = "default"
         return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
 
     @property
     def _default_sensor_configs(self):
+        print("  PickCubeV2Env: _default_sensor_configs()")
         pose_center = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         pose_left = sapien_utils.look_at(eye=[0.0, -0.3, 0.6], target=[-0.1, 0, 0.1])
         pose_right = sapien_utils.look_at(eye=[0.0, 0.3, 0.6], target=[-0.1, 0, 0.1])
