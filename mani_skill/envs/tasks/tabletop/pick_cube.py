@@ -44,23 +44,29 @@ class PickCubeEnv(BaseEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        print(" --> Created PickCubeEnv")
 
     @property
     def _default_sensor_configs(self):
-        # assert False, "This should not be called"
+        print("  PickCubeEnv:   _default_sensor_configs()")
+        assert False, "This should not be called"
         pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):
+        print("  PickCubeEnv:   _default_human_render_camera_configs()")
+        assert False, "This should not be called"
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
+        print("  PickCubeEnv:   _load_agent()")
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        # assert False, "This should not be called"
+        print("  PickCubeEnv:   _load_scene()")
+        assert False, "This should not be called"
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -84,6 +90,7 @@ class PickCubeEnv(BaseEnv):
         self._hidden_objects.append(self.goal_site)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        print("  PickCubeEnv:   _initialize_episode()")
         # assert False, "This should not be called"
         with torch.device(self.device):
             b = len(env_idx)
@@ -121,6 +128,14 @@ class PickCubeEnv(BaseEnv):
         )
         is_grasped = self.agent.is_grasping(self.cube)
         is_robot_static = self.agent.is_static(0.2)
+
+        # Check if this is ever happening.
+        if torch.any(is_obj_placed & torch.logical_not(is_robot_static)):
+            print("HEADSUP: found a case when the object is placed but the robot is not static")
+            print(is_obj_placed, is_robot_static)
+            exit()
+
+        # 
         return {
             "success": is_obj_placed & is_robot_static,
             "is_obj_placed": is_obj_placed,

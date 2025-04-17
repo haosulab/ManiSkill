@@ -20,11 +20,24 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 
+REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
+REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
+
+
 @register_env("PushCube-v2", max_episode_steps=50)
 class PushCubeV2Env(PushCubeEnv):
     """
     **Task Description:**
     Nearly exacty copy of PushCubeEnv, but with 3 cameras instead of 1.
+
+    
+    Notes:
+     - Cube spawns in x: [-0.1, 0.1], y: [-0.1, 0.1]
+     - Goal region is cube-position + [0.1 + goal_radius (=0.1), 0, 0]
+
+     -> min workspace size should be x: [-0.1, 0.3], y: [-0.1, 0.1]
+     -> x-mid = 0.1, y-mid = 0.0
+
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         assert "camera_width" in kwargs, "camera_width must be provided"
@@ -128,14 +141,44 @@ class PushCubeV2Env(PushCubeEnv):
 
     @property
     def _default_sensor_configs(self):
-        target=[0, 0, -0.1]
-        pose_center = sapien_utils.look_at(eye=[0.2, 0, 0.3],  target=target)
-        pose_left = sapien_utils.look_at(eye=[0.0, -0.2, 0.3], target=target)
-        pose_right = sapien_utils.look_at(eye=[0.0, 0.2, 0.3], target=target)
+        SHADER = "default"
+        target=[0.1, 0, -0.1]
+        eye_xy = 0.35
+        eye_z = 0.45
+        pose_center = sapien_utils.look_at(eye=[eye_xy, 0, eye_z],  target=target)
+        pose_left = sapien_utils.look_at(eye=[0.0, -eye_xy, eye_z], target=target)
+        pose_right = sapien_utils.look_at(eye=[0.0, eye_xy, eye_z], target=target)
         cfgs = [
-            CameraConfig("camera_center", pose_center, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100),
-            CameraConfig("camera_left", pose_left, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100),
-            CameraConfig("camera_right", pose_right, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100),
+            CameraConfig(
+                uid="camera_center",
+                pose=pose_center,
+                width=self._camera_width,
+                height=self._camera_height,
+                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
+                near=0.01,
+                far=100,
+                shader_pack=SHADER,
+            ),
+            CameraConfig(
+                uid="camera_left",
+                pose=pose_left,
+                width=self._camera_width,
+                height=self._camera_height,
+                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
+                near=0.01,
+                far=100,
+                shader_pack=SHADER,
+            ),
+            CameraConfig(
+                uid="camera_right",
+                pose=pose_right,
+                width=self._camera_width,
+                height=self._camera_height,
+                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
+                near=0.01,
+                far=100,
+                shader_pack=SHADER,
+            ),
         ]
         cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
         return cfgs_adjusted

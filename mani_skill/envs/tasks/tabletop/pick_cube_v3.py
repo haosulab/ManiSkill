@@ -29,6 +29,7 @@ class PickCubeV3Env(PickCubeV2Env):
 
     @property
     def _default_sensor_configs(self):
+        print("  PickCubeV3Env: _default_sensor_configs()")
         pose_center = sapien_utils.look_at(eye=[0.3, 0, 0.4], target=[0.0, 0, 0.15])
         pose_left = sapien_utils.look_at(eye=[0.0, -0.3, 0.4], target=[0.0, 0, 0.15])
         pose_right = sapien_utils.look_at(eye=[0.0, 0.3, 0.4], target=[0.0, 0, 0.15])
