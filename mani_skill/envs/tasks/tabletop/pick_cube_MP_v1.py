@@ -11,9 +11,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
-
-REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
-REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
 
 
 @register_env("PickCubeMP-v1", max_episode_steps=100)
@@ -150,39 +148,7 @@ class PickCubeMPEnv(PickCubeEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose_center = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        pose_left = sapien_utils.look_at(eye=[0.0, -0.3, 0.6], target=[-0.1, 0, 0.1])
-        pose_right = sapien_utils.look_at(eye=[0.0, 0.3, 0.6], target=[-0.1, 0, 0.1])
-        SHADER = "default"
-        return [
-            CameraConfig(
-                uid="camera_center",
-                pose=pose_center,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-            CameraConfig(
-                uid="camera_left",
-                pose=pose_left,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-            CameraConfig(
-                uid="camera_right",
-                pose=pose_right,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=np.pi / 2,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-        ]
+        target = [-0.1, 0, 0.1]
+        eye_xy = 0.5
+        eye_z = 0.6
+        return get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)

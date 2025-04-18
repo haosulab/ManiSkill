@@ -4,7 +4,7 @@ from mani_skill.envs.tasks.tabletop.pull_cube_tool import PullCubeToolEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
 
 @register_env("PullCubeTool-v2", max_episode_steps=50)
 class PullCubeToolV2Env(PullCubeToolEnv):
@@ -30,11 +30,8 @@ class PullCubeToolV2Env(PullCubeToolEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose_center = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
-        pose_left = sapien_utils.look_at(eye=[0.0, -0.3, 0.6], target=[-0.1, 0, 0.1])
-        pose_right = sapien_utils.look_at(eye=[0.0, 0.3, 0.6], target=[-0.1, 0, 0.1])
-        return [
-            CameraConfig("camera_center", pose_center, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100),
-            CameraConfig("camera_left", pose_left, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100),
-            CameraConfig("camera_right", pose_right, self._camera_width, self._camera_height, np.pi / 2, 0.01, 100),
-        ]
+        target = [0, 0, 0.0]
+        eye_xy = 0.3
+        eye_z = 0.4
+        cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)
+        return cfgs
