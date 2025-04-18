@@ -6,12 +6,8 @@ import sapien
 
 from mani_skill.envs.tasks.tabletop.pick_cube_v2 import PickCubeV2Env
 from mani_skill.utils.registration import register_env
-from mani_skill.utils import sapien_utils
 from mani_skill.sensors.camera import CameraConfig
-
-
-REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
-REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
 
 
 @register_env("PickCube-v3", max_episode_steps=100)
@@ -30,41 +26,9 @@ class PickCubeV3Env(PickCubeV2Env):
     @property
     def _default_sensor_configs(self):
         print("  PickCubeV3Env: _default_sensor_configs()")
-        pose_center = sapien_utils.look_at(eye=[0.3, 0, 0.4], target=[0.0, 0, 0.15])
-        pose_left = sapien_utils.look_at(eye=[0.0, -0.3, 0.4], target=[0.0, 0, 0.15])
-        pose_right = sapien_utils.look_at(eye=[0.0, 0.3, 0.4], target=[0.0, 0, 0.15])
-        SHADER = "default"
-        cfgs = [
-            CameraConfig(
-                uid="camera_center",
-                pose=pose_center,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-            CameraConfig(
-                uid="camera_left",
-                pose=pose_left,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-            CameraConfig(
-                uid="camera_right",
-                pose=pose_right,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-        ]
+        target=[0.0, 0, 0.15]
+        xy_offset = 0.3
+        z_offset = 0.4
+        cfgs = get_camera_configs(xy_offset, z_offset, target, self._camera_width, self._camera_height)
         cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
         return cfgs_adjusted
