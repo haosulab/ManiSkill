@@ -4,7 +4,7 @@ from mani_skill.envs.tasks.tabletop.pull_cube_tool import PullCubeToolEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
 
 @register_env("PullCubeTool-v2", max_episode_steps=50)
 class PullCubeToolV2Env(PullCubeToolEnv):
@@ -21,11 +21,7 @@ class PullCubeToolV2Env(PullCubeToolEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        """ Configures the human render camera.
-        """
-        pose = sapien_utils.look_at([0.5, 0.6, 0.5], [0.0, 0.0, 0.35])
-        SHADER = "default"
-        return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
+        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.3])
 
 
     @property

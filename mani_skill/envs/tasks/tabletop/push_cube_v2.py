@@ -19,8 +19,8 @@ from mani_skill.envs.tasks.tabletop.push_cube import PushCubeEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
 
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
 @register_env("PushCube-v2", max_episode_steps=50)
 class PushCubeV2Env(PushCubeEnv):
     """
@@ -129,11 +129,7 @@ class PushCubeV2Env(PushCubeEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        """ Configures the human render camera.
-        """
-        pose = sapien_utils.look_at([0.5, 0.6, 0.5], [0.0, 0.0, 0.1])
-        SHADER = "default"
-        return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
+        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.1])
 
 
     @property
