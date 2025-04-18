@@ -15,7 +15,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
 from mani_skill.envs.distraction_set import DistractionSet
 
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
 
 DEFAULT_GOAL_THRESH_MARGIN = 0.05
 
@@ -127,21 +127,7 @@ class PickCubeV2Env(PickCubeEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        """ Configures the human render camera.
-
-        Shader options:
-            minimal: The fastest shader with minimal GPU memory usage. Note that the background will always be black (normally it is the color of the ambient light)
-            default: A balance between speed and texture availability
-            rt: A shader optimized for photo-realistic rendering via ray-tracing
-            rt-med: Same as rt but runs faster with slightly lower quality
-            rt-fast: Same as rt-med but runs faster with slightly lower quality
-
-            -> https://maniskill.readthedocs.io/en/latest/user_guide/concepts/sensors.html#shaders-and-textures
-        """
-        print("  PickCubeV2Env: _default_human_render_camera_configs()")
-        pose = sapien_utils.look_at([0.35, 0.45, 0.4], [0.0, 0.0, 0.15])
-        SHADER = "default"
-        return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
+        return get_human_render_camera_config(eye=[0.35, 0.45, 0.4], target=[0.0, 0.0, 0.15])
 
     @property
     def _default_sensor_configs(self):

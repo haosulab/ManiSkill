@@ -4,7 +4,7 @@ from mani_skill.envs.tasks.tabletop.plug_charger import PlugChargerEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
 
 @register_env("PlugCharger-v2", max_episode_steps=200)
 class PlugChargerV2Env(PlugChargerEnv):
@@ -18,6 +18,10 @@ class PlugChargerV2Env(PlugChargerEnv):
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
+
+    @property
+    def _default_human_render_camera_configs(self):
+        return get_human_render_camera_config(eye=[0.35, 0.45, 0.4], target=[0.0, 0.0, 0.15])
 
     @property
     def _default_sensor_configs(self):

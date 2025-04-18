@@ -4,7 +4,7 @@ from mani_skill.envs.tasks.tabletop.peg_insertion_side import PegInsertionSideEn
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
 
 @register_env("PegInsertionSide-v2", max_episode_steps=50)
 class PegInsertionSideV2Env(PegInsertionSideEnv):
@@ -21,11 +21,7 @@ class PegInsertionSideV2Env(PegInsertionSideEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        """ Configures the human render camera.
-        """
-        pose = sapien_utils.look_at([0.45, -0.45, 0.7], [0.05, -0.1, 0.4])
-        SHADER = "default"
-        return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
+        return get_human_render_camera_config(eye=[0.45, -0.45, 0.7], target=[0.05, -0.1, 0.4])
 
 
     @property

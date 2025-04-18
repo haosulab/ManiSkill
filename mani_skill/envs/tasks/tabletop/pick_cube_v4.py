@@ -6,7 +6,6 @@ import sapien
 
 from mani_skill.envs.tasks.tabletop.pick_cube_v2 import PickCubeV2Env
 from mani_skill.utils.registration import register_env
-from mani_skill.utils import sapien_utils
 from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs
 
 
