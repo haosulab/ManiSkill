@@ -162,9 +162,9 @@ class MyCustomTask(BaseEnv):
 
         self.object = Actor.merge(objects, name="object") 
         # or if its articulation you use Articulation.merge
-        self.register_to_state_dict_registry(self.object)
-        # note that some tasks merge links, but links do not need to be registered to the state dict registry, they are
-        # automatically included with merged articulations
+        self.add_to_state_dict_registry(self.object)
+        # note that some tasks merge links, but links do not need to be registered to the state dict registry
+        # link state is included with merged articulations
 ```
 
 

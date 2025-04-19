@@ -4,7 +4,7 @@ import numpy as np
 import sapien.core as sapien
 import torch
 
-from mani_skill import PACKAGE_ASSET_DIR
+from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
@@ -12,10 +12,10 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 
 
-@register_agent()
+@register_agent(asset_download_ids=["xarm6"])
 class XArm6NoGripper(BaseAgent):
     uid = "xarm6_nogripper"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_nogripper.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/xarm6/xarm6_nogripper.urdf"
 
     keyframes = dict(
         rest=Keyframe(

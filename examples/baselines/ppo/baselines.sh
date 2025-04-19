@@ -13,6 +13,7 @@ do
     --track
 done
 
+# pick cube tests for ensuring manipulation robots work
 for seed in ${seeds[@]}
 do
   python ppo_fast.py --env_id="PickCube-v1" --seed=${seed} \
@@ -29,6 +30,16 @@ python ppo_fast.py --env_id="SO100GraspCube-v1" --seed=${seed} \
   --num_eval_envs=16 --num-eval-steps=100 \
   --cudagraphs --exp-name="ppo-SO100GraspCube-v1-state-${seed}-walltime_efficient" \
   --track --wandb_project_name "SO100-ManiSkill"
+
+for seed in ${seeds[@]}
+do
+  python ppo_fast.py --env_id="PickCubeSO100-v1" --seed=${seed} \
+    --num_envs=4096 --num-steps=8 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 \
+    --num_eval_envs=16 \
+    --cudagraphs --exp-name="ppo-PickCubeSO100-v1-state-${seed}-walltime_efficient" \
+    --track
+done
 
 for seed in ${seeds[@]}
 do

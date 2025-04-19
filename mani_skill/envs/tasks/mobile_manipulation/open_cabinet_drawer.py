@@ -163,7 +163,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
                     handle_links[-1].append(link)
                     # save the first mesh in the link object that correspond with a handle
                     handle_links_meshes[-1].append(
-                        link.generate_mesh(
+                        link.generate_visual_mesh(
                             filter=lambda _, render_shape: "handle"
                             in render_shape.name,
                             mesh_name="handle",

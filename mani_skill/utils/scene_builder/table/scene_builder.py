@@ -14,8 +14,10 @@ from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
 
 
-# TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
+    """A simple scene builder that adds a table to the scene such that the height of the table is at 0, and
+    gives reasonable initial poses for robots."""
+
     def build(self):
         builder = self.scene.create_actor_builder()
         model_dir = Path(osp.dirname(__file__)) / "assets"
@@ -116,27 +118,6 @@ class TableSceneBuilder(SceneBuilder):
             qpos[:, -2:] = 0.04
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uids == "xmate3_robotiq":
-            qpos = np.array(
-                [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
-            )
-            if self.env._enhanced_determinism:
-                qpos = (
-                    self.env._batched_episode_rng[env_idx].normal(
-                        0, self.robot_init_qpos_noise, len(qpos)
-                    )
-                    + qpos
-                )
-            else:
-                qpos = (
-                    self.env._episode_rng.normal(
-                        0, self.robot_init_qpos_noise, (b, len(qpos))
-                    )
-                    + qpos
-                )
-            qpos[:, -2:] = 0
-            self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids in [
             "xarm6_allegro_left",
             "xarm6_allegro_right",
@@ -151,7 +132,7 @@ class TableSceneBuilder(SceneBuilder):
                 + qpos
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.45, 0, 0]))
+            self.env.agent.robot.set_pose(sapien.Pose([-0.522, 0, 0]))
         elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [
@@ -289,3 +270,15 @@ class TableSceneBuilder(SceneBuilder):
                 )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
+        elif self.env.robot_uids == "so100":
+            qpos = np.array([0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0])
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
+            )
+            self.env.agent.reset(qpos)
+            self.env.agent.robot.set_pose(
+                sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+            )
