@@ -4,6 +4,12 @@
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
   name="SO_5DOF_ARM100_8j_URDF.SLDASM">
+  <material name="white">
+    <color rgba="0.95 0.95 0.95 1" />
+  </material>
+  <material name="motor">
+    <color rgba="0.05 0.05 0.05 1" />
+  </material>
   <link
     name="Base">
     <inertial>
@@ -20,18 +26,25 @@
         iyz="2.26514711036514E-05"
         izz="0.000145097720857224" />
     </inertial>
-    <visual>
+    <visual name="base_link_chassis">
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/Base.stl" />
+      </geometry>
+      <material name="white">
+      </material>
+    </visual>
+    <visual name="base_link_motor">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Base.STL" />
+          filename="meshes/Base_Motor.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="motor">
       </material>
     </visual>
     <collision>
@@ -40,7 +53,16 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Base.STL" />
+          filename="meshes/Base.stl" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Base_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -60,18 +82,26 @@
         iyz="-4.58026206663885E-06"
         izz="5.86058514263952E-05" />
     </inertial>
-    <visual>
+    <visual name="rotation_pitch_chassis">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Rotation_Pitch.STL" />
+          filename="meshes/Rotation_Pitch.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="white">
+      </material>
+    </visual>
+    <visual name="rotation_pitch_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Rotation_Pitch_Motor.stl" />
+      </geometry>
+      <material name="motor">
       </material>
     </visual>
     <collision>
@@ -80,7 +110,16 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Rotation_Pitch.STL" />
+          filename="meshes/Rotation_Pitch.stl" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Rotation_Pitch_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -119,18 +158,26 @@
         iyz="2.11884806298698E-06"
         izz="0.000213280241160769" />
     </inertial>
-    <visual>
+    <visual name="upper_arm_chassis">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Upper_Arm.STL" />
+          filename="meshes/Upper_Arm.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="white">
+      </material>
+    </visual>
+    <visual name="upper_arm_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Upper_Arm_Motor.stl" />
+      </geometry>
+      <material name="motor">
       </material>
     </visual>
     <collision>
@@ -139,7 +186,16 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Upper_Arm.STL" />
+          filename="meshes/Upper_Arm.stl" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Upper_Arm_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -177,18 +233,26 @@
         iyz="1.77429964684103E-06"
         izz="5.08741652515214E-05" />
     </inertial>
-    <visual>
+    <visual name="lower_arm_chassis">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Lower_Arm.STL" />
+          filename="meshes/Lower_Arm.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="white">
+      </material>
+    </visual>
+    <visual name="lower_arm_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Lower_Arm_Motor.stl" />
+      </geometry>
+      <material name="motor">
       </material>
     </visual>
     <collision>
@@ -197,7 +261,16 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Lower_Arm.STL" />
+          filename="meshes/Lower_Arm.stl" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Lower_Arm_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -235,18 +308,26 @@
         iyz="4.09549055863776E-08"
         izz="3.4540143384536E-05" />
     </inertial>
-    <visual>
+    <visual name="wrist_pitch_roll_chassis">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Wrist_Pitch_Roll.STL" />
+          filename="meshes/Wrist_Pitch_Roll.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="white">
+      </material>
+    </visual>
+    <visual name="wrist_pitch_roll_motor">
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Wrist_Pitch_Roll_Motor.stl" />
+      </geometry>
+      <material name="motor">
       </material>
     </visual>
     <collision>
@@ -255,7 +336,16 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Wrist_Pitch_Roll.STL" />
+          filename="meshes/Wrist_Pitch_Roll.stl" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="meshes/Wrist_Pitch_Roll_Motor.stl" />
       </geometry>
     </collision>
   </link>
@@ -293,29 +383,28 @@
         iyz="-1.58743247545413E-07"
         izz="5.02460913506734E-05" />
     </inertial>
-    <visual>
+    <visual name="fixed_jaw_chassis">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Fixed_Jaw.STL" />
+          filename="meshes/Fixed_Jaw.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="white">
       </material>
     </visual>
-    <!-- <collision>
+    <visual name="fixed_jaw_motor">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Fixed_Jaw.STL" />
+          filename="meshes/Fixed_Jaw_Motor.stl" />
       </geometry>
-    </collision> -->
+      <material name="motor">
+      </material>
+    </visual>
     <collision>
       <origin
         xyz="0 0 0"
@@ -369,18 +458,15 @@
         iyz="-1.71146075110632E-07"
         izz="8.9916083370498E-06" />
     </inertial>
-    <visual>
+    <visual name="moving_jaw_chassis">
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="meshes/Moving Jaw.STL" />
+          filename="meshes/Moving_Jaw.stl" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      <material name="white">
       </material>
     </visual>
     <collision>

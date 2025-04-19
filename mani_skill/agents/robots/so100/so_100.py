@@ -12,12 +12,13 @@ from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils.structs.pose import Pose
 
 
 @register_agent()
 class SO100(BaseAgent):
     uid = "so100"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/so100/SO_5DOF_ARM100_8j/original.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/so100/SO_5DOF_ARM100_8j/so100.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2, dynamic_friction=2, restitution=0.0)
@@ -87,6 +88,10 @@ class SO100(BaseAgent):
         # computes the tool center point as the mid point between the the fixed and moving jaw's tips
         return (self.finger1_tip.pose.p + self.finger2_tip.pose.p) / 2
 
+    @property
+    def tcp_pose(self):
+        return Pose.create_from_pq(self.tcp_pos, self.finger1_link.pose.q)
+
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object
 
@@ -116,3 +121,9 @@ class SO100(BaseAgent):
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
         return torch.logical_and(lflag, rflag)
+
+    def is_static(self, threshold=0.2):
+        qvel = self.robot.get_qvel()[
+            :, :-2
+        ]  # exclude the gripper joint and gripper rotation joint.
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
