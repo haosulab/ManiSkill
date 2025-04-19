@@ -79,11 +79,9 @@ class PickCubeEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        print("  PickCubeEnv:   _load_agent()")
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        print("  PickCubeEnv:   _load_scene()")
         assert False, "This should not be called"
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -160,9 +158,7 @@ class PickCubeEnv(BaseEnv):
 
         # Check if this is ever happening.
         if torch.any(is_obj_placed & torch.logical_not(is_robot_static)):
-            print("HEADSUP: found a case when the object is placed but the robot is not static")
-            print(is_obj_placed, is_robot_static)
-            exit()
+            print(f"HEADSUP: found a case when the object is placed but the robot is not static. {is_obj_placed=}, {is_robot_static=}")
 
         # 
         return {
