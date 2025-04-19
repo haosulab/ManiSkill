@@ -91,6 +91,7 @@ class PlaceSphereEnv(BaseEnv):
 
     def _build_bin(self, radius):
         builder = self.scene.create_actor_builder()
+        builder.initial_pose = sapien.Pose()
 
         # init the locations of the basic blocks
         dx = self.block_half_size[1] - self.block_half_size[0]
@@ -144,6 +145,7 @@ class PlaceSphereEnv(BaseEnv):
             color=np.array([12, 42, 160, 255]) / 255,
             name="sphere",
             body_type="dynamic",
+            initial_pose=sapien.Pose(),
         )
 
         # load the bin
