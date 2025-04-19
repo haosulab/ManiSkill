@@ -22,7 +22,7 @@ class LiftPegUprightV2Env(LiftPegUprightEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.35])
+        return get_human_render_camera_config(eye=[0.4, 0.5, 0.4], target=[0.0, 0.0, 0.1])
 
 
     @property

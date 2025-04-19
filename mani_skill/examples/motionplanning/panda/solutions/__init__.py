@@ -8,3 +8,6 @@ from .lift_peg_upright import solve as solveLiftPegUpright
 from .pull_cube import solve as solvePullCube
 from .draw_svg import solve as solveDrawSVG
 from .draw_triangle import solve as solveDrawTriangle
+
+# new
+from .place_sphere import solve as solvePlaceSphere
