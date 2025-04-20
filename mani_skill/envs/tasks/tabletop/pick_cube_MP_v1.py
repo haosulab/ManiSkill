@@ -13,6 +13,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
 from mani_skill.envs.distraction_set import DistractionSet
 from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
+from mani_skill.utils.building.actors.ycb import get_ycb_builder
 
 
 @register_env("PickCubeMP-v1", max_episode_steps=100)
@@ -73,23 +74,31 @@ class PickCubeMPEnv(PickCubeEnv):
             "y_bounds": (-0.35, -0.45),
         }
 
-        self._obstacle_cfgs = [
-            # {
-            #     "half_size": [0.1, 0.025, 0.075],
-            #     "color": [0, 1, 1, 1.0],
-            #     "pose": sapien.Pose(p=[0.0, 0.5, 0.075]),
-            # },
+
+        y_offset = 0.15
+        self._cylinder_obstacle_cfg = [
             {
-                "half_size": [0.1, 0.025, 0.1],
+                "radius": 0.025,
+                "height": 0.2,
                 "color": [0, 1, 1, 1.0],
-                "pose": sapien.Pose(p=[0.0, 0.1, 0.1]),
-            }
+                "pose": sapien.Pose(p=[-0.1, y_offset, 0.1], q=[0, 0.7071068, 0, 0.7071068]),
+            },{
+                "radius": 0.025,
+                "height": 0.25,
+                "color": [0, 1, 1, 1.0],
+                "pose": sapien.Pose(p=[0.0, y_offset, 0.125], q=[0, 0.7071068, 0, 0.7071068]),
+            },{
+                "radius": 0.025,
+                "height": 0.2,
+                "color": [0, 1, 1, 1.0],
+                "pose": sapien.Pose(p=[0.1, y_offset, 0.1], q=[0, 0.7071068, 0, 0.7071068]),
+            },
         ]
+
         # Note(@jstmn): For some bizzaire reason, you need to create the array with the correct size first,
         # otherwise collecting demonstrations uses an increasing amount of cuda memory and is also much slower. This 
         # took a whilte to debug.
-        self._n_obstacles = len(self._obstacle_cfgs)
-        self._obstacles: List[Optional[sapien.Actor]] = [None] * self._n_obstacles
+        self._obstacles: List[Optional[sapien.Actor]] = [None] * len(self._cylinder_obstacle_cfg)
         self.goal_site: Optional[sapien.Actor] = None
         self.bin: Optional[sapien.Actor] = None
         self.cube: Optional[sapien.Actor] = None
@@ -189,16 +198,35 @@ class PickCubeMPEnv(PickCubeEnv):
         self._hidden_objects.append(self.goal_site)
 
         # 
-        for i, cfg in enumerate(self._obstacle_cfgs):
-            self._obstacles[i] = actors.build_box(
+        for i, cfg in enumerate(self._cylinder_obstacle_cfg):
+            self._obstacles[i] = actors.build_cylinder(
                 self.scene,
-                half_sizes=cfg["half_size"],
+                radius=cfg["radius"],
+                half_length=cfg["height"]/2.0,
                 color=cfg["color"],
                 name=f"obstacle_{i}",
+                body_type="dynamic",
+                add_collision=True,
+                scene_idxs=None,
                 initial_pose=cfg["pose"],
             )
+            # self._obstacles[i] = actors.build_box(
+            #     self.scene,
+            #     half_sizes=cfg["half_size"],
+            #     color=cfg["color"],
+            #     name=f"obstacle_{i}",
+            #     initial_pose=cfg["pose"],
+            # )
 
         self.bin = self._build_bin(self._cube_half_size)
+
+
+        # Add a ycb object - not important but will be useful later
+        builder = get_ycb_builder(self.scene, id="011_banana")
+        builder.initial_pose = sapien.Pose(p=[0.35, 0.35, 0.0])
+        builder.set_scene_idxs([0])
+        self._ycb_obj = builder.build(name="011_banana")
+        # self._ycb_obj.set_pose(sapien.Pose(p=[0.35, 0.35, 0.0]))
 
 
     @property
