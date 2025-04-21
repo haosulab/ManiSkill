@@ -17,6 +17,7 @@ class PegInsertionSideV2Env(PegInsertionSideEnv):
         assert "camera_height" in kwargs, "camera_height must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
+        self._distraction_set = kwargs.pop("distraction_set")
         super().__init__(*args, **kwargs)
 
     @property

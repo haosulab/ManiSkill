@@ -53,7 +53,12 @@ def get_partnet_mobility_builder(
     loader.fix_root_link = fix_root_link
     loader.scale = metadata["scale"]
     loader.load_multiple_collisions_from_file = True
-    urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
+    try:
+        urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
+    except:
+        for k, v in PARTNET_MOBILITY["model_urdf_paths"].items():
+            print(f"{k}: \t{v}")
+        raise KeyError(f"ID {id} not found in Partnet Mobility dataset. Keys: {PARTNET_MOBILITY['model_urdf_paths'].keys()}")
     applied_urdf_config = sapien_utils.parse_urdf_config(
         dict(
             material=dict(static_friction=1, dynamic_friction=1, restitution=0),
