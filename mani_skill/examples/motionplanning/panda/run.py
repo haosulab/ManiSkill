@@ -11,7 +11,7 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere, solveOpenDrawer
 from mani_skill.envs.distraction_set import DISTRACTION_SETS
 
 MP_SOLUTIONS = {
@@ -29,6 +29,8 @@ MP_SOLUTIONS = {
     "DrawSVG-v1" : solveDrawSVG,
     "LiftPegUpright-v2": solveLiftPegUpright,
     # 
+
+    "OpenCabinetDrawer-v2": solveOpenDrawer,
     "PlaceSphere-v2": solvePlaceSphere,
     "PickCube-v2": solvePickCube,                   # new
     "PickCube-v3": solvePickCube,                   # new
@@ -42,6 +44,28 @@ MP_SOLUTIONS = {
     "PullCube-v2": solvePullCube,                   # new
     "PegInsertionSide-v2": solvePegInsertionSide,   # new
 }
+
+"""
+
+# ENVID=PickCube-v2
+# ENVID=TurnFaucet-v1
+# ENV_ID=OpenCabinetDrawer-v1
+ENV_ID=OpenCabinetDrawer-v2
+
+python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
+
+
+python mani_skill/examples/motionplanning/panda/run.py \
+    --camera-width 640 --camera-height 480 \
+    --env-id ${ENV_ID} \
+    --num-traj 10 \
+    --distraction-set "none" \
+    --num-procs 1 \
+    --reward-mode "sparse" \
+    --random-seed \
+    --vis \
+    --save-video
+"""
 
 
 def parse_args(args=None):
@@ -128,13 +152,13 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     passed = 0
     while True:
         env.reset(seed=seed, options={"reconfigure": True}) # reconfigure so distractor variations are resampled
-        try:
-            res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
-        except Exception as e:
-            print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
-            print("Traceback:")
-            print(''.join(traceback.format_tb(e.__traceback__)))
-            res = -1
+        res = solve(env, seed=seed, debug=False, vis=True if args.vis else False)
+        # try:
+        # except Exception as e:
+        #     print(f"Cannot find valid solution because of an error in motion planning solution: {e}")
+        #     print("Traceback:")
+        #     print(''.join(traceback.format_tb(e.__traceback__)))
+        #     res = -1
 
         if res == -1:
             success = False

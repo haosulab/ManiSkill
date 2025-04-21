@@ -72,26 +72,29 @@ class TableSceneBuilder(SceneBuilder):
         self.table = table
         self.scene_objects: list[sapien.Entity] = [self.table, self.ground]
 
-    def initialize(self, env_idx: torch.Tensor):
+    def initialize(self, env_idx: torch.Tensor, table_z_rotation_angle: float = np.pi/2.0, qpos_0: Optional[np.ndarray] = None):
         # table_height = 0.9196429
         b = len(env_idx)
         self.table.set_pose(
-            sapien.Pose(p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2))
+            sapien.Pose(p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, table_z_rotation_angle))
         )
         if self.env.robot_uids == "panda":
-            qpos = np.array(
-                [
-                    0.0,
-                    np.pi / 8,
-                    0,
-                    -np.pi * 5 / 8,
+            if qpos_0 is None:
+                qpos = np.array(
+                    [
+                        0.0,
+                        np.pi / 8,
+                        0,
+                        -np.pi * 5 / 8,
                     0,
                     np.pi * 3 / 4,
                     np.pi / 4,
                     0.04,
                     0.04,
                 ]
-            )
+                )
+            else:
+                qpos = qpos_0
             if self.env._enhanced_determinism:
                 qpos = (
                     self.env._batched_episode_rng[env_idx].normal(

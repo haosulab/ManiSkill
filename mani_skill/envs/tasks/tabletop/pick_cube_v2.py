@@ -4,11 +4,9 @@ from typing import Union
 import torch
 import sapien
 
-from mani_skill.utils.structs import Link, Actor
+from mani_skill.utils.structs import Actor
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.envs.tasks.tabletop.pick_cube import PickCubeEnv
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
