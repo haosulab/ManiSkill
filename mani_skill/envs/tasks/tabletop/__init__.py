@@ -18,6 +18,7 @@ from .push_t import PushTEnv
 from .pull_cube_tool import PullCubeToolEnv
 
 # New environments
+from .open_cabinet_drawer_v2 import OpenCabinetDrawerV2Env
 from .pick_cube_v2 import PickCubeV2Env
 from .pick_cube_v3 import PickCubeV3Env
 from .pick_cube_v4 import PickCubeV4Env
