@@ -11,3 +11,4 @@ from .draw_triangle import solve as solveDrawTriangle
 
 # new
 from .place_sphere import solve as solvePlaceSphere
+from .open_drawer import solve as solveOpenDrawer
