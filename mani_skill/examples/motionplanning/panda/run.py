@@ -30,7 +30,7 @@ MP_SOLUTIONS = {
     "LiftPegUpright-v2": solveLiftPegUpright,
     # 
 
-    "OpenCabinetDrawer-v2": solveOpenDrawer,
+    "OpenDrawer-v1": solveOpenDrawer,
     "PlaceSphere-v2": solvePlaceSphere,
     "PickCube-v2": solvePickCube,                   # new
     "PickCube-v3": solvePickCube,                   # new
@@ -50,7 +50,7 @@ MP_SOLUTIONS = {
 # ENVID=PickCube-v2
 # ENVID=TurnFaucet-v1
 # ENV_ID=OpenCabinetDrawer-v1
-ENV_ID=OpenCabinetDrawer-v2
+ENV_ID=OpenDrawer-v1
 
 python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 

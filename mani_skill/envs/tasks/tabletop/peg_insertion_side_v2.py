@@ -15,14 +15,17 @@ class PegInsertionSideV2Env(PegInsertionSideEnv):
     def __init__(self, *args, **kwargs):
         assert "camera_width" in kwargs, "camera_width must be provided"
         assert "camera_height" in kwargs, "camera_height must be provided"
+        assert "distraction_set" in kwargs, "distraction_set must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
         self._distraction_set = kwargs.pop("distraction_set")
-        super().__init__(*args, **kwargs)
+        if isinstance(self._distraction_set, dict):
+            self._distraction_set = DistractionSet(**self._distraction_set)
+        super().__init__(robot_uids="panda", *args, **kwargs)
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.45, -0.45, 0.7], target=[0.05, -0.1, 0.4])
+        return get_human_render_camera_config(eye=[0.45, -0.45, 0.7], target=[0.05, -0.1, 0.3])
 
 
     @property
