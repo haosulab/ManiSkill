@@ -2,13 +2,13 @@ import numpy as np
 import sapien
 from transforms3d.euler import euler2quat
 
-from mani_skill.envs.tasks import OpenCabinetDrawerV2Env
+from mani_skill.envs.tasks import OpenDrawerV1Env
 from mani_skill.utils import common
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
 from mani_skill.examples.motionplanning.panda.utils import compute_grasp_info_by_obb, get_actor_obb
 from mani_skill.utils.geometry.rotation_conversions import quaternion_multiply
 
-def solve(env: OpenCabinetDrawerV2Env, seed=None, debug=False, vis=False):
+def solve(env: OpenDrawerV1Env, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
     assert env.unwrapped.control_mode in [
         "pd_joint_pos",
