@@ -100,16 +100,14 @@ class Kinematics:
             xml = f.read()
 
         joint_order = [
-            j.name  # f"joint_{j.child_link.index}"
+            j.name
             for j in self.articulation.active_joints
             if j.name in self._kinematic_chain_joint_names
-            # for j in sapien_articulation.active_joints
         ]
         link_order = [
-            l.name  # f"link_{l.index}"
+            l.name
             for l in self.articulation.links
             if l.name in self._kinematic_chain_link_names
-            # for l in sapien_articulation.links
         ]
 
         self.pmodel = PinocchioModel(xml, [0, 0, -9.81])
