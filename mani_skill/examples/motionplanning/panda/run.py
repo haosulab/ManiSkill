@@ -27,33 +27,26 @@ MP_SOLUTIONS = {
     "LiftPegUpright-v1": solveLiftPegUpright,
     "PullCube-v1": solvePullCube,
     "DrawSVG-v1" : solveDrawSVG,
-    "LiftPegUpright-v2": solveLiftPegUpright,
     # 
 
-    "OpenDrawer-v1": solveOpenDrawer,
-    "PlaceSphere-v2": solvePlaceSphere,
-    "PickCube-v2": solvePickCube,                   # new
-    "PickCube-v3": solvePickCube,                   # new
-    "PickCube-v4": solvePickCube,                   # new
-    "PickCube-v3-VisibleSphere": solvePickCube,     # new
+    # New tasks:
+    "LiftPegUpright-v2": solveLiftPegUpright,
+    "OpenDrawer-v1": solveOpenDrawer,               # new
+    "PlaceSphere-v2": solvePlaceSphere,             # new  
+    # "PickCube-v2": solvePickCube,                   # new
+    # "PickCube-v3": solvePickCube,                   # new
+    # "PickCube-v4": solvePickCube,                   # new
+    # "PickCube-v3-VisibleSphere": solvePickCube,     # new
     "StackCube-v2": solveStackCube,                 # new
-    "PlugCharger-v2": solvePlugCharger,             # new
+    # "PlugCharger-v2": solvePlugCharger,             # new
     "PushCube-v2": solvePushCube,                   # new
     "PullCube-v2": solvePullCube,                   # new
-    "PullCubeTool-v2": solvePullCubeTool,           # new
-    "PullCube-v2": solvePullCube,                   # new
+    # "PullCubeTool-v2": solvePullCubeTool,           # new
     "PegInsertionSide-v2": solvePegInsertionSide,   # new
 }
 
 """
-
-# ENVID=PickCube-v2
-# ENVID=TurnFaucet-v1
-# ENV_ID=OpenCabinetDrawer-v1
-ENV_ID=OpenDrawer-v1
-
-python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
-
+ENV_ID=PushCube-v2
 
 python mani_skill/examples/motionplanning/panda/run.py \
     --camera-width 640 --camera-height 480 \
@@ -65,6 +58,8 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --random-seed \
     --vis \
     --save-video
+
+    python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 """
 
 
