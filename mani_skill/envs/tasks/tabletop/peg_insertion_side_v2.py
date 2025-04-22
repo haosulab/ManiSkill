@@ -11,6 +11,11 @@ class PegInsertionSideV2Env(PegInsertionSideEnv):
     """
     **Task Description:**
     Nearly exacty copy of PegInsertionSideEnv, but with 3 cameras instead of 1.
+
+    Appropriate pointcloud bounds:
+    x: [-0.3, 0.3] 
+    y: [-0.5, 0.5] 
+    z: [0.01, 0.3]
     """
     def __init__(self, *args, **kwargs):
         assert "camera_width" in kwargs, "camera_width must be provided"
@@ -30,7 +35,7 @@ class PegInsertionSideV2Env(PegInsertionSideEnv):
 
     @property
     def _default_sensor_configs(self):
-        target = [0, 0, 0.1]
-        eye_xy = 0.3
-        eye_z = 0.4
+        target = [0, 0.15, 0.1]
+        eye_xy = 0.4
+        eye_z = 0.5
         return get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)

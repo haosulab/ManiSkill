@@ -19,7 +19,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_human_render_camera_config, REALSENSE_DEPTH_FOV_VERTICAL_RAD, SHADER
 from mani_skill.envs.distraction_set import DistractionSet
 
 CABINET_COLLISION_BIT = 29
@@ -38,6 +38,20 @@ class OpenDrawerV1Env(BaseEnv):
     Use the Panda open the target drawer out.
 
     Largely borrowed from mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py
+
+
+    Appropriate pointcloud bounds:
+    x: [-0.4, 0.1] 
+    y: [-0.3, 0.3] 
+    z: [0.4, 0.8]
+
+    
+    Only used for calculating the pointcloud bounds:
+        center: (-0.2, 0, 0.6)
+        offsets wrt. center:
+            x: [-0.2, 0.3]
+            y: [-0.3, 0.3]
+            z: [-.2, 0.2]
     """
 
     SUPPORTED_ROBOTS = ["panda"]
@@ -86,14 +100,45 @@ class OpenDrawerV1Env(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.35, 0.45, 0.4], target=[0.0, 0.0, 0.15])
+        return get_human_render_camera_config(eye=[-0.2, 0.5, 1.1], target=[-0.1, 0, 0.5])
 
     @property
     def _default_sensor_configs(self):
-        target=[-0.1, 0, 0.1]
-        eye_xy = 0.3
-        eye_z = 0.6
-        cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)
+        target = [-0.2, 0, 0.5]
+        pose_center = sapien_utils.look_at(eye=[-0.5, 0.0, 1.25], target=target)
+        pose_left = sapien_utils.look_at(eye=[-0.2, 0.5, 1.1], target=target)
+        pose_right = sapien_utils.look_at(eye=[-0.2, -0.5, 1.1], target=target)
+        cfgs = [
+            CameraConfig(
+                uid="camera_center",
+                pose=pose_center,
+                width=self._camera_width,
+                height=self._camera_height,
+                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
+                near=0.01,
+                far=100,
+                shader_pack=SHADER,
+            ),
+            CameraConfig(
+                uid="camera_left",
+                pose=pose_left,
+                width=self._camera_width,
+                height=self._camera_height,
+                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
+                near=0.01,
+                far=100,
+                shader_pack=SHADER,
+            ),
+            CameraConfig(
+                uid="camera_right",
+                pose=pose_right,
+                width=self._camera_width,
+                height=self._camera_height,
+                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
+                near=0.01,
+                far=100,
+                shader_pack=SHADER,
+            )]
         return self._distraction_set.update_camera_configs(cfgs)
 
     def _load_agent(self, options: dict):
@@ -232,13 +277,11 @@ class OpenDrawerV1Env(BaseEnv):
 
 
             # initialize robot
-            qpos_0 = np.array([-.325, -0.6, 0.3, -2.3, 2.5, 3, 0.0, 0.4, 0.4]) # < working
             qpos_0 = np.array([-0.13595445, -1.2611351, 0.24094589, -2.9000182, 2.5728698, 3.0259767, 0.029944034, 0.039999813, 0.03999985]) # final two are gripper (start open)
-            self.table_scene.initialize(env_idx, table_z_rotation_angle=np.pi, qpos_0=qpos_0)
             # ^ Copied from visualizer
-
-            # self.table_scene.initialize(env_idx, table_z_rotation_angle=np.pi)
+            self.table_scene.initialize(env_idx, table_z_rotation_angle=np.pi, qpos_0=qpos_0)
             # ^ table_z_rotation_angle=np.pi rotates the table 90 degrees from default so that the cabinet has more table space behind it
+
 
             # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
             qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
