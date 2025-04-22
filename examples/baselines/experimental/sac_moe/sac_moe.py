@@ -41,7 +41,7 @@ class Args:
     """the wandb's project name"""
     wandb_entity: Optional[str] = None
     """the entity (team) of wandb's project"""
-    wandb_group: str = "SAC"
+    wandb_group: str = "SAC_MOE"
     """the group of the run for wandb"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
@@ -392,7 +392,7 @@ if __name__ == "__main__":
                 name=run_name,
                 save_code=True,
                 group=args.wandb_group,
-                tags=["sac", "walltime_efficient"]
+                tags=["sac_moe", "walltime_efficient"]
             )
         writer = SummaryWriter(f"runs/{run_name}")
         writer.add_text(

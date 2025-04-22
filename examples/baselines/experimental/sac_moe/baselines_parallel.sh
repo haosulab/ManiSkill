@@ -21,7 +21,7 @@ for env in "${envs[@]}"; do
       --num_envs=32 --utd=0.5 --buffer_size=500_000 \
       --total_timesteps=1_000_000 --eval_freq=50_000 \
       --control-mode=\"pd_ee_delta_pos\" \
-      --exp-name=\"${file_name}-${env}-state-${seed}\" --track"
+      --exp-name=\"${file_name}-${env}-state-${seed}-walltime_efficient\" --track"
     commands+=("$cmd")
   done
 done
@@ -55,7 +55,7 @@ for env in "${rgbd_envs[@]}"; do
     cmd="python ${file_name}_rgbd.py --env_id=\"$env\" --seed=$seed \
       --num_envs=32 --utd=0.5 --buffer_size=500_000 --obs_mode="rgb" --camera_width=64 --camera_height=64 \
       --total_timesteps=1_000_000 --eval_freq=50_000 --control-mode=\"pd_ee_delta_pos\" \
-      --exp-name=\"${file_name}-${env}-rgb-${seed}\" --track"
+      --exp-name=\"${file_name}-${env}-rgb-${seed}-walltime_efficient\" --track"
     rgbd_commands+=("$cmd")
   done
 done
