@@ -28,14 +28,16 @@ CABINET_COLLISION_BIT = 29
 # TODO (stao): we need to cut the meshes of all the cabinets in this dataset for gpu sim, there may be some wierd physics
 # that may happen although it seems okay for state based RL
 @register_env(
-    "OpenCabinetDrawer-v2",
+    "OpenDrawer-v1",
     asset_download_ids=["partnet_mobility_cabinet"],
     max_episode_steps=100,
 )
-class OpenCabinetDrawerV2Env(BaseEnv):
+class OpenDrawerV1Env(BaseEnv):
     """
     **Task Description:**
     Use the Panda open the target drawer out.
+
+    Largely borrowed from mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py
     """
 
     SUPPORTED_ROBOTS = ["panda"]
@@ -57,11 +59,13 @@ class OpenCabinetDrawerV2Env(BaseEnv):
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
-        # TEMP:
-        print("TODO: remove default camera_width, camera_height, distraction_set defaults")
-        self._camera_width = kwargs.pop("camera_width", 640)
-        self._camera_height = kwargs.pop("camera_height", 480)
-        self._distraction_set = kwargs.pop("distraction_set", DistractionSet())
+        assert "camera_width" in kwargs and "camera_height" in kwargs, "camera_width and camera_height must be provided"
+        assert "distraction_set" in kwargs, "distraction_set must be provided"
+        self._camera_width = kwargs.pop("camera_width")
+        self._camera_height = kwargs.pop("camera_height")
+        self._distraction_set = kwargs.pop("distraction_set")
+        if isinstance(self._distraction_set, dict):
+            self._distraction_set = DistractionSet(**self._distraction_set)
         # 
         self.robot_init_qpos_noise = robot_init_qpos_noise
         # TRAIN_JSON.keys(): ['1000' '1004' '1005' '1013' '1016' '1021' '1024' '1027' '1032' '1033'
@@ -101,13 +105,11 @@ class OpenCabinetDrawerV2Env(BaseEnv):
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
-        
         # temporarily turn off the logging as there will be big red warnings
         # about the cabinets having oblong meshes which we ignore for now.
         sapien.set_log_level("off")
         self._load_cabinets(self.handle_types)
         sapien.set_log_level("warn")
-        
 
 
     def _load_cabinets(self, joint_types: List[str]):
