@@ -24,6 +24,7 @@ from .pick_cube_v3 import PickCubeV3Env
 from .pick_cube_v4 import PickCubeV4Env
 from .pick_cube_v3_vsphere import PickCubeV3VisibleSphereEnv
 from .place_sphere_v2 import PlaceSphereV2Env
+from .place_sphere_v3 import PlaceSphereV3Env
 from .pick_cube_MP_v1 import PickCubeMPEnv
 from .plug_charger_v2 import PlugChargerV2Env             # new
 from .pull_cube_v2 import PullCubeV2Env                   # new
