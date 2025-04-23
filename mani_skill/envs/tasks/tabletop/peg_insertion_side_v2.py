@@ -5,6 +5,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
+from mani_skill.envs.distraction_set import DistractionSet
 
 @register_env("PegInsertionSide-v2", max_episode_steps=50)
 class PegInsertionSideV2Env(PegInsertionSideEnv):
