@@ -33,6 +33,7 @@ MP_SOLUTIONS = {
     "LiftPegUpright-v2": solveLiftPegUpright,
     "OpenDrawer-v1": solveOpenDrawer,               # new
     "PlaceSphere-v2": solvePlaceSphere,             # new  
+    "PlaceSphere-v3": solvePlaceSphere,             # new  
     # "PickCube-v2": solvePickCube,                   # new
     # "PickCube-v3": solvePickCube,                   # new
     # "PickCube-v4": solvePickCube,                   # new
@@ -46,7 +47,7 @@ MP_SOLUTIONS = {
 }
 
 """
-ENV_ID=PushCube-v2
+ENV_ID=PlaceSphere-v3
 
 python mani_skill/examples/motionplanning/panda/run.py \
     --camera-width 640 --camera-height 480 \
@@ -56,9 +57,8 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --num-procs 1 \
     --reward-mode "sparse" \
     --random-seed \
-    --vis \
-    --save-video
-
+    --vis
+    
     python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 """
 
