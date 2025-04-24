@@ -35,7 +35,6 @@ class PickCubeV3VisibleSphereEnv(PickCubeV3Env):
 
         # Initialize
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
-        print(" --> Created PickCubeV3-VisibleSphere")
 
 
     def _load_scene(self, options: dict):

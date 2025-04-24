@@ -44,7 +44,6 @@ class PickCubeEnv(BaseEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         self.robot_init_qpos_noise = robot_init_qpos_noise
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
-        print(" --> Created PickCubeEnv")
 
     @property
     def _default_sensor_configs(self):
@@ -86,7 +85,6 @@ class PickCubeEnv(BaseEnv):
         self._hidden_objects.append(self.goal_site)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        print("  PickCubeEnv:   _initialize_episode()")
         # assert False, "This should not be called"
         with torch.device(self.device):
             b = len(env_idx)
