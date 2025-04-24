@@ -23,11 +23,9 @@ class PickCubeV4Env(PickCubeV2Env):
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, goal_thresh_margin=self.goal_thresh_margin, **kwargs)
-        print(" --> Created PickCubeV4Env")
 
     @property
     def _default_sensor_configs(self):
-        print("  PickCubeV4Env: _default_sensor_configs()")
         eye_xy = 0.3
         eye_z = 0.4
         target = [0.0, 0, 0.15]
