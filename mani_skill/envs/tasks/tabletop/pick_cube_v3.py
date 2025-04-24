@@ -21,11 +21,9 @@ class PickCubeV3Env(PickCubeV2Env):
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, goal_thresh_margin=self.goal_thresh_margin, **kwargs)
-        print(" --> Created PickCubeV3Env")
 
     @property
     def _default_sensor_configs(self):
-        print("  PickCubeV3Env: _default_sensor_configs()")
         target=[0.0, 0, 0.15]
         xy_offset = 0.3
         z_offset = 0.4

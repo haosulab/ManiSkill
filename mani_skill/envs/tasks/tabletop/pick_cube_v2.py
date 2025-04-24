@@ -46,11 +46,9 @@ class PickCubeV2Env(PickCubeEnv):
         self._table_scenes: list[TableSceneBuilder] = []
 
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
-        print(" --> Created PickCubeV2Env")
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        print("  PickCubeV2Env: _initialize_episode()")
         with torch.device(self.device):
             b = len(env_idx) # number of environments. env_idx is [0, 1, 2, ..., n_envs-1]
             for ts in self._table_scenes:
@@ -77,7 +75,6 @@ class PickCubeV2Env(PickCubeEnv):
     def _load_scene(self, options: dict):
         """ Load the scene.
         """
-        print("  PickCubeV2Env: _load_scene()")
         self._table_scenes = []
         add_visual_from_file = not self._distraction_set.table_color_enabled()
         for i in range(self.num_envs):
@@ -109,7 +106,6 @@ class PickCubeV2Env(PickCubeEnv):
 
 
         # Create goal site
-        print(f"PickCubeV2Env: Creating goal site with radius: {self.goal_thresh}")
         self.goal_site = actors.build_sphere(
             self.scene,
             radius=self.goal_thresh,
@@ -129,7 +125,6 @@ class PickCubeV2Env(PickCubeEnv):
 
     @property
     def _default_sensor_configs(self):
-        print("  PickCubeV2Env: _default_sensor_configs()")
         target=[-0.1, 0, 0.1]
         eye_xy = 0.3
         eye_z = 0.6
