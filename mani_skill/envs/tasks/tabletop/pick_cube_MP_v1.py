@@ -145,6 +145,24 @@ class PickCubeMPEnv(PickCubeEnv):
         return builder.build_kinematic(name="bin")
 
 
+    def _get_obs_extra(self, info: dict):
+        obs = {}
+        def entry_name(link_name, obj_name):
+            return f"contact-force:{link_name}___{obj_name}"
+
+        for link_name, link in self.agent.robot.links_map.items():
+            for obj_name, obj in zip(["cube", "goal_site", "bin"], [self.cube, self.goal_site, self.bin]):
+                forces = self.scene.get_pairwise_contact_forces(link, obj)
+                obs[entry_name(link_name, obj_name)] = forces
+            for i, obstacle in enumerate(self._obstacles):
+                if obstacle is None:
+                    continue
+                forces = self.scene.get_pairwise_contact_forces(link, obstacle)
+                obs[entry_name(link_name, f"cylinder{i}")] = forces
+        return obs
+
+
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
