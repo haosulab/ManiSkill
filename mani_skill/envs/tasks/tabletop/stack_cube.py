@@ -14,7 +14,6 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 
-
 @register_env("StackCube-v1", max_episode_steps=50)
 class StackCubeEnv(BaseEnv):
     """
