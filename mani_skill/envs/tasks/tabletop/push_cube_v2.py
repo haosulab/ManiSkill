@@ -45,7 +45,7 @@ class PushCubeV2Env(PushCubeEnv):
         # In this situation, the DistractionSet has serialized as a dict so we now need to deserialize it.
         if isinstance(self._distraction_set, dict):
             self._distraction_set = DistractionSet(**self._distraction_set)
-
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
 
@@ -129,7 +129,7 @@ class PushCubeV2Env(PushCubeEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.1])
+        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.1], shader=self._human_render_shader)
 
 
     @property

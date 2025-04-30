@@ -285,7 +285,7 @@ class Panda(BaseAgent):
         rflag = torch.logical_and(
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
-        return torch.logical_and(lflag, rflag)
+        return torch.logical_and(lflag, rflag).to(self.device)
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]

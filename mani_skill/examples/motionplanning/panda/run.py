@@ -57,7 +57,7 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --reward-mode "sparse" \
     --random-seed \
     --vis
-    
+
     python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 """
 
@@ -81,6 +81,7 @@ def parse_args(args=None):
     parser.add_argument("--camera-width", type=int, required=False, help="Width of the camera.")
     parser.add_argument("--camera-height", type=int,  required=False, help="Height of the camera.")
     parser.add_argument("--distraction-set", type=str, required=True, help=f"Distraction set to use. Available options are {list(DISTRACTION_SETS.keys())}")
+    parser.add_argument("--include_eih_camera", type=bool, default=False, help=f"Whether to include the EIH camera in the observation.")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:

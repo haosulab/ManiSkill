@@ -124,42 +124,6 @@ class StackCubeEnv(BaseEnv):
         is_cubeA_static = self.cubeA.is_static(lin_thresh=1e-2, ang_thresh=0.5)
         is_cubeA_grasped = self.agent.is_grasping(self.cubeA)
         success = is_cubeA_on_cubeB * is_cubeA_static * (~is_cubeA_grasped)
-
-        # DEBUGGING
-        # if self._successes is None:
-        #     self._successes = success
-        # else:
-        #     self._successes = torch.logical_or(self._successes, success)
-        # def pp(arr):
-        #     s = "[ "
-        #     from termcolor import colored
-        #     for x in arr:
-        #         if x.item():
-        #             s += colored("true ", "green") + " "
-        #         else:
-        #             s += colored("false", "red") + " "
-        #     return s + "]"
-        # torch.set_printoptions(precision=4, sci_mode=False, linewidth=200)
-        # print(f"is_cubeA_on_cubeB={pp(is_cubeA_on_cubeB)}  ~is_cubeA_grasped={pp(~is_cubeA_grasped)}  is_cubeA_static={pp(is_cubeA_static)}  success={pp(success)}    offsets: {[of[0:2].data for of in offset]}")
-        # from termcolor import colored
-        # def green_if_true(x):
-        #     if x.item():
-        #         return colored("true ", "green")
-        #     else:
-        #         return colored("false", "red")
-        # print()
-        # for i in range(len(is_cubeA_on_cubeB)):
-        #     if not self._successes[i]:
-        #         if is_cubeA_on_cubeB[i].item():
-        #             print(f"  [CASE A]       {i}: is_cubeA_on_cubeB=true  ~is_cubeA_grasped={green_if_true(~is_cubeA_grasped[i])}  is_cubeA_static={green_if_true(is_cubeA_static[i])}   offset: {offset[i, 0:2]}")
-
-        #         else:
-        #             print(f"  [CASE B]       {i}: is_cubeA_on_cubeB={green_if_true(is_cubeA_on_cubeB[i])}  ~is_cubeA_grasped={green_if_true(~is_cubeA_grasped[i])}  is_cubeA_static={green_if_true(is_cubeA_static[i])}   offset: {offset[i, 0:2]}")
-        #     else:
-        #         print(f"  [CASE SUCCESS] {i}")
-        # 
-        # END OF: DEBUGGING
-
         return {
             "is_cubeA_grasped": is_cubeA_grasped,
             "is_cubeA_on_cubeB": is_cubeA_on_cubeB,

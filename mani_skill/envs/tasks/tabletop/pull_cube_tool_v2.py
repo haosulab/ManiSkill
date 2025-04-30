@@ -17,11 +17,12 @@ class PullCubeToolV2Env(PullCubeToolEnv):
         assert "camera_height" in kwargs, "camera_height must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.3])
+        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.3], shader=self._human_render_shader)
 
 
     @property

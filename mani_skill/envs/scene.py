@@ -777,14 +777,14 @@ class ManiSkillScene:
             query = self.pairwise_contact_queries[query_key]
             self.px.gpu_query_contact_pair_impulses(query)
             # query.cuda_impulses is shape (num_unique_pairs * num_envs, 3)
-            pairwise_contact_impulses = query.cuda_impulses.torch().clone()
+            pairwise_contact_impulses = query.cuda_impulses.torch().clone().to(self.device)
             return pairwise_contact_impulses
         else:
             contacts = self.px.get_contacts()
             pairwise_contact_impulses = sapien_utils.get_pairwise_contact_impulse(
                 contacts, obj1._bodies[0].entity, obj2._bodies[0].entity
             )
-            return common.to_tensor(pairwise_contact_impulses)[None, :]
+            return common.to_tensor(pairwise_contact_impulses, device=self.device)[None, :]
 
     def get_pairwise_contact_forces(
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
