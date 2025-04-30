@@ -96,11 +96,11 @@ class OpenDrawerV1Env(BaseEnv):
             robot_uids=robot_uids,
             **kwargs,
         )
-
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[-0.2, 0.5, 1.1], target=[-0.1, 0, 0.5])
+        return get_human_render_camera_config(eye=[-0.2, 0.5, 1.1], target=[-0.1, 0, 0.5], shader=self._human_render_shader)
 
     @property
     def _default_sensor_configs(self):

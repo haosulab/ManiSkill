@@ -43,7 +43,7 @@ def get_camera_configs(xy_offset, z_offset, target: tuple[float, float, float], 
             shader_pack=SHADER,
         )]
 
-def get_human_render_camera_config(eye: tuple[float, float, float], target: tuple[float, float, float]):
+def get_human_render_camera_config(eye: tuple[float, float, float], target: tuple[float, float, float], shader: str | None = None):
     """ Configures the human render camera. Shader options:
         - minimal: The fastest shader with minimal GPU memory usage. Note that the background will always be black (normally it is the color of the ambient light)
         - default: A balance between speed and texture availability
@@ -52,6 +52,6 @@ def get_human_render_camera_config(eye: tuple[float, float, float], target: tupl
         - rt-fast: Same as rt-med but runs faster with slightly lower quality
         -> https://maniskill.readthedocs.io/en/latest/user_guide/concepts/sensors.html#shaders-and-textures
     """
-    SHADER = "default"
+    SHADER = "default" if shader is None else shader
     pose = sapien_utils.look_at(eye=eye, target=target)
     return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)

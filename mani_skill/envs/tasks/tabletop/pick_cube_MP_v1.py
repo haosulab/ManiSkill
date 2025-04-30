@@ -45,7 +45,7 @@ class PickCubeMPEnv(PickCubeEnv):
         # In this situation, the DistractionSet has serialized as a dict so we now need to deserialize it.
         if isinstance(self._distraction_set, dict):
             self._distraction_set = DistractionSet(**self._distraction_set)
-
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
         # Env configuration
         self._cube_half_size = 0.02
 
@@ -249,7 +249,7 @@ class PickCubeMPEnv(PickCubeEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.5, 0.6, 0.7], target=[-0.1, 0.0, 0.1])
+        return get_human_render_camera_config(eye=[0.5, 0.6, 0.7], target=[-0.1, 0.0, 0.1], shader=self._human_render_shader)
 
     @property
     def _default_sensor_configs(self):

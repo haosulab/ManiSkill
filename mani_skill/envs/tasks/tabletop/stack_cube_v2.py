@@ -20,11 +20,12 @@ class StackCubeV2Env(StackCubeEnv):
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
         self._distraction_set = kwargs.pop("distraction_set")
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.3, 0, 0.4], target=[-0.1, 0, 0.1])
+        return get_human_render_camera_config(eye=[0.5, 0.2, 0.5], target=[-0.1, 0, 0.1], shader=self._human_render_shader)
 
     @property
     def _default_sensor_configs(self):

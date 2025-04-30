@@ -32,7 +32,7 @@ class LiftPegUprightV2Env(LiftPegUprightEnv):
 
         self.peg_spawn_bounds_x = [-0.2, 0]
         self.peg_spawn_bounds_y = [-0.1, 0.1]
-        
+        self._human_render_shader = kwargs.pop("human_render_shader", None) 
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
 
@@ -56,7 +56,7 @@ class LiftPegUprightV2Env(LiftPegUprightEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.4, 0.5, 0.4], target=[0.0, 0.0, 0.1])
+        return get_human_render_camera_config(eye=[0.4, 0.5, 0.4], target=[0.0, 0.0, 0.1], shader=self._human_render_shader)
 
     @property
     def _default_sensor_configs(self):

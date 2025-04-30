@@ -28,10 +28,11 @@ class PegInsertionSideV2Env(PegInsertionSideEnv):
         if isinstance(self._distraction_set, dict):
             self._distraction_set = DistractionSet(**self._distraction_set)
         super().__init__(robot_uids="panda", *args, **kwargs)
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.45, -0.45, 0.7], target=[0.05, -0.1, 0.3])
+        return get_human_render_camera_config(eye=[0.45, -0.45, 0.7], target=[0.05, -0.1, 0.3], shader=self._human_render_shader)
 
 
     @property
