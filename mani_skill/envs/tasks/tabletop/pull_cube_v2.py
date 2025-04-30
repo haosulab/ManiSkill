@@ -16,9 +16,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
 from mani_skill.envs.distraction_set import DistractionSet
 
-REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
-REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
-
+from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
 
 @register_env("PullCube-v2", max_episode_steps=50)
 class PullCubeV2Env(PullCubeEnv):
@@ -40,6 +38,7 @@ class PullCubeV2Env(PullCubeEnv):
         # In this situation, the DistractionSet has serialized as a dict so we now need to deserialize it.
         if isinstance(self._distraction_set, dict):
             self._distraction_set = DistractionSet(**self._distraction_set)
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
 
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
@@ -118,11 +117,7 @@ class PullCubeV2Env(PullCubeEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        """ Configures the human render camera.
-        """
-        pose = sapien_utils.look_at([0.5, 0.6, 0.5], [0.0, 0.0, 0.1])
-        SHADER = "default"
-        return CameraConfig("render_camera", pose=pose, width=1264, height=1264, fov=np.pi / 3, near=0.01, far=100, shader_pack=SHADER)
+        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.1], shader=self._human_render_shader)
 
 
     @property
@@ -131,40 +126,6 @@ class PullCubeV2Env(PullCubeEnv):
         target=[-0.1, 0, -0.1]
         eye_xy = 0.35
         eye_z = 0.45
-        pose_center = sapien_utils.look_at(eye=[eye_xy, 0, eye_z],  target=target)
-        pose_left = sapien_utils.look_at(eye=[0.0, -eye_xy, eye_z], target=target)
-        pose_right = sapien_utils.look_at(eye=[0.0, eye_xy, eye_z], target=target)
-        cfgs = [
-            CameraConfig(
-                uid="camera_center",
-                pose=pose_center,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-            CameraConfig(
-                uid="camera_left",
-                pose=pose_left,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-            CameraConfig(
-                uid="camera_right",
-                pose=pose_right,
-                width=self._camera_width,
-                height=self._camera_height,
-                fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
-                near=0.01,
-                far=100,
-                shader_pack=SHADER,
-            ),
-        ]
+        cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)
         cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
         return cfgs_adjusted
