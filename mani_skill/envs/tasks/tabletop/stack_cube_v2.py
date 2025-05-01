@@ -33,6 +33,13 @@ class StackCubeV2Env(StackCubeEnv):
         self._distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
         if isinstance(self._distraction_set, dict):
             self._distraction_set = DistractionSet(**self._distraction_set)
+
+        # self.cubeA_color = [1, 0, 0, 1]
+        # self.cubeA_color = [1, 1, 1, 1] # white
+        # self.cubeB_color = [0, 1, 0, 1]
+        # self.cubeA_color = [1, 100/255.0, 0, 0.9]  # RGB values for orange
+        # self.cubeB_color = [0, 0, 1, 1] # blue
+
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
 
 
@@ -43,6 +50,9 @@ class StackCubeV2Env(StackCubeEnv):
         # === Add randomized tables
         self._table_scenes = []
         add_visual_from_file = not self._distraction_set.table_color_enabled()
+        # add_visual_from_file = True
+        # add_visual_from_file = False
+        # Note: you can't add a texture to the table if you've set its color already.
         for i in range(self.num_envs):
             table_scene = TableSceneBuilder(self, robot_init_qpos_noise=self.robot_init_qpos_noise)
             table_scene.build(remove_table_from_state_dict_registry=True, scene_idx=i, name_suffix=f"env-{i}", add_visual_from_file=add_visual_from_file)
@@ -89,7 +99,7 @@ class StackCubeV2Env(StackCubeEnv):
         self.cubeB = Actor.merge(cubeB_actors, name="cubeB")
         self.add_to_state_dict_registry(self.cubeB)
 
-        self._distraction_set.load_scene_hook(self.scene, manipulation_object=self.cubeA, table=self.table_scene)
+        self._distraction_set.load_scene_hook(self.scene, manipulation_object=self.cubeA, table=self.table_scene, receiving_object=self.cubeB)
 
         # self.cubeA = actors.build_cube(
         #     self.scene,
@@ -143,8 +153,7 @@ class StackCubeV2Env(StackCubeEnv):
             # self.table_scene.initialize(env_idx)
             for ts in self._table_scenes:
                 ts.initialize(env_idx)
-            self._distraction_set.initialize_episode_hook(b, mo_pose=xyz)
-
+            self._distraction_set.initialize_episode_hook(b, mo_pose=cubeA_xy, ro_pose=cubeB_xy)
 
 
     @property

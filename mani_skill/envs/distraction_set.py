@@ -16,6 +16,17 @@ from mani_skill.utils.building import actors
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.actor import Actor
 
+
+def _get_random_color(color_range: tuple):
+    assert (len(color_range) == 2) and (len(color_range[0]) == 3) and (len(color_range[1]) == 3), "color_range must be a tuple of two tuples of three floats"
+    return np.random.uniform(*color_range).tolist() + [1]
+
+def _get_random_texture(texture_dir: str):
+    texture_files = [f for f in os.listdir(texture_dir) if f.endswith('.png')]
+    texture_file = np.random.choice(texture_files)
+    return sapien.render.RenderTexture2D(filename=os.path.join(texture_dir, texture_file))
+
+
 @dataclass
 class DistractionSet:
     """
@@ -50,8 +61,6 @@ class DistractionSet:
     camera_pose_cfg: dict = field(default_factory=dict)
 
     unimplemented = {
-        "RO_color",
-        "RO_texture",
         "MO_size",
         "RO_size",
         "light_color",
@@ -178,9 +187,30 @@ class DistractionSet:
 
         return cfgs
 
+    def set_texture(self, obj: Actor, texture_cfg: dict):
+        # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
+        for obj in obj._objs:
+            # modify the i-th object which is in parallel environment i
+            render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
+            for render_shape in render_body_component.render_shapes:
+                for part in render_shape.parts:
+                    # part.material: sapien.core.pysapien.RenderMaterial
+                    texture = _get_random_texture(texture_cfg["textures_directory"])
+                    part.material.set_base_color_texture(texture)
 
 
-    def load_scene_hook(self, scene: ManiSkillScene, manipulation_object: Optional[Actor], table: Optional[Actor]):
+    def set_color(self, obj: Actor, color_cfg: dict):
+        # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
+        for obj in obj._objs:
+            # modify the i-th object which is in parallel environment i
+            render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
+            for render_shape in render_body_component.render_shapes:
+                for part in render_shape.parts:
+                    # part.material: sapien.core.pysapien.RenderMaterial
+                    color = _get_random_color(color_cfg["color_range"])
+                    part.material.set_base_color(color)
+
+    def load_scene_hook(self, scene: ManiSkillScene, manipulation_object: Optional[Actor], table: Optional[Actor], receiving_object: Optional[Actor]):
         """
         This function is called when the scene is loaded.
         Args:
@@ -208,72 +238,51 @@ class DistractionSet:
                 for i in range(n_spheres)
             ]
 
-        def get_random_color(color_range: tuple):
-            assert (len(color_range) == 2) and (len(color_range[0]) == 3) and (len(color_range[1]) == 3), "color_range must be a tuple of two tuples of three floats"
-            return np.random.uniform(*color_range).tolist() + [1]
-
-        def get_random_texture(texture_dir: str):
-            texture_files = [f for f in os.listdir(texture_dir) if f.endswith('.png')]
-            texture_file = np.random.choice(texture_files)
-            return sapien.render.RenderTexture2D(filename=os.path.join(texture_dir, texture_file))
-
         # Set table color and texture
-        if (table is not None) and (self.table_color_enabled() or self.table_texture_enabled()):
-            assert isinstance(table, Actor), "table must be a ManiSkill Actor, is {}".format(type(table))
-            # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
-            for obj in table._objs:
-                # modify the i-th object which is in parallel environment i
-                render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
-                for render_shape in render_body_component.render_shapes:
-                    for part in render_shape.parts:
-                        # part.material: sapien.core.pysapien.RenderMaterial
-                        if self.table_texture_enabled():
-                            texture = get_random_texture(self.table_texture_cfg["textures_directory"])
-                        if self.table_color_enabled():
-                            color = get_random_color(self.table_color_cfg["color_range"])
+        if table is not None:
+            if self.table_color_enabled() and self.table_texture_enabled():
+                if np.random.random() < 0.5:
+                    self.set_texture(table, self.table_texture_cfg)
+                else:
+                    self.set_color(table, self.table_color_cfg)
+            elif self.table_color_enabled():
+                self.set_color(table, self.table_color_cfg)
+            elif self.table_texture_enabled():
+                self.set_texture(table, self.table_texture_cfg)
 
-                        if self.table_color_enabled() and not self.table_texture_enabled():
-                            part.material.set_base_color(color)
-                        elif self.table_texture_enabled() and not self.table_color_enabled():
-                            part.material.set_base_color_texture(texture)
-                        else:
-                            use_color = np.random.random() < 0.5
-                            if use_color:
-                                part.material.set_base_color(color)
-                            else:
-                                part.material.set_base_color_texture(texture)
+        # Manipulation object
+        if manipulation_object is not None:
+            if self.MO_color_enabled() and self.MO_texture_enabled():
+                if np.random.random() < 0.5:
+                    self.set_texture(manipulation_object, self.MO_texture_cfg)
+                else:
+                    self.set_color(manipulation_object, self.MO_color_cfg)
+            elif self.MO_color_enabled():
+                self.set_color(manipulation_object, self.MO_color_cfg)
+            elif self.MO_texture_enabled():
+                self.set_texture(manipulation_object, self.MO_texture_cfg)
 
-
-        if (manipulation_object is not None) and (self.MO_color_enabled() or self.MO_texture_enabled()):
-            assert isinstance(manipulation_object, Actor), "manipulation_object must be a ManiSkill Actor, is {}".format(type(manipulation_object))
-
-            # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
-            for obj in manipulation_object._objs:
-                # modify the i-th object which is in parallel environment i
-                render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
-                for render_shape in render_body_component.render_shapes:
-                    for part in render_shape.parts:
-                        # part.material: sapien.core.pysapien.RenderMaterial
-                        if self.MO_color_enabled():
-                            color = get_random_color(self.MO_color_cfg["color_range"])
-                        if self.MO_texture_enabled():
-                            texture = get_random_texture(self.MO_texture_cfg["textures_directory"])
-
-                        if self.MO_color_enabled() and not self.MO_texture_enabled():
-                            part.material.set_base_color(color)
-                        elif self.MO_texture_enabled() and not self.MO_color_enabled():
-                            part.material.set_base_color_texture(texture)
-                        else:
-                            use_color = np.random.random() < 0.5
-                            if use_color:
-                                part.material.set_base_color(color)
-                            else:
-                                part.material.set_base_color_texture(texture)
+        # Receiving object
+        if receiving_object is not None:
+            if self.RO_color_enabled() and self.RO_texture_enabled():
+                if np.random.random() < 0.5:
+                    self.set_texture(receiving_object, self.RO_texture_cfg)
+                else:
+                    self.set_color(receiving_object, self.RO_color_cfg)
+            elif self.RO_color_enabled():
+                self.set_color(receiving_object, self.RO_color_cfg)
+            elif self.RO_texture_enabled():
+                self.set_texture(receiving_object, self.RO_texture_cfg)
 
 
+    def initialize_episode_hook(self, n_envs: int, mo_pose: torch.Tensor, ro_pose: torch.Tensor):
+        assert mo_pose.shape[0] == n_envs
+        assert mo_pose.shape[1] >= 2, f"mo_pose must have at least 2 dimensions, got {mo_pose.shape[1]}"
+        if ro_pose is not None:
+            assert ro_pose.shape[0] == n_envs
+            assert ro_pose.shape[1] >= 2, f"ro_pose must have at least 2 dimensions, got {ro_pose.shape[1]}"
 
-    def initialize_episode_hook(self, n_envs: int, mo_pose: torch.Tensor):
-        assert mo_pose.shape == (n_envs, 3), f"mo_pose must be of shape (n_envs, 3), got {mo_pose.shape}"
+        # TODO: Make sure that the sampled poses are beyond some epsilon of RO/ro objects
 
         if self.distractor_object_enabled():
 
@@ -320,7 +329,7 @@ all_distractor_set = DistractionSet(
 
 DISTRACTION_SETS = {
     "none".upper(): DistractionSet(),
-    "dev".upper(): DistractionSet(
+    "all".upper(): DistractionSet(
         distractor_object_cfg={
             "n_spheres": 1,
             "radius_range": (0.01, 0.02),
@@ -334,6 +343,12 @@ DISTRACTION_SETS = {
         MO_texture_cfg = {
             "textures_directory": os.path.join(_ASSETS_DIR, "textures"),
         },
+        RO_color_cfg ={
+            "color_range": ((0, 0, 0), (1, 1, 1)),
+        },
+        RO_texture_cfg = {
+            "textures_directory": os.path.join(_ASSETS_DIR, "textures"),
+        },
         table_color_cfg = {
             "color_range": ((0, 0, 0), (1, 1, 1)),
         },
@@ -345,10 +360,11 @@ DISTRACTION_SETS = {
             "xyz_range": ((-0.025, -0.025, 0.025), (0.025, 0.025, 0.025)),        # 2.5 cm
         }
     ),
-    "all".upper(): deepcopy(all_distractor_set),
     "distractor_object_cfg".upper(): all_distractor_set.get_partial_copy(["distractor_object_cfg"]),
     "MO_color_cfg".upper(): all_distractor_set.get_partial_copy(["MO_color_cfg"]),
     "MO_texture_cfg".upper(): all_distractor_set.get_partial_copy(["MO_texture_cfg"]),
+    "RO_color_cfg".upper(): all_distractor_set.get_partial_copy(["RO_color_cfg"]),
+    "RO_texture_cfg".upper(): all_distractor_set.get_partial_copy(["RO_texture_cfg"]),
     "table_color_cfg".upper(): all_distractor_set.get_partial_copy(["table_color_cfg"]),
     "table_texture_cfg".upper(): all_distractor_set.get_partial_copy(["table_texture_cfg"]),
     "camera_pose_cfg".upper(): all_distractor_set.get_partial_copy(["camera_pose_cfg"]),

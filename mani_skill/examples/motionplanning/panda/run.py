@@ -11,7 +11,7 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere, solveOpenDrawer
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere, solveOpenDrawer,solveRaiseCube
 from mani_skill.envs.distraction_set import DISTRACTION_SETS
 
 MP_SOLUTIONS = {
@@ -30,6 +30,7 @@ MP_SOLUTIONS = {
     # 
 
     # New tasks:
+    "RaiseCube-v1": solveRaiseCube,
     "LiftPegUpright-v2": solveLiftPegUpright,
     "OpenDrawer-v1": solveOpenDrawer,               # new
     "PlaceSphere-v2": solvePlaceSphere,             # new  
