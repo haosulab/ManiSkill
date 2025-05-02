@@ -46,7 +46,7 @@ MP_SOLUTIONS = {
 }
 
 """
-ENV_ID=PlaceSphere-v3
+ENV_ID=RaiseCube-v1
 
 python mani_skill/examples/motionplanning/panda/run.py \
     --camera-width 640 --camera-height 480 \
@@ -54,7 +54,7 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --num-traj 10 \
     --distraction-set "none" \
     --num-procs 1 \
-    --reward-mode "sparse" \
+    --reward-mode "none" \
     --random-seed \
     --vis
 

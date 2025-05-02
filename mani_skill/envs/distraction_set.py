@@ -187,7 +187,11 @@ class DistractionSet:
 
         return cfgs
 
-    def set_texture(self, obj: Actor, texture_cfg: dict):
+    def set_color_or_texture(self, obj: Actor, color_cfg: dict, texture_cfg: dict, set_color: bool, set_texture: bool):
+
+        if not set_color and not set_texture:
+            return
+
         # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
         for obj in obj._objs:
             # modify the i-th object which is in parallel environment i
@@ -195,20 +199,21 @@ class DistractionSet:
             for render_shape in render_body_component.render_shapes:
                 for part in render_shape.parts:
                     # part.material: sapien.core.pysapien.RenderMaterial
-                    texture = _get_random_texture(texture_cfg["textures_directory"])
-                    part.material.set_base_color_texture(texture)
+                    if set_texture:
+                        texture = _get_random_texture(texture_cfg["textures_directory"])
+                    if set_color:
+                        color = _get_random_color(color_cfg["color_range"])
 
+                    if set_color and not set_texture:
+                        part.material.set_base_color(color)
+                    elif not set_color and set_texture:
+                        part.material.set_base_color_texture(texture)
+                    elif set_color and set_texture:
+                        if np.random.random() < 0.5:
+                            part.material.set_base_color(color)
+                        else:
+                            part.material.set_base_color_texture(texture)
 
-    def set_color(self, obj: Actor, color_cfg: dict):
-        # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
-        for obj in obj._objs:
-            # modify the i-th object which is in parallel environment i
-            render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
-            for render_shape in render_body_component.render_shapes:
-                for part in render_shape.parts:
-                    # part.material: sapien.core.pysapien.RenderMaterial
-                    color = _get_random_color(color_cfg["color_range"])
-                    part.material.set_base_color(color)
 
     def load_scene_hook(self, scene: ManiSkillScene, manipulation_object: Optional[Actor], table: Optional[Actor], receiving_object: Optional[Actor]):
         """
@@ -240,39 +245,15 @@ class DistractionSet:
 
         # Set table color and texture
         if table is not None:
-            if self.table_color_enabled() and self.table_texture_enabled():
-                if np.random.random() < 0.5:
-                    self.set_texture(table, self.table_texture_cfg)
-                else:
-                    self.set_color(table, self.table_color_cfg)
-            elif self.table_color_enabled():
-                self.set_color(table, self.table_color_cfg)
-            elif self.table_texture_enabled():
-                self.set_texture(table, self.table_texture_cfg)
+            self.set_color_or_texture(table, self.table_color_cfg, self.table_texture_cfg, self.table_color_enabled(), self.table_texture_enabled())
 
         # Manipulation object
         if manipulation_object is not None:
-            if self.MO_color_enabled() and self.MO_texture_enabled():
-                if np.random.random() < 0.5:
-                    self.set_texture(manipulation_object, self.MO_texture_cfg)
-                else:
-                    self.set_color(manipulation_object, self.MO_color_cfg)
-            elif self.MO_color_enabled():
-                self.set_color(manipulation_object, self.MO_color_cfg)
-            elif self.MO_texture_enabled():
-                self.set_texture(manipulation_object, self.MO_texture_cfg)
+            self.set_color_or_texture(manipulation_object, self.MO_color_cfg, self.MO_texture_cfg, self.MO_color_enabled(), self.MO_texture_enabled())
 
         # Receiving object
         if receiving_object is not None:
-            if self.RO_color_enabled() and self.RO_texture_enabled():
-                if np.random.random() < 0.5:
-                    self.set_texture(receiving_object, self.RO_texture_cfg)
-                else:
-                    self.set_color(receiving_object, self.RO_color_cfg)
-            elif self.RO_color_enabled():
-                self.set_color(receiving_object, self.RO_color_cfg)
-            elif self.RO_texture_enabled():
-                self.set_texture(receiving_object, self.RO_texture_cfg)
+            self.set_color_or_texture(receiving_object, self.RO_color_cfg, self.RO_texture_cfg, self.RO_color_enabled(), self.RO_texture_enabled())
 
 
     def initialize_episode_hook(self, n_envs: int, mo_pose: torch.Tensor, ro_pose: torch.Tensor):

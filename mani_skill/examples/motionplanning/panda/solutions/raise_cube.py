@@ -50,7 +50,7 @@ def solve(env: RaiseCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    target_pose = reach_pose * sapien.Pose([0, 0, 0.3])
+    target_pose = reach_pose * sapien.Pose([0, 0, -0.2])
     goal_pose = sapien.Pose(target_pose.p, grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 

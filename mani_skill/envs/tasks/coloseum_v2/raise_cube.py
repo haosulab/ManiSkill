@@ -34,7 +34,7 @@ class RaiseCubeEnv(BaseEnv):
     ]
     agent: Union[Panda, Fetch, XArm6Robotiq]
     cube_half_size = 0.02
-    target_height = 0.25
+    target_height = 0.15
 
     """
     """
@@ -127,10 +127,10 @@ class RaiseCubeEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        target=[-0.1, 0, 0.1]
-        eye_xy = 0.3
-        eye_z = 0.6
-        cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)
+        target=[0.0, 0, 0.15]
+        xy_offset = 0.3
+        z_offset = 0.4
+        cfgs = get_camera_configs(xy_offset, z_offset, target, self._camera_width, self._camera_height)
         cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
         return cfgs_adjusted
 
