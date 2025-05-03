@@ -320,19 +320,24 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     #                 g0, g1, g2, g3 = s.get_collision_groups()
     #                 s.set_collision_groups([g0, g1, g2 | (1 << 29), g3])
 
-    def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
+    def get_first_collision_mesh(
+        self, to_world_frame: bool = True
+    ) -> Union[trimesh.Trimesh, None]:
         """
         Returns the collision mesh of the first managed articulation object. Note results of this are not cached or optimized at the moment
-        so this function can be slow if called too often
+        so this function can be slow if called too often. Some articulations have no collision meshes, in which case this function returns None
 
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
         """
-        return self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+        mesh = self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+        if isinstance(mesh, trimesh.Trimesh):
+            return mesh
+        return None
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> List[trimesh.Trimesh]:
+    ) -> Union[List[trimesh.Trimesh], trimesh.Trimesh]:
         """
         Returns the collision mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -340,7 +345,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
             first_only (bool): Whether to return the collision mesh of just the first articulation managed by this object. If True,
-                this also returns a single Trimesh.Mesh object instead of a list
+                this also returns a single Trimesh.Mesh object instead of a list. This can be useful for efficiency reasons if you know
+                ahead of time all of the managed actors have the same collision mesh
         """
         assert (
             not self.merged
@@ -365,9 +371,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                         link_mesh.apply_transform(pose.sp.to_transformation_matrix())
                     art_meshes.append(link_mesh)
             mesh = merge_meshes(art_meshes)
-            meshes.append(mesh)
+            if mesh is not None:
+                meshes.append(mesh)
             if first_only:
                 break
+        if len(meshes) == 0:
+            return []
         if first_only:
             return meshes[0]
         return meshes
