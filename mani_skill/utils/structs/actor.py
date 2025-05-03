@@ -242,22 +242,27 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 cg[group] = value
                 cs.set_collision_groups(cg)
 
-    def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
+    def get_first_collision_mesh(
+        self, to_world_frame: bool = True
+    ) -> Union[trimesh.Trimesh, None]:
         """
         Returns the collision mesh of the first managed actor object. Note results of this are not cached or optimized at the moment
-        so this function can be slow if called too often
+        so this function can be slow if called too often. Some actors have no collision meshes, in which case this function returns None
 
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
         """
-        return self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+        mesh = self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+        if len(mesh) == 0:
+            return None
+        return mesh
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> List[trimesh.Trimesh]:
+    ) -> Union[List[trimesh.Trimesh], trimesh.Trimesh]:
         """
         Returns the collision mesh of each managed actor object. Note results of this are not cached or optimized at the moment
-        so this function can be slow if called too often
+        so this function can be slow if called too often. Some actors have no collision meshes, in which case this function returns an empty list.
 
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
@@ -274,9 +279,12 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             actor_meshes = []
             for comp in actor.components:
                 if isinstance(comp, physx.PhysxRigidBaseComponent):
-                    actor_meshes.append(merge_meshes(get_component_meshes(comp)))
+                    merged = merge_meshes(get_component_meshes(comp))
+                    if merged is not None:
+                        actor_meshes.append(merged)
             mesh = merge_meshes(actor_meshes)
-            meshes.append(mesh)
+            if mesh is not None:
+                meshes.append(mesh)
             if first_only:
                 break
         if to_world_frame:
@@ -287,6 +295,8 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                         mesh.apply_transform(mat[i].sp.to_transformation_matrix())
                     else:
                         mesh.apply_transform(mat.sp.to_transformation_matrix())
+        if len(meshes) == 0:
+            return []
         if first_only:
             return meshes[0]
         return meshes
