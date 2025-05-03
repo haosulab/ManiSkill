@@ -253,9 +253,9 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
         """
         mesh = self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
-        if len(mesh) == 0:
-            return None
-        return mesh
+        if isinstance(mesh, trimesh.Trimesh):
+            return mesh
+        return None
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
@@ -267,7 +267,8 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
             first_only (bool): Whether to return the collision mesh of just the first actor managed by this object. If True,
-                this also returns a single Trimesh.Mesh object instead of a list
+                this also returns a single Trimesh.Mesh object instead of a list. This can be useful for efficiency reasons if you know
+                ahead of time all of the managed actors have the same collision mesh
         """
         assert (
             not self.merged
