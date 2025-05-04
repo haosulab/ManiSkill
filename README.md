@@ -19,7 +19,7 @@ ManiSkill is a powerful unified framework for robot simulation and training powe
 - Real2sim environments for scalably evaluating real-world policies 100x faster via GPU simulation.
 - Many tuned robot learning baselines in Reinforcement Learning (e.g. PPO, SAC, [TD-MPC2](https://github.com/nicklashansen/tdmpc2)), Imitation Learning (e.g. Behavior Cloning, [Diffusion Policy](https://github.com/real-stanford/diffusion_policy)), and large Vision Language Action (VLA) models (e.g. [Octo](https://github.com/octo-models/octo), [RDT-1B](https://github.com/thu-ml/RoboticsDiffusionTransformer), [RT-x](https://robotics-transformer-x.github.io/))
 
-For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425).
+For more details we encourage you to take a look at our [paper](https://arxiv.org/abs/2410.00425), published at [RSS 2025](https://roboticsconference.org/).
 
 There are more features to be added to ManiSkill 3, see [our roadmap](https://maniskill.readthedocs.io/en/latest/roadmap/index.html) for planned features that will be added over time before the official v3 is released.
 
@@ -74,9 +74,9 @@ If you use ManiSkill3 (versions `mani_skill>=3.0.0`) in your work please cite ou
 ```
 @article{taomaniskill3,
   title={ManiSkill3: GPU Parallelized Robotics Simulation and Rendering for Generalizable Embodied AI},
-  author={Stone Tao and Fanbo Xiang and Arth Shukla and Yuzhe Qin and Xander Hinrichsen and Xiaodi Yuan and Chen Bao and Xinsong Lin and Yulin Liu and Tse-kai Chan and Yuan Gao and Xuanlin Li and Tongzhou Mu and Nan Xiao and Arnav Gurha and Zhiao Huang and Roberto Calandra and Rui Chen and Shan Luo and Hao Su},
-  journal = {arXiv preprint arXiv:2410.00425},
-  year={2024},
+  author={Stone Tao and Fanbo Xiang and Arth Shukla and Yuzhe Qin and Xander Hinrichsen and Xiaodi Yuan and Chen Bao and Xinsong Lin and Yulin Liu and Tse-kai Chan and Yuan Gao and Xuanlin Li and Tongzhou Mu and Nan Xiao and Arnav Gurha and Viswesh Nagaswamy Rajesh and Yong Woo Choi and Yen-Ru Chen and Zhiao Huang and Roberto Calandra and Rui Chen and Shan Luo and Hao Su},
+  journal = {Robotics: Science and Systems},
+  year={2025},
 } 
 ```
 
