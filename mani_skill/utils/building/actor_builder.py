@@ -202,7 +202,6 @@ class ActorBuilder(SAPIENActorBuilder):
             and self.name not in self.scene.actors
         ), "built actors in ManiSkill must have unique names and cannot be None or empty strings"
 
-        num_actors = self.scene.num_envs
         if self.scene_idxs is not None:
             self.scene_idxs = common.to_tensor(
                 self.scene_idxs, device=self.scene.device
