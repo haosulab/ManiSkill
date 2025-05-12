@@ -260,6 +260,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def _data_index(self):
+        """
+        Returns a tensor of the indices of the articulation in the GPU simulation for the physx_cuda backend.
+        """
         return torch.tensor(
             [px_articulation.gpu_index for px_articulation in self._objs],
             device=self.device,
@@ -268,6 +271,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def fixed_root_link(self):
+        """
+        Returns a boolean tensor of whether the root link is fixed for each parallel articulation
+        """
         return torch.tensor(
             [x.links[0].entity.components[0].joint.type == "fixed" for x in self._objs],
             device=self.device,
