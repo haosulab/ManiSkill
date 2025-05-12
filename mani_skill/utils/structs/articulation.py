@@ -260,6 +260,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def _data_index(self):
+        """
+        Returns a tensor of the indices of the articulation in the GPU simulation for the physx_cuda backend.
+        """
         return torch.tensor(
             [px_articulation.gpu_index for px_articulation in self._objs],
             device=self.device,
@@ -268,6 +271,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def fixed_root_link(self):
+        """
+        Returns a boolean tensor of whether the root link is fixed for each parallel articulation
+        """
         return torch.tensor(
             [x.links[0].entity.components[0].joint.type == "fixed" for x in self._objs],
             device=self.device,
@@ -566,6 +572,31 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # def get_gpu_index(self) -> int: ...
     def get_joints(self):
         return self.joints
+
+    def get_link_incoming_joint_forces(self):
+        """
+        Returns the incoming joint forces, referred to as spatial forces, for each link, with shape (N, M, 6), where N is the number of environments and M is the number of links.
+
+        Spatial forces are complex to describe and we recommend you see the physx documentation for how they are computed: https://nvidia-omniverse.github.io/PhysX/physx/5.6.0/docs/Articulations.html#link-incoming-joint-force
+
+        The mth spatial force refers to the mth link, and to find a particular link you can find the Link object first then use it's index attribute.
+
+        link = articulation.links_map[link_name]
+        link_index = link.index
+        link_incoming_joint_force = articulation.get_link_incoming_joint_forces()[:, link_index]
+
+        """
+        if self.scene.gpu_sim_enabled:
+            self.px.gpu_fetch_articulation_link_incoming_joint_forces()
+            # TODO (stao): we should lazy call the GPU data fetching functions in the future if necessarily. Since most users don't use this at the moment
+            # we just fetch it live here instead of with all the other fetch functions
+            return self.px.cuda_articulation_link_incoming_joint_forces.torch()[
+                self._data_index, :
+            ]
+        else:
+            return torch.from_numpy(
+                self._objs[0].get_link_incoming_joint_forces()[None, :]
+            )
 
     def get_links(self):
         return self.links
