@@ -3,6 +3,7 @@ import numpy as np
 import sapien
 
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.distraction_set import DistractionSet
 from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers import RecordEpisode
 
@@ -55,6 +56,12 @@ class Args:
     seed: Annotated[Optional[Union[int, list[int]]], tyro.conf.arg(aliases=["-s"])] = None
     """Seed(s) for random actions and simulator. Can be a single integer or a list of integers. Default is None (no seeds)"""
 
+    camera_width: int = 640
+    """Camera width"""
+
+    camera_height: int = 480
+    """Camera height"""
+
 def main(args: Args):
     if args.render_mode == "none":
         args.render_mode = None
@@ -83,6 +90,9 @@ def main(args: Args):
         render_backend=args.render_backend,
         enable_shadow=True,
         parallel_in_single_scene=parallel_in_single_scene,
+        camera_width=args.camera_width,
+        camera_height=args.camera_height,
+        distraction_set=DistractionSet(),
     )
     if args.robot_uids is not None:
         env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))

@@ -59,7 +59,7 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --random-seed \
     --vis
 
-    python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
+python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 """
 
 
