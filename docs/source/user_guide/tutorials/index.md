@@ -7,7 +7,7 @@ For those looking for a quickstart/tutorial on Google Colab, checkout the [quick
 
 ```{toctree}
 :titlesonly:
-
+:maxdepth: 1
 custom_tasks/index
 custom_robots
 custom_reusable_scenes

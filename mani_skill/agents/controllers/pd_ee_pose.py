@@ -126,6 +126,9 @@ class PDEEPosController(PDJointPosController):
                 target_pose[:, :3], target_pose[:, 3:]
             )
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(dof={self.single_action_space.shape[0]}, active_joints={len(self.joints)}, end_link={self.config.ee_link}, joints=({', '.join([x.name for x in self.joints])}))"
+
 
 # TODO (stao): This config should really inherit the pd joint pos controller config
 @dataclass

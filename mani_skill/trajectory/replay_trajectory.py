@@ -545,8 +545,8 @@ def main(args: Args):
         and ("num_envs" not in env_kwargs or env_kwargs["num_envs"] == 1)
     ):
         env_kwargs["sim_backend"] = "physx_cpu"
+    env_kwargs["num_envs"] = args.num_envs
     if env_kwargs["sim_backend"] not in CPU_SIM_BACKENDS:
-        env_kwargs["num_envs"] = args.num_envs
         record_episode_kwargs["max_steps_per_video"] = env_info["max_episode_steps"]
         _, replay_result = _main(
             args,
@@ -560,6 +560,8 @@ def main(args: Args):
         )
 
     else:
+        env_kwargs["num_envs"] = 1
+        ori_env_kwargs["num_envs"] = 1
         if args.num_envs > 1:
             pool = mp.Pool(args.num_envs)
             proc_args = [

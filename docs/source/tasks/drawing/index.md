@@ -45,7 +45,7 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/DrawTriangle-v1_rt_thumb_first.png' alt='DrawTriangle-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/DrawTriangle-v1_rt_thumb_last.png' alt='DrawTriangle-v1'></div></td>
 <td><p>❌</p></td>
 <td><p>✅</p></td>
-<td><p>❌</p></td>
+<td><p>✅</p></td>
 <td><p>300</p></td>
 </tr>
 </tbody>
@@ -100,7 +100,7 @@ Instantiates a table with a white canvas on it and a svg path specified with an 
 
 <div style="display: flex; justify-content: center;">
 <video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/DrawSVG-v1_rt_thumb_first.png">
-<source src="https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawSVG-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/DrawSVG-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -108,6 +108,7 @@ Instantiates a table with a white canvas on it and a svg path specified with an 
 
 ![no-dense-reward][no-dense-reward-badge]
 ![sparse-reward][sparse-reward-badge]
+![demos][demos-badge]
 :::{dropdown} Task Card
 :icon: note
 :color: primary
@@ -125,6 +126,6 @@ Instantiates a table with a white canvas on it and a goal triangle with an outli
 
 <div style="display: flex; justify-content: center;">
 <video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/DrawTriangle-v1_rt_thumb_first.png">
-<source src="https://github.com/haosulab/ManiSkill/raw/figures/environment_demos/DrawTriangle-v1_rt.mp4" type="video/mp4">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/DrawTriangle-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
