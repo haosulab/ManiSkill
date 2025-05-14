@@ -204,6 +204,8 @@ class BaseEnv(gym.Env):
         render_backend: str = "gpu",
         parallel_in_single_scene: bool = False,
         enhanced_determinism: bool = False,
+        point_cloud_n_points: int | None = None,
+        point_cloud_sample_method: str = "random",
     ):
         self._enhanced_determinism = enhanced_determinism
 
@@ -302,6 +304,10 @@ class BaseEnv(gym.Env):
 
         # Lighting
         self.enable_shadow = enable_shadow
+
+        # Pointcloud
+        self._pc_n_points = point_cloud_n_points
+        self._pc_sample_method = point_cloud_sample_method
 
         # Use a fixed (main) seed to enhance determinism
         self._main_seed = None
@@ -509,7 +515,7 @@ class BaseEnv(gym.Env):
             obs = self._get_obs_state_dict(info)
         elif self._obs_mode == "pointcloud":
             obs = self._get_obs_with_sensor_data(info)
-            obs = sensor_data_to_pointcloud(obs, self._sensors)
+            obs = sensor_data_to_pointcloud(obs, self._sensors, self._pc_n_points, self._pc_sample_method)
         elif self._obs_mode == "sensor_data":
             # return raw texture data dependent on choice of shader
             obs = self._get_obs_with_sensor_data(info, apply_texture_transforms=False)
