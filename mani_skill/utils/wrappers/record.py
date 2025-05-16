@@ -580,6 +580,7 @@ class RecordEpisode(gym.Wrapper):
                         for k in data.keys():
                             recursive_add_to_h5py(subgrp, data[k], k)
                     else:
+                        chunk_shape = (1,) + data.shape[2:]
                         if key == "rgb":
                             # NOTE(jigu): It is more efficient to use gzip than png for a sequence of images.
                             group.create_dataset(
@@ -588,6 +589,7 @@ class RecordEpisode(gym.Wrapper):
                                 dtype=data.dtype,
                                 compression="gzip",
                                 compression_opts=5,
+                                chunks=chunk_shape,
                             )
                         elif key == "depth":
                             # NOTE (stao): By default now cameras in ManiSkill return depth values of type uint16 for numpy
@@ -597,6 +599,7 @@ class RecordEpisode(gym.Wrapper):
                                 dtype=data.dtype,
                                 compression="gzip",
                                 compression_opts=5,
+                                chunks=chunk_shape,
                             )
                         elif key == "seg":
                             group.create_dataset(
@@ -605,6 +608,7 @@ class RecordEpisode(gym.Wrapper):
                                 dtype=data.dtype,
                                 compression="gzip",
                                 compression_opts=5,
+                                chunks=chunk_shape,
                             )
                         else:
                             group.create_dataset(
