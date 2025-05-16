@@ -78,6 +78,8 @@ class Args:
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     control_mode: Optional[str] = "pd_joint_delta_pos"
     """the control mode to use for the environment"""
+    robot_uids: Optional[str] = None
+    """Pass in a robot uid to change the robot loaded into the environment instead of using the default one"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
     gamma: float = 0.8
@@ -307,6 +309,8 @@ if __name__ == "__main__":
     env_kwargs = dict(obs_mode="rgb", render_mode=args.render_mode, sim_backend="physx_cuda")
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
+    if args.robot_uids is not None:
+        env_kwargs["robot_uids"] = args.robot_uids
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
 

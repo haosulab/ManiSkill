@@ -87,6 +87,8 @@ class Args:
     """frequency to save training videos in terms of iterations"""
     control_mode: Optional[str] = "pd_joint_delta_pos"
     """the control mode to use for the environment"""
+    robot_uids: Optional[str] = None
+    """Pass in a robot uid to change the robot loaded into the environment instead of using the default one"""
 
     # Algorithm specific arguments
     total_timesteps: int = 10000000
