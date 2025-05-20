@@ -91,13 +91,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/wrist_base_link.glb"/>
+        <mesh filename="../meshes/visual/wrist_base_link.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/wrist_base_link.glb"/>
+        <mesh filename="../meshes/visual/wrist_base_link.glb"/>
       </geometry>
     </collision>
   </link>
@@ -110,13 +110,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/R_wrist_link.glb"/>
+        <mesh filename="../meshes/visual/R_wrist_link.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/R_wrist_link.glb"/>
+        <mesh filename="../meshes/visual/R_wrist_link.glb"/>
       </geometry>
     </collision>
   </link>
@@ -136,13 +136,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/R_hand_base_link.glb"/>
+        <mesh filename="../meshes/visual/R_hand_base_link.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/R_hand_base_link.glb"/>
+        <mesh filename="../meshes/visual/R_hand_base_link.glb"/>
       </geometry>
     </collision>
   </link>
@@ -162,13 +162,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/R_thumb_metacarpal_base.glb"/>
+        <mesh filename="../meshes/visual/R_thumb_metacarpal_base.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/R_thumb_metacarpal_base.glb"/>
+        <mesh filename="../meshes/visual/R_thumb_metacarpal_base.glb"/>
       </geometry>
     </collision>
   </link>
@@ -188,13 +188,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/thumb_metacarpal.glb"/>
+        <mesh filename="../meshes/visual/thumb_metacarpal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/thumb_metacarpal.glb"/>
+        <mesh filename="../meshes/visual/thumb_metacarpal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -214,13 +214,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/thumb_proximal.glb"/>
+        <mesh filename="../meshes/visual/thumb_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/thumb_proximal.glb"/>
+        <mesh filename="../meshes/visual/thumb_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -241,13 +241,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/thumb_distal.glb"/>
+        <mesh filename="../meshes/visual/thumb_distal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/thumb_distal.glb"/>
+        <mesh filename="../meshes/visual/thumb_distal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -272,13 +272,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -298,13 +298,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -325,13 +325,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -351,13 +351,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/middle_middle.glb"/>
+        <mesh filename="../meshes/visual/middle_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/middle_middle.glb"/>
+        <mesh filename="../meshes/visual/middle_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -378,13 +378,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -404,13 +404,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -431,13 +431,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -457,13 +457,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/pinky_middle.glb"/>
+        <mesh filename="../meshes/visual/pinky_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/end_effector/inspire_hand/visual/pinky_middle.glb"/>
+        <mesh filename="../meshes/visual/pinky_middle.glb"/>
       </geometry>
     </collision>
   </link>
