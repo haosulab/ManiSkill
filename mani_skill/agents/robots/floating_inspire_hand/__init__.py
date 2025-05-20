@@ -1,2 +1,2 @@
-from .fixed_inspire_hand import FixedInspireHandRight
-from .floating_inspire_hand import FloatingInspireHandRight
+from .fixed_inspire_hand import FixedInspireHandLeft, FixedInspireHandRight
+from .floating_inspire_hand import FloatingInspireHandLeft, FloatingInspireHandRight

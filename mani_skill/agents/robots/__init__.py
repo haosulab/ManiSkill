@@ -2,7 +2,12 @@ from .allegro_hand import *
 from .anymal import ANYmalC
 from .dclaw import DClaw
 from .fetch import Fetch
-from .floating_inspire_hand import FloatingInspireHandRight
+from .floating_inspire_hand import (
+    FixedInspireHandLeft,
+    FixedInspireHandRight,
+    FloatingInspireHandLeft,
+    FloatingInspireHandRight,
+)
 from .floating_panda_gripper import FloatingPandaGripper
 from .floating_robotiq_2f_85_gripper import *
 from .googlerobot import *

@@ -35,6 +35,18 @@
     "quality": "B",
     "name": "D'Claw"
   },
+  "fixed_inspire_hand_left": {
+    "quality": "B",
+    "name": "Fixed Inspire Hand Left"
+  },
+  "fixed_inspire_hand_right": {
+    "quality": "B",
+    "name": "Fixed Inspire Hand Right"
+  },
+  "floating_inspire_hand_left": {
+    "quality": "B",
+    "name": "Floating Inspire Hand Left"
+  },
   "floating_inspire_hand_right": {
     "quality": "B",
     "name": "Floating Inspire Hand Right"
