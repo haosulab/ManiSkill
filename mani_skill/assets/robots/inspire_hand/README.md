@@ -16,7 +16,7 @@ Changes Made:
 There are still some small issues with the provided URDF from Inspire Robotics. They are noted below, to be removed once fixed:
 - The mimic joint offsets are not tuned, needs system ID.
 - Some joint limits are not tuned for mimic joints, need system ID. Currently there is some extra space in the limits that should be shrunk once offsets are identified.
-
+- Some other joints might move by a little bit (up to 0.001 radian change) when another joint moves. Also likely due to physx issues.
 ### Simulation
 
 It is unclear why but for the physx backends a damping of 0.001 (or some small value) needed to be set on the mimic joints for them to simulate stably. This is done at the controller level at the moment in ManiSkill.

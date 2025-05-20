@@ -83,9 +83,9 @@ def main():
         elif args.none_actions:
             env.step(None)
             robot=env.unwrapped.agent.robot
-            # cqpos = robot.joints_map["right_hand_thumb_CMC_pitch_joint"].qpos
-            # print("sim", robot.joints_map["right_hand_thumb_MCP_joint"].qpos, "gt", cqpos * 1.33)
-            # print("sim", robot.joints_map["right_hand_thumb_IP_joint"].qpos, "gt", cqpos * 2 / 3 )
+            cqpos = robot.joints_map["right_hand_thumb_CMC_pitch_joint"].qpos
+            print("sim", robot.joints_map["right_hand_thumb_MCP_joint"].qpos, "gt", cqpos * 1.33 -0.08144869842640205)
+            print("sim", robot.joints_map["right_hand_thumb_IP_joint"].qpos, "gt", cqpos * 2 / 3 -0.040724349213201026)
         elif args.zero_actions:
             env.step(env.action_space.sample() * 0)
         elif args.keyframe_actions:

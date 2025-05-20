@@ -13,7 +13,7 @@ from mani_skill.agents.registration import register_agent
 @register_agent()
 class FloatingInspireHandRight(BaseAgent):
     uid = "floating_inspire_hand_right"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/inspire_hand/urdf/end_effector/inspire_hand/inspire_hand_right_floating.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/inspire_hand/RH56DFX-2LR/urdf/inspire_hand_right_floating.urdf"
     urdf_config = dict(
         _materials=dict(
             finger=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -74,29 +74,58 @@ class FloatingInspireHandRight(BaseAgent):
         palm_side=Keyframe(
             # magic numbers below correspond with controlling joints being set to 0. The other non-active revolute joints are mimic joints
             qpos=[
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                -0.167348,
-                -0.167348,
-                -0.167348,
-                -0.167348,
-                -0.0814487,
-                -0.13473265,
+                [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    -0.16734816,
+                    -0.16734803,
+                    -0.16734798,
+                    -0.167348,
+                    -0.08147363,
+                    -0.07234851,
+                ]
             ],
             pose=sapien.Pose(p=[0, 0, 0.4], q=euler2quat(0, 0, -np.pi / 2)),
-        )
+        ),
+        palm_up=Keyframe(
+            qpos=[
+                [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    -0.16734816,
+                    -0.16734803,
+                    -0.16734798,
+                    -0.167348,
+                    -0.08147363,
+                    -0.07234851,
+                ]
+            ],
+            pose=sapien.Pose(p=[0, 0, 0.4], q=euler2quat(np.pi / 2, 0, -np.pi / 2)),
+        ),
     )
 
     @property
