@@ -82,6 +82,12 @@ class FloatingInspireHandRight(BaseAgent):
                 0,
                 0,
                 0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
                 -0.167348,
                 -0.167348,
                 -0.167348,
@@ -95,19 +101,26 @@ class FloatingInspireHandRight(BaseAgent):
 
     @property
     def _controller_configs(self):
-        # float_pd_joint_pos = PDJointPosControllerConfig(
-        #     joint_names=self.root_joint_names,
-        #     lower=None,
-        #     upper=None,
-        #     stiffness=1e3,
-        #     damping=1e2,
-        #     force_limit=100,
-        #     normalize_action=False,
-        # )
-        hand_joint_pos = PDJointPosControllerConfig(
+        float_pd_joint_pos = PDJointPosControllerConfig(
+            joint_names=self.root_joint_names,
+            lower=None,
+            upper=None,
+            stiffness=1e3,
+            damping=1e2,
+            force_limit=100,
+            normalize_action=False,
+        )
+        wrist_joint_pos = PDJointPosControllerConfig(
+            joint_names=["right_hand_wrist_pitch_joint", "right_hand_wrist_yaw_joint"],
+            lower=None,
+            upper=None,
+            stiffness=1e3,
+            damping=1e2,
+            force_limit=100,
+            normalize_action=False,
+        )
+        fingers_joint_pos = PDJointPosControllerConfig(
             joint_names=[
-                "right_hand_wrist_pitch_joint",
-                "right_hand_wrist_yaw_joint",
                 "right_hand_thumb_CMC_yaw_joint",
                 "right_hand_thumb_CMC_pitch_joint",
                 "right_hand_index_MCP_joint",
@@ -117,8 +130,8 @@ class FloatingInspireHandRight(BaseAgent):
             ],
             lower=None,
             upper=None,
-            stiffness=2e3,
-            damping=3e2,
+            stiffness=1e3,
+            damping=1e2,
             force_limit=20,
             normalize_action=False,
         )
@@ -131,92 +144,39 @@ class FloatingInspireHandRight(BaseAgent):
                 "right_hand_ring_PIP_joint",
                 "right_hand_pinky_PIP_joint",
             ],
-            damping=0,
+            damping=0.001,
             force_limit=20,
         )
-        # fingers_joint_pos = PDJointPosMimicControllerConfig(
-        #     joint_names=[
-        #         # "right_hand_thumb_MCP_joint",
-        #         # "right_hand_thumb_IP_joint",
-        #         "right_hand_index_PIP_joint",
-        #         "right_hand_middle_PIP_joint",
-        #         "right_hand_ring_PIP_joint",
-        #         "right_hand_pinky_PIP_joint",
-        #         # "right_hand_thumb_CMC_pitch_joint",
-        #         "right_hand_index_MCP_joint",
-        #         "right_hand_middle_MCP_joint",
-        #         "right_hand_ring_MCP_joint",
-        #         "right_hand_pinky_MCP_joint",
-        #     ],
-        #     lower=None,
-        #     upper=None,
-        #     stiffness=2e4,
-        #     damping=3e2,
-        #     force_limit=20,
-        #     mimic={
-        #         # "right_hand_thumb_MCP_joint": {
-        #         #     "joint": "right_hand_thumb_CMC_pitch_joint",
-        #         #     "multiplier": 1.3333333333333335,
-        #         #     "offset": -0.08144869842640205,
-        #         # },
-        #         # "right_hand_thumb_IP_joint": {
-        #         #     "joint": "right_hand_thumb_CMC_pitch_joint",
-        #         #     "multiplier": 0.6666666666666667,
-        #         #     "offset": -0.040724349213201026,
-        #         # },
-        #         "right_hand_index_PIP_joint": {
-        #             "joint": "right_hand_index_MCP_joint",
-        #             "multiplier": 1.06399,
-        #             "offset": -0.16734800000000002,
-        #         },
-        #         "right_hand_middle_PIP_joint": {
-        #             "joint": "right_hand_middle_MCP_joint",
-        #             "multiplier": 1.06399,
-        #             "offset": -0.16734800000000002,
-        #         },
-        #         "right_hand_ring_PIP_joint": {
-        #             "joint": "right_hand_ring_MCP_joint",
-        #             "multiplier": 1.06399,
-        #             "offset": -0.16734800000000002,
-        #         },
-        #         "right_hand_pinky_PIP_joint": {
-        #             "joint": "right_hand_pinky_MCP_joint",
-        #             "multiplier": 1.06399,
-        #             "offset": -0.16734800000000002,
-        #         },
-        #     },
-        #     normalize_action=False,
-        # )
 
-        hand_joint_delta_pos = deepcopy(hand_joint_pos)
-        hand_joint_delta_pos.use_delta = True
-        hand_joint_delta_pos.normalize_action = True
-        hand_joint_delta_pos.lower = -0.1
-        hand_joint_delta_pos.upper = 0.1
+        wrist_joint_delta_pos = deepcopy(wrist_joint_pos)
+        wrist_joint_delta_pos.use_delta = True
+        wrist_joint_delta_pos.normalize_action = True
+        wrist_joint_delta_pos.lower = -0.1
+        wrist_joint_delta_pos.upper = 0.1
 
-        # fingers_joint_delta_pos = deepcopy(fingers_joint_pos)
-        # fingers_joint_delta_pos.use_delta = True
-        # fingers_joint_delta_pos.normalize_action = True
-        # fingers_joint_delta_pos.lower = -0.1
-        # fingers_joint_delta_pos.upper = 0.1
+        fingers_joint_delta_pos = deepcopy(fingers_joint_pos)
+        fingers_joint_delta_pos.use_delta = True
+        fingers_joint_delta_pos.normalize_action = True
+        fingers_joint_delta_pos.lower = -0.1
+        fingers_joint_delta_pos.upper = 0.1
 
-        # float_pd_joint_delta_pos = deepcopy(float_pd_joint_pos)
-        # float_pd_joint_delta_pos.use_delta = True
-        # float_pd_joint_delta_pos.normalize_action = True
-        # float_pd_joint_delta_pos.lower = -0.1
-        # float_pd_joint_delta_pos.upper = 0.1
+        float_pd_joint_delta_pos = deepcopy(float_pd_joint_pos)
+        float_pd_joint_delta_pos.use_delta = True
+        float_pd_joint_delta_pos.normalize_action = True
+        float_pd_joint_delta_pos.lower = -0.1
+        float_pd_joint_delta_pos.upper = 0.1
 
         return dict(
             pd_joint_pos=dict(
-                # root=float_pd_joint_pos,
-                passive_joint_pos=passive,
-                hand=hand_joint_pos,
-                # fingers=fingers_joint_pos,
+                root=float_pd_joint_pos,
+                wrist=wrist_joint_pos,
+                fingers=fingers_joint_pos,
+                passive=passive,
             ),
             pd_joint_delta_pos=dict(
-                passive_joint_pos=passive,
-                # root=float_pd_joint_delta_pos,
-                hand=hand_joint_delta_pos,
-                # fingers=fingers_joint_delta_pos,
+                root=float_pd_joint_delta_pos,
+                wrist=wrist_joint_delta_pos,
+                fingers=fingers_joint_delta_pos,
+                passive=passive,
             ),
         )
