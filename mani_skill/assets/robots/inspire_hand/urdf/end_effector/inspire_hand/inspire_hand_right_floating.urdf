@@ -4,7 +4,7 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="inspire_hand">
-  <link name="root">
+  <!-- <link name="root">
     <inertial>
       <mass value="0"/>
       <inertia ixx="0.00" ixy="0.00" ixz="0.00" iyy="0.00" iyz="0.00" izz="0.00"/>
@@ -81,7 +81,7 @@
     <axis xyz="0 0 1"/>
     <limit effort="100" lower="-20" upper="20" velocity="0.50"/>
     <dynamics damping="10.0" friction="10"/>
-  </joint>
+  </joint> -->
   <link name="right_hand_wrist_base_link">
     <inertial>
       <origin rpy="0 0 0" xyz="2.5182E-06 0.0014729 0.032787"/>
@@ -230,7 +230,7 @@
     <child link="right_hand_thumb_proximal"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-0.8" upper="0" velocity="0.5"/>
-    <!-- <mimic joint="right_hand_thumb_CMC_pitch_joint" multiplier="1.3333333333333335" offset="-0.08144869842640205"/> -->
+    <mimic joint="right_hand_thumb_CMC_pitch_joint" multiplier="1.3333333333333335" offset="-0.08144869842640205"/>
   </joint>
   <link name="right_hand_thumb_distal">
     <inertial>
@@ -257,7 +257,7 @@
     <child link="right_hand_thumb_distal"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-0.4" upper="0" velocity="0.5"/>
-    <!-- <mimic joint="right_hand_thumb_CMC_pitch_joint" multiplier="0.6666666666666667" offset="-0.040724349213201026"/> -->
+    <mimic joint="right_hand_thumb_CMC_pitch_joint" multiplier="0.6666666666666667" offset="-0.040724349213201026"/>
   </joint>
   <link name="right_hand_index_proximal">
     <inertial>
@@ -310,7 +310,7 @@
     <child link="right_hand_index_middle"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="right_hand_index_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <mimic joint="right_hand_index_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="right_hand_middle_proximal">
     <inertial>
@@ -363,7 +363,7 @@
     <child link="right_hand_middle_middle"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="right_hand_middle_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <mimic joint="right_hand_middle_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="right_hand_ring_proximal">
     <inertial>
@@ -416,7 +416,7 @@
     <child link="right_hand_ring_middle"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="right_hand_ring_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <mimic joint="right_hand_ring_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="right_hand_pinky_proximal">
     <inertial>
@@ -469,7 +469,7 @@
     <child link="right_hand_pinky_middle"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="right_hand_pinky_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <mimic joint="right_hand_pinky_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="right_hand_thumb_tip"/>
   <joint name="right_hand_thumb_tip_joint" type="fixed">
