@@ -7,6 +7,7 @@ Currently the RH56DFX-2L/R with wrist model is supported.
 Changes Made:
 - Tuned the joint axes/signs to match the real robot.
 - Tuned the limits of some joints to match the current multipliers and offsets
+- To support simulation in physx, the 2 underactuated thumb joints have one of their mimic tags modified to depend on the parent joint instead of the grandparent joint.
 - Added a floating base version of the inspire hand.
 
 ## Notes
