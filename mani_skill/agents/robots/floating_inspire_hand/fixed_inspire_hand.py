@@ -5,83 +5,23 @@ import sapien
 from transforms3d.euler import euler2quat
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent, Keyframe
+from mani_skill.agents.base_agent import Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
+from mani_skill.agents.robots.floating_inspire_hand.floating_inspire_hand import (
+    FloatingInspireHandRight,
+)
 
 
 @register_agent()
-class FloatingInspireHandRight(BaseAgent):
-    uid = "floating_inspire_hand_right"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/inspire_hand/RH56DFX-2LR/urdf/inspire_hand_right_floating.urdf"
-    urdf_config = dict(
-        _materials=dict(
-            finger=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
-        ),
-        link=dict(
-            right_hand_hand_base_link=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_thumb_distal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_thumb_metacarpal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_thumb_proximal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_index_proximal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_index_middle=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_middle_proximal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_middle_middle=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_ring_proximal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_ring_middle=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_pinky_proximal=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-            right_hand_pinky_middle=dict(
-                material="finger", patch_radius=0.1, min_patch_radius=0.1
-            ),
-        ),
-    )
-    disable_self_collisions = True
-    # you could model all of the fingers and disable certain impossible self collisions that occur
-    # but it is simpler and faster to just disable all self collisions. It is highly unlikely the hand self-collides to begin with
-    # due to the design of the hand
-
-    root_joint_names = [
-        "root_x_axis_joint",
-        "root_y_axis_joint",
-        "root_z_axis_joint",
-        "root_x_rot_joint",
-        "root_y_rot_joint",
-        "root_z_rot_joint",
-    ]
-
+class FixedInspireHandRight(FloatingInspireHandRight):
+    uid = "fixed_inspire_hand_right"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/inspire_hand/RH56DFX-2LR/urdf/inspire_hand_right.urdf"
     keyframes = dict(
         palm_side=Keyframe(
             # magic numbers below correspond with controlling joints being set to 0. The other non-active revolute joints are mimic joints
             qpos=[
                 [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
                     0,
                     0,
                     0,
@@ -111,12 +51,6 @@ class FloatingInspireHandRight(BaseAgent):
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
                     -0.16734816,
                     -0.16734803,
                     -0.16734798,
@@ -131,15 +65,6 @@ class FloatingInspireHandRight(BaseAgent):
 
     @property
     def _controller_configs(self):
-        float_pd_joint_pos = PDJointPosControllerConfig(
-            joint_names=self.root_joint_names,
-            lower=None,
-            upper=None,
-            stiffness=1e3,
-            damping=1e2,
-            force_limit=100,
-            normalize_action=False,
-        )
         wrist_joint_pos = PDJointPosControllerConfig(
             joint_names=["right_hand_wrist_pitch_joint", "right_hand_wrist_yaw_joint"],
             lower=None,
@@ -174,7 +99,7 @@ class FloatingInspireHandRight(BaseAgent):
                 "right_hand_ring_PIP_joint",
                 "right_hand_pinky_PIP_joint",
             ],
-            damping=0.001,  # NOTE (stao): This magic number is necessary for physx to simulate correctly...
+            damping=0.001,
             force_limit=20,
         )
 
@@ -190,21 +115,13 @@ class FloatingInspireHandRight(BaseAgent):
         fingers_joint_delta_pos.lower = -0.1
         fingers_joint_delta_pos.upper = 0.1
 
-        float_pd_joint_delta_pos = deepcopy(float_pd_joint_pos)
-        float_pd_joint_delta_pos.use_delta = True
-        float_pd_joint_delta_pos.normalize_action = True
-        float_pd_joint_delta_pos.lower = -0.1
-        float_pd_joint_delta_pos.upper = 0.1
-
         return dict(
             pd_joint_pos=dict(
-                root=float_pd_joint_pos,
                 wrist=wrist_joint_pos,
                 fingers=fingers_joint_pos,
                 passive=passive,
             ),
             pd_joint_delta_pos=dict(
-                root=float_pd_joint_delta_pos,
                 wrist=wrist_joint_delta_pos,
                 fingers=fingers_joint_delta_pos,
                 passive=passive,
