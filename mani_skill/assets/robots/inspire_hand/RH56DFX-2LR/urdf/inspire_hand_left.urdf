@@ -13,13 +13,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/wrist_base_link.glb"/>
+        <mesh filename="../meshes/visual/wrist_base_link.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/wrist_base_link.glb"/>
+        <mesh filename="../meshes/visual/wrist_base_link.glb"/>
       </geometry>
     </collision>
   </link>
@@ -32,13 +32,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/L_wrist_link.glb"/>
+        <mesh filename="../meshes/visual/L_wrist_link.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/L_wrist_link.glb"/>
+        <mesh filename="../meshes/visual/L_wrist_link.glb"/>
       </geometry>
     </collision>
   </link>
@@ -58,13 +58,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/L_hand_base_link.glb"/>
+        <mesh filename="../meshes/visual/L_hand_base_link.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/L_hand_base_link.glb"/>
+        <mesh filename="../meshes/visual/L_hand_base_link.glb"/>
       </geometry>
     </collision>
   </link>
@@ -84,13 +84,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/L_thumb_metacarpal_base.glb"/>
+        <mesh filename="../meshes/visual/L_thumb_metacarpal_base.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/L_thumb_metacarpal_base.glb"/>
+        <mesh filename="../meshes/visual/L_thumb_metacarpal_base.glb"/>
       </geometry>
     </collision>
   </link>
@@ -110,13 +110,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/thumb_metacarpal.glb"/>
+        <mesh filename="../meshes/visual/thumb_metacarpal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/thumb_metacarpal.glb"/>
+        <mesh filename="../meshes/visual/thumb_metacarpal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -144,13 +144,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/thumb_proximal.glb"/>
+        <mesh filename="../meshes/visual/thumb_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/thumb_proximal.glb"/>
+        <mesh filename="../meshes/visual/thumb_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -160,7 +160,7 @@
     <child link="left_hand_thumb_proximal"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-0.8" upper="0" velocity="0.5"/>
-    <!-- <mimic joint="left_hand_thumb_CMC_pitch_joint" multiplier="1.3333333333333335" offset="-0.08144869842640205"/> -->
+    <mimic joint="left_hand_thumb_CMC_pitch_joint" multiplier="1.3333333333333335" offset="-0.08144869842640205"/>
   </joint>
   <link name="left_hand_thumb_distal">
     <inertial>
@@ -171,13 +171,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/thumb_distal.glb"/>
+        <mesh filename="../meshes/visual/thumb_distal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/thumb_distal.glb"/>
+        <mesh filename="../meshes/visual/thumb_distal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -187,7 +187,11 @@
     <child link="left_hand_thumb_distal"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-0.4" upper="0" velocity="0.5"/>
+    <!-- NOTE (stao): In order to ues physx fixed tendon to simulate 2 underactuated joints in series controlled by one joint, we need
+    to have them mimic one after another. The original mimic tag is commented out and we rearrange the transformation to make it depend 
+    on the parent joint instead of the grandparent joint. -->
     <!-- <mimic joint="left_hand_thumb_CMC_pitch_joint" multiplier="0.6666666666666667" offset="-0.040724349213201026"/> -->
+    <mimic joint="left_hand_thumb_MCP_joint" multiplier="0.5" offset="0"/>
   </joint>
   <link name="left_hand_index_proximal">
     <inertial>
@@ -198,24 +202,16 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </collision>
   </link>
-  <!--
-      from sapien import Pose
-      from transforms3d.euler import euler2quat, quat2euler
-      import numpy as np
-      pose_hand_proximal = Pose([0.027071, 0.10464, 0.0020953], euler2quat(np.pi/2, -0.32457, 1.5359))
-      new_pose_hand_proximal = pose_hand_proximal * Pose(q=euler2quat(0, 0, -0.2))
-      quat2euler(new_pose_hand_proximal.q)
-    -->
   <joint name="left_hand_index_MCP_joint" type="revolute">
     <origin rpy="1.5707963267948966 -0.12457000000000001 1.5359" xyz="0.027071 0.10464 0.0020953"/>
     <parent link="left_hand_hand_base_link"/>
@@ -232,13 +228,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -247,8 +243,8 @@
     <parent link="left_hand_index_proximal"/>
     <child link="left_hand_index_middle"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="left_hand_index_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <limit effort="1" lower="-1.5930946000000001" upper="0.04545" velocity="0.5"/>
+    <mimic joint="left_hand_index_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="left_hand_middle_proximal">
     <inertial>
@@ -259,13 +255,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -285,13 +281,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/middle_middle.glb"/>
+        <mesh filename="../meshes/visual/middle_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/middle_middle.glb"/>
+        <mesh filename="../meshes/visual/middle_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -300,8 +296,8 @@
     <parent link="left_hand_middle_proximal"/>
     <child link="left_hand_middle_middle"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="left_hand_middle_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <limit effort="1" lower="-1.5930946000000001" upper="0.04545" velocity="0.5"/>
+    <mimic joint="left_hand_middle_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="left_hand_ring_proximal">
     <inertial>
@@ -312,13 +308,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_proximal.glb"/>
+        <mesh filename="../meshes/visual/index_ring_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -338,13 +334,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/index_ring_middle.glb"/>
+        <mesh filename="../meshes/visual/index_ring_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -353,8 +349,8 @@
     <parent link="left_hand_ring_proximal"/>
     <child link="left_hand_ring_middle"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="left_hand_ring_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <limit effort="1" lower="-1.5930946000000001" upper="0.04545" velocity="0.5"/>
+    <mimic joint="left_hand_ring_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="left_hand_pinky_proximal">
     <inertial>
@@ -365,13 +361,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/middle_pinky_proximal.glb"/>
+        <mesh filename="../meshes/visual/middle_pinky_proximal.glb"/>
       </geometry>
     </collision>
   </link>
@@ -391,13 +387,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/pinky_middle.glb"/>
+        <mesh filename="../meshes/visual/pinky_middle.glb"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://robot_description/meshes/end_effector/inspire_hand/visual/pinky_middle.glb"/>
+        <mesh filename="../meshes/visual/pinky_middle.glb"/>
       </geometry>
     </collision>
   </link>
@@ -406,8 +402,8 @@
     <parent link="left_hand_pinky_proximal"/>
     <child link="left_hand_pinky_middle"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-1.56" upper="0.04545" velocity="0.5"/>
-    <!-- <mimic joint="left_hand_pinky_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/> -->
+    <limit effort="1" lower="-1.5930946000000001" upper="0.04545" velocity="0.5"/>
+    <mimic joint="left_hand_pinky_MCP_joint" multiplier="1.06399" offset="-0.16734800000000002"/>
   </joint>
   <link name="left_hand_thumb_tip"/>
   <joint name="left_hand_thumb_tip_joint" type="fixed">
@@ -439,5 +435,4 @@
     <parent link="left_hand_pinky_middle"/>
     <child link="left_hand_pinky_tip"/>
   </joint>
-  <!-- Left arm -->
 </robot>
