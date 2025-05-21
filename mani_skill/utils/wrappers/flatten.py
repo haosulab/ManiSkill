@@ -77,6 +77,47 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         return ret
 
 
+class FlattenPointCloudObservationWrapper(gym.ObservationWrapper):
+    """
+    Flattens the point cloud observations into a dictionary with 'state' and 'pointcloud' keys.
+    """
+
+    def __init__(self, env, rgb=True, state=True) -> None:
+        super().__init__(env)
+        self.include_rgb = rgb
+        self.include_state = state
+
+        if "pointcloud" not in self.base_env._init_raw_obs:
+            raise ValueError("Point cloud data not found in observation")
+
+        new_obs = self.observation(self.base_env._init_raw_obs)
+        self.base_env.update_obs_space(new_obs)
+
+    def observation(self, observation: Dict):
+        pointcloud_data = observation.pop("pointcloud")
+
+        if "sensor_param" in observation:
+            del observation["sensor_param"]
+        if "sensor_data" in observation:
+            del observation["sensor_data"]
+        # flatten the rest of the data which should just be state data
+        state_data = common.flatten_state_dict(
+            observation, use_torch=True, device=self.base_env.device
+        )
+
+        xyz = pointcloud_data["xyzw"][..., :-1]
+        rgb = pointcloud_data["rgb"]
+        ret = dict()
+        if self.include_state:
+            ret["state"] = state_data
+        if self.include_rgb:
+            ret["pointcloud"] = torch.concat([xyz, rgb], axis=-1)
+        else:
+            ret["pointcloud"] = xyz
+
+        return ret
+
+
 class FlattenObservationWrapper(gym.ObservationWrapper):
     """
     Flattens the observations into a single vector
