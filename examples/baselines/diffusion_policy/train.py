@@ -147,7 +147,8 @@ class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memo
 
         obs_seq = self.trajectories['observations'][traj_idx][max(0, start):start+self.obs_horizon]
         # start+self.obs_horizon is at least 1
-        act_seq = self.trajectories['actions'][traj_idx][max(0, start):end]
+        start_act  = start + self.obs_horizon - 1 # start first action with the last obs
+        act_seq = self.trajectories['actions'][traj_idx][max(0, start_act):end]
         if start < 0: # pad before the trajectory
             obs_seq = torch.cat([obs_seq[0].repeat(-start, 1), obs_seq], dim=0)
             act_seq = torch.cat([act_seq[0].repeat(-start, 1), act_seq], dim=0)
