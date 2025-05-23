@@ -52,7 +52,7 @@ def solve(env: StackPyramidEnv, move_cube_a_to_b=True, seed=None, debug=False, v
     )
     closing, center = grasp_info["closing"], grasp_info["center"]
     distance = np.abs(np.linalg.norm(moving_cube.pose.sp.p) - np.linalg.norm(target_cube.pose.sp.p))
-    need_move_a_b = (distance > 0.0072)
+    need_move_a_b = (distance > 0.007)
     if need_move_a_b:
         planner.close_gripper()
         grasp_pose = env.agent.build_grasp_pose(approaching, closing, moving_cube.pose.sp.p)
