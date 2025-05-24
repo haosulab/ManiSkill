@@ -315,6 +315,26 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
+    <a href="widowxai">
+        <img src="../_static/robot_images/widowxai/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="widowxai">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="widowxai"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">widowxai</p></a>
+        <p style="margin-top: 0px;">Quality: N/A</p>
+    </div>
+</div>
+
+<div class="gallery-item">
+    <a href="widowxai_cam">
+        <img src="../_static/robot_images/widowxai_cam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="widowxai_cam">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="widowxai_cam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">widowxai_cam</p></a>
+        <p style="margin-top: 0px;">Quality: N/A</p>
+    </div>
+</div>
+
+<div class="gallery-item">
     <a href="xarm6_nogripper">
         <img src="../_static/robot_images/xarm6_nogripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with No Gripper">
     </a>
@@ -389,6 +409,8 @@ unitree_go2/index
 unitree_h1/index
 unitree_h1_simplified/index
 widowx250s/index
+widowxai/index
+widowxai_cam/index
 xarm6_nogripper/index
 xarm6_robotiq/index
 xarm6_robotiq_wristcam/index
