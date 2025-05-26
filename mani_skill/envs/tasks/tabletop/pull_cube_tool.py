@@ -44,7 +44,6 @@ class PullCubeToolEnv(BaseEnv):
     hook_length = 0.05
     width = 0.05
     height = 0.05
-    cube_size = 0.02
     arm_reach = 0.35
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
@@ -162,7 +161,7 @@ class PullCubeToolEnv(BaseEnv):
                 - 0.3
             )
             cube_xyz[..., 1] = torch.rand(b, device=self.device) * 0.3 - 0.25
-            cube_xyz[..., 2] = self.cube_size / 2 + 0.015
+            cube_xyz[..., 2] = self.cube_half_size
 
             cube_q = randomization.random_quaternions(
                 b,
@@ -248,7 +247,7 @@ class PullCubeToolEnv(BaseEnv):
         cube_to_workspace_dist = torch.linalg.norm(cube_pos - workspace_target, dim=1)
         initial_dist = torch.linalg.norm(
             torch.tensor(
-                [self.arm_reach + 0.1, 0, self.cube_size / 2], device=self.device
+                [self.arm_reach + 0.1, 0, self.cube_half_size], device=self.device
             )
             - workspace_target,
             dim=1,
