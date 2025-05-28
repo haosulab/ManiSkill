@@ -276,12 +276,3 @@ class PlugChargerEnv(BaseEnv):
                 goal_pose=self.goal_pose.raw_pose,
             )
         return obs
-
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        return torch.zeros(self.num_envs, device=self.device)
-
-    def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
-    ):
-        max_reward = 1.0
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
