@@ -12,7 +12,7 @@ from mani_skill.examples.motionplanning.panda.utils import (
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.utils.structs import Pose
 
-def solve(env: StackPyramidEnv, move_cube_a_to_b=True, seed=None, debug=False, vis=False):
+def solve(env: StackPyramidEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
     assert env.unwrapped.control_mode in [
         "pd_joint_pos",
@@ -29,12 +29,8 @@ def solve(env: StackPyramidEnv, move_cube_a_to_b=True, seed=None, debug=False, v
     FINGER_LENGTH = 0.025
     env = env.unwrapped
 
-    if move_cube_a_to_b:
-        moving_cube = env.cubeA
-        target_cube = env.cubeB
-    else:
-        moving_cube = env.cubeB
-        target_cube = env.cubeA
+    moving_cube = env.cubeA
+    target_cube = env.cubeB
 
 
     # -------------------------------------------------------------------------- #
