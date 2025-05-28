@@ -6,6 +6,7 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
+from mani_skill.utils import gym_utils
 from mani_skill.utils.common import torch_clone_dict
 from mani_skill.utils.structs.types import Array
 
@@ -52,16 +53,18 @@ class ManiSkillVectorEnv(VectorEnv):
         self.ignore_terminations = ignore_terminations
         self.record_metrics = record_metrics
         self.spec = self._env.spec
-        self.metadata = dict(auto_reset_mode=gym.vector.AutoresetMode.SAME_STEP)
 
-        GYM_1_1 = True
-        if GYM_1_1:
+        if gym_utils.IS_GYMNASIUM_1:
             self.single_observation_space = self._env.get_wrapper_attr(
                 "single_observation_space"
             )
             self.single_action_space = self._env.get_wrapper_attr("single_action_space")
             self.action_space = self._env.get_wrapper_attr("action_space")
             self.observation_space = self._env.get_wrapper_attr("observation_space")
+            self.metadata = self._env.metadata
+            # hardcoded SAME STEP reset mode for now. Trying to support others with backwards compatability with gym < 1.0
+            # might be too much of a hassle.
+            self.metadata.update(autoreset_mode=gym.vector.AutoresetMode.SAME_STEP)
         else:
             super().__init__(
                 num_envs,

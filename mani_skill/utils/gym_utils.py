@@ -11,6 +11,10 @@ from gymnasium import spaces
 from mani_skill.utils.logging_utils import logger
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
+IS_GYMNASIUM_1 = False
+if gym.__version__ > "1.0.0":
+    IS_GYMNASIUM_1 = True
+
 
 def find_max_episode_steps_value(env):
     """Finds the max episode steps parameter given by user or registered in the environment.
