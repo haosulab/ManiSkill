@@ -1,7 +1,7 @@
 """various gymnasium/gym utilities used in ManiSkill, mostly to handle observation/action spaces and noramlization"""
-from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict
+
+from typing import Dict
 
 import gymnasium as gym
 import numpy as np
@@ -9,9 +9,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill.utils.logging_utils import logger
-
-if TYPE_CHECKING:
-    from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 IS_GYMNASIUM_1 = False
 if gym.__version__ > "1.0.0":

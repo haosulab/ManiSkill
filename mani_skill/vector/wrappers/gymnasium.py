@@ -6,7 +6,6 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils import gym_utils
 from mani_skill.utils.common import torch_clone_dict
 from mani_skill.utils.structs.types import Array
 
@@ -54,7 +53,9 @@ class ManiSkillVectorEnv(VectorEnv):
         self.record_metrics = record_metrics
         self.spec = self._env.spec
 
-        if gym_utils.IS_GYMNASIUM_1:
+        from mani_skill.utils.gym_utils import IS_GYMNASIUM_1
+
+        if IS_GYMNASIUM_1:
             self.single_observation_space = self._env.get_wrapper_attr(
                 "single_observation_space"
             )
