@@ -52,6 +52,7 @@ class ManiSkillVectorEnv(VectorEnv):
         self.ignore_terminations = ignore_terminations
         self.record_metrics = record_metrics
         self.spec = self._env.spec
+        self.metadata = dict(auto_reset_mode=gym.vector.AutoresetMode.SAME_STEP)
 
         GYM_1_1 = True
         if GYM_1_1:
