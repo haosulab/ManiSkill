@@ -6,8 +6,8 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils.structs.types import Array
 from mani_skill.utils.common import torch_clone_dict
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
@@ -47,15 +47,26 @@ class ManiSkillVectorEnv(VectorEnv):
         else:
             self._env = env
             num_envs = self.base_env.num_envs
+        self.num_envs = num_envs
         self.auto_reset = auto_reset
         self.ignore_terminations = ignore_terminations
         self.record_metrics = record_metrics
         self.spec = self._env.spec
-        super().__init__(
-            num_envs,
-            self._env.get_wrapper_attr("single_observation_space"),
-            self._env.get_wrapper_attr("single_action_space"),
-        )
+
+        GYM_1_1 = True
+        if GYM_1_1:
+            self.single_observation_space = self._env.get_wrapper_attr(
+                "single_observation_space"
+            )
+            self.single_action_space = self._env.get_wrapper_attr("single_action_space")
+            self.action_space = self._env.get_wrapper_attr("action_space")
+            self.observation_space = self._env.get_wrapper_attr("observation_space")
+        else:
+            super().__init__(
+                num_envs,
+                self._env.get_wrapper_attr("single_observation_space"),
+                self._env.get_wrapper_attr("single_action_space"),
+            )
         if not self.ignore_terminations and auto_reset:
             assert (
                 self.base_env.reconfiguration_freq == 0 or self.base_env.num_envs == 1

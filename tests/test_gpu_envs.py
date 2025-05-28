@@ -47,8 +47,8 @@ def test_envs_obs_modes(env_id, obs_mode):
     env = gym.make_vec(
         env_id,
         num_envs=16,
-        vectorization_mode="custom",
-        vector_kwargs=dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
+        # vectorization_mode="custom",
+        **dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
     )
     base_env = env.base_env
     obs, _ = env.reset()
