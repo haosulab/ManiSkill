@@ -217,6 +217,7 @@ class Fetch(BaseAgent):
             self.gripper_stiffness,
             self.gripper_damping,
             self.gripper_force_limit,
+            mimic={"r_gripper_finger_joint": {"joint": "l_gripper_finger_joint"}},
         )
 
         # -------------------------------------------------------------------------- #
