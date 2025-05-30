@@ -379,75 +379,107 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-
-        # Stage 1, reach the object with a wide grasp
         tcp_to_obj_dist = torch.linalg.norm(
-            self.cube.pose.p - self.agent.tcp_pos,
-            axis=-1,
+            self.cube.pose.p - self.agent.tcp_pose.p, axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reached_object = tcp_to_obj_dist < 0.04
+        reward = reaching_reward
 
-        open_gripper_pos = self.rest_qpos[
-            -1
-        ]  # keep gripper at starting keyframe position
-        to_open_gripper_dist = (open_gripper_pos - self.agent.robot.qpos[..., -1]).abs()
-        open_gripper_reward = 1 - torch.tanh(to_open_gripper_dist * 4)
-        reward = reaching_reward + open_gripper_reward
-        stage_1_passed = reached_object
-
-        # Stage 2, close the gripper, grasp the object around the right place
         is_grasped = info["is_grasped"]
-        # close_gripper_pos = 0.2
-        # to_close_gripper_dist = (close_gripper_pos - self.agent.robot.qpos[..., -1]).abs()
-        to_close_gripper_dist = torch.linalg.norm(
-            self.agent.finger1_tip.pose.p - self.cube.pose.p,
-            axis=-1,
-        ) + torch.linalg.norm(
-            self.agent.finger2_tip.pose.p - self.cube.pose.p,
-            axis=-1,
+        reward += is_grasped
+
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_site.pose.p - self.cube.pose.p, axis=1
         )
-        close_gripper_reward = 1 - torch.tanh(to_close_gripper_dist * 3)
-        reward[stage_1_passed] = (
-            1.0 + (reaching_reward + is_grasped + close_gripper_reward)[stage_1_passed]
-        )
-        stage_2_passed = is_grasped * stage_1_passed
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * is_grasped
 
-        # # Stage 3, lift the cube off the table
-        # cube_lifted = info["cube_lifted"]
-        # reward[stage_2_passed] = 6.0 + (cube_lifted.float())[stage_2_passed]
-        # stage_3_passed = cube_lifted * stage_2_passed
+        qvel = self.agent.robot.get_qvel()
+        if self.robot_uids == "panda":
+            qvel = qvel[..., :-2]
+        elif self.robot_uids == "so100":
+            qvel = qvel[..., :-1]
+        static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
+        reward += static_reward * info["is_obj_placed"]
 
-        # Stage 4, return to rest position
-        per_joint_return_to_rest_reward = (
-            1
-            - torch.tanh(
-                2
-                * (
-                    self.agent.controller._target_qpos[:, :-1] - self.rest_qpos[:-1]
-                ).abs()
-            )
-        ).sum(dim=-1) / self.rest_qpos[:-1].shape[-1]
-        reward[stage_2_passed] = (
-            4.0
-            + (
-                (1 - torch.tanh(4 * info["distance_to_rest_qpos"]))
-                + 2 * per_joint_return_to_rest_reward
-            )[stage_2_passed]
-        )
-
-        reward[info["success"]] = 8
-
-        # rest is some general penalties and failure modes
-        # penalize for touching table
-        reward -= 2.0 * info["touching_table"].float()
-        # if the robot closes the gripper before reaching the object, it is a failure
-        # closed_gripper_too_early = (((self.rest_qpos[-1] - self.agent.robot.qpos[..., -1]).abs()) > 0.1) & ~reached_object
-        # reward[closed_gripper_too_early] -= -2.0
-
+        reward[info["success"]] = 5
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
+
+    # def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+
+    #     # Stage 1, reach the object with a wide grasp
+    #     tcp_to_obj_dist = torch.linalg.norm(
+    #         self.cube.pose.p - self.agent.tcp_pos,
+    #         axis=-1,
+    #     )
+    #     reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+    #     reached_object = tcp_to_obj_dist < 0.04
+
+    #     open_gripper_pos = self.rest_qpos[
+    #         -1
+    #     ]  # keep gripper at starting keyframe position
+    #     to_open_gripper_dist = (open_gripper_pos - self.agent.robot.qpos[..., -1]).abs()
+    #     open_gripper_reward = 1 - torch.tanh(to_open_gripper_dist * 4)
+    #     reward = reaching_reward + open_gripper_reward
+    #     stage_1_passed = reached_object
+
+    #     # Stage 2, close the gripper, grasp the object around the right place
+    #     is_grasped = info["is_grasped"]
+    #     # close_gripper_pos = 0.2
+    #     # to_close_gripper_dist = (close_gripper_pos - self.agent.robot.qpos[..., -1]).abs()
+    #     to_close_gripper_dist = torch.linalg.norm(
+    #         self.agent.finger1_tip.pose.p - self.cube.pose.p,
+    #         axis=-1,
+    #     ) + torch.linalg.norm(
+    #         self.agent.finger2_tip.pose.p - self.cube.pose.p,
+    #         axis=-1,
+    #     )
+    #     close_gripper_reward = 1 - torch.tanh(to_close_gripper_dist * 3)
+    #     reward[stage_1_passed] = (
+    #         1.0 + (reaching_reward + is_grasped + close_gripper_reward)[stage_1_passed]
+    #     )
+    #     stage_2_passed = is_grasped * stage_1_passed
+
+    #     # # Stage 3, lift the cube off the table
+    #     # cube_lifted = info["cube_lifted"]
+    #     # reward[stage_2_passed] = 6.0 + (cube_lifted.float())[stage_2_passed]
+    #     # stage_3_passed = cube_lifted * stage_2_passed
+
+    #     # Stage 4, return to rest position
+    #     per_joint_return_to_rest_reward = (
+    #         1
+    #         - torch.tanh(
+    #             2
+    #             * (
+    #                 self.agent.controller._target_qpos[:, :-1] - self.rest_qpos[:-1]
+    #             ).abs()
+    #         )
+    #     ).sum(dim=-1) / self.rest_qpos[:-1].shape[-1]
+    #     reward[stage_2_passed] = (
+    #         4.0
+    #         + (
+    #             (1 - torch.tanh(4 * info["distance_to_rest_qpos"]))
+    #             + 2 * per_joint_return_to_rest_reward
+    #         )[stage_2_passed]
+    #     )
+
+    #     reward[info["success"]] = 8
+
+    #     # rest is some general penalties and failure modes
+    #     # penalize for touching table
+    #     reward -= 2.0 * info["touching_table"].float()
+    #     # if the robot closes the gripper before reaching the object, it is a failure
+    #     # closed_gripper_too_early = (((self.rest_qpos[-1] - self.agent.robot.qpos[..., -1]).abs()) > 0.1) & ~reached_object
+    #     # reward[closed_gripper_too_early] -= -2.0
+
+    #     return reward
+
+    # def compute_normalized_dense_reward(
+    #     self, obs: Any, action: torch.Tensor, info: Dict
+    # ):
+    #     return self.compute_dense_reward(obs=obs, action=action, info=info) / 8

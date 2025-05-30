@@ -24,7 +24,10 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
-from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend, CPU_SIM_BACKENDS
+from mani_skill.envs.utils.system.backend import (
+    CPU_SIM_BACKENDS,
+    parse_sim_and_render_backend,
+)
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -1215,7 +1218,11 @@ class BaseEnv(gym.Env):
         """
         Get environment state dictionary. Override to include task information (e.g., goal)
         """
-        return self.scene.get_sim_state()
+        sim_state = self.scene.get_sim_state()
+        controller_state = self.agent.controller.get_state()
+        if len(controller_state) > 0:
+            sim_state["controller"] = controller_state
+        return sim_state
 
     def get_state(self):
         """
