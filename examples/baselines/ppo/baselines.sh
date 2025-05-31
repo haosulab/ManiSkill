@@ -36,6 +36,16 @@ done
 
 for seed in ${seeds[@]}
 do
+  python ppo_fast.py --env_id="PickCube-v1" --robot_uids="widowxai" --seed=${seed} \
+    --num_envs=4096 --update_epochs=8 --num_minibatches=32 \
+    --total_timesteps=50_000_000 \
+    --num_eval_envs=16 \
+    --cudagraphs --exp-name="ppo-PickCube-v1-widowxai-state-${seed}-walltime_efficient" \
+    --track
+done
+
+for seed in ${seeds[@]}
+do
   python ppo_fast.py --env_id="PushT-v1" --seed=${seed} \
     --num_envs=4096 --num-steps=16 --update_epochs=8 --num_minibatches=32 --gamma=0.99 \
     --total_timesteps=50_000_000 --num_eval_steps=100 \
