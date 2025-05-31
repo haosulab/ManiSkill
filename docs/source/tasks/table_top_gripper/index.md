@@ -153,6 +153,15 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>50</p></td>
 </tr>
 <tr class="row-odd">
+<td><p><a href="#stackpyramid-v1">StackPyramid-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/StackPyramid-v1_rt_thumb_first.png' alt='StackPyramid-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/StackPyramid-v1_rt_thumb_last.png' alt='StackPyramid-v1'></div></td>
+<td><p>❌</p></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>250</p></td>
+</tr>
+
+<tr class="row-odd">
 <td><p><a href="#turnfaucet-v1">TurnFaucet-v1</a></p></td>
 <td><div style='display:flex;gap:4px;align-items:center'> </div></td>
 <td><p>❌</p></td>
@@ -566,6 +575,34 @@ The goal is to pick up a red cube and stack it on top of a green cube and let go
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
+
+## StackPyramid-v1
+
+![sparse-reward][sparse-reward-badge]
+![demos][demos-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+The goal is to pick up a red cube, place it next to the green cube, and stack the blue cube on top of the red and green cube without it falling off.
+
+**Randomizations:**
+- all cubes have their z-axis rotation randomized
+- all cubes have their xy positions on top of the table scene randomized. The positions are sampled such that the cubes do not collide with each other.
+
+**Success Conditions:**
+- the blue cube is static
+- the blue cube is on top of both the red and green cube (to within half of the cube size)
+- none of the red, green, or blue cube are grasped by the robot (robot must let go of the cubes)
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/StackPyramid-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/StackPyramid-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
 
 ## TwoRobotPickCube-v1
 
