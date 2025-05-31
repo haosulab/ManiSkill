@@ -80,12 +80,18 @@ class StackPyramidEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
+
+            xyz = torch.zeros((b, 3), device=self.device)
+            xyz[:, 2] = 0.02
+            xy = xyz[:, :2]
             region = [[-0.1, -0.2], [0.1, 0.2]]
-            cubeA_xy, cubeB_xy, cubeC_xy = sample_safe_offsets(b=b, sample_region=region, min_distance=0.03, max_iter=100, device=self.device)
+            sampler = randomization.UniformPlacementSampler(bounds=region, batch_size=b, device=self.device)
+            radius = torch.linalg.norm(torch.tensor([0.02, 0.02]))
+            cubeA_xy = xy + sampler.sample(radius, 100)
+            cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)
+            cubeC_xy = xy + sampler.sample(radius, 100, verbose=False)
 
             # Cube A
-            xyz = torch.zeros((b, 3), device=self.device)
-            xyz[:, 2] = 0.02  # table height offset
             xyz[:, :2] = cubeA_xy
             
             qs = randomization.random_quaternions(
@@ -168,46 +174,4 @@ class StackPyramidEnv(BaseEnv):
                 cubeA_to_cubeC_pos=self.cubeC.pose.p - self.cubeA.pose.p,
             )
         return obs
-
-def sample_safe_offsets(b: int, sample_region: Union[float, int, list], min_distance: float = 0.05, max_iter: int = 100, device: torch.device = torch.device("cpu")):
-    """
-    For each sample in the batch, sample three (2,) offsets such that
-    all pairwise distances are at least min_distance.
-
-    sample_region can either be:
-      - a float/int that specifies the sample region's side length. This assumes the sample region is a square, or 
-      - a list defining the coordinate region as [[low_x, low_y], [high_x, high_y]]
-      
-    Returns three tensors of shape (b, 2) for offsets A, B, and C.
-    """
-    if isinstance(sample_region, (list)):
-        low = torch.tensor(sample_region[0], device=device)
-        high = torch.tensor(sample_region[1], device=device)
-        distribution = torch.distributions.Uniform(low, high)
-    elif isinstance(sample_region, (float, int)):
-        half = sample_region / 2.0
-        low = torch.tensor([-half, -half], device=device)
-        high = torch.tensor([half, half], device=device)
-        distribution = torch.distributions.Uniform(low, high)
-    else:
-        raise ValueError("sample_region must be either a float/int or a list of two coordinate pairs, e.g. [[low_x, low_y], [high_x, high_y]]")
     
-    offsets_A = torch.zeros((b, 2), device=device)
-    offsets_B = torch.zeros((b, 2), device=device)
-    offsets_C = torch.zeros((b, 2), device=device)
-    for i in range(b):
-        for iter_count in range(max_iter):
-            off = distribution.sample((3,))
-            d_AB = torch.norm(off[0] - off[1])
-            d_AC = torch.norm(off[0] - off[2])
-            d_BC = torch.norm(off[1] - off[2])
-            offsets_A[i] = off[0]
-            offsets_B[i] = off[1]
-            offsets_C[i] = off[2]
-            
-            if d_AB >= min_distance and d_AC >= min_distance and d_BC >= min_distance:
-                break
-        else:
-            print("Warning: no valid sample after max_iter iterations for sample index", i)
-        
-    return offsets_A, offsets_B, offsets_C
