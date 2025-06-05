@@ -524,6 +524,7 @@ def main(args: Args):
         save_trajectory=args.save_traj,
         save_video=args.save_video,
         record_reward=args.record_rewards,
+        render_substeps=True,
     )
 
     if args.count is not None and args.count > len(json_data["episodes"]):
