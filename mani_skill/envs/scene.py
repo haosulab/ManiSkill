@@ -928,11 +928,15 @@ class ManiSkillScene:
             self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
                 self.px.cuda_articulation_qvel.torch()
             )  # zero out all q velocities
+            self.px.cuda_articulation_qf.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qf.torch()
+            )  # zero out all qf
 
             self.px.gpu_apply_rigid_dynamic_data()
             self.px.gpu_apply_articulation_root_pose()
             self.px.gpu_apply_articulation_root_velocity()
             self.px.gpu_apply_articulation_qvel()
+            self.px.gpu_apply_articulation_qf()
 
             self._gpu_sim_initialized = True
             self.px.gpu_update_articulation_kinematics()

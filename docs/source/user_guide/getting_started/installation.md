@@ -27,7 +27,7 @@ The rigid-body tasks, powered by SAPIEN, are ready to use after installation. Te
 python -m mani_skill.examples.demo_random_action
 ```
 
-A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/haosulab/mani-skill/general) called  `haosulab/mani-skill` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
+A docker image is also provided on [Docker Hub](https://hub.docker.com/repository/docker/maniskill/base) called  `maniskill/base` and its corresponding [Dockerfile](https://github.com/haosulab/ManiSkill/blob/main/docker/Dockerfile).
 
 Once you are done here, you can head over to the [quickstart page](./quickstart.md) to try out some live demos and start to program with ManiSkill.
 
@@ -118,7 +118,7 @@ sudo apt-get install libvulkan1
 To test your installation of Vulkan:
 
 ```bash
-sudo apt-get install vulkan-utils
+sudo apt-get install vulkan-tools
 vulkaninfo
 ```
 

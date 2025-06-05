@@ -74,6 +74,8 @@ The code to fairly evaluate policies and record standard metrics in ManiSkill ar
 
 ```python
 import gymnasium as gym
+import torch
+from collections import defaultdict
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 env_id = "PushCube-v1"
 num_eval_envs = 64
@@ -100,6 +102,8 @@ And for CPU vectorized environments the following is recommended for evaluation:
 
 ```python
 import gymnasium as gym
+import numpy as np
+from collections import defaultdict
 from mani_skill.utils.wrappers import CPUGymWrapper
 env_id = "PickCube-v1"
 num_eval_envs = 8

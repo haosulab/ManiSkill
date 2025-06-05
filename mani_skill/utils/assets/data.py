@@ -190,7 +190,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["xarm6"] = DataSource(
         source_type="robot",
-        url="https://github.com/haosulab/ManiSkill-XArm6/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/haosulab/ManiSkill-XArm6/archive/refs/tags/v0.1.1.zip",
         target_path="robots/xarm6",
     )
 

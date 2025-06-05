@@ -45,7 +45,7 @@ class PushCubeEnv(BaseEnv):
     - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
 
     **Success Conditions:**
-    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+    - the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance and the cube is still on the table.
     """
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushCube-v1_rt.mp4"
@@ -226,12 +226,22 @@ class PushCubeEnv(BaseEnv):
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * reached
+        
+        # Compute a z reward to encourage the robot to keep the cube on the table
+        desired_obj_z = self.cube_half_size
+        current_obj_z = self.obj.pose.p[..., 2]
+        z_deviation = torch.abs(current_obj_z - desired_obj_z)
+        z_reward = 1 - torch.tanh(5 * z_deviation)
+        # We multiply the z reward by the place_reward and reached mask so that 
+        #   we only add the z reward if the robot has reached the desired push pose
+        #   and the z reward becomes more important as the robot gets closer to the goal.
+        reward += place_reward * z_reward * reached
 
         # assign rewards to parallel environments that achieved success to the maximum of 3.
-        reward[info["success"]] = 3
+        reward[info["success"]] = 4
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
         # this should be equal to compute_dense_reward / max possible reward
-        max_reward = 3.0
+        max_reward = 4.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

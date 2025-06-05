@@ -27,6 +27,7 @@ FETCH_BASE_COLLISION_BIT = 31
 class Fetch(BaseAgent):
     uid = "fetch"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/fetch/fetch.urdf"
+    urdf_arm_ik_path = f"{PACKAGE_ASSET_DIR}/robots/fetch/fetch_torso_up.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -149,7 +150,8 @@ class Fetch(BaseAgent):
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=self.urdf_arm_ik_path,
+            root_link_name="torso_lift_link",
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
@@ -161,7 +163,8 @@ class Fetch(BaseAgent):
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=self.urdf_arm_ik_path,
+            root_link_name="torso_lift_link",
         )
 
         arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
@@ -214,6 +217,7 @@ class Fetch(BaseAgent):
             self.gripper_stiffness,
             self.gripper_damping,
             self.gripper_force_limit,
+            mimic={"r_gripper_finger_joint": {"joint": "l_gripper_finger_joint"}},
         )
 
         # -------------------------------------------------------------------------- #

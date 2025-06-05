@@ -1,1 +1,0 @@
-from .floating_inspire_hand import FloatingInspireHandRight

@@ -24,7 +24,10 @@ from mani_skill.envs.utils.observations import (
     sensor_data_to_pointcloud,
 )
 from mani_skill.envs.utils.randomization.batched_rng import BatchedRNG
-from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend, CPU_SIM_BACKENDS
+from mani_skill.envs.utils.system.backend import (
+    CPU_SIM_BACKENDS,
+    parse_sim_and_render_backend,
+)
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
@@ -1069,10 +1072,16 @@ class BaseEnv(gym.Env):
                 action = common.batch(action)
             self.agent.set_action(action)
             if self._sim_device.is_cuda():
-                if self.agent.controller.sets_target_qpos:
+                if isinstance(self.agent.controller, dict):
+                    # TODO: a small optimization is to cache whether the dict of controllers has any that set qpos/qvel values
+                    # in the BaseAgent/MultiAgent class. Code below just avoids iterating over the dict of controllers each time
                     self.scene.px.gpu_apply_articulation_target_position()
-                if self.agent.controller.sets_target_qvel:
                     self.scene.px.gpu_apply_articulation_target_velocity()
+                else:
+                    if self.agent.controller.sets_target_qpos:
+                        self.scene.px.gpu_apply_articulation_target_position()
+                    if self.agent.controller.sets_target_qvel:
+                        self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             if self.agent is not None:
