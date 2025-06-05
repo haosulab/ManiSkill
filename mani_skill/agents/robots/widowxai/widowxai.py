@@ -15,7 +15,7 @@ from mani_skill.utils.structs.actor import Actor
 @register_agent(asset_download_ids=["widowxai"])
 class WidowXAI(BaseAgent):
     uid = "widowxai"
-    urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai_follower.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -55,9 +55,11 @@ class WidowXAI(BaseAgent):
         "joint_3",
         "joint_4",
         "joint_5",
+        "left_carriage_joint",
     ]
     gripper_joint_names = [
-        "right_carriage_joint",
+        # only control the control joint, not the mimicked one
+        # "right_carriage_joint",
         "left_carriage_joint",
     ]
     ee_link_name = "ee_gripper_link"
@@ -89,39 +91,35 @@ class WidowXAI(BaseAgent):
             use_delta=True,
             use_target=False,
         )
+        gripper_pd_joint_pos = PDJointPosControllerConfig(
+            self.gripper_joint_names,
+            lower=0.0,
+            upper=0.044,
+            stiffness=self.gripper_stiffness,
+            damping=self.gripper_damping,
+        )
         arm_pd_joint_target_delta_pos = copy.deepcopy(arm_pd_joint_delta_pos)
         arm_pd_joint_target_delta_pos.use_target = True
 
-        # gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
-        #     self.gripper_joint_names,
-        #     lower=-0.01,  # a trick to have force when the object is thin
-        #     upper=0.04,
-        #     stiffness=self.gripper_stiffness,
-        #     damping=self.gripper_damping,
-        #     force_limit=self.gripper_force_limit,
-        #     mimic={"left_carriage_joint": {"joint": "right_carriage_joint"}},
-        # )
-
-        # controller_configs = dict(
-        #     pd_joint_delta_pos=dict(
-        #         arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos,
-        #     ),
-        #     pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
-        #     pd_joint_target_delta_pos=dict(
-        #         arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos,
-        #     ),
-        # )
         controller_configs = dict(
-            pd_joint_delta_pos=arm_pd_joint_delta_pos,
-            pd_joint_pos=arm_pd_joint_pos,
-            pd_joint_target_delta_pos=arm_pd_joint_target_delta_pos,
+            pd_joint_delta_pos=dict(
+                arm=arm_pd_joint_delta_pos,
+                gripper=gripper_pd_joint_pos,
+            ),
+            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
+            pd_joint_target_delta_pos=dict(
+                arm=arm_pd_joint_target_delta_pos,
+                gripper=gripper_pd_joint_pos,
+            ),
         )
         return deepcopy_dict(controller_configs)
 
     def _after_loading_articulation(self):
         self.finger1_link = self.robot.links_map["gripper_left"]
         self.finger2_link = self.robot.links_map["gripper_right"]
-        self.tcp = sapien_utils.get_obj_by_name(self.robot.get_links(), self.ee_link_name)
+        self.tcp = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
+        )
 
     @property
     def tcp_pos(self):
@@ -139,16 +137,24 @@ class WidowXAI(BaseAgent):
             min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.5.
             max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 85.
         """
-        l_contact_forces = self.scene.get_pairwise_contact_forces(self.finger1_link, object)
-        r_contact_forces = self.scene.get_pairwise_contact_forces(self.finger2_link, object)
+        l_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger1_link, object
+        )
+        r_contact_forces = self.scene.get_pairwise_contact_forces(
+            self.finger2_link, object
+        )
         lforce = torch.linalg.norm(l_contact_forces, axis=1)
         rforce = torch.linalg.norm(r_contact_forces, axis=1)
         ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
         rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
         langle = common.compute_angle_between(ldirection, l_contact_forces)
         rangle = common.compute_angle_between(rdirection, r_contact_forces)
-        lflag = torch.logical_and(lforce >= min_force, torch.rad2deg(langle) <= max_angle)
-        rflag = torch.logical_and(rforce >= min_force, torch.rad2deg(rangle) <= max_angle)
+        lflag = torch.logical_and(
+            lforce >= min_force, torch.rad2deg(langle) <= max_angle
+        )
+        rflag = torch.logical_and(
+            rforce >= min_force, torch.rad2deg(rangle) <= max_angle
+        )
         _is_grasped = torch.logical_and(lflag, rflag)
         return _is_grasped
 
