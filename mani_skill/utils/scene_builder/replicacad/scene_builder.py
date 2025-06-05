@@ -314,7 +314,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             self.scene.px.step()
             self.scene._gpu_fetch_all()
 
-        # teleport robot back to correct location
+        self._initialize_robot(env_idx)
+
+    def _initialize_robot(self, env_idx):
+        # NOTE (arth): if you set qpos/pose with an unbatched value, then you can ignore env_idx
         if self.env.robot_uids == "fetch":
             self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))

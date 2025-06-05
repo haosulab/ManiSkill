@@ -339,12 +339,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             self.scene.px.step()
             self.scene._gpu_fetch_all()
 
-        # teleport robot back to correct location
-        if self.env.robot_uids == "fetch":
-            self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
-        else:
-            raise NotImplementedError(self.env.robot_uids)
+        self._initialize_robot(env_idx)
 
     def sample_build_config_idxs(self):
         used_build_config_idxs = list(self.used_build_config_idxs)
