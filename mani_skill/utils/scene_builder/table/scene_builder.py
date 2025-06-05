@@ -270,7 +270,7 @@ class TableSceneBuilder(SceneBuilder):
                 )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uids in ["widowxai", "widowxai2", "widowxai_cam"]:
+        elif self.env.robot_uids in ["widowxai", "widowxai_wristcam"]:
             qpos = self.env.agent.keyframes["ready_to_grasp"].qpos
             self.env.agent.reset(qpos)
         elif self.env.robot_uids == "so100":

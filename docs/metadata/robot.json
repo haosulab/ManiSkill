@@ -134,5 +134,9 @@
   "widowxai": {
     "quality": "B",
     "name": "WidowX AI"
+  },
+  "widowxai_wristcam": {
+    "quality": "B",
+    "name": "WidowX AI with wrist camera"
   }
 }

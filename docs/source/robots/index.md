@@ -325,12 +325,12 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
-    <a href="widowxai_cam">
-        <img src="../_static/robot_images/widowxai_cam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="widowxai_cam">
+    <a href="widowxai_wristcam">
+        <img src="../_static/robot_images/widowxai_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX AI with wrist camera">
     </a>
     <div class="gallery-item-caption">
-        <a href="widowxai_cam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">widowxai_cam</p></a>
-        <p style="margin-top: 0px;">Quality: N/A</p>
+        <a href="widowxai_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">WidowX AI with wrist camera</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 
@@ -410,7 +410,7 @@ unitree_h1/index
 unitree_h1_simplified/index
 widowx250s/index
 widowxai/index
-widowxai_cam/index
+widowxai_wristcam/index
 xarm6_nogripper/index
 xarm6_robotiq/index
 xarm6_robotiq_wristcam/index

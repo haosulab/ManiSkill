@@ -15,7 +15,7 @@ from mani_skill.utils.structs.actor import Actor
 @register_agent(asset_download_ids=["widowxai"])
 class WidowXAI(BaseAgent):
     uid = "widowxai"
-    urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai_follower.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/widowxai/wxai_base.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
