@@ -316,11 +316,11 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 
 <div class="gallery-item">
     <a href="widowxai">
-        <img src="../_static/robot_images/widowxai/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="widowxai">
+        <img src="../_static/robot_images/widowxai/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX AI">
     </a>
     <div class="gallery-item-caption">
-        <a href="widowxai"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">widowxai</p></a>
-        <p style="margin-top: 0px;">Quality: N/A</p>
+        <a href="widowxai"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">WidowX AI</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
     </div>
 </div>
 

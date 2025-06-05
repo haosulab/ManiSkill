@@ -17,6 +17,7 @@ QUALITY_KEY_TO_DESCRIPTION = {
 }
 import json
 from typing import List
+import sys
 
 import numpy as np
 
@@ -53,7 +54,7 @@ def capture_images(env: EmptyEnv):
     img_side = env.unwrapped.render_rgb_array().cpu().numpy()[0]
     return dict(front=img_front, side=img_side)
 
-def main():
+def main(robot_id: str = None):
     base_dir = Path(__file__).parent / "source/robots"
     robot_metadata = json.load(open(Path(__file__).parent / "metadata/robot.json"))
 
@@ -93,94 +94,6 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
     for row_idx, agent in enumerate(agent_classes):
         ## generate images of the robot ###
         print(f"Generating docs for {agent.uid}")
-        env = EmptyEnv(robot_uids=agent.uid, render_mode="rgb_array", human_render_camera_configs=dict(shader_pack="rt", width=1024, height=1024))
-        env.reset()
-        robot_dof = env.agent.robot.dof.item()
-        controllers = list(env.agent._controller_configs.keys())
-
-        kf = env.agent.keyframes
-        # Get the first keyframe if available
-        if kf and len(kf) > 0:
-            first_keyframe_name = next(iter(kf))
-            first_keyframe = kf[first_keyframe_name]
-            env.agent.robot.set_qpos(first_keyframe.qpos)
-            env.agent.robot.set_pose(first_keyframe.pose)
-
-
-        imgs = capture_images(env)
-        Path(f"source/_static/robot_images/{agent.uid}").mkdir(parents=True, exist_ok=True)
-        cv2.imwrite(f"source/_static/robot_images/{agent.uid}/front_visual.png", cv2.cvtColor(imgs["front"], cv2.COLOR_BGR2RGB))
-        cv2.imwrite(f"source/_static/robot_images/{agent.uid}/side_visual.png", cv2.cvtColor(imgs["side"], cv2.COLOR_BGR2RGB))
-
-        cv2.imwrite(f"source/_static/robot_images/{agent.uid}/thumbnail.png", cv2.cvtColor(cv2.resize(imgs["side"], (256, 256)), cv2.COLOR_BGR2RGB))
-
-        red_mat = sapien.render.RenderMaterial(base_color=[1, 0, 0, 1])
-        green_mat = sapien.render.RenderMaterial(base_color=[0, 1, 0, 1])
-        blue_mat = sapien.render.RenderMaterial(base_color=[0, 0, 1, 1])
-        def add_collision_visual(entity: sapien.Entity):
-            new_visual = sapien.render.RenderBodyComponent()
-            new_visual.disable_render_id()  # avoid it interfere with visual id counting
-            for c in entity.components:
-                if isinstance(c, sapien.physx.PhysxRigidBaseComponent):
-                    for s in c.collision_shapes:
-                        if isinstance(s, sapien.physx.PhysxCollisionShapeSphere):
-                            vs = sapien.render.RenderShapeSphere(s.radius, blue_mat)
-
-                        elif isinstance(s, sapien.physx.PhysxCollisionShapeBox):
-                            vs = sapien.render.RenderShapeBox(s.half_size, blue_mat)
-
-                        elif isinstance(s, sapien.physx.PhysxCollisionShapeCapsule):
-                            vs = sapien.render.RenderShapeCapsule(
-                                s.radius, s.half_length, blue_mat
-                            )
-
-                        elif isinstance(s, sapien.physx.PhysxCollisionShapeConvexMesh):
-                            vs = sapien.render.RenderShapeTriangleMesh(
-                                s.vertices,
-                                s.triangles,
-                                np.zeros((0, 3)),
-                                np.zeros((0, 2)),
-                                green_mat,
-                            )
-                            vs.scale = s.scale
-
-                        elif isinstance(s, sapien.physx.PhysxCollisionShapeTriangleMesh):
-                            vs = sapien.render.RenderShapeTriangleMesh(
-                                s.vertices,
-                                s.triangles,
-                                np.zeros((0, 3)),
-                                np.zeros((0, 2)),
-                                red_mat,
-                            )
-                            vs.scale = s.scale
-
-                        elif isinstance(s, sapien.physx.PhysxCollisionShapePlane):
-                            vs = sapien.render.RenderShapePlane([1, 1e4, 1e4], blue_mat)
-
-                        elif isinstance(s, sapien.physx.PhysxCollisionShapeCylinder):
-                            vs = sapien.render.RenderShapeCylinder(
-                                s.radius, s.half_length, green_mat
-                            )
-
-                        else:
-                            raise Exception(
-                                "invalid collision shape, this code should be unreachable."
-                            )
-
-                        vs.local_pose = s.local_pose
-
-                        new_visual.attach(vs)
-
-            entity.add_component(new_visual)
-            new_visual.set_property("shadeFlat", 1)
-        for link in env.agent.robot.links:
-            for c in link._objs[0].entity.components:
-                if isinstance(c, sapien.render.RenderBodyComponent):
-                    c.disable()
-            add_collision_visual(link._objs[0].entity)
-        imgs = capture_images(env)
-        cv2.imwrite(f"source/_static/robot_images/{agent.uid}/front_collision.png", cv2.cvtColor(imgs["front"], cv2.COLOR_BGR2RGB))
-        cv2.imwrite(f"source/_static/robot_images/{agent.uid}/side_collision.png", cv2.cvtColor(imgs["side"], cv2.COLOR_BGR2RGB))
 
         ### generate robot docs ###
         metadata = robot_metadata.pop(agent.uid, {})
@@ -208,13 +121,105 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 """
         )
 
-        # generate robot specific documentation
+        if robot_id is None or robot_id == agent.uid:
+            env = EmptyEnv(robot_uids=agent.uid, render_mode="rgb_array", human_render_camera_configs=dict(shader_pack="rt", width=1024, height=1024))
+            env.reset()
+            robot_dof = env.agent.robot.dof.item()
+            controllers = list(env.agent._controller_configs.keys())
 
-        if quality is not None:
-            quality_desc = f"{quality} ({QUALITY_KEY_TO_DESCRIPTION[quality]})"
-        else:
-            quality_desc = "N/A"
-        robot_page_markdown_str = GLOBAL_ROBOT_DOCS_HEADER + f"""
+            kf = env.agent.keyframes
+            # Get the first keyframe if available
+            if kf and len(kf) > 0:
+                first_keyframe_name = next(iter(kf))
+                first_keyframe = kf[first_keyframe_name]
+                env.agent.robot.set_qpos(first_keyframe.qpos)
+                env.agent.robot.set_pose(first_keyframe.pose)
+
+
+            imgs = capture_images(env)
+            Path(f"source/_static/robot_images/{agent.uid}").mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(f"source/_static/robot_images/{agent.uid}/front_visual.png", cv2.cvtColor(imgs["front"], cv2.COLOR_BGR2RGB))
+            cv2.imwrite(f"source/_static/robot_images/{agent.uid}/side_visual.png", cv2.cvtColor(imgs["side"], cv2.COLOR_BGR2RGB))
+
+            cv2.imwrite(f"source/_static/robot_images/{agent.uid}/thumbnail.png", cv2.cvtColor(cv2.resize(imgs["side"], (256, 256)), cv2.COLOR_BGR2RGB))
+
+            red_mat = sapien.render.RenderMaterial(base_color=[1, 0, 0, 1])
+            green_mat = sapien.render.RenderMaterial(base_color=[0, 1, 0, 1])
+            blue_mat = sapien.render.RenderMaterial(base_color=[0, 0, 1, 1])
+            def add_collision_visual(entity: sapien.Entity):
+                new_visual = sapien.render.RenderBodyComponent()
+                new_visual.disable_render_id()  # avoid it interfere with visual id counting
+                for c in entity.components:
+                    if isinstance(c, sapien.physx.PhysxRigidBaseComponent):
+                        for s in c.collision_shapes:
+                            if isinstance(s, sapien.physx.PhysxCollisionShapeSphere):
+                                vs = sapien.render.RenderShapeSphere(s.radius, blue_mat)
+
+                            elif isinstance(s, sapien.physx.PhysxCollisionShapeBox):
+                                vs = sapien.render.RenderShapeBox(s.half_size, blue_mat)
+
+                            elif isinstance(s, sapien.physx.PhysxCollisionShapeCapsule):
+                                vs = sapien.render.RenderShapeCapsule(
+                                    s.radius, s.half_length, blue_mat
+                                )
+
+                            elif isinstance(s, sapien.physx.PhysxCollisionShapeConvexMesh):
+                                vs = sapien.render.RenderShapeTriangleMesh(
+                                    s.vertices,
+                                    s.triangles,
+                                    np.zeros((0, 3)),
+                                    np.zeros((0, 2)),
+                                    green_mat,
+                                )
+                                vs.scale = s.scale
+
+                            elif isinstance(s, sapien.physx.PhysxCollisionShapeTriangleMesh):
+                                vs = sapien.render.RenderShapeTriangleMesh(
+                                    s.vertices,
+                                    s.triangles,
+                                    np.zeros((0, 3)),
+                                    np.zeros((0, 2)),
+                                    red_mat,
+                                )
+                                vs.scale = s.scale
+
+                            elif isinstance(s, sapien.physx.PhysxCollisionShapePlane):
+                                vs = sapien.render.RenderShapePlane([1, 1e4, 1e4], blue_mat)
+
+                            elif isinstance(s, sapien.physx.PhysxCollisionShapeCylinder):
+                                vs = sapien.render.RenderShapeCylinder(
+                                    s.radius, s.half_length, green_mat
+                                )
+
+                            else:
+                                raise Exception(
+                                    "invalid collision shape, this code should be unreachable."
+                                )
+
+                            vs.local_pose = s.local_pose
+
+                            new_visual.attach(vs)
+
+                entity.add_component(new_visual)
+                new_visual.set_property("shadeFlat", 1)
+            for link in env.agent.robot.links:
+                for c in link._objs[0].entity.components:
+                    if isinstance(c, sapien.render.RenderBodyComponent):
+                        c.disable()
+                add_collision_visual(link._objs[0].entity)
+            imgs = capture_images(env)
+            cv2.imwrite(f"source/_static/robot_images/{agent.uid}/front_collision.png", cv2.cvtColor(imgs["front"], cv2.COLOR_BGR2RGB))
+            cv2.imwrite(f"source/_static/robot_images/{agent.uid}/side_collision.png", cv2.cvtColor(imgs["side"], cv2.COLOR_BGR2RGB))
+
+
+
+            # generate robot specific documentation
+
+            if quality is not None:
+                quality_desc = f"{quality} ({QUALITY_KEY_TO_DESCRIPTION[quality]})"
+            else:
+                quality_desc = "N/A"
+            robot_page_markdown_str = GLOBAL_ROBOT_DOCS_HEADER + f"""
 # {agent_name}
 
 Robot UID: `{agent.uid}`
@@ -243,11 +248,11 @@ Controllers: {", ".join([f"`{c}`" for c in controllers])}
     <p style="text-align: center; font-size: 1.2rem;">Collision Meshes (Green = Convex Mesh, Blue = Primitive Shape Mesh)</p>
 </div>
 """
-        Path(f"{base_dir}/{agent.uid}").mkdir(parents=True, exist_ok=True)
-        with open(
-            f"{base_dir}/{agent.uid}/index.md", "w"
-        ) as f:
-            f.write(robot_page_markdown_str)
+            Path(f"{base_dir}/{agent.uid}").mkdir(parents=True, exist_ok=True)
+            with open(
+                f"{base_dir}/{agent.uid}/index.md", "w"
+            ) as f:
+                f.write(robot_page_markdown_str)
     robot_index_markdown_str += """\n</div>
 
 ```{toctree}
@@ -271,4 +276,5 @@ Controllers: {", ".join([f"`{c}`" for c in controllers])}
         for robot in robot_metadata:
             print(f"- {robot}")
 if __name__ == "__main__":
-    main()
+    robot_id = sys.argv[1] if len(sys.argv) > 1 else None
+    main(robot_id)
