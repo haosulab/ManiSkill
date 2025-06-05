@@ -15,23 +15,23 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 
+PICK_CUBE_DOC_STRING = """**Task Description:**
+A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
+capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized to a random angle
+- the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
+
+**Success Conditions:**
+- the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+"""
+
 
 @register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv(BaseEnv):
-    """
-    **Task Description:**
-    A simple task where the objective is to grasp a red cube and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
-    capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
-
-    **Randomizations:**
-    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the cube's z-axis rotation is randomized to a random angle
-    - the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
-
-    **Success Conditions:**
-    - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
-    - the robot is static (q velocity < 0.2)
-    """
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = [
@@ -192,19 +192,26 @@ class PickCubeEnv(BaseEnv):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
 
 
+PickCubeEnv.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="Panda")
+
+
 @register_env("PickCubeSO100-v1", max_episode_steps=50)
 class PickCubeSO100Env(PickCubeEnv):
-
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeSO100-v1_rt.mp4"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, robot_uids="so100", **kwargs)
 
 
+PickCubeSO100Env.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="SO100")
+
+
 @register_env("PickCubeWidowXAI-v1", max_episode_steps=50)
 class PickCubeWidowXAIEnv(PickCubeEnv):
-
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeWidowXAI-v1_rt.mp4"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, robot_uids="widowxai", **kwargs)
+
+
+PickCubeWidowXAIEnv.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="WidowXAI")
