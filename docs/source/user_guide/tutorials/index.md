@@ -12,4 +12,5 @@ custom_tasks/index
 custom_robots
 custom_reusable_scenes
 domain_randomization
+sim2real/index
 ```
