@@ -32,7 +32,6 @@ def main(args):
         num_envs=1,
         obs_mode="state",
         reward_mode="none",
-        robot_uids="widowxai2",
         render_mode=args.render_mode,
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
