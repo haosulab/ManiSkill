@@ -5,7 +5,7 @@ import sapien
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import SO100, Fetch, Panda, XArm6Robotiq, WidowXAI
+from mani_skill.agents.robots import SO100, Fetch, Panda, WidowXAI, XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
 from mani_skill.sensors.camera import CameraConfig
@@ -199,3 +199,12 @@ class PickCubeSO100Env(PickCubeEnv):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, robot_uids="so100", **kwargs)
+
+
+@register_env("PickCubeWidowXAI-v1", max_episode_steps=50)
+class PickCubeWidowXAIEnv(PickCubeEnv):
+
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeWidowXAI-v1_rt.mp4"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, robot_uids="widowxai2", **kwargs)
