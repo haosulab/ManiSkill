@@ -173,11 +173,6 @@ def initialize_data_sources():
         url="https://github.com/haosulab/ManiSkill-WidowX250S/archive/refs/tags/v0.2.0.zip",
         target_path="robots/widowx",
     )
-    DATA_SOURCES["widowxai"] = DataSource(
-        source_type="robot",
-        url="https://github.com/hu-po/ManiSkill-WidowXAI/archive/refs/tags/v0.2.0.zip",
-        target_path="robots/widowxai",
-    )
     DATA_SOURCES["googlerobot"] = DataSource(
         source_type="robot",
         url="https://github.com/haosulab/ManiSkill-GoogleRobot/archive/refs/tags/v0.1.0.zip",
@@ -193,10 +188,9 @@ def initialize_data_sources():
         url="https://github.com/haosulab/ManiSkill-XArm6/archive/refs/tags/v0.1.1.zip",
         target_path="robots/xarm6",
     )
-    # TODO (stao, hu-po, trossen): Update the true link here later
     DATA_SOURCES["widowxai"] = DataSource(
         source_type="robot",
-        url="https://github.com/hu-po/ManiSkill-WidowXAI/archive/refs/tags/v0.2.0.zip",
+        url="https://github.com/TrossenRobotics/ManiSkill-WidowX_AI/archive/refs/tags/v0.1.0.zip",
         target_path="robots/widowxai",
     )
 
