@@ -35,5 +35,10 @@ python generate_task_docs.py
 
 ```bash
 # In docs/
+
+# generate all robot docs
 python generate_robot_docs.py
+
+# update just one robot's documentation
+python generate_robot_docs.py robot_uid
 ```

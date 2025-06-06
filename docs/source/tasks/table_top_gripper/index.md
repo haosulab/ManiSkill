@@ -73,6 +73,14 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>50</p></td>
 </tr>
 <tr class="row-odd">
+<td><p><a href="#pickcubewidowxai-v1">PickCubeWidowXAI-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCubeWidowXAI-v1_rt_thumb_first.png' alt='PickCubeWidowXAI-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickCubeWidowXAI-v1_rt_thumb_last.png' alt='PickCubeWidowXAI-v1'></div></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>❌</p></td>
+<td><p>50</p></td>
+</tr>
+<tr class="row-odd">
 <td><p><a href="#picksingleycb-v1">PickSingleYCB-v1</a></p></td>
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_first.png' alt='PickSingleYCB-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PickSingleYCB-v1_rt_thumb_last.png' alt='PickSingleYCB-v1'></div></td>
 <td><p>✅</p></td>
@@ -269,7 +277,7 @@ Pick up a orange-white peg and insert the orange end into the box with a hole in
 :color: primary
 
 **Task Description:**
-A simple task where the objective is to grasp a red cube and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
+A simple task where the objective is to grasp a red cube with the Panda robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
 
 **Randomizations:**
@@ -285,6 +293,62 @@ capabilities can be simulated and trained properly. Hence there is extra code fo
 <div style="display: flex; justify-content: center;">
 <video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PickCube-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
+## PickCubeSO100-v1
+
+![dense-reward][dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to grasp a red cube with the SO100 robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
+capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized to a random angle
+- the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
+
+**Success Conditions:**
+- the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PickCubeSO100-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeSO100-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
+## PickCubeWidowXAI-v1
+
+![dense-reward][dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+A simple task where the objective is to grasp a red cube with the WidowXAI robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
+capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized to a random angle
+- the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
+
+**Success Conditions:**
+- the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PickCubeWidowXAI-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeWidowXAI-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -474,7 +538,7 @@ A simple task where the objective is to push and move a cube to a goal region in
 - the target goal region is marked by a red/white circular target. The position of the target is fixed to be the cube xy position + [0.1 + goal_radius, 0]
 
 **Success Conditions:**
-- the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+- the cube's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance and the cube is still on the table.
 :::
 
 <div style="display: flex; justify-content: center;">
