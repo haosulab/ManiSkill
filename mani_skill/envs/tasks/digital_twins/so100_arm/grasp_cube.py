@@ -23,7 +23,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 # there are many ways to parameterize an environment's domain randomization. This is a simple way to do it
 # with dataclasses that can be created and modified by the user and passed into the environment constructor.
 @dataclass
-class KochGraspCubeDomainRandomizationConfig:
+class SO100GraspCubeDomainRandomizationConfig:
     ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
     randomize_robot_color: bool = True
@@ -72,8 +72,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         self,
         *args,
         robot_uids="so100",
+        control_mode="pd_joint_target_delta_pos",
         greenscreen_overlay_path=None,
-        domain_randomization_config=KochGraspCubeDomainRandomizationConfig(),
+        domain_randomization_config=SO100GraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
         base_camera_settings=dict(
             fov=52 * np.pi / 180,
@@ -99,7 +100,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
-        super().__init__(*args, robot_uids=robot_uids, **kwargs)
+        super().__init__(
+            *args, robot_uids=robot_uids, control_mode=control_mode, **kwargs
+        )
 
     def default_sim_config(self):
         return SimConfig(
