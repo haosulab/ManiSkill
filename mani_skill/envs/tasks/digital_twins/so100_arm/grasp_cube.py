@@ -315,6 +315,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # update the camera poses before agent actions are executed
         if self.domain_randomization:
             self.camera_mount.set_pose(self.sample_camera_poses(n=self.num_envs))
+            self.scene._gpu_apply_all()
 
     def _get_obs_agent(self):
         # we remove qvel as koch arm qvel is too noisy to learn from and not implemented.
