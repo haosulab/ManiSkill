@@ -379,3 +379,6 @@ class Sim2RealEnv(gym.Env):
 
     def close(self):
         self.agent.stop()
+
+    def __getattr__(self, name):
+        return getattr(self.base_sim_env, name)

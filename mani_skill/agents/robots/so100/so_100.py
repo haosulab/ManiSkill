@@ -56,10 +56,12 @@ class SO100(BaseAgent):
             normalize_action=False,
         )
 
+        # max delta permitted of 0.05 since the robot is not as accurate as more expensive arms
+        # and moving too fast can cause the robot to shake too much and damage the hardware
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            -0.1,
-            0.1,
+            -0.05,
+            0.05,
             stiffness=[1e3] * 6,
             damping=[1e2] * 6,
             force_limit=100,
