@@ -44,7 +44,7 @@ class SO100GraspCubeDomainRandomizationConfig:
     randomize_cube_color: bool = True
 
 
-@register_env("SO100GraspCube-v1", max_episode_steps=100)
+@register_env("SO100GraspCube-v1", max_episode_steps=50)
 class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     """
     **Task Description:**
@@ -224,8 +224,12 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         self.remove_object_from_greenscreen(self.cube)
 
         # a hardcoded initial joint configuration for the robot to start from
+        # self.rest_qpos = torch.tensor(
+        #     [0.0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0], device=self.device
+        # )
         self.rest_qpos = torch.tensor(
-            [0.0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0], device=self.device
+            [0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0],
+            device=self.device,
         )
         # hardcoded pose for the table that places it such that the robot base is at 0 and on the edge of the table.
         self.table_pose = Pose.create_from_pq(
@@ -286,6 +290,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             # sample a random initial joint configuration for the robot
             self.agent.robot.set_qpos(
                 self.rest_qpos + torch.randn(size=(b, self.rest_qpos.shape[-1])) * 0.02
+            )
+            self.agent.robot.set_pose(
+                Pose.create_from_pq(p=[0, 0, 0], q=euler2quat(0, 0, np.pi / 2))
             )
 
             # initialize the cube at a random position and rotation around the z-axis
@@ -391,19 +398,20 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         is_grasped = info["is_grasped"]
         reward += is_grasped
 
-        obj_to_goal_dist = torch.linalg.norm(
-            self.goal_site.pose.p - self.cube.pose.p, axis=1
-        )
-        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        # obj_to_goal_dist = torch.linalg.norm(
+        #     self.goal_site.pose.p - self.cube.pose.p, axis=1
+        # )
+        # place_reward = 1 - torch.tanh(5 * info["distance_to_rest_qpos"])
+        place_reward = torch.exp(-2 * info["distance_to_rest_qpos"])
         reward += place_reward * is_grasped
 
-        qvel = self.agent.robot.get_qvel()
-        if self.robot_uids == "panda":
-            qvel = qvel[..., :-2]
-        elif self.robot_uids == "so100":
-            qvel = qvel[..., :-1]
-        static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
-        reward += static_reward * info["is_obj_placed"]
+        # qvel = self.agent.robot.get_qvel()
+        # if self.robot_uids == "panda":
+        #     qvel = qvel[..., :-2]
+        # elif self.robot_uids == "so100":
+        #     qvel = qvel[..., :-1]
+        # static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
+        # reward += static_reward * info["is_obj_placed"]
 
         reward[info["success"]] = 5
         return reward
