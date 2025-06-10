@@ -44,7 +44,7 @@ class SO100GraspCubeDomainRandomizationConfig:
     randomize_cube_color: bool = True
 
 
-@register_env("SO100GraspCube-v1", max_episode_steps=50)
+@register_env("SO100GraspCube-v1", max_episode_steps=64)
 class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     """
     **Task Description:**
@@ -330,18 +330,19 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # available data (joint positions or the controllers target joint positions in this case).
         self.agent.controller._target_qpos.clone()
         # is_grasped = (
-        #     (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.02
-        # ).float() * (target_qpos[..., -1] < 0.24)
+        #     (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.05
+        # ).float() * (target_qpos[..., -1] < 0.55)
         # print(info["is_grasped"], self.agent.robot.qpos[..., -1] - target_qpos[..., -1])
         # print(self.agent.robot.qpos[..., -1], target_qpos[..., -1])
         obs = dict(
             dist_to_rest_qpos=self.agent.controller._target_qpos[:, :-1]
-            - self.rest_qpos[:-1]
+            - self.rest_qpos[:-1],
+            # is_grasped=is_grasped,
         )
         if self.obs_mode_struct.state:
             # state based policies can gain access to more information that helps learning
             obs.update(
-                is_grasped=info["is_grasped"],
+                # is_grasped=is_grasped,
                 obj_pose=self.cube.pose.raw_pose,
                 tcp_pos=self.agent.tcp_pos,
                 tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp_pos,
@@ -357,8 +358,12 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         )
         reached_object = tcp_to_obj_dist < 0.03  # half size of cube
         is_grasped = self.agent.is_grasping(self.cube)
+        target_qpos = self.agent.controller._target_qpos.clone()
+        pseudo_is_grasped = (
+            (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.02
+        ).float() * (target_qpos[..., -1] < 0.55)
         distance_to_rest_qpos = torch.linalg.norm(
-            self.agent.controller._target_qpos[:, :-1] - self.rest_qpos[:-1], axis=-1
+            target_qpos[:, :-1] - self.rest_qpos[:-1], axis=-1
         )
         reached_rest_qpos = distance_to_rest_qpos < 0.1
         cube_lifted = self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
@@ -381,6 +386,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         )
         return {
             "is_grasped": is_grasped,
+            "pseudo_is_grasped": pseudo_is_grasped,
             "reached_object": reached_object,
             "distance_to_rest_qpos": distance_to_rest_qpos,
             "touching_table": touching_table,
@@ -399,12 +405,14 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         is_grasped = info["is_grasped"]
         reward += is_grasped
 
+        # reward += info["cube_lifted"] * is_grasped
+
         # obj_to_goal_dist = torch.linalg.norm(
         #     self.goal_site.pose.p - self.cube.pose.p, axis=1
         # )
         # place_reward = 1 - torch.tanh(5 * info["distance_to_rest_qpos"])
         place_reward = torch.exp(-2 * info["distance_to_rest_qpos"])
-        reward += place_reward * is_grasped
+        reward += place_reward * is_grasped  # * info["cube_lifted"]
 
         # qvel = self.agent.robot.get_qvel()
         # if self.robot_uids == "panda":
@@ -413,6 +421,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         #     qvel = qvel[..., :-1]
         # static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
         # reward += static_reward * info["is_obj_placed"]
+        # reward -= 2 * info["touching_table"].float()
 
         reward[info["success"]] = 5
         return reward
