@@ -188,6 +188,11 @@ def initialize_data_sources():
         url="https://github.com/haosulab/ManiSkill-XArm6/archive/refs/tags/v0.1.1.zip",
         target_path="robots/xarm6",
     )
+    DATA_SOURCES["widowxai"] = DataSource(
+        source_type="robot",
+        url="https://github.com/TrossenRobotics/ManiSkill-WidowX_AI/archive/refs/tags/v0.1.0.zip",
+        target_path="robots/widowxai",
+    )
 
 
 def expand_data_group_into_individual_data_source_ids(data_group_id: str):
