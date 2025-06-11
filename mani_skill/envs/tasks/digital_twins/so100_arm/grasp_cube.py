@@ -67,7 +67,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     ]
     SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgb+segmentation"]
     agent: SO100
-    spawn_box_half_size = 0.1 / 2  # cube can spawn in a 10cm x 10cm range
+    spawn_box_half_size = 0.2 / 2  # cube can spawn in a 20cm x 20cm range
 
     def __init__(
         self,
@@ -307,7 +307,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             )
 
             # initialize the cube at a random position and rotation around the z-axis
-            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.3, 0, 0])
+            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.25, 0, 0])
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = (
                 torch.rand((b, 2)) * self.spawn_box_half_size * 2
