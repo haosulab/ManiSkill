@@ -40,6 +40,17 @@ class SO100(BaseAgent):
         ),
     )
 
+    arm_joint_names = [
+        "shoulder_pan",
+        "shoulder_lift",
+        "elbow_flex",
+        "wrist_flex",
+        "wrist_roll",
+    ]
+    gripper_joint_names = [
+        "gripper",
+    ]
+
     @property
     def _controller_configs(self):
         pd_joint_pos = PDJointPosControllerConfig(
@@ -56,16 +67,35 @@ class SO100(BaseAgent):
         # and moving too fast can cause the robot to shake too much and damage the hardware
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            -0.05,
-            0.05,
+            [-0.05, -0.05, -0.05, -0.05, -0.05, -0.2],
+            [0.05, 0.05, 0.05, 0.05, 0.05, 0.2],
             stiffness=[1e3] * 6,
             damping=[1e2] * 6,
             force_limit=100,
             use_delta=True,
             use_target=False,
         )
+        gripper_pd_joint_pos = PDJointPosControllerConfig(
+            self.gripper_joint_names,
+            lower=None,
+            upper=None,
+            stiffness=[1e3] * 1,
+            damping=[1e2] * 1,
+            force_limit=100,
+        )
         pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
         pd_joint_target_delta_pos.use_target = True
+
+        gripper_pd_joint_delta_pos = PDJointPosControllerConfig(
+            self.gripper_joint_names,
+            lower=None,
+            upper=None,
+            stiffness=[1e3] * 1,
+            damping=[1e2] * 1,
+            force_limit=100,
+            use_delta=True,
+            use_target=False,
+        )
 
         controller_configs = dict(
             pd_joint_delta_pos=pd_joint_delta_pos,
