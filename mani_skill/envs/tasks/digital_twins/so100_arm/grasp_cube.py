@@ -224,11 +224,8 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         self.remove_object_from_greenscreen(self.cube)
 
         # a hardcoded initial joint configuration for the robot to start from
-        # self.rest_qpos = torch.tensor(
-        #     [0.0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0], device=self.device
-        # )
         self.rest_qpos = torch.tensor(
-            [0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0],
+            [0, 0, 0, np.pi / 2, np.pi / 2, 1.0],
             device=self.device,
         )
         # hardcoded pose for the table that places it such that the robot base is at 0 and on the edge of the table.
@@ -315,7 +312,8 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # update the camera poses before agent actions are executed
         if self.domain_randomization:
             self.camera_mount.set_pose(self.sample_camera_poses(n=self.num_envs))
-            self.scene._gpu_apply_all()
+            if self.gpu_sim_enabled:
+                self.scene._gpu_apply_all()
 
     def _get_obs_agent(self):
         # we remove qvel as koch arm qvel is too noisy to learn from and not implemented.

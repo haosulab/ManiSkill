@@ -32,7 +32,7 @@ class LeRobotRealAgent(BaseRealAgent):
             currently the slowest part of LeRobot for some of the supported motors.
     """
 
-    def __init__(self, robot: Robot, use_cached_qpos: bool = False, **kwargs):
+    def __init__(self, robot: Robot, use_cached_qpos: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._captured_sensor_data = None
         self.real_robot = robot
@@ -70,7 +70,7 @@ class LeRobotRealAgent(BaseRealAgent):
             self.set_target_qpos(target_pos)
             dt_s = time.perf_counter() - start_loop_t
             # TODO use HF busy wait later
-            busy_wait.sleep(1 / freq - dt_s)
+            busy_wait(1 / freq - dt_s)
 
     def capture_sensor_data(self, sensor_names: Optional[List[str]] = None):
         sensor_obs = dict()

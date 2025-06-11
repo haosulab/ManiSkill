@@ -31,7 +31,7 @@ class SO100(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array([0, 2.2, 3.017, -0.25, 0, 0.6044]),
+            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0, 0]),
             pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         ),
         elevated_turn=Keyframe(
@@ -60,8 +60,8 @@ class SO100(BaseAgent):
         # and moving too fast can cause the robot to shake too much and damage the hardware
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            -0.1,
-            0.1,
+            -0.05,
+            0.05,
             stiffness=[1e3] * 6,
             damping=[1e2] * 6,
             force_limit=100,
