@@ -225,7 +225,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
 
         # a hardcoded initial joint configuration for the robot to start from
         self.rest_qpos = torch.tensor(
-            [0, 0, 0, np.pi / 2, np.pi / 2, 1.0],
+            [0, 0, 0, np.pi / 2, np.pi / 2, 0],
             device=self.device,
         )
         # hardcoded pose for the table that places it such that the robot base is at 0 and on the edge of the table.

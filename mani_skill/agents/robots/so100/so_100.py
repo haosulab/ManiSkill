@@ -31,11 +31,7 @@ class SO100(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0, 0]),
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
-        ),
-        elevated_turn=Keyframe(
-            qpos=np.array([0, 2.2, 2.75, -0.25, -np.pi / 2, 1.0]),
+            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0, -1.1]),
             pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
         ),
         zero=Keyframe(
