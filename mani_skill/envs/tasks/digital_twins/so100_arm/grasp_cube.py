@@ -27,6 +27,7 @@ class SO100GraspCubeDomainRandomizationConfig:
     ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
     randomize_robot_color: bool = True
+    randomize_lighting: bool = True
     max_camera_offset: Tuple[float, float, float] = (0.025, 0.025, 0.025)
     """max camera offset from the base camera position in x, y, and z axes"""
     camera_target_noise: float = 1e-6
@@ -95,7 +96,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
                 "No greenscreen overlay path provided, using default overlay"
             )
             greenscreen_overlay_path = os.path.join(
-                os.path.dirname(__file__), "assets/sample_background.png"
+                os.path.dirname(__file__), "assets/greenscreen_background.png"
             )
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
@@ -147,6 +148,19 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         super()._load_agent(
             options, sapien.Pose(p=[0, 0, 0], q=euler2quat(0, 0, np.pi / 2))
         )
+
+    def _load_lighting(self, options: dict):
+        if self.domain_randomization:
+            if self.domain_randomization_config.randomize_lighting:
+                ambient_colors = self._batched_episode_rng.uniform(0.2, 0.5, size=(3,))
+                for i, scene in enumerate(self.scene.sub_scenes):
+                    scene.render_system.ambient_light = ambient_colors[i]
+        else:
+            self.scene.set_ambient_light([0.3, 0.3, 0.3])
+        self.scene.add_directional_light(
+            [1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
+        )
+        self.scene.add_directional_light([0, 0, -1], [1, 1, 1])
 
     def _load_scene(self, options: dict):
         # we use a predefined table scene builder which simply adds a table and floor to the scene
@@ -305,13 +319,14 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
             # randomize the camera poses
-            if self.domain_randomization:
-                self.camera_mount.set_pose(self.sample_camera_poses(n=b))
+            # if self.domain_randomization:
+            self.camera_mount.set_pose(self.sample_camera_poses(n=b))
 
     def _before_control_step(self):
         # update the camera poses before agent actions are executed
         if self.domain_randomization:
             self.camera_mount.set_pose(self.sample_camera_poses(n=self.num_envs))
+            print(self.camera_mount.pose)
             if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
 
