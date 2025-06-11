@@ -51,6 +51,9 @@ class LeRobotRealAgent(BaseRealAgent):
         qpos = common.to_cpu_tensor(qpos).flatten()
         qpos = torch.rad2deg(qpos)
         qpos = {f"{self._motor_keys[i]}.pos": qpos[i] for i in range(len(qpos))}
+        # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
+        if self.real_robot.name == "so100_follower":
+            qpos["elbow_flex.pos"] = qpos["elbow_flex.pos"] + 6.8
         self.real_robot.send_action(qpos)
 
     def reset(self, qpos: Array):
@@ -103,6 +106,10 @@ class LeRobotRealAgent(BaseRealAgent):
         if self.use_cached_qpos and self._cached_qpos is not None:
             return self._cached_qpos.clone()
         qpos_deg = self.real_robot.bus.sync_read("Present_Position")
+
+        # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
+        if self.real_robot.name == "so100_follower":
+            qpos_deg["elbow_flex"] = qpos_deg["elbow_flex"] - 6.8
         if self._motor_keys is None:
             self._motor_keys = list(qpos_deg.keys())
         qpos_deg = common.flatten_state_dict(qpos_deg)
