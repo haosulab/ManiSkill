@@ -498,11 +498,11 @@
     </collision>
   </link>
   <joint
-    name="Jaw"
+    name="gripper"
     type="revolute">
     <origin
       xyz="-0.0202 -0.0244 0"
-      rpy="3.1416 0 3.33" />
+      rpy="0 3.14159 -0.9" />
     <parent
       link="Fixed_Jaw" />
     <child
@@ -510,8 +510,8 @@
     <axis
       xyz="0 0 1" />
     <limit 
-      lower="0"
-      upper="1.7"
+      lower="-1.1"
+      upper="1.1"
       effort="0"
       velocity="0" />
   </joint>

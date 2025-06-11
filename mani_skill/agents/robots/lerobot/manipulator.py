@@ -14,6 +14,7 @@ from mani_skill.utils.structs.types import Array
 
 try:
     from lerobot.common.cameras.camera import Camera
+    from lerobot.common.motors.motors_bus import MotorNormMode
     from lerobot.common.robots.robot import Robot
     from lerobot.common.utils.robot_utils import busy_wait
 except ImportError:
@@ -39,6 +40,9 @@ class LeRobotRealAgent(BaseRealAgent):
         self.use_cached_qpos = use_cached_qpos
         self._cached_qpos = None
         self._motor_keys: List[str] = None
+
+        if self.real_robot.name == "so100_follower":
+            self.real_robot.bus.motors["gripper"].norm_mode = MotorNormMode.DEGREES
 
     def start(self):
         self.real_robot.connect()
