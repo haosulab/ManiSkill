@@ -78,7 +78,7 @@ class Args:
     """how often to reconfigure the environment during training"""
     eval_reconfiguration_freq: Optional[int] = 1
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
-    control_mode: Optional[str] = "pd_joint_delta_pos"
+    control_mode: Optional[str] = None
     """the control mode to use for the environment"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
@@ -306,10 +306,15 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgb+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda",
-                      base_camera_settings=dict(pos=[0.68, 0.35, 0.2861], target=[0.185, -0.135, 0.03], fov=0.61),
-                      greenscreen_overlay_path="greenscreen_background.png",
-                      )
+    env_kwargs = dict(
+        obs_mode="rgb+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda",
+        base_camera_settings=dict(
+            pos=[0.69, 0.37, 0.28],
+            fov=0.8256,
+            target=[0.185, -0.15, 0.0]
+        ),
+        greenscreen_overlay_path="greenscreen_background.png",
+    )
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)

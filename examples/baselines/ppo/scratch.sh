@@ -19,9 +19,9 @@ python ppo_rgb.py --env_id="SO100GraspCube-v1" --seed=${seed} \
 
 
 python ppo_rgb.py --env_id="SO100GraspCube-v1" --seed=${seed} \
-  --num_envs=1024 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+  --num_envs=1024 --num-steps=20 --update_epochs=8 --num_minibatches=32 \
   --total_timesteps=50_000_000 \
-  --num_eval_envs=16 --num-eval-steps=64 \
+  --num_eval_envs=16 --num-eval-steps=80 \
   --cached_resets \
-  --exp-name="scratch/ppo-SO100GraspCube-v1-rgb-${seed}-walltime_efficient-64steps-rewardv3" \
-  --track --wandb_project_name "SO100-ManiSkill"
+  --exp-name="scratch/ppo-SO100GraspCube-v1-rgb-${seed}-walltime_efficient-64steps-rewardv3-realbg-targetcontrolmode" \
+  --track --wandb_project_name "SO100-ManiSkill" --gamma=0.9
