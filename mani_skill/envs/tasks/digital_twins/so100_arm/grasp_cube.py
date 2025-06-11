@@ -158,7 +158,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         else:
             self.scene.set_ambient_light([0.3, 0.3, 0.3])
         self.scene.add_directional_light(
-            [1, 1, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
+            [1, 1, -1], [1, 1, 1], shadow=False, shadow_scale=5, shadow_map_size=2048
         )
         self.scene.add_directional_light([0, 0, -1], [1, 1, 1])
 
@@ -326,7 +326,6 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # update the camera poses before agent actions are executed
         if self.domain_randomization:
             self.camera_mount.set_pose(self.sample_camera_poses(n=self.num_envs))
-            print(self.camera_mount.pose)
             if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
 
@@ -378,7 +377,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         distance_to_rest_qpos = torch.linalg.norm(
             target_qpos[:, :-1] - self.rest_qpos[:-1], axis=-1
         )
-        reached_rest_qpos = distance_to_rest_qpos < 0.1
+        reached_rest_qpos = distance_to_rest_qpos < 0.2
         cube_lifted = self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
         success = cube_lifted & is_grasped & reached_rest_qpos
 
@@ -436,13 +435,13 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # reward += static_reward * info["is_obj_placed"]
         # reward -= 2 * info["touching_table"].float()
 
-        reward[info["success"]] = 5
+        # reward[info["success"]] = 5
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
-        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 3
 
     # def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
 
