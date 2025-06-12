@@ -51,7 +51,7 @@ class StackPyramidEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[-0.5,0.0,0.25], target=[0.2,0.0,-0.5])
+        pose = sapien_utils.look_at(eye=[0.3, 0, 0.4], target=[-0.05, 0, 0.1])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
@@ -143,7 +143,7 @@ class StackPyramidEnv(BaseEnv):
             elif top_or_next == "next_to":
                 is_cubeA_on_cubeB = xy_flag
             else:
-                return NotImplementedError(f"Expect top_or_next to be either 'top' or 'next', got {top_or_next}")
+                return NotImplementedError(f"Expect top_or_next to be either 'top' or 'next_to', got {top_or_next}")
             
             is_cubeA_static = cube_a.is_static(lin_thresh=1e-2, ang_thresh=0.5)
             is_cubeA_grasped = self.agent.is_grasping(cube_a)
