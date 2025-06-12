@@ -64,7 +64,6 @@ class Args:
     """the id of the environment"""
     env_vectorization: str = "gpu"
     """the type of environment vectorization to use"""
-    robot_uids: Optional[str] = None
     num_envs: int = 512
     """the number of parallel environments"""
     num_eval_envs: int = 16
@@ -330,8 +329,6 @@ if __name__ == "__main__":
     env_kwargs = dict(obs_mode="state", render_mode="rgb_array", sim_backend="physx_cuda")
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
-    if args.robot_uids is not None:
-        env_kwargs["robot_uids"] = args.robot_uids
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, human_render_camera_configs=dict(shader_pack="default"), **env_kwargs)
     if isinstance(envs.action_space, gym.spaces.Dict):

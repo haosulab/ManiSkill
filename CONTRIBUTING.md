@@ -66,6 +66,6 @@ python -m twine upload dist/*
 
 ## Adding New Tasks
 
-ManiSkill is built to support building your own custom tasks easily. The documentation on how to use the ManiSkill API to do so is here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/custom_tasks.html
+ManiSkill is built to support building your own custom tasks easily. The documentation on how to use the ManiSkill API to do so is here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/custom_tasks/index.html
 
-We encourage users to either create their own repositories with their own tasks for others to use, or to submit to this ManiSkill repo to be part of the official, *vetted*, task list. For tasks in this repo, we do a number of checks to ensure they are of high quality and are well documented. For detailed information on how to add new tasks, see https://maniskill.readthedocs.io/en/latest/contributing/task.html
+We encourage users to either create their own repositories with their own tasks for others to use, or to submit to this ManiSkill repo to be part of the official, *vetted*, task list. For tasks in this repo, we do a number of checks to ensure they are of high quality and are well documented. For detailed information on how to add new tasks, see https://maniskill.readthedocs.io/en/latest/contributing/tasks.html

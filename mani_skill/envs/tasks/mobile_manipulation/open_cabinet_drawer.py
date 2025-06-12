@@ -131,7 +131,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         model_ids = self._batched_episode_rng.choice(self.all_model_ids)
         link_ids = self._batched_episode_rng.randint(0, 2**31)
 
-        self._cabinets = []
+        self._cabinets: List[Articulation] = []
         handle_links: List[List[Link]] = []
         handle_links_meshes: List[List[trimesh.Trimesh]] = []
         for i, model_id in enumerate(model_ids):
@@ -163,7 +163,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
                     handle_links[-1].append(link)
                     # save the first mesh in the link object that correspond with a handle
                     handle_links_meshes[-1].append(
-                        link.generate_visual_mesh(
+                        link.generate_mesh(
                             filter=lambda _, render_shape: "handle"
                             in render_shape.name,
                             mesh_name="handle",

@@ -557,6 +557,8 @@ def main(args: Args):
         )
 
     else:
+        env_kwargs["num_envs"] = 1
+        ori_env_kwargs["num_envs"] = 1
         if args.num_envs > 1:
             pool = mp.Pool(args.num_envs)
             proc_args = [

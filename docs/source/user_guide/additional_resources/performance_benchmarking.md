@@ -39,41 +39,41 @@ Video of the task above with ManiSkill on top and Isaac Lab below.
 ### State
 
 CartPoleBalance simulation only performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_state.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_state.png
 :::
 
 ### Realistic RGB Camera Setups
 
 The [Open-X](https://robotics-transformer-x.github.io/) and [Droid](https://droid-dataset.github.io/) datasets are two of the largest real-world robotics datasets. Open-X typically has a single 640x480 RGB observation while Droid has 3 320x180 RGB observations. The next 2 figures show the performance of simulators when mimicing the real world camera setups.
 
-:::{figure} benchmarking_results/rtx_4090/fps:rt_dataset_setup_bar.png
+:::{figure} benchmarking_results/rtx_4090/fps_rt_dataset_setup_rgb_bar.png
 :::
 
-:::{figure} benchmarking_results/rtx_4090/fps:droid_dataset_setup_bar.png
+:::{figure} benchmarking_results/rtx_4090/fps_droid_dataset_setup_rgb_bar.png
 :::
 
 ### RGB
 
 CartPoleBalance simulation+rendering (rgb only) performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x512x512_rgb.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_1x512x512_rgb.png
 :::
 
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x256x256_rgb.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_1x256x256_rgb.png
 :::
 
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x128x128_rgb.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_1x128x128_rgb.png
 :::
 
 #### RGB+Depth
 
 CartPoleBalance simulation+rendering (rgb+depth) performance results showing FPS vs number of environments, annotated by GPU memory usage in GB on top of data points.
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x512x512_rgb+depth.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_1x512x512_rgb+depth.png
 :::
 
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x256x256_rgb+depth.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_1x256x256_rgb+depth.png
 :::
 
-:::{figure} benchmarking_results/rtx_4090/fps:num_envs_1x128x128_rgb+depth.png
+:::{figure} benchmarking_results/rtx_4090/fps_num_envs_1x128x128_rgb+depth.png
 :::
 ## Commands for Reproducing the Results
 

@@ -260,6 +260,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def _data_index(self):
+        """
+        Returns a tensor of the indices of the articulation in the GPU simulation for the physx_cuda backend.
+        """
         return torch.tensor(
             [px_articulation.gpu_index for px_articulation in self._objs],
             device=self.device,
@@ -268,6 +271,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     @cached_property
     def fixed_root_link(self):
+        """
+        Returns a boolean tensor of whether the root link is fixed for each parallel articulation
+        """
         return torch.tensor(
             [x.links[0].entity.components[0].joint.type == "fixed" for x in self._objs],
             device=self.device,
@@ -320,19 +326,24 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     #                 g0, g1, g2, g3 = s.get_collision_groups()
     #                 s.set_collision_groups([g0, g1, g2 | (1 << 29), g3])
 
-    def get_first_collision_mesh(self, to_world_frame: bool = True) -> trimesh.Trimesh:
+    def get_first_collision_mesh(
+        self, to_world_frame: bool = True
+    ) -> Union[trimesh.Trimesh, None]:
         """
         Returns the collision mesh of the first managed articulation object. Note results of this are not cached or optimized at the moment
-        so this function can be slow if called too often
+        so this function can be slow if called too often. Some articulations have no collision meshes, in which case this function returns None
 
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
         """
-        return self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+        mesh = self.get_collision_meshes(to_world_frame=to_world_frame, first_only=True)
+        if isinstance(mesh, trimesh.Trimesh):
+            return mesh
+        return None
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> List[trimesh.Trimesh]:
+    ) -> Union[List[trimesh.Trimesh], trimesh.Trimesh]:
         """
         Returns the collision mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -340,7 +351,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         Args:
             to_world_frame (bool): Whether to transform the collision mesh pose to the world frame
             first_only (bool): Whether to return the collision mesh of just the first articulation managed by this object. If True,
-                this also returns a single Trimesh.Mesh object instead of a list
+                this also returns a single Trimesh.Mesh object instead of a list. This can be useful for efficiency reasons if you know
+                ahead of time all of the managed actors have the same collision mesh
         """
         assert (
             not self.merged
@@ -365,9 +377,12 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                         link_mesh.apply_transform(pose.sp.to_transformation_matrix())
                     art_meshes.append(link_mesh)
             mesh = merge_meshes(art_meshes)
-            meshes.append(mesh)
+            if mesh is not None:
+                meshes.append(mesh)
             if first_only:
                 break
+        if len(meshes) == 0:
+            return []
         if first_only:
             return meshes[0]
         return meshes
@@ -557,6 +572,31 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     # def get_gpu_index(self) -> int: ...
     def get_joints(self):
         return self.joints
+
+    def get_link_incoming_joint_forces(self):
+        """
+        Returns the incoming joint forces, referred to as spatial forces, for each link, with shape (N, M, 6), where N is the number of environments and M is the number of links.
+
+        Spatial forces are complex to describe and we recommend you see the physx documentation for how they are computed: https://nvidia-omniverse.github.io/PhysX/physx/5.6.0/docs/Articulations.html#link-incoming-joint-force
+
+        The mth spatial force refers to the mth link, and to find a particular link you can find the Link object first then use it's index attribute.
+
+        link = articulation.links_map[link_name]
+        link_index = link.index
+        link_incoming_joint_force = articulation.get_link_incoming_joint_forces()[:, link_index]
+
+        """
+        if self.scene.gpu_sim_enabled:
+            self.px.gpu_fetch_articulation_link_incoming_joint_forces()
+            # TODO (stao): we should lazy call the GPU data fetching functions in the future if necessarily. Since most users don't use this at the moment
+            # we just fetch it live here instead of with all the other fetch functions
+            return self.px.cuda_articulation_link_incoming_joint_forces.torch()[
+                self._data_index, :
+            ]
+        else:
+            return torch.from_numpy(
+                self._objs[0].get_link_incoming_joint_forces()[None, :]
+            )
 
     def get_links(self):
         return self.links

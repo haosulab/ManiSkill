@@ -1072,10 +1072,16 @@ class BaseEnv(gym.Env):
                 action = common.batch(action)
             self.agent.set_action(action)
             if self._sim_device.is_cuda():
-                if self.agent.controller.sets_target_qpos:
+                if isinstance(self.agent.controller, dict):
+                    # TODO: a small optimization is to cache whether the dict of controllers has any that set qpos/qvel values
+                    # in the BaseAgent/MultiAgent class. Code below just avoids iterating over the dict of controllers each time
                     self.scene.px.gpu_apply_articulation_target_position()
-                if self.agent.controller.sets_target_qvel:
                     self.scene.px.gpu_apply_articulation_target_velocity()
+                else:
+                    if self.agent.controller.sets_target_qpos:
+                        self.scene.px.gpu_apply_articulation_target_position()
+                    if self.agent.controller.sets_target_qvel:
+                        self.scene.px.gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             if self.agent is not None:
