@@ -76,7 +76,6 @@ class LeRobotRealAgent(BaseRealAgent):
 
             self.set_target_qpos(target_pos)
             dt_s = time.perf_counter() - start_loop_t
-            # TODO use HF busy wait later
             busy_wait(1 / freq - dt_s)
 
     def capture_sensor_data(self, sensor_names: Optional[List[str]] = None):

@@ -75,27 +75,9 @@ class SO100(BaseAgent):
             use_delta=True,
             use_target=False,
         )
-        gripper_pd_joint_pos = PDJointPosControllerConfig(
-            self.gripper_joint_names,
-            lower=None,
-            upper=None,
-            stiffness=[1e3] * 1,
-            damping=[1e2] * 1,
-            force_limit=100,
-        )
+
         pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
         pd_joint_target_delta_pos.use_target = True
-
-        gripper_pd_joint_delta_pos = PDJointPosControllerConfig(
-            self.gripper_joint_names,
-            lower=None,
-            upper=None,
-            stiffness=[1e3] * 1,
-            damping=[1e2] * 1,
-            force_limit=100,
-            use_delta=True,
-            use_target=False,
-        )
 
         controller_configs = dict(
             pd_joint_delta_pos=pd_joint_delta_pos,
@@ -194,7 +176,5 @@ class SO100(BaseAgent):
         return torch.logical_and(lflag, rflag)
 
     def is_static(self, threshold=0.2):
-        qvel = self.robot.get_qvel()[
-            :, :-2
-        ]  # exclude the gripper joint and gripper rotation joint.
+        qvel = self.robot.get_qvel()[:, :-1]  # exclude the gripper joint
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
