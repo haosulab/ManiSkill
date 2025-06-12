@@ -313,7 +313,7 @@ if __name__ == "__main__":
             fov=0.8256,
             target=[0.185, -0.15, 0.0]
         ),
-        greenscreen_overlay_path="greenscreen_background.png",
+        greenscreen_overlay_path="backgrounds/greenscreen_background_1.png",
     )
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode

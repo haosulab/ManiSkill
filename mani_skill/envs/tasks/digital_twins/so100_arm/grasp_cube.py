@@ -307,7 +307,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             )
 
             # initialize the cube at a random position and rotation around the z-axis
-            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.25, 0, 0])
+            # spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.3, 0, 0])
+            # if camera is on left of robot, favor placing cubes on the left side so camera can see it.
+            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.3, 0.05, 0])
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = (
                 torch.rand((b, 2)) * self.spawn_box_half_size * 2
