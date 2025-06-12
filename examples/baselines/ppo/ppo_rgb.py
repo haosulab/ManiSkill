@@ -68,8 +68,6 @@ class Args:
     """whether to let parallel environments reset upon termination instead of truncation"""
     eval_partial_reset: bool = False
     """whether to let parallel evaluation environments reset upon termination instead of truncation"""
-    cached_resets: bool = False
-    """whether to cache resets, which reduces the data diversity as we use a fixed set of env states to train from but improves walltime by ensuring we don't spend time sampling new states during resets"""
     num_steps: int = 50
     """the number of steps to run in each environment per policy rollout"""
     num_eval_steps: int = 50

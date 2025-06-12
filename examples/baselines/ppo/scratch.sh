@@ -93,3 +93,39 @@ python ppo_rgb.py --env_id="SO100GraspCube-v1" --seed=${seed} \
   --num_eval_envs=16 --num-eval-steps=64 \
   --exp-name="scratch/ppo-SO100GraspCube-v1-rgb-${seed}-walltime_efficient-rewardv4-daytimebg" \
   --track --wandb_project_name "SO100-ManiSkill" --gamma=0.9 --no-partial-reset
+
+
+# best working commit: 11b6d8077491f5716f9b92460de037d8487e5b3d
+python ppo_rgb.py --env_id="SO100GraspCube-v1" --seed=${seed} \
+  --num_envs=1024 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=100_000_000 \
+  --num_eval_envs=16 --num-eval-steps=64 \
+  --exp-name="scratch/ppo-SO100GraspCube-v1-rgb-${seed}-walltime_efficient-rewardv4-daytimebg-leftsidebias" \
+  --track --wandb_project_name "SO100-ManiSkill" --gamma=0.9 --no-partial-reset
+
+# 4 deg fov randomization, target pos randomizes +- 1e-2meters
+python ppo_rgb.py --env_id="SO100GraspCube-v1" --seed=${seed} \
+  --num_envs=1024 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=100_000_000 \
+  --num_eval_envs=16 --num-eval-steps=64 \
+  --exp-name="scratch/ppo-SO100GraspCube-v1-rgb-${seed}-walltime_efficient-rewardv4-daytimebg-leftsidebias-rand2" \
+  --track --wandb_project_name "SO100-ManiSkill" --gamma=0.9 --no-partial-reset
+
+
+# 4 deg fov randomization, target pos randomizes +- 1e-2meters, no touching table penalty
+tcp_to_obj_dist = torch.linalg.norm(
+    self.cube.pose.p - self.agent.tcp_pose.p, axis=1
+)
+reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+reward = reaching_reward
+reward += info["is_grasped"]
+place_reward = torch.exp(-2 * info["distance_to_rest_qpos"])
+reward += place_reward * is_grasped
+reward -= 2 * info["touching_table"].float()
+
+python ppo_rgb.py --env_id="SO100GraspCube-v1" --seed=${seed} \
+  --num_envs=1024 --num-steps=16 --update_epochs=8 --num_minibatches=32 \
+  --total_timesteps=100_000_000 \
+  --num_eval_envs=16 --num-eval-steps=64 \
+  --exp-name="scratch/ppo-SO100GraspCube-v1-rgb-${seed}-walltime_efficient-rewardv4-daytimebg-leftsidebias-rand2-notouchingtable" \
+  --track --wandb_project_name "SO100-ManiSkill" --gamma=0.9 --no-partial-reset

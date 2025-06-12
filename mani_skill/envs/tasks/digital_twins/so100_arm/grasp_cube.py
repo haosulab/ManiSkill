@@ -30,11 +30,11 @@ class SO100GraspCubeDomainRandomizationConfig:
     randomize_lighting: bool = True
     max_camera_offset: Tuple[float, float, float] = (0.025, 0.025, 0.025)
     """max camera offset from the base camera position in x, y, and z axes"""
-    camera_target_noise: float = 1e-6
+    camera_target_noise: float = 1e-2
     """scale of noise added to the camera target position"""
     camera_view_rot_noise: float = 5e-3
     """scale of noise added to the camera view rotation"""
-    camera_fov_noise: float = np.deg2rad(2)
+    camera_fov_noise: float = np.deg2rad(4)
     """scale of noise added to the camera fov"""
 
     ### task-specific related domain randomizations that occur during scene loading ###
@@ -435,7 +435,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         #     qvel = qvel[..., :-1]
         # static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
         # reward += static_reward * info["is_obj_placed"]
-        # reward -= 2 * info["touching_table"].float()
+        reward -= 2 * info["touching_table"].float()
 
         # reward[info["success"]] = 5
         return reward
