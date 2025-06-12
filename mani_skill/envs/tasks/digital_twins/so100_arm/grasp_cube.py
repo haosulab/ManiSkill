@@ -49,16 +49,14 @@ class SO100GraspCubeDomainRandomizationConfig:
 class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     """
     **Task Description:**
-    A simple task where the objective is to grasp a cube with the Koch arm and bring it up to a target rest pose.
+    A simple task where the objective is to grasp a cube with the SO100 arm and bring it up to a target rest pose.
 
     **Randomizations:**
-    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+    - the cube's xy position is randomized on top of a table in a region of size [0.2, 0.2] x [-0.2, -0.2]. It is placed flat on the table
     - the cube's z-axis rotation is randomized to a random angle
-    - the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
 
     **Success Conditions:**
-    - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
-    - the robot is static (q velocity < 0.2)
+    - the cube is lifted, grasped, and the robot returns to a rest pose above the surface of the table
     """
 
     # _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
@@ -144,7 +142,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         )
 
     def _load_agent(self, options: dict):
-        # load the koch arm at this initial pose
+        # load the robot arm at this initial pose
         super()._load_agent(
             options, sapien.Pose(p=[0, 0, 0], q=euler2quat(0, 0, np.pi / 2))
         )
@@ -230,6 +228,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             cube = builder.build(name=f"cube-{i}")
             cubes.append(cube)
             self.remove_from_state_dict_registry(cube)
+
+        # since we are building many different cubes but simulating in parallel, we need to merge them into a single actor
+        # so we can access each different cube's information with a single object
         self.cube = Actor.merge(cubes, name="cube")
         self.add_to_state_dict_registry(self.cube)
 
@@ -247,7 +248,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             p=[-0.12 + 0.737, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
         )
 
-        # we build a bunch of camera mounts to put cameras on which let us randomize camera poses at each timestep
+        # we build a 3rd-view camera mount to put cameras on which let us randomize camera poses at each timestep
         builder = self.scene.create_actor_builder()
         builder.initial_pose = sapien.Pose()
         self.camera_mount = builder.build_kinematic("camera_mount")
@@ -321,7 +322,6 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
             # randomize the camera poses
-            # if self.domain_randomization:
             self.camera_mount.set_pose(self.sample_camera_poses(n=b))
 
     def _before_control_step(self):
@@ -332,7 +332,8 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
                 self.scene._gpu_apply_all()
 
     def _get_obs_agent(self):
-        # we remove qvel as koch arm qvel is too noisy to learn from and not implemented.
+        # the default get_obs_agent function in ManiSkill records qpos and qvel. However
+        # SO100 arm qvel are likely too noisy to learn from and not implemented.
         obs = dict(qpos=self.agent.robot.get_qpos())
         controller_state = self.agent.controller.get_state()
         if len(controller_state) > 0:
@@ -342,48 +343,39 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     def _get_obs_extra(self, info: Dict):
         # we ensure that the observation data is always retrievable in the real world, using only real world
         # available data (joint positions or the controllers target joint positions in this case).
-        self.agent.controller._target_qpos.clone()
-        # is_grasped = (
-        #     (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.05
-        # ).float() * (target_qpos[..., -1] < 0.55)
-        # print(info["is_grasped"], self.agent.robot.qpos[..., -1] - target_qpos[..., -1])
-        # print(self.agent.robot.qpos[..., -1], target_qpos[..., -1])
         obs = dict(
             dist_to_rest_qpos=self.agent.controller._target_qpos[:, :-1]
             - self.rest_qpos[:-1],
-            # is_grasped=is_grasped,
         )
         if self.obs_mode_struct.state:
             # state based policies can gain access to more information that helps learning
             obs.update(
-                # is_grasped=is_grasped,
+                is_grasped=info["is_grasped"],
                 obj_pose=self.cube.pose.raw_pose,
                 tcp_pos=self.agent.tcp_pos,
                 tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp_pos,
             )
         return obs
 
-    # TODO (stao, xander): clean up the evaluate function and reward functions and annotate them to explain why we write those lines
     def evaluate(self):
+        # evaluation function to generate some useful metrics/flags and evaluate the success of the task
 
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.agent.tcp_pos,
             axis=-1,
         )
-        reached_object = tcp_to_obj_dist < 0.03  # half size of cube
+        reached_object = tcp_to_obj_dist < 0.03
         is_grasped = self.agent.is_grasping(self.cube)
+
         target_qpos = self.agent.controller._target_qpos.clone()
-        pseudo_is_grasped = (
-            (self.agent.robot.qpos[..., -1] - target_qpos[..., -1]) >= 0.02
-        ).float() * (target_qpos[..., -1] < 0.55)
         distance_to_rest_qpos = torch.linalg.norm(
             target_qpos[:, :-1] - self.rest_qpos[:-1], axis=-1
         )
         reached_rest_qpos = distance_to_rest_qpos < 0.2
-        cube_lifted = self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
-        success = cube_lifted & is_grasped & reached_rest_qpos
 
-        ### determine failure conditions ###
+        cube_lifted = self.cube.pose.p[..., -1] >= (self.cube_half_sizes + 1e-3)
+
+        success = cube_lifted & is_grasped & reached_rest_qpos
 
         # determine if robot is touching the table. for safety reasons we want the robot to avoid hitting the table when grasping the cube
         l_contact_forces = self.scene.get_pairwise_contact_forces(
@@ -400,121 +392,34 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         )
         return {
             "is_grasped": is_grasped,
-            "pseudo_is_grasped": pseudo_is_grasped,
             "reached_object": reached_object,
             "distance_to_rest_qpos": distance_to_rest_qpos,
             "touching_table": touching_table,
             "cube_lifted": cube_lifted,
-            # "fail": fail,
             "success": success,
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        # note the info object is the data returned by the evaluate function. We can reuse information
+        # to save compute time.
+        # this reward function essentially has two stages, before and after grasping.
+        # in stage 1 we reward the robot for reaching the object and grasping it.
+        # in stage 2 if the robot is grasping the object, we reward it for controlling the robot returning to the predefined rest pose.
+        # in all stages we penalize the robot for touching the table.
+        # this reward function is very simple and can easily be improved to learn more robust behaviors or solve more complex problems.
+
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.agent.tcp_pose.p, axis=1
         )
         reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-        reward = reaching_reward
-
-        is_grasped = info["is_grasped"]
-        reward += is_grasped
-
-        # reward += info["cube_lifted"] * is_grasped
-
-        # obj_to_goal_dist = torch.linalg.norm(
-        #     self.goal_site.pose.p - self.cube.pose.p, axis=1
-        # )
-        # place_reward = 1 - torch.tanh(5 * info["distance_to_rest_qpos"])
+        reward = reaching_reward + info["is_grasped"]
         place_reward = torch.exp(-2 * info["distance_to_rest_qpos"])
-        reward += place_reward * is_grasped  # * info["cube_lifted"]
-
-        # qvel = self.agent.robot.get_qvel()
-        # if self.robot_uids == "panda":
-        #     qvel = qvel[..., :-2]
-        # elif self.robot_uids == "so100":
-        #     qvel = qvel[..., :-1]
-        # static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
-        # reward += static_reward * info["is_obj_placed"]
+        reward += place_reward * info["is_grasped"]
         reward -= 2 * info["touching_table"].float()
-
-        # reward[info["success"]] = 5
         return reward
 
     def compute_normalized_dense_reward(
         self, obs: Any, action: torch.Tensor, info: Dict
     ):
+        # for more stable RL we often also permit defining a noramlized reward function where you manually scale the reward down by its max value like so
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 3
-
-    # def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-
-    #     # Stage 1, reach the object with a wide grasp
-    #     tcp_to_obj_dist = torch.linalg.norm(
-    #         self.cube.pose.p - self.agent.tcp_pos,
-    #         axis=-1,
-    #     )
-    #     reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
-    #     reached_object = tcp_to_obj_dist < 0.04
-
-    #     open_gripper_pos = self.rest_qpos[
-    #         -1
-    #     ]  # keep gripper at starting keyframe position
-    #     to_open_gripper_dist = (open_gripper_pos - self.agent.robot.qpos[..., -1]).abs()
-    #     open_gripper_reward = 1 - torch.tanh(to_open_gripper_dist * 4)
-    #     reward = reaching_reward + open_gripper_reward
-    #     stage_1_passed = reached_object
-
-    #     # Stage 2, close the gripper, grasp the object around the right place
-    #     is_grasped = info["is_grasped"]
-    #     # close_gripper_pos = 0.2
-    #     # to_close_gripper_dist = (close_gripper_pos - self.agent.robot.qpos[..., -1]).abs()
-    #     to_close_gripper_dist = torch.linalg.norm(
-    #         self.agent.finger1_tip.pose.p - self.cube.pose.p,
-    #         axis=-1,
-    #     ) + torch.linalg.norm(
-    #         self.agent.finger2_tip.pose.p - self.cube.pose.p,
-    #         axis=-1,
-    #     )
-    #     close_gripper_reward = 1 - torch.tanh(to_close_gripper_dist * 3)
-    #     reward[stage_1_passed] = (
-    #         1.0 + (reaching_reward + is_grasped + close_gripper_reward)[stage_1_passed]
-    #     )
-    #     stage_2_passed = is_grasped * stage_1_passed
-
-    #     # # Stage 3, lift the cube off the table
-    #     # cube_lifted = info["cube_lifted"]
-    #     # reward[stage_2_passed] = 6.0 + (cube_lifted.float())[stage_2_passed]
-    #     # stage_3_passed = cube_lifted * stage_2_passed
-
-    #     # Stage 4, return to rest position
-    #     per_joint_return_to_rest_reward = (
-    #         1
-    #         - torch.tanh(
-    #             2
-    #             * (
-    #                 self.agent.controller._target_qpos[:, :-1] - self.rest_qpos[:-1]
-    #             ).abs()
-    #         )
-    #     ).sum(dim=-1) / self.rest_qpos[:-1].shape[-1]
-    #     reward[stage_2_passed] = (
-    #         4.0
-    #         + (
-    #             (1 - torch.tanh(4 * info["distance_to_rest_qpos"]))
-    #             + 2 * per_joint_return_to_rest_reward
-    #         )[stage_2_passed]
-    #     )
-
-    #     reward[info["success"]] = 8
-
-    #     # rest is some general penalties and failure modes
-    #     # penalize for touching table
-    #     reward -= 2.0 * info["touching_table"].float()
-    #     # if the robot closes the gripper before reaching the object, it is a failure
-    #     # closed_gripper_too_early = (((self.rest_qpos[-1] - self.agent.robot.qpos[..., -1]).abs()) > 0.1) & ~reached_object
-    #     # reward[closed_gripper_too_early] -= -2.0
-
-    #     return reward
-
-    # def compute_normalized_dense_reward(
-    #     self, obs: Any, action: torch.Tensor, info: Dict
-    # ):
-    #     return self.compute_dense_reward(obs=obs, action=action, info=info) / 8
