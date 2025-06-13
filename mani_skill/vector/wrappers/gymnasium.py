@@ -6,8 +6,8 @@ import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils.structs.types import Array
 from mani_skill.utils.common import torch_clone_dict
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
