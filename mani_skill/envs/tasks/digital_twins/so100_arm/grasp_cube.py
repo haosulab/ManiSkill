@@ -29,11 +29,11 @@ class SO100GraspCubeDomainRandomizationConfig:
     randomize_lighting: bool = True
     max_camera_offset: Tuple[float, float, float] = (0.025, 0.025, 0.025)
     """max camera offset from the base camera position in x, y, and z axes"""
-    camera_target_noise: float = 1e-2
+    camera_target_noise: float = 1e-3
     """scale of noise added to the camera target position"""
     camera_view_rot_noise: float = 5e-3
     """scale of noise added to the camera view rotation"""
-    camera_fov_noise: float = np.deg2rad(4)
+    camera_fov_noise: float = np.deg2rad(2)
     """scale of noise added to the camera fov"""
 
     ### task-specific related domain randomizations that occur during scene loading ###
