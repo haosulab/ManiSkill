@@ -47,7 +47,7 @@ class Sim2RealEnv(gym.Env):
 
     def __init__(
         self,
-        sim_env: BaseEnv,
+        sim_env: gym.Env,
         agent: BaseRealAgent,
         obs_mode: str = "rgb",
         real_reset_function: Optional[
@@ -63,13 +63,13 @@ class Sim2RealEnv(gym.Env):
         self.sim_env = sim_env
         self.num_envs = 1
         assert (
-            self.sim_env.backend.sim_backend == "physx_cpu"
+            self.sim_env.unwrapped.backend.sim_backend == "physx_cpu"
         ), "For the Sim2RealEnv we expect the simulation to be using the physx_cpu simulation backend currently in order to correctly align the robot"
 
         # copy over some sim parameters/settings
-        self.device = self.sim_env.backend.device
-        self.sim_freq = self.sim_env.sim_freq
-        self.control_freq = self.sim_env.control_freq
+        self.device = self.sim_env.unwrapped.backend.device
+        self.sim_freq = self.sim_env.unwrapped.sim_freq
+        self.control_freq = self.sim_env.unwrapped.control_freq
 
         # control timing
         self.control_dt = 1 / self.control_freq
