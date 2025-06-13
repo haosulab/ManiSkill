@@ -1,28 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
 from gymnasium.vector import VectorEnv
 
-from mani_skill.utils import common, tree
 from mani_skill.utils.common import torch_clone_dict
-from mani_skill.utils.structs.types import Array, Device
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.sapien_env import BaseEnv
-
-
-@dataclass
-class CachedResetsConfig:
-    num_resets: Optional[int] = None
-    """The number of reset states to cache. If none it will cache `num_envs` number of reset states."""
-    device: Optional[Device] = None
-    """The device to cache the reset states on. If none it will use the base environment's device."""
-    seed: Optional[int] = None
-    """The seed to use for generating the cached reset states."""
 
 
 class ManiSkillVectorEnv(VectorEnv):
@@ -30,9 +18,6 @@ class ManiSkillVectorEnv(VectorEnv):
     Gymnasium Vector Env implementation for ManiSkill environments running on the GPU for parallel simulation and optionally parallel rendering
 
     Note that currently this also assumes modeling tasks as infinite horizon (e.g. terminations is always False, only reset when timelimit is reached)
-
-    This class should almost always be the final wrapper applied to any environment that inherits gym.Env or gym.Wrapper. VectorEnvWrappers can be applied
-    after this one but you should be careful as wrappers can easily get complex and difficult to debug.
 
     Args:
         env: The environment created via gym.make / after wrappers are applied. If a string is given, we use gym.make(env) to create an environment
@@ -46,10 +31,6 @@ class ManiSkillVectorEnv(VectorEnv):
             stops only due to the timelimit.
         record_metrics (bool): If True, the returned info objects will contain the metrics: return, length, success_once, success_at_end, fail_once, fail_at_end.
             success/fail metrics are recorded only when the environment has success/fail criteria. success/fail_at_end are recorded only when ignore_terminations is True.
-        cached_resets (bool): If True, the wrapper will cache the reset options and use them to reset the environment. This is useful for environments that
-            have slower resets due to e.g. generating images, or slow operations to compute new initial poses of objects, or if you need to often reset just a
-            few parallel environments instead of all of them and need this to run faster.
-        cached_resets_config (dict): Configuration for the cached resets. Only used if cached_resets is True.
     """
 
     def __init__(
@@ -59,8 +40,6 @@ class ManiSkillVectorEnv(VectorEnv):
         auto_reset: bool = True,
         ignore_terminations: bool = False,
         record_metrics: bool = False,
-        cached_resets: bool = False,
-        cached_resets_config: CachedResetsConfig = CachedResetsConfig(),
         **kwargs,
     ):
         if isinstance(env, str):
@@ -93,51 +72,6 @@ class ManiSkillVectorEnv(VectorEnv):
                 self.num_envs, device=self.base_env.device, dtype=torch.float32
             )
 
-        # reset caching
-        self.cached_resets = cached_resets
-        self.cached_resets_config = cached_resets_config
-        if self.cached_resets:
-            if self.cached_resets_config.num_resets is None:
-                self.cached_resets_config.num_resets = 16384
-            count = 0
-            self._cached_resets_env_states = []
-            self._cached_resets_obs_buffer = []
-            while count < self.cached_resets_config.num_resets:
-                obs, _ = self._env.reset(
-                    seed=self.cached_resets_config.seed,
-                    options=dict(
-                        env_idx=torch.arange(
-                            0,
-                            min(
-                                self.cached_resets_config.num_resets - count,
-                                self.num_envs,
-                            ),
-                            device=self.device,
-                        )
-                    ),
-                )
-                state = self._env.get_state()
-                if self.cached_resets_config.num_resets - count < self.num_envs:
-                    obs = tree.slice(
-                        obs, slice(0, self.cached_resets_config.num_resets - count)
-                    )
-                    state = tree.slice(
-                        state, slice(0, self.cached_resets_config.num_resets - count)
-                    )
-                self._cached_resets_obs_buffer.append(
-                    common.to_tensor(obs, device=self.cached_resets_config.device)
-                )
-                self._cached_resets_env_states.append(
-                    common.to_tensor(state, device=self.cached_resets_config.device)
-                )
-                count += len(state)
-            self._cached_resets_env_states = tree.cat(self._cached_resets_env_states)
-            self._cached_resets_obs_buffer = tree.cat(self._cached_resets_obs_buffer)
-            self._last_obs = tree.slice(
-                self._cached_resets_obs_buffer,
-                torch.arange(0, self.num_envs, device=self.device),
-            )
-
     @property
     def device(self):
         return self.base_env.device
@@ -156,40 +90,7 @@ class ManiSkillVectorEnv(VectorEnv):
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = dict(),
     ):
-        if self.cached_resets:
-            if "env_idx" in options:
-                env_idx = options["env_idx"]
-            else:
-                env_idx = torch.arange(0, self.num_envs, device=self.device)
-            sampled_ids = torch.randint(
-                0,
-                len(self._cached_resets_env_states),
-                size=(len(env_idx),),
-                device=self.device,
-            )
-            obs = self._last_obs
-            tree.replace(
-                obs, env_idx, tree.slice(self._cached_resets_obs_buffer, sampled_ids)
-            )
-            state = tree.slice(self._cached_resets_env_states, sampled_ids)
-            # TODO (move this to maniskill base env, it walways updates if reset chagnes)
-            self.base_env.scene._reset_mask[:] = False
-            self.base_env.scene._reset_mask[env_idx] = True
-            self.base_env._elapsed_steps[env_idx] = 0
-            self.base_env._clear_sim_state()
-            self.base_env.agent.reset()
-            self._env.set_state(state, env_idx)
-            self.base_env.scene._reset_mask[:] = True
-            # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
-            if self.base_env.agent is not None:
-                if isinstance(self.base_env.agent.controller, dict):
-                    for controller in self.base_env.agent.controller.values():
-                        controller.reset()
-                else:
-                    self.base_env.agent.controller.reset()
-            info = {}
-        else:
-            obs, info = self._env.reset(seed=seed, options=options)
+        obs, info = self._env.reset(seed=seed, options=options)
         if "env_idx" in options:
             env_idx = options["env_idx"]
             mask = torch.zeros(self.num_envs, dtype=bool, device=self.base_env.device)
@@ -203,16 +104,13 @@ class ManiSkillVectorEnv(VectorEnv):
                 self.success_once[:] = False
                 self.fail_once[:] = False
                 self.returns[:] = 0
-        if self.cached_resets:
-            self._last_obs = obs
         return obs, info
 
     def step(
         self, actions: Union[Array, Dict]
     ) -> Tuple[Array, Array, Array, Array, Dict]:
         obs, rew, terminations, truncations, infos = self._env.step(actions)
-        if self.cached_resets:
-            self._last_obs = obs
+
         if self.record_metrics:
             episode_info = dict()
             self.returns += rew
@@ -257,9 +155,6 @@ class ManiSkillVectorEnv(VectorEnv):
             infos["_final_observation"] = dones
             infos["_elapsed_steps"] = dones
             # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
-
-        if self.cached_resets:
-            self._last_obs = obs
         return obs, rew, terminations, truncations, infos
 
     def close(self):
