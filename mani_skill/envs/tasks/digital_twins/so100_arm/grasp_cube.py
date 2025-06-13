@@ -103,14 +103,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             *args, robot_uids=robot_uids, control_mode=control_mode, **kwargs
         )
 
-    def default_sim_config(self):
-        return SimConfig(
-            sim_freq=120,
-            control_freq=30,
-            gpu_memory_config=GPUMemoryConfig(
-                max_rigid_contact_count=2**22, max_rigid_patch_count=2**21
-            ),
-        )
+    @property
+    def _default_sim_config(self):
+        return SimConfig(sim_freq=120, control_freq=30)
 
     @property
     def _default_sensor_configs(self):
