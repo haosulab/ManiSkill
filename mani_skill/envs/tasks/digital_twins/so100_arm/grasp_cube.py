@@ -105,7 +105,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
 
     @property
     def _default_sim_config(self):
-        return SimConfig(sim_freq=120, control_freq=30)
+        return SimConfig(sim_freq=100, control_freq=20)
 
     @property
     def _default_sensor_configs(self):
