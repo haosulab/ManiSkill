@@ -1,6 +1,8 @@
 # Sim2Real Env Design
 
-## 1 | Create the Sim Environment for Sim2Real
+WIP
+
+<!-- ## 1 | Create the Sim Environment for Sim2Real
 
 This is possibly the hardest part because not everything in the real world can be simulated to begin with. To limit the scope we will only focus on rigid-body physics (which do cover a significant number of common robotics tasks). Moreover for this sim2real tutorial we will be using a green-screening approach to mitigate part of the vision gap between simulation and real world although for more advanced use cases you might not need it.
 
@@ -80,4 +82,4 @@ When it comes to designing a reward function for manipulation tasks a common app
 3. Lift the cube up
 4. Move the cube to some target location.
 
-
+ -->
