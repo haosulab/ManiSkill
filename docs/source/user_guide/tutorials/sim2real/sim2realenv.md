@@ -1,8 +1,5 @@
 # Sim2RealEnv
 
-
-## Sim2RealEnv Class
-
 The `Sim2RealEnv` class is a gymnasium interface for the real world robot.
 
 The goal of the `Sim2RealEnv` class is to avoid manually writing too much code to ensure aspects like controller code or sensor image resolution/shapes are aligned with the simulation. The `Sim2RealEnv` class inspects a given simulation environment and automatically tries to setup the real environment to be as similar as possible. It will also perform some automated checks to ensure that the real environment's robot and sensors are correctly configured. This will ensure that the real environment uses the same exact action space and robot controller as the simulation environment, and ensure the observations are the same shape and order (it does not guarantee real-world images match the fidelity of simulation images). Moreover the `Sim2RealEnv` class will also follow the Gymnasium interface so it can be used similar to a simulation environment. Code shown hides some of the real robot code setup for brevity.
@@ -20,9 +17,11 @@ real_env = Sim2RealEnv(sim_env=sim_env, agent=real_agent)
 # that are not accessible in the real world
 # the two observations should be identical
 sim_obs, _ = sim_env.reset(seed=0)
+real_obs, _ = real_env.reset(seed=0)
+
 # real resets by default will prompt user to reset the real world first before continuing
 # the robot by default will reset to whatever joint position the sim env samples
-real_obs, _ = real_env.reset(seed=0)
+
 done = False
 while not done:
     action = real_env.action_space.sample()
