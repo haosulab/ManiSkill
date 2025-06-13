@@ -1,7 +1,6 @@
 import time
 from typing import Any, Callable, Dict, List, Optional
 
-import cv2
 import gymnasium as gym
 import numpy as np
 import torch
@@ -350,6 +349,8 @@ class Sim2RealEnv(gym.Env):
     def preprocess_sensor_data(
         self, sensor_data: Dict, sensor_names: Optional[List[str]] = None
     ):
+        import cv2
+
         if sensor_names is None:
             sensor_names = list(sensor_data.keys())
         for sensor_name in sensor_names:
