@@ -44,6 +44,7 @@ class Sim2RealEnv(gym.Env):
 
         skip_data_checks (bool): If False, this will reset the sim and real environments once to check if observations are aligned. It is recommended
             to keep this False.
+        control_freq (Optional[int]): The control frequency of the real robot. By default this is None and we use the same control frequency as the simulation environment.
 
     """
 
@@ -59,6 +60,7 @@ class Sim2RealEnv(gym.Env):
         sensor_data_preprocessing_function: Optional[Callable[[Dict], Dict]] = None,
         render_mode: Optional[str] = "sensors",
         skip_data_checks: bool = False,
+        control_freq: Optional[int] = None,
     ):
         self.sim_env = sim_env
         self.num_envs = 1
@@ -69,7 +71,7 @@ class Sim2RealEnv(gym.Env):
         # copy over some sim parameters/settings
         self.device = self.sim_env.unwrapped.backend.device
         self.sim_freq = self.sim_env.unwrapped.sim_freq
-        self.control_freq = self.sim_env.unwrapped.control_freq
+        self.control_freq = control_freq or self.sim_env.unwrapped.control_freq
 
         # control timing
         self.control_dt = 1 / self.control_freq
