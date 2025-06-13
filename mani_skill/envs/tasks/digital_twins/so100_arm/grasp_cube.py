@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
@@ -91,14 +90,16 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
 
         if greenscreen_overlay_path is None:
             logger.warning(
-                "No greenscreen overlay path provided, using default overlay"
+                "No greenscreen overlay path provided, no greenscreen will be used"
             )
-            greenscreen_overlay_path = os.path.join(
-                os.path.dirname(__file__), "assets/greenscreen_background.png"
-            )
+            self.rgb_overlay_mode = "none"
+            # greenscreen_overlay_path = os.path.join(
+            #     os.path.dirname(__file__), "assets/greenscreen_background.png"
+            # )
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
-        self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
+        else:
+            self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
         super().__init__(
             *args, robot_uids=robot_uids, control_mode=control_mode, **kwargs
         )
