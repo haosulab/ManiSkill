@@ -1,66 +1,4 @@
-# Part 1: Setting up Environments
-
-The setup tutorial will guide you through the process of setting up both a simulation environment for training and how to easily convert it to a gym environment that interfaces with a real robot and sensors. A pre-requisite to making sim2real environments in this tutorial is to first learn how to create simulation tasks in the [custom tasks tutorial](../custom_tasks/intro.md). If you are interested in simply using pre-built simulated environments + robots and doing training to test the sim2real pipeline, then we recommend you at least read the high level overview below and then skip to [Part 2 of the tutorial on the vision based RL training](./training.md).
-
-
-We first describe at a high-level some of the features of the {py:class}`mani_skill.envs.sim2real_env.Sim2RealEnv` class that we provide that helps streamline the process of creating sim2real environments. Then the full tutorial will give examples and step-by-step instructions on how to make your own Sim2Real environments using the[LeRobot](https://github.com/huggingface/lerobot) system for easy robot/sensor setups.
-
-
-## High Level Overview
-
-The goal of the `Sim2RealEnv` class is to avoid manually writing too much code to ensure aspects like controller code or sensor image resolution/shapes are aligned with the simulation. The `Sim2RealEnv` class inspects a given simulation environment and automatically tries to setup the real environment to be as similar as possible. It will also perform some automated checks to ensure that the real environment's robot and sensors are correctly configured. This will ensure that the real environment uses the same exact action space and robot controller as the simulation environment, and ensure the observations are the same shape and order (it does not guarantee real-world images match the lower fidelity of simulation images). Moreover the `Sim2RealEnv` class will also follow the Gymnasium interface so it can be used similar to a simulation environment. Code shown hides some of the real robot code setup for brevity, but will be explained in full at the start of the tutorial (next section).
-
-
-```python
-import gymnasium as gym
-from mani_skill.envs.sim2real_env import Sim2RealEnv
-sim_env = gym.make("YourEnvironment", obs_mode="rgb")
-# setup the real robot and sensors/cameras
-real_agent = LeRobotAgent(**config)
-# create a real world interface based on the sim env and real robot
-real_env = Sim2RealEnv(sim_env=sim_env, agent=real_agent) 
-# assuming sim env does not generate any observations 
-# that are not accessible in the real world
-# the two observations should be identical
-sim_obs, _ = sim_env.reset(seed=0)
-# real resets by default will prompt user to reset the real world first before continuing
-# the robot by default will reset to whatever joint position the sim env samples
-real_obs, _ = real_env.reset(seed=0)
-done = False
-while not done:
-    action = real_env.action_space.sample()
-    real_obs, _, terminated, truncated, info = real_env.step(action)
-    done = terminated or truncated
-sim_env.close()
-real_env.close()
-```
-
-For those familiar with Gymnasium/Reinforcement Learning (RL), we also support simulation wrappers on real environments. In order to re-use the wrappers you may have used for RL training in simulation, you simply apply those wrappers to the `sim_env` before passing it into the `Sim2RealEnv` constructor. A common wrapper is the [FlattenRGBDObservationWrapper](../wrappers/flatten.md#flatten-rgbd-observations) which flattens the observation space to a dictionary with a "state" key and a "rgb" and/or "depth" key. The example below will show how to apply the wrapper and then create a real environment interface and print the observation data/shapes.
-
-```python
-from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
-sim_env = gym.make("YourEnvironment", obs_mode="rgb")
-real_agent = LeRobotAgent(**config)
-sim_env = FlattenRGBDObservationWrapper(sim_env)
-real_env = Sim2RealEnv(sim_env=sim_env, agent=real_agent)
-
-sim_obs, _ = sim_env.reset()
-real_obs, _ = real_env.reset()
-for k in sim_obs.keys():
-    print(
-        f"{k}: sim_obs shape: {sim_obs[k].shape}, real_obs shape: {real_obs[k].shape}"
-    )
-# state: sim_obs shape: torch.Size([1, 13]), real_obs shape: torch.Size([1, 13])
-# rgb: sim_obs shape: torch.Size([1, 128, 128, 3]), real_obs shape: torch.Size([1, 128, 128, 3])
-```
-
-Like the rest of ManiSkill and simulated environments, all Sim2Real environments will output batched data by default.
-
-:::{note}
-While this may streamline the process of creating sim2real environment interfaces for robot policy deployment, it is quite simple and requires instantiating one CPU simulated environment in order to do the automatic checks and configuration of the controller and sensors. Moreover it is possible there is overhead induced by inefficiencies as this general code cannot easily account for features unique to some real-world setups. We further tried to make it such that most gym wrappers would be compatible with the real environment, but if you run into issues please let us know.
-
-If you need heavy customizations we provide some recommendations in later sections of the tutorial.
-:::
+# Sim2Real Env Design
 
 ## 1 | Create the Sim Environment for Sim2Real
 
@@ -79,7 +17,7 @@ We note a few common recommendations with respect to these functions:
 If you haven't already first follow the [custom tasks tutorial](../custom_tasks/intro.md) to learn how to create a simulation environment, which documents how to load the robot, load objects, setup cameras and more. Once you know how to create a basic environment, go ahead and make a cube picking task similar to the example environment below. The objective is to train a robot to grasp a cube and lift it up. You will note that we inherit from `BaseDigitalTwinEnv` instead of the usual `BaseEnv` class for simulation. This is so we can use the green-screeening functionalities provided by `BaseDigitalTwinEnv` already. The example code below is in the ManiSkill package at [`mani_skill.envs.tasks.digital_twins.tabletop.koch_pickcube`](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/tasks/digital_twins/tabletop/koch_pickcube.py) and is heavily annotated to explain most of the lines of code (we do recommend reading the file directly instead of through the documentation here). You can skip the code with respect to the reward function for now as we will cover that in the [last section](#4--reward-function-design) of this tutorial.
 
 :::{dropdown} Example simulation environment code
-:::{literalinclude} ../../../../../mani_skill/envs/tasks/digital_twins/koch_arm/pickcube.py
+:::{literalinclude} ../../../../../mani_skill/envs/tasks/digital_twins/so100_arm/grasp_cube.py
     :language: python
     :linenos:
 :::
