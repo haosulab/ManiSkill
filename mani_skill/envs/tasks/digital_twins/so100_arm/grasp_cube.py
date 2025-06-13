@@ -59,12 +59,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     """
 
     # _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
-    SUPPORTED_ROBOTS = [
-        "so100",
-    ]
+    SUPPORTED_ROBOTS = ["so100"]
     SUPPORTED_OBS_MODES = ["none", "state", "state_dict", "rgb+segmentation"]
     agent: SO100
-    spawn_box_half_size = 0.2 / 2  # cube can spawn in a 20cm x 20cm range
 
     def __init__(
         self,
@@ -79,6 +76,8 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             pos=[0.5, 0.3, 0.35],
             target=[0.3, 0.0, 0.1],
         ),
+        spawn_box_pos=[0.3, 0.05],
+        spawn_box_half_size=0.2 / 2,
         **kwargs,
     ):
         self.domain_randomization = domain_randomization
@@ -100,6 +99,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         else:
             self.rgb_overlay_paths = dict(base_camera=greenscreen_overlay_path)
+
+        self.spawn_box_pos = spawn_box_pos
+        self.spawn_box_half_size = spawn_box_half_size
         super().__init__(
             *args, robot_uids=robot_uids, control_mode=control_mode, **kwargs
         )
@@ -113,9 +115,12 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         # we just set a default camera pose here for now. For sim2real we will modify this during training accordingly.
         # note that we pass in the camera mount which is created in the _load_scene function later. This mount lets us
         # randomize camera poses at each environment step. Here we just randomize some camera configuration like fov.
-        camera_fov_noise = self.domain_randomization_config.camera_fov_noise * (
-            2 * self._batched_episode_rng.rand() - 1
-        )
+        if self.domain_randomization:
+            camera_fov_noise = self.domain_randomization_config.camera_fov_noise * (
+                2 * self._batched_episode_rng.rand() - 1
+            )
+        else:
+            camera_fov_noise = 0
         return [
             CameraConfig(
                 "base_camera",
@@ -304,9 +309,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
             )
 
             # initialize the cube at a random position and rotation around the z-axis
-            # spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.3, 0, 0])
-            # if camera is on left of robot, favor placing cubes on the left side so camera can see it.
-            spawn_box_pos = self.agent.robot.pose.p + torch.tensor([0.3, 0.05, 0])
+            spawn_box_pos = self.agent.robot.pose.p + torch.tensor(
+                [self.spawn_box_pos[0], self.spawn_box_pos[1], 0]
+            )
             xyz = torch.zeros((b, 3))
             xyz[:, :2] = (
                 torch.rand((b, 2)) * self.spawn_box_half_size * 2
