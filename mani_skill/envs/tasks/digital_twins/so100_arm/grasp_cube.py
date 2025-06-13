@@ -92,9 +92,6 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
                 "No greenscreen overlay path provided, no greenscreen will be used"
             )
             self.rgb_overlay_mode = "none"
-            # greenscreen_overlay_path = os.path.join(
-            #     os.path.dirname(__file__), "assets/greenscreen_background.png"
-            # )
 
         # set the camera called "base_camera" to use the greenscreen overlay when rendering
         else:
