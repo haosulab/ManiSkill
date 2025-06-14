@@ -6,7 +6,7 @@
 [sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-yes-green.svg
 [no-sparse-reward-badge]: https://img.shields.io/badge/sparse%20reward-no-red.svg
 [demos-badge]: https://img.shields.io/badge/demos-yes-green.svg
-ManiSkill features a number of built-in rigid-body tasks, all GPU parallelized and demonstrate a range of features. They are generally categorized into a few categories.
+ManiSkill features a number of built-in rigid-body tasks, all GPU parallelized and demonstrating a range of features. They are generally categorized into a few categories.
 
 Soft-body tasks will be added back in as they are still in development as part of a new soft-body simulator we are working on. For some categories there are very few tasks and/or no dense rewards as this is the beta release. We are in the process of still adding some examples in (and welcome outside contributions on these efforts!)
 
