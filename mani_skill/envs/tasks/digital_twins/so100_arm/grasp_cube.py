@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import sapien
 import torch
+from sapien.render import RenderBodyComponent
 from transforms3d.euler import euler2quat
 
 import mani_skill.envs.utils.randomization as randomization
@@ -25,7 +26,8 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class SO100GraspCubeDomainRandomizationConfig:
     ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
-    randomize_robot_color: bool = True
+    robot_color: Union[str, Tuple[float, float, float]] = (1, 1, 1)
+    """Color of the robot in RGB format in scale of 0 to 1 mapping to 0 to 255. If you want to randomize it just set this value to "random"."""
     randomize_lighting: bool = True
     max_camera_offset: Tuple[float, float, float] = (0.025, 0.025, 0.025)
     """max camera offset from the base camera position in x, y, and z axes"""
@@ -142,7 +144,12 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     def _load_agent(self, options: dict):
         # load the robot arm at this initial pose
         super()._load_agent(
-            options, sapien.Pose(p=[0, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+            options,
+            sapien.Pose(p=[0, 0, 0], q=euler2quat(0, 0, np.pi / 2)),
+            build_separate=True
+            if self.domain_randomization
+            and self.domain_randomization_config.robot_color == "random"
+            else False,
         )
 
     def _load_lighting(self, options: dict):
@@ -250,6 +257,33 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         builder = self.scene.create_actor_builder()
         builder.initial_pose = sapien.Pose()
         self.camera_mount = builder.build_kinematic("camera_mount")
+
+        # randomize or set a fixed robot color
+        for link in self.agent.robot.links:
+            for i, obj in enumerate(link._objs):
+                # modify the i-th object which is in parallel environment i
+                render_body_component: RenderBodyComponent = (
+                    obj.entity.find_component_by_type(RenderBodyComponent)
+                )
+                if render_body_component is not None:
+                    for render_shape in render_body_component.render_shapes:
+                        for part in render_shape.parts:
+                            if (
+                                self.domain_randomization
+                                and self.domain_randomization_config.robot_color
+                                == "random"
+                            ):
+                                part.material.set_base_color(
+                                    self._batched_episode_rng[i]
+                                    .uniform(low=0.0, high=1.0, size=(3,))
+                                    .tolist()
+                                    + [1]
+                                )
+                            else:
+                                part.material.set_base_color(
+                                    list(self.domain_randomization_config.robot_color)
+                                    + [1]
+                                )
 
     def sample_camera_poses(self, n: int):
         # a custom function to sample random camera poses
