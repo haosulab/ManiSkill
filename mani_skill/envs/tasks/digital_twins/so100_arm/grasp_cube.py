@@ -1,6 +1,7 @@
-from dataclasses import dataclass
-from typing import Any, Dict, Tuple, Union
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, Sequence, Union
 
+import dacite
 import numpy as np
 import sapien
 import torch
@@ -26,10 +27,10 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class SO100GraspCubeDomainRandomizationConfig:
     ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
-    robot_color: Union[str, Tuple[float, float, float]] = (1, 1, 1)
+    robot_color: Union[str, Sequence[float]] = (1, 1, 1)
     """Color of the robot in RGB format in scale of 0 to 1 mapping to 0 to 255. If you want to randomize it just set this value to "random"."""
     randomize_lighting: bool = True
-    max_camera_offset: Tuple[float, float, float] = (0.025, 0.025, 0.025)
+    max_camera_offset: Sequence[float] = (0.025, 0.025, 0.025)
     """max camera offset from the base camera position in x, y, and z axes"""
     camera_target_noise: float = 1e-3
     """scale of noise added to the camera target position"""
@@ -39,11 +40,14 @@ class SO100GraspCubeDomainRandomizationConfig:
     """scale of noise added to the camera fov"""
 
     ### task-specific related domain randomizations that occur during scene loading ###
-    cube_half_size_range: Tuple[float, float] = (0.022 / 2, 0.028 / 2)
+    cube_half_size_range: Sequence[float] = (0.022 / 2, 0.028 / 2)
     cube_friction_mean: float = 0.3
     cube_friction_std: float = 0.05
-    cube_friction_bounds: Tuple[float, float] = (0.1, 0.5)
+    cube_friction_bounds: Sequence[float] = (0.1, 0.5)
     randomize_cube_color: bool = True
+
+    def dict(self):
+        return {k: v for k, v in asdict(self).items()}
 
 
 @register_env("SO100GraspCube-v1", max_episode_steps=64)
@@ -71,7 +75,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         robot_uids="so100",
         control_mode="pd_joint_target_delta_pos",
         greenscreen_overlay_path=None,
-        domain_randomization_config=SO100GraspCubeDomainRandomizationConfig(),
+        domain_randomization_config: Union[
+            SO100GraspCubeDomainRandomizationConfig, dict
+        ] = SO100GraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
         base_camera_settings=dict(
             fov=52 * np.pi / 180,
@@ -84,8 +90,18 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
     ):
         self.domain_randomization = domain_randomization
         """whether randomization is turned on or off."""
-        self.domain_randomization_config = domain_randomization_config
+        self.domain_randomization_config = SO100GraspCubeDomainRandomizationConfig()
         """domain randomization config"""
+        merged_domain_randomization_config = self.domain_randomization_config.dict()
+        if isinstance(domain_randomization_config, dict):
+            common.dict_merge(
+                merged_domain_randomization_config, domain_randomization_config
+            )
+            self.domain_randomization_config = dacite.from_dict(
+                data_class=SO100GraspCubeDomainRandomizationConfig,
+                data=domain_randomization_config,
+                config=dacite.Config(strict=True),
+            )
         self.base_camera_settings = base_camera_settings
         """what the camera fov, position and target are when domain randomization is off. DR is centered around these settings"""
 
