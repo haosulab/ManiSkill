@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, Sequence, Union
+from typing import Any, Dict, Optional, Sequence, Union
 
 import dacite
 import numpy as np
@@ -27,8 +27,11 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class SO100GraspCubeDomainRandomizationConfig:
     ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
-    robot_color: Union[str, Sequence[float]] = (1, 1, 1)
-    """Color of the robot in RGB format in scale of 0 to 1 mapping to 0 to 255. If you want to randomize it just set this value to "random"."""
+    robot_color: Optional[Union[str, Sequence[float]]] = None
+    """Color of the robot in RGB format in scale of 0 to 1 mapping to 0 to 255.
+    If you want to randomize it just set this value to "random". If left as None which is
+    the default, it will set the robot parts to white and motors to black. For more fine-grained choices on robot colors you need to modify
+    mani_skill/assets/robots/so100/so100.urdf in the ManiSkill package."""
     randomize_lighting: bool = True
     max_camera_offset: Sequence[float] = (0.025, 0.025, 0.025)
     """max camera offset from the base camera position in x, y, and z axes"""
@@ -275,31 +278,34 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         self.camera_mount = builder.build_kinematic("camera_mount")
 
         # randomize or set a fixed robot color
-        for link in self.agent.robot.links:
-            for i, obj in enumerate(link._objs):
-                # modify the i-th object which is in parallel environment i
-                render_body_component: RenderBodyComponent = (
-                    obj.entity.find_component_by_type(RenderBodyComponent)
-                )
-                if render_body_component is not None:
-                    for render_shape in render_body_component.render_shapes:
-                        for part in render_shape.parts:
-                            if (
-                                self.domain_randomization
-                                and self.domain_randomization_config.robot_color
-                                == "random"
-                            ):
-                                part.material.set_base_color(
-                                    self._batched_episode_rng[i]
-                                    .uniform(low=0.0, high=1.0, size=(3,))
-                                    .tolist()
-                                    + [1]
-                                )
-                            else:
-                                part.material.set_base_color(
-                                    list(self.domain_randomization_config.robot_color)
-                                    + [1]
-                                )
+        if self.domain_randomization_config.robot_color is not None:
+            for link in self.agent.robot.links:
+                for i, obj in enumerate(link._objs):
+                    # modify the i-th object which is in parallel environment i
+                    render_body_component: RenderBodyComponent = (
+                        obj.entity.find_component_by_type(RenderBodyComponent)
+                    )
+                    if render_body_component is not None:
+                        for render_shape in render_body_component.render_shapes:
+                            for part in render_shape.parts:
+                                if (
+                                    self.domain_randomization
+                                    and self.domain_randomization_config.robot_color
+                                    == "random"
+                                ):
+                                    part.material.set_base_color(
+                                        self._batched_episode_rng[i]
+                                        .uniform(low=0.0, high=1.0, size=(3,))
+                                        .tolist()
+                                        + [1]
+                                    )
+                                else:
+                                    part.material.set_base_color(
+                                        list(
+                                            self.domain_randomization_config.robot_color
+                                        )
+                                        + [1]
+                                    )
 
     def sample_camera_poses(self, n: int):
         # a custom function to sample random camera poses
