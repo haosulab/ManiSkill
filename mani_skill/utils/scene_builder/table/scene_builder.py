@@ -41,10 +41,17 @@ class TableSceneBuilder(SceneBuilder):
             p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
         )
         table = builder.build_kinematic(name="table-workspace")
-        aabb = (
-            table._objs[0]
-            .find_component_by_type(sapien.render.RenderBodyComponent)
-            .compute_global_aabb_tight()
+        # aabb = (
+        #     table._objs[0]
+        #     .find_component_by_type(sapien.render.RenderBodyComponent)
+        #     .compute_global_aabb_tight()
+        # )
+        # value of the call above is saved below
+        aabb = np.array(
+            [
+                [-0.7402168, -1.2148621, -0.91964257],
+                [0.4688596, 1.2030163, 3.5762787e-07],
+            ]
         )
         self.table_length = aabb[1, 0] - aabb[0, 0]
         self.table_width = aabb[1, 1] - aabb[0, 1]

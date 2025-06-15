@@ -726,11 +726,11 @@ class BaseEnv(gym.Env):
         self._load_agent(options)
 
         self._load_scene(options)
-        self._load_lighting(options)
+        if self.scene.can_render(): self._load_lighting(options)
 
         self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
-        self._setup_sensors(options)
+        if self.scene.can_render(): self._setup_sensors(options)
         if self.render_mode == "human" and self._viewer is None:
             self._viewer = create_viewer(self._viewer_camera_config)
         if self._viewer is not None:
@@ -1153,8 +1153,11 @@ class BaseEnv(gym.Env):
                     scene_idx % scene_grid_length - scene_grid_length // 2,
                     scene_idx // scene_grid_length - scene_grid_length // 2,
                 )
+                systems = [physx_system]
+                if self._render_device.can_render():
+                    systems.append(sapien.render.RenderSystem(self._render_device))
                 scene = sapien.Scene(
-                    systems=[physx_system, sapien.render.RenderSystem(self._render_device)]
+                    systems=systems
                 )
                 physx_system.set_scene_offset(
                     scene,
@@ -1167,8 +1170,11 @@ class BaseEnv(gym.Env):
                 sub_scenes.append(scene)
         else:
             physx_system = physx.PhysxCpuSystem()
+            systems = [physx_system]
+            if self._render_device.can_render():
+                systems.append(sapien.render.RenderSystem(self._render_device))
             sub_scenes = [
-                sapien.Scene([physx_system, sapien.render.RenderSystem(self._render_device)])
+                sapien.Scene(systems)
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(
@@ -1179,6 +1185,9 @@ class BaseEnv(gym.Env):
             backend=self.backend
         )
         self.scene.px.timestep = 1.0 / self._sim_freq
+        if not self.scene.can_render():
+            if self.render_mode is not None:
+                logger.warning(f'The chosen render mode is "{self.render_mode}", but selected rendering device "{self.scene.backend.render_device}" does not support rendering')
 
     def _clear(self):
         """Clear the simulation scene instance and other buffers.
