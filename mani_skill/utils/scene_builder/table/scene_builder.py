@@ -46,9 +46,16 @@ class TableSceneBuilder(SceneBuilder):
         #     .find_component_by_type(sapien.render.RenderBodyComponent)
         #     .compute_global_aabb_tight()
         # )
-        self.table_length = 1
-        self.table_width = 1
-        self.table_height = 1
+        # value of the call above is saved below
+        aabb = np.array(
+            [
+                [-0.7402168, -1.2148621, -0.91964257],
+                [0.4688596, 1.2030163, 3.5762787e-07],
+            ]
+        )
+        self.table_length = aabb[1, 0] - aabb[0, 0]
+        self.table_width = aabb[1, 1] - aabb[0, 1]
+        self.table_height = aabb[1, 2] - aabb[0, 2]
         floor_width = 100
         if self.scene.parallel_in_single_scene:
             floor_width = 500

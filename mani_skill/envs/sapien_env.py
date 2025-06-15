@@ -1153,8 +1153,11 @@ class BaseEnv(gym.Env):
                     scene_idx % scene_grid_length - scene_grid_length // 2,
                     scene_idx // scene_grid_length - scene_grid_length // 2,
                 )
+                systems = [physx_system]
+                if self._render_device.can_render():
+                    systems.append(sapien.render.RenderSystem(self._render_device))
                 scene = sapien.Scene(
-                    systems=[physx_system, sapien.render.RenderSystem(self._render_device)]
+                    systems=systems
                 )
                 physx_system.set_scene_offset(
                     scene,
