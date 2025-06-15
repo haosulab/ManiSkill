@@ -53,8 +53,6 @@ class Args:
     """Seed(s) for random actions and simulator. Can be a single integer or a list of integers. Default is None (no seeds)"""
 
 def main(args: Args):
-    if args.render_mode == "none":
-        args.render_mode = None
     np.set_printoptions(suppress=True, precision=3)
     verbose = not args.quiet
     if isinstance(args.seed, int):

@@ -41,14 +41,14 @@ class TableSceneBuilder(SceneBuilder):
             p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
         )
         table = builder.build_kinematic(name="table-workspace")
-        # aabb = (
-        #     table._objs[0]
-        #     .find_component_by_type(sapien.render.RenderBodyComponent)
-        #     .compute_global_aabb_tight()
-        # )
-        self.table_length = 1
-        self.table_width = 1
-        self.table_height = 1
+        aabb = (
+            table._objs[0]
+            .find_component_by_type(sapien.render.RenderBodyComponent)
+            .compute_global_aabb_tight()
+        )
+        self.table_length = aabb[1, 0] - aabb[0, 0]
+        self.table_width = aabb[1, 1] - aabb[0, 1]
+        self.table_height = aabb[1, 2] - aabb[0, 2]
         floor_width = 100
         if self.scene.parallel_in_single_scene:
             floor_width = 500

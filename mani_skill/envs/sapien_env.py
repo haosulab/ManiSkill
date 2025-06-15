@@ -726,11 +726,11 @@ class BaseEnv(gym.Env):
         self._load_agent(options)
 
         self._load_scene(options)
-        if self.scene.can_render(): self._load_lighting(options)
+        self._load_lighting(options)
 
         self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
-        if self.scene.can_render(): self._setup_sensors(options)
+        self._setup_sensors(options)
         if self.render_mode == "human" and self._viewer is None:
             self._viewer = create_viewer(self._viewer_camera_config)
         if self._viewer is not None:
@@ -1167,11 +1167,8 @@ class BaseEnv(gym.Env):
                 sub_scenes.append(scene)
         else:
             physx_system = physx.PhysxCpuSystem()
-            systems = [physx_system]
-            if self._render_device.can_render():
-                systems.append(sapien.render.RenderSystem(self._render_device))
             sub_scenes = [
-                sapien.Scene(systems)
+                sapien.Scene([physx_system, sapien.render.RenderSystem(self._render_device)])
             ]
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(
