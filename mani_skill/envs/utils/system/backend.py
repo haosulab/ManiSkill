@@ -44,7 +44,7 @@ render_backend_name_mapping = {
 
 def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> BackendInfo:
     sim_backend = sim_backend_name_mapping[sim_backend]
-    render_backend = render_backend_name_mapping[render_backend]
+    render_backend = render_backend_name_mapping.get(render_backend, render_backend)
     if sim_backend == "physx_cpu":
         device = torch.device("cpu")
         sim_device = sapien.Device("cpu")

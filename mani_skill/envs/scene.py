@@ -115,6 +115,10 @@ class ManiSkillScene:
         )
         """state dict registry that map actor/articulation names to Actor/Articulation struct references. Only these structs are used for the environment state"""
 
+    def can_render(self):
+        """Whether or not this Scene object permits rendering, depending on the rendering device selected"""
+        return self.backend.render_device.can_render()
+
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
     # -------------------------------------------------------------------------- #
