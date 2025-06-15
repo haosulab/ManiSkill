@@ -57,31 +57,21 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
     else:
         raise ValueError(f"Invalid simulation backend: {sim_backend}")
 
-    try:
-        if platform.system() == "Darwin":
-            render_device = sapien.Device("cpu")
-            render_backend = "sapien_cpu"
-            logger.warning(
-                "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
-            )
-        elif render_backend == "sapien_cuda":
-            render_device = sapien.Device("cuda")
-        elif render_backend == "sapien_cpu":
-            render_device = sapien.Device("cpu")
-        elif render_backend[:4] == "cuda":
-            render_device = sapien.Device(render_backend)
-        else:
-            # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
-            render_device = sapien.Device(render_backend)
-    except RuntimeError as e:
-        if str(e) == 'failed to find device "cuda"':
-            logger.warning(
-                f"Requested to use render device {render_backend}, but CUDA device was not found. Falling back to cpu device. Rendering might be disabled."
-            )
-            render_device = sapien.Device("cpu")
-            render_backend = "sapien_cpu"
-        else:
-            raise
+    if platform.system() == "Darwin":
+        render_device = sapien.Device("cpu")
+        render_backend = "sapien_cpu"
+        logger.warning(
+            "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
+        )
+    elif render_backend == "sapien_cuda":
+        render_device = sapien.Device("cuda")
+    elif render_backend == "sapien_cpu":
+        render_device = sapien.Device("cpu")
+    elif render_backend[:4] == "cuda":
+        render_device = sapien.Device(render_backend)
+    else:
+        # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
+        render_device = sapien.Device(render_backend)
     return BackendInfo(
         device=device,
         sim_device=sim_device,
