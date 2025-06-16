@@ -14,6 +14,7 @@ import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
 
+import mani_skill.render.utils as render_utils
 from mani_skill import logger
 from mani_skill.agents import REGISTERED_AGENTS
 from mani_skill.agents.base_agent import BaseAgent
@@ -1154,7 +1155,7 @@ class BaseEnv(gym.Env):
                     scene_idx // scene_grid_length - scene_grid_length // 2,
                 )
                 systems = [physx_system]
-                if self._render_device.can_render():
+                if render_utils.can_render(self._render_device):
                     systems.append(sapien.render.RenderSystem(self._render_device))
                 scene = sapien.Scene(
                     systems=systems
@@ -1171,7 +1172,7 @@ class BaseEnv(gym.Env):
         else:
             physx_system = physx.PhysxCpuSystem()
             systems = [physx_system]
-            if self._render_device.can_render():
+            if render_utils.can_render(self._render_device):
                 systems.append(sapien.render.RenderSystem(self._render_device))
             sub_scenes = [
                 sapien.Scene(systems)
