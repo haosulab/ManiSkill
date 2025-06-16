@@ -1,3 +1,4 @@
+import platform
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -117,6 +118,9 @@ class ManiSkillScene:
 
     def can_render(self):
         """Whether or not this Scene object permits rendering, depending on the rendering device selected"""
+        # NOTE (stao): currently sapien can't tell if the render device can render or not for MacOS
+        if platform.system() == "Darwin":
+            return True
         return self.backend.render_device.can_render()
 
     # -------------------------------------------------------------------------- #
