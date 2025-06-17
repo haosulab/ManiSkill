@@ -139,7 +139,7 @@ class RecordEpisode(gym.Wrapper):
 
     ```python
     env = gym.make(env_info["env_id"], **env_info["env_kwargs"])
-    episode = env_info["episodes"][0] # picks the first
+    episode = env_info["episodes"][0]  # picks the first
     env.reset(**episode["reset_kwargs"])
     ```
 
@@ -178,6 +178,7 @@ class RecordEpisode(gym.Wrapper):
 
     ```python
     import mani_skill.trajectory.utils as trajectory_utils
+
     env_states = trajectory_utils.dict_to_list_of_dicts(env_states)
     # now env_states[i] is the same as the data env.get_state_dict() returned at timestep i
     i = 10
@@ -255,12 +256,12 @@ class RecordEpisode(gym.Wrapper):
         self.save_on_reset = save_on_reset
         self.save_trajectory = save_trajectory
         if self.base_env.num_envs > 1 and save_video:
-            assert (
-                max_steps_per_video is not None
-            ), "On GPU parallelized environments, \
+            assert max_steps_per_video is not None, (
+                "On GPU parallelized environments, \
                 there must be a given max steps per video value in order to flush videos in order \
                 to avoid issues caused by partial resets. If your environment does not do partial \
                 resets you may set max_steps_per_video equal to the max_episode_steps"
+            )
         self.clean_on_close = clean_on_close
         self.record_reward = record_reward
         self.record_env_state = record_env_state
@@ -278,9 +279,7 @@ class RecordEpisode(gym.Wrapper):
                 episodes=[],
             )
             if self._json_data["env_info"] is not None:
-                self._json_data["env_info"][
-                    "max_episode_steps"
-                ] = self.max_episode_steps
+                self._json_data["env_info"]["max_episode_steps"] = self.max_episode_steps
             if source_type is not None:
                 self._json_data["source_type"] = source_type
             if source_desc is not None:
@@ -318,6 +317,8 @@ class RecordEpisode(gym.Wrapper):
 
             self.base_env._after_simulation_step = wrapped_after_simulation_step
 
+        
+
     @property
     def num_envs(self):
         return self.base_env.num_envs
@@ -342,9 +343,7 @@ class RecordEpisode(gym.Wrapper):
             img = img[None]
         if infos is not None:
             for i in range(len(img)):
-                info_item = {
-                    k: v if np.size(v) == 1 else v[i] for k, v in infos.items()
-                }
+                info_item = {k: v if np.size(v) == 1 else v[i] for k, v in infos.items()}
                 img[i] = put_info_on_image(img[i], info_item)
         if len(img.shape) > 3:
             if len(img) == 1:
@@ -358,20 +357,18 @@ class RecordEpisode(gym.Wrapper):
         *args,
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = dict(),
+        save=True,
         **kwargs,
     ):
-
         if self.save_on_reset:
             if self.save_video and self.num_envs == 1:
-                self.flush_video()
+                self.flush_video(save=save)
             # if doing a full reset then we flush all trajectories including incompleted ones
             if self._trajectory_buffer is not None:
                 if "env_idx" not in options:
-                    self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs))
+                    self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs), save=save)
                 else:
-                    self.flush_trajectory(
-                        env_idxs_to_flush=common.to_numpy(options["env_idx"])
-                    )
+                    self.flush_trajectory(env_idxs_to_flush=common.to_numpy(options["env_idx"], save=save))
 
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
         if info["reconfigure"]:
@@ -380,9 +377,7 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer = None
         if self.save_trajectory:
             state_dict = self.base_env.get_state_dict()
-            action = common.batch(
-                self.env.get_wrapper_attr("single_action_space").sample()
-            )
+            action = common.batch(self.env.get_wrapper_attr("single_action_space").sample())
             # check if state_dict is consistent
             if not sapien_utils.is_state_dict_consistent(state_dict):
                 self.record_env_state = False
@@ -433,23 +428,15 @@ class RecordEpisode(gym.Wrapper):
                 # Maybe we shouldn't?
                 if self.record_env_state:
                     recursive_replace(self._trajectory_buffer.state, first_step.state)
-                recursive_replace(
-                    self._trajectory_buffer.observation, first_step.observation
-                )
+                recursive_replace(self._trajectory_buffer.observation, first_step.observation)
                 recursive_replace(self._trajectory_buffer.action, first_step.action)
                 if self.record_reward:
                     recursive_replace(self._trajectory_buffer.reward, first_step.reward)
-                recursive_replace(
-                    self._trajectory_buffer.terminated, first_step.terminated
-                )
-                recursive_replace(
-                    self._trajectory_buffer.truncated, first_step.truncated
-                )
+                recursive_replace(self._trajectory_buffer.terminated, first_step.terminated)
+                recursive_replace(self._trajectory_buffer.truncated, first_step.truncated)
                 recursive_replace(self._trajectory_buffer.done, first_step.done)
                 if self._trajectory_buffer.success is not None:
-                    recursive_replace(
-                        self._trajectory_buffer.success, first_step.success
-                    )
+                    recursive_replace(self._trajectory_buffer.success, first_step.success)
                 if self._trajectory_buffer.fail is not None:
                     recursive_replace(self._trajectory_buffer.fail, first_step.fail)
         if options is not None and "env_idx" in options:
@@ -518,14 +505,10 @@ class RecordEpisode(gym.Wrapper):
         if self.save_video:
             self._video_steps += 1
             if self.info_on_video:
-                scalar_info = gym_utils.extract_scalars_from_info(
-                    common.to_numpy(info), batch_size=self.num_envs
-                )
+                scalar_info = gym_utils.extract_scalars_from_info(common.to_numpy(info), batch_size=self.num_envs)
                 scalar_info["reward"] = common.to_numpy(rew)
                 if np.size(scalar_info["reward"]) > 1:
-                    scalar_info["reward"] = [
-                        float(rew) for rew in scalar_info["reward"]
-                    ]
+                    scalar_info["reward"] = [float(rew) for rew in scalar_info["reward"]]
                 else:
                     scalar_info["reward"] = float(scalar_info["reward"])
                 image = self.capture_image(scalar_info)
@@ -533,10 +516,7 @@ class RecordEpisode(gym.Wrapper):
                 image = self.capture_image()
 
             self.render_images.append(image)
-            if (
-                self.max_steps_per_video is not None
-                and self._video_steps >= self.max_steps_per_video
-            ):
+            if self.max_steps_per_video is not None and self._video_steps >= self.max_steps_per_video:
                 self.flush_video()
         self._elapsed_record_steps += 1
         return obs, rew, terminated, truncated, info
@@ -571,9 +551,7 @@ class RecordEpisode(gym.Wrapper):
                 traj_id = "traj_{}".format(self._episode_id)
                 group = self._h5_file.create_group(traj_id, track_order=True)
 
-                def recursive_add_to_h5py(
-                    group: h5py.Group, data: Union[dict, Array], key
-                ):
+                def recursive_add_to_h5py(group: h5py.Group, data: Union[dict, Array], key):
                     """simple recursive data insertion for nested data structures into h5py, optimizing for visual data as well"""
                     if isinstance(data, dict):
                         subgrp = group.create_group(key, track_order=True)
@@ -615,9 +593,7 @@ class RecordEpisode(gym.Wrapper):
 
                 # Observations need special processing
                 if isinstance(self._trajectory_buffer.observation, dict):
-                    recursive_add_to_h5py(
-                        group, self._trajectory_buffer.observation, "obs"
-                    )
+                    recursive_add_to_h5py(group, self._trajectory_buffer.observation, "obs")
                 elif isinstance(self._trajectory_buffer.observation, np.ndarray):
                     if self.cpu_wrapped_env:
                         group.create_dataset(
@@ -628,9 +604,7 @@ class RecordEpisode(gym.Wrapper):
                     else:
                         group.create_dataset(
                             "obs",
-                            data=self._trajectory_buffer.observation[
-                                start_ptr:end_ptr, env_idx
-                            ],
+                            data=self._trajectory_buffer.observation[start_ptr:end_ptr, env_idx],
                             dtype=self._trajectory_buffer.observation.dtype,
                         )
                 else:
@@ -654,12 +628,8 @@ class RecordEpisode(gym.Wrapper):
                     self._trajectory_buffer.action,
                     (slice(start_ptr + 1, end_ptr), env_idx),
                 )
-                terminated = self._trajectory_buffer.terminated[
-                    start_ptr + 1 : end_ptr, env_idx
-                ]
-                truncated = self._trajectory_buffer.truncated[
-                    start_ptr + 1 : end_ptr, env_idx
-                ]
+                terminated = self._trajectory_buffer.terminated[start_ptr + 1 : end_ptr, env_idx]
+                truncated = self._trajectory_buffer.truncated[start_ptr + 1 : end_ptr, env_idx]
                 if isinstance(self._trajectory_buffer.action, dict):
                     recursive_add_to_h5py(group, actions, "actions")
                 else:
@@ -670,35 +640,23 @@ class RecordEpisode(gym.Wrapper):
                 if self._trajectory_buffer.success is not None:
                     group.create_dataset(
                         "success",
-                        data=self._trajectory_buffer.success[
-                            start_ptr + 1 : end_ptr, env_idx
-                        ],
+                        data=self._trajectory_buffer.success[start_ptr + 1 : end_ptr, env_idx],
                         dtype=bool,
                     )
-                    episode_info.update(
-                        success=self._trajectory_buffer.success[end_ptr - 1, env_idx]
-                    )
+                    episode_info.update(success=self._trajectory_buffer.success[end_ptr - 1, env_idx])
                 if self._trajectory_buffer.fail is not None:
                     group.create_dataset(
                         "fail",
-                        data=self._trajectory_buffer.fail[
-                            start_ptr + 1 : end_ptr, env_idx
-                        ],
+                        data=self._trajectory_buffer.fail[start_ptr + 1 : end_ptr, env_idx],
                         dtype=bool,
                     )
-                    episode_info.update(
-                        fail=self._trajectory_buffer.fail[end_ptr - 1, env_idx]
-                    )
+                    episode_info.update(fail=self._trajectory_buffer.fail[end_ptr - 1, env_idx])
                 if self.record_env_state:
-                    recursive_add_to_h5py(
-                        group, self._trajectory_buffer.state, "env_states"
-                    )
+                    recursive_add_to_h5py(group, self._trajectory_buffer.state, "env_states")
                 if self.record_reward:
                     group.create_dataset(
                         "rewards",
-                        data=self._trajectory_buffer.reward[
-                            start_ptr + 1 : end_ptr, env_idx
-                        ],
+                        data=self._trajectory_buffer.reward[start_ptr + 1 : end_ptr, env_idx],
                         dtype=np.float32,
                     )
 
@@ -708,15 +666,11 @@ class RecordEpisode(gym.Wrapper):
                     if flush_count == 1:
                         print(f"Recorded episode {self._episode_id}")
                     else:
-                        print(
-                            f"Recorded episodes {self._episode_id - flush_count} to {self._episode_id}"
-                        )
+                        print(f"Recorded episodes {self._episode_id - flush_count} to {self._episode_id}")
 
         # truncate self._trajectory_buffer down to save memory
         if flush_count > 0:
-            self._trajectory_buffer.env_episode_ptr[env_idxs_to_flush] = (
-                len(self._trajectory_buffer.done) - 1
-            )
+            self._trajectory_buffer.env_episode_ptr[env_idxs_to_flush] = len(self._trajectory_buffer.done) - 1
             min_env_ptr = self._trajectory_buffer.env_episode_ptr.min()
             N = len(self._trajectory_buffer.done)
 
@@ -740,9 +694,7 @@ class RecordEpisode(gym.Wrapper):
             self._trajectory_buffer.truncated = common.index_dict_array(
                 self._trajectory_buffer.truncated, slice(min_env_ptr, N)
             )
-            self._trajectory_buffer.done = common.index_dict_array(
-                self._trajectory_buffer.done, slice(min_env_ptr, N)
-            )
+            self._trajectory_buffer.done = common.index_dict_array(self._trajectory_buffer.done, slice(min_env_ptr, N))
             if self._trajectory_buffer.success is not None:
                 self._trajectory_buffer.success = common.index_dict_array(
                     self._trajectory_buffer.success, slice(min_env_ptr, N)
@@ -782,10 +734,7 @@ class RecordEpisode(gym.Wrapper):
                 if suffix:
                     video_name += "_" + suffix
                 if self._avoid_overwriting_video:
-                    while (
-                        Path(self.output_dir)
-                        / (video_name.replace(" ", "_").replace("\n", "_") + ".mp4")
-                    ).exists():
+                    while (Path(self.output_dir) / (video_name.replace(" ", "_").replace("\n", "_") + ".mp4")).exists():
                         self._video_id += 1
                         video_name = "{}".format(self._video_id)
                         if suffix:
