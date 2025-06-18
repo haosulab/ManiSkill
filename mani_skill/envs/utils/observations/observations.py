@@ -14,7 +14,28 @@ from mani_skill.sensors.camera import Camera
 from mani_skill.utils import common
 
 
-def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor]):
+def downsample_point_cloud(obs, n_points=4096, method="random"):
+    pc_dict = obs["pointcloud"]
+    if n_points is None or pc_dict["xyzw"].shape[1] <= n_points:
+        return obs  # nothing to do
+    if method == "random":
+        idx = torch.randperm(pc_dict["xyzw"].shape[1], device=pc_dict["xyzw"].device)[
+            :n_points
+        ]
+    else:
+        raise ValueError(f"unknown sampling method {method}")
+
+    for k in pc_dict:
+        pc_dict[k] = pc_dict[k][:, idx]
+    return obs
+
+
+def sensor_data_to_pointcloud(
+    observation: Dict,
+    sensors: Dict[str, BaseSensor],
+    n_points=2048,
+    sample_method="random",
+):
     """convert all camera data in sensor to pointcloud data"""
     sensor_data = observation["sensor_data"]
     camera_params = observation["sensor_param"]
@@ -60,6 +81,7 @@ def sensor_data_to_pointcloud(observation: Dict, sensors: Dict[str, BaseSensor])
     for key, value in pointcloud_obs.items():
         pointcloud_obs[key] = torch.concat(value, axis=1)
     observation["pointcloud"] = pointcloud_obs
+    pointcloud_obs = downsample_point_cloud(observation, n_points, sample_method)
 
     # if not physx.is_gpu_enabled():
     #     observation["pointcloud"]["segmentation"] = (
