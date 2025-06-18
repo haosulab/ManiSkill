@@ -10,6 +10,7 @@ from mani_skill.utils.common import torch_clone_dict
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
+    from gymnasium import Env
     from mani_skill.envs.sapien_env import BaseEnv
 
 
@@ -35,7 +36,7 @@ class ManiSkillVectorEnv(VectorEnv):
 
     def __init__(
         self,
-        env: Union[BaseEnv, str],
+        env: Union[Env, str],
         num_envs: int = None,
         auto_reset: bool = True,
         ignore_terminations: bool = False,
