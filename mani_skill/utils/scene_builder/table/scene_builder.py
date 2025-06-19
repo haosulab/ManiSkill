@@ -282,3 +282,16 @@ class TableSceneBuilder(SceneBuilder):
             self.env.agent.robot.set_pose(
                 sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
             )
+        
+        elif self.env.robot_uids == "ur_10e":
+            # qpos = np.array([0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0])
+            # qpos = (
+            #     self.env._episode_rng.normal(
+            #         0, self.robot_init_qpos_noise, (b, len(qpos))
+            #     )
+            #     + qpos
+            # )
+            # self.env.agent.reset(qpos)
+            self.env.agent.robot.set_pose(
+                sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+            )
