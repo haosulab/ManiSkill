@@ -122,7 +122,7 @@ class Panda(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
-        arm_pd_ee_pose = PDEEPoseControllerConfig_NEW(
+        arm_pd_ee_pose = PDEEPoseControllerConfig_Fast(
             joint_names=self.arm_joint_names,
             pos_lower=None,
             pos_upper=None,

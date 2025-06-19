@@ -287,8 +287,8 @@ class PDEEPoseControllerConfig(PDEEPosControllerConfig):
 # NEW EE_POSE CONTROLLER
 
 
-class PDEEPoseController_NEW(PDEEPosController):
-    config: "PDEEPoseControllerConfig_NEW"
+class PDEEPoseController_Fast(PDEEPosController):
+    config: "PDEEPoseControllerConfig_Fast"
 
     def _check_gpu_sim_works(self):
         assert (
@@ -314,33 +314,27 @@ class PDEEPoseController_NEW(PDEEPosController):
         )
         self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
-    def _clip_and_scale_action(self, action):
-        # NOTE(xiqiang): rotation should be clipped by norm.
-        pos_action = gym_utils.clip_and_scale_action(
-            action[:, :3], self.action_space_low[:3], self.action_space_high[:3]
-        )
-        # need to clone here to avoid in place modification of the original action data
-        rot_action = action[:, 3:].clone()
-
-        rot_norm = torch.linalg.norm(rot_action, axis=1)
-        rot_action[rot_norm > 1] = torch.mul(rot_action, 1 / rot_norm[:, None])[
-            rot_norm > 1
-        ]
-        rot_action = rot_action * self.config.rot_lower
-        return torch.hstack([pos_action, rot_action])
-
     def set_action(self, action: Array):
-        """ Action is a 6D pose in the root frame.
+        """ Sets the desired joint configuration to reach the target pose. Performs Levenberg-Marquardt (LM) 
+        optimization to solve for the joint configuration. This optimization allows for taking more aggressive control 
+        steps compared to the naive J^T * delta-pose method that's commonly used. See this plot for a comparison between
+        the two: https://github.com/haosulab/ManiSkill/issues/955#issuecomment-2742253342. For those too lazy to click,
+        after the same number of optimization steps, LM will achieve a 2-10x reduction in pose error.
+
+        Specifically, LM specifies the following equation: (J^T * J + lambda * I) * delta-q = J^T * delta-pose
+        where lambda is a regularization parameter. This is compared to the naive method: delta-q = J^T * delta-pose.
 
         Args:
-            action (Array) [B x 6]: 6D pose in the root frame
+            action (Array) [B x 6]: 6D pose in the root frame. The first 3 dimensions are the position, and the last 
+                                    3 dimensions are the rotation in euler angles.
         """
-        t0 = time()
         assert self.config.frame == "root_translation:root_aligned_body_rotation", self.config.frame
         assert action.shape[1] == 6, f"Action must be a 6D pose in the root frame, got {action.shape}"
         assert self.config.use_target, "use_target must be True for the new controller. I don't know what this does and it's not used here."
+        assert not self.config.interpolate, "interpolate is not supported in the new controller. Again I don't know what this does and it's not used here."
         action = self._preprocess_action(action)
         B = action.shape[0]
+        ndof_active = len(self.kinematics.qmask)
 
         # Compute the desired change in end effector pose
         target_pos, target_rot = action[:, 0:3], action[:, 3:6]
@@ -354,58 +348,28 @@ class PDEEPoseController_NEW(PDEEPosController):
         delta_pose[:, 0:3] = delta_pose_pose.p
         delta_pose[:, 3:6] = matrix_to_euler_angles(delta_pose_pose.to_transformation_matrix()[:, :3, :3], "XYZ")
 
-
         # Get the jacobian - [B x 6 x N]. [:, 0:3, :] are the position rows. [:, 3:6, :] are the rotation rows.
         q0 = self.articulation.get_qpos()[:, self.kinematics.active_ancestor_joint_idxs]
         jacobian = self.kinematics.pk_chain.jacobian(q0)
         jacobian = jacobian[:, :, self.kinematics.qmask]
-        delta_joint_pos = torch.linalg.pinv(jacobian) @ delta_pose.unsqueeze(-1)
-        delta_joint_pos0 = delta_joint_pos.clone().detach()
 
-        # scale down
-        norm = torch.linalg.norm(delta_joint_pos.squeeze(-1), dim=1)
-        norm_threshold = 0.1
-        scale = 0.1
-        mask = norm > norm_threshold
-        print("mask:", mask, f"\tnorm:", norm)
-        delta_joint_pos[mask, :, :] /= norm[mask].view(mask.sum(), 1, 1) * 1/scale
+        # delta_joint_pos = torch.linalg.pinv(jacobian) @ delta_pose.unsqueeze(-1)
+        # ^ Note: this is the naive implementation: `delta-q = pinv(J) * delta-pose`
+        assert jacobian.shape == (B, 6, ndof_active), f"Jacobian shape mismatch: {jacobian.shape} != {B, 6, ndof_active}"
+        lambd = 0.0001 # Regularization parameter to ensure J^T * J is non-singular.
+        J_T = jacobian.transpose(1, 2)
+        lfs_A = torch.bmm(J_T, jacobian) + lambd * torch.eye(ndof_active, device=self.device)  # [n ndof ndof]
+        rhs_B = torch.bmm(J_T, delta_pose.unsqueeze(-1))  # [n ndof 1]
+        delta_joint_pos = torch.linalg.solve(lfs_A, rhs_B)  # [n ndof 1]
+        assert delta_joint_pos.shape == (B, ndof_active, 1), f"Delta joint pos shape mismatch: {delta_joint_pos.shape} != {B, ndof_active, 1}"
 
-
-        print()
-        print("delta_joint_pos0:", delta_joint_pos0[0, :, 0])
-        print("delta_joint_pos: ", delta_joint_pos[0, :, 0])
-        q_updated = q0[:, self.kinematics.qmask] + delta_joint_pos.squeeze(-1)
-
-
-        # self._target_qpos = self.kinematics.compute_ik(
-        #     self._target_pose,
-        #     self.articulation.get_qpos(),
-        #     pos_only=False,
-        #     action=action,
-        #     use_delta_ik_solver=self.config.use_delta and not self.config.use_target,
-        # )
-        # t = time()
-        assert not self.config.interpolate, "interpolate is not supported in the new controller"
+        q_updated = q0[:, self.kinematics.qmask] + self.config.alpha * delta_joint_pos.squeeze(-1)
         self.set_drive_targets(q_updated)
-        # print(f"Time taken: {time() - t0}")
-
-        # R_difference = torch.tensor(root__T__ee_desired.R * np.linalg.inv(current_ee_pose.R), dtype=torch.float32, device=DEVICE)
-        # action_delta[env_idx, 0:3] = torch.tensor(
-        #     world__T__ee_desired.t - current_ee_pose.t, dtype=torch.float32, device=DEVICE
-        # )
-        # action_delta[env_idx, 3:6] = matrix_to_euler_angles(R_difference, "XYZ")
-        # action_delta[env_idx, 6] = gripper_angle_desired
-        # # Increase the delta to make the tracking more aggressive. 0:6 means leaving the gripper alone
-        # action_delta[:, 0:3] *= 7.0  # xyz
-        # action_delta[:, 3:6] *= 1.0  # rpy
-        # print(f"Time taken: {time() - t0}")
-
-
 
 
 
 @dataclass
-class PDEEPoseControllerConfig_NEW(PDEEPosControllerConfig):
+class PDEEPoseControllerConfig_Fast(PDEEPosControllerConfig):
 
     rot_lower: Union[float, Sequence[float]] = None
     """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
@@ -415,6 +379,8 @@ class PDEEPoseControllerConfig_NEW(PDEEPosControllerConfig):
     damping: Union[float, Sequence[float]] = None
     force_limit: Union[float, Sequence[float]] = 1e10
     friction: Union[float, Sequence[float]] = 0.0
+    alpha: float = 1.0
+    """Scaling term used to calculate the delta-q generated by Levenberg-Marquardt in set_action()."""
 
     frame: Literal[
         "body_translation:root_aligned_body_rotation",
@@ -425,7 +391,7 @@ class PDEEPoseControllerConfig_NEW(PDEEPosControllerConfig):
     """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
 
-    controller_cls = PDEEPoseController_NEW
+    controller_cls = PDEEPoseController_Fast
 
     def __post_init__(self):
         assert not self.use_delta, "use_delta is not supported in the new controller"
