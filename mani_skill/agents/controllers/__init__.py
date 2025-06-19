@@ -10,6 +10,7 @@ from .pd_ee_pose import (
     PDEEPosControllerConfig,
     PDEEPoseController,
     PDEEPoseControllerConfig,
+    PDEEPoseControllerConfig_NEW
 )
 from .pd_joint_vel import PDJointVelController, PDJointVelControllerConfig
 from .pd_joint_pos_vel import PDJointPosVelController, PDJointPosVelControllerConfig

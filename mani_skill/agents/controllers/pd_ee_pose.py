@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, Sequence, Union
+from time import time
 
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     matrix_to_quaternion,
     quaternion_apply,
     quaternion_multiply,
+    matrix_to_euler_angles,
 )
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, DriveMode
@@ -272,3 +274,158 @@ class PDEEPoseControllerConfig(PDEEPosControllerConfig):
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
 
     controller_cls = PDEEPoseController
+
+
+
+
+
+
+
+
+# ======================================================================================================================
+# ======================================================================================================================
+# NEW EE_POSE CONTROLLER
+
+
+class PDEEPoseController_NEW(PDEEPosController):
+    config: "PDEEPoseControllerConfig_NEW"
+
+    def _check_gpu_sim_works(self):
+        assert (
+            self.config.frame == "root_translation:root_aligned_body_rotation"
+        ), "currently only translation in the root frame for EE control is supported in GPU sim"
+
+    def _initialize_action_space(self):
+        low = np.float32(
+            np.hstack(
+                [
+                    np.broadcast_to(self.config.pos_lower, 3),
+                    np.broadcast_to(self.config.rot_lower, 3),
+                ]
+            )
+        )
+        high = np.float32(
+            np.hstack(
+                [
+                    np.broadcast_to(self.config.pos_upper, 3),
+                    np.broadcast_to(self.config.rot_upper, 3),
+                ]
+            )
+        )
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
+
+    def _clip_and_scale_action(self, action):
+        # NOTE(xiqiang): rotation should be clipped by norm.
+        pos_action = gym_utils.clip_and_scale_action(
+            action[:, :3], self.action_space_low[:3], self.action_space_high[:3]
+        )
+        # need to clone here to avoid in place modification of the original action data
+        rot_action = action[:, 3:].clone()
+
+        rot_norm = torch.linalg.norm(rot_action, axis=1)
+        rot_action[rot_norm > 1] = torch.mul(rot_action, 1 / rot_norm[:, None])[
+            rot_norm > 1
+        ]
+        rot_action = rot_action * self.config.rot_lower
+        return torch.hstack([pos_action, rot_action])
+
+    def set_action(self, action: Array):
+        """ Action is a 6D pose in the root frame.
+
+        Args:
+            action (Array) [B x 6]: 6D pose in the root frame
+        """
+        t0 = time()
+        assert self.config.frame == "root_translation:root_aligned_body_rotation", self.config.frame
+        assert action.shape[1] == 6, f"Action must be a 6D pose in the root frame, got {action.shape}"
+        assert self.config.use_target, "use_target must be True for the new controller. I don't know what this does and it's not used here."
+        action = self._preprocess_action(action)
+        B = action.shape[0]
+
+        # Compute the desired change in end effector pose
+        target_pos, target_rot = action[:, 0:3], action[:, 3:6]
+        target_quat = matrix_to_quaternion(
+            euler_angles_to_matrix(target_rot, "XYZ")
+        )
+        target_pose = Pose.create_from_pq(target_pos, target_quat)
+        current_ee_pose = self.ee_pose_at_base
+        delta_pose_pose = target_pose * current_ee_pose.inv()
+        delta_pose = torch.zeros((B, 6), device=self.device, dtype=torch.float32)
+        delta_pose[:, 0:3] = delta_pose_pose.p
+        delta_pose[:, 3:6] = matrix_to_euler_angles(delta_pose_pose.to_transformation_matrix()[:, :3, :3], "XYZ")
+
+
+        # Get the jacobian - [B x 6 x N]. [:, 0:3, :] are the position rows. [:, 3:6, :] are the rotation rows.
+        q0 = self.articulation.get_qpos()[:, self.kinematics.active_ancestor_joint_idxs]
+        jacobian = self.kinematics.pk_chain.jacobian(q0)
+        jacobian = jacobian[:, :, self.kinematics.qmask]
+        delta_joint_pos = torch.linalg.pinv(jacobian) @ delta_pose.unsqueeze(-1)
+        delta_joint_pos0 = delta_joint_pos.clone().detach()
+
+        # scale down
+        norm = torch.linalg.norm(delta_joint_pos.squeeze(-1), dim=1)
+        norm_threshold = 0.1
+        scale = 0.1
+        mask = norm > norm_threshold
+        print("mask:", mask, f"\tnorm:", norm)
+        delta_joint_pos[mask, :, :] /= norm[mask].view(mask.sum(), 1, 1) * 1/scale
+
+
+        print()
+        print("delta_joint_pos0:", delta_joint_pos0[0, :, 0])
+        print("delta_joint_pos: ", delta_joint_pos[0, :, 0])
+        q_updated = q0[:, self.kinematics.qmask] + delta_joint_pos.squeeze(-1)
+
+
+        # self._target_qpos = self.kinematics.compute_ik(
+        #     self._target_pose,
+        #     self.articulation.get_qpos(),
+        #     pos_only=False,
+        #     action=action,
+        #     use_delta_ik_solver=self.config.use_delta and not self.config.use_target,
+        # )
+        # t = time()
+        assert not self.config.interpolate, "interpolate is not supported in the new controller"
+        self.set_drive_targets(q_updated)
+        # print(f"Time taken: {time() - t0}")
+
+        # R_difference = torch.tensor(root__T__ee_desired.R * np.linalg.inv(current_ee_pose.R), dtype=torch.float32, device=DEVICE)
+        # action_delta[env_idx, 0:3] = torch.tensor(
+        #     world__T__ee_desired.t - current_ee_pose.t, dtype=torch.float32, device=DEVICE
+        # )
+        # action_delta[env_idx, 3:6] = matrix_to_euler_angles(R_difference, "XYZ")
+        # action_delta[env_idx, 6] = gripper_angle_desired
+        # # Increase the delta to make the tracking more aggressive. 0:6 means leaving the gripper alone
+        # action_delta[:, 0:3] *= 7.0  # xyz
+        # action_delta[:, 3:6] *= 1.0  # rpy
+        # print(f"Time taken: {time() - t0}")
+
+
+
+
+
+@dataclass
+class PDEEPoseControllerConfig_NEW(PDEEPosControllerConfig):
+
+    rot_lower: Union[float, Sequence[float]] = None
+    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    rot_upper: Union[float, Sequence[float]] = None
+    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    stiffness: Union[float, Sequence[float]] = None
+    damping: Union[float, Sequence[float]] = None
+    force_limit: Union[float, Sequence[float]] = 1e10
+    friction: Union[float, Sequence[float]] = 0.0
+
+    frame: Literal[
+        "body_translation:root_aligned_body_rotation",
+        "root_translation:root_aligned_body_rotation",
+        "body_translation:body_aligned_body_rotation",
+        "root_translation:body_aligned_body_rotation",
+    ] = "root_translation:root_aligned_body_rotation"
+    """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
+    with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
+
+    controller_cls = PDEEPoseController_NEW
+
+    def __post_init__(self):
+        assert not self.use_delta, "use_delta is not supported in the new controller"
