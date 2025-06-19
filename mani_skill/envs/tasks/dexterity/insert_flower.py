@@ -31,9 +31,6 @@ class InsertFlowerEnv(BaseEnv):
     _clearance = 0.003
     hand_init_height = 0.25
     flower_spawn_half_size = 0.05
-    # flower_spawn_center = (-0.022, -0.204)
-    # flower_height = 0.024
-    
 
     def __init__(
         self,
@@ -59,8 +56,6 @@ class InsertFlowerEnv(BaseEnv):
         with torch.device(self.device):
             self.prev_unit_vector = torch.zeros((self.num_envs, 3))
             self.cum_rotation_angle = torch.zeros((self.num_envs,))
-        
-        
 
     @property
     def _default_sim_config(self):
@@ -119,13 +114,10 @@ class InsertFlowerEnv(BaseEnv):
 
         self.target_area_box = list(self.target_area.values())
         # Convert target_area into tensor for fast computation
-        self.target_area_box = torch.tensor(self.target_area_box, device=self.device, dtype=torch.float32).view(
-            2, 3
-        ) 
+        self.target_area_box = torch.tensor(self.target_area_box, device=self.device, dtype=torch.float32).view(2, 3)
 
     def _after_reconfigure(self, options: dict):
         pass
-
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
@@ -141,8 +133,6 @@ class InsertFlowerEnv(BaseEnv):
             flower_pose = self.init_flower_pose
             flower_pose.p[:, :2] += torch.rand((b, 2)) * self.flower_spawn_half_size * 2 - self.flower_spawn_half_size
             self.flower.set_pose(flower_pose)
-
-            
 
     def _initialize_agent(self, env_idx: torch.Tensor):
         with torch.device(self.device):
@@ -167,9 +157,7 @@ class InsertFlowerEnv(BaseEnv):
     def _get_obs_extra(self, info: Dict):
         return {}
 
-
     def evaluate(self, **kwargs) -> dict:
-
         object_pos = torch.tensor(self.flower.pose.p, device=self.device, dtype=torch.float32)
 
         # Check if the object is within the specified bounds
@@ -179,16 +167,15 @@ class InsertFlowerEnv(BaseEnv):
         )
 
         return {"success": is_within}
-        
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict) -> float:
         # return 0
         object_pos = self.flower.pose.p
         dist_outside = torch.max(
-                torch.max(self.target_area_box[0] - object_pos, torch.zeros_like(object_pos)),  # lower bound
-                torch.max(object_pos - self.target_area_box[1], torch.zeros_like(object_pos)),  # upper bound
-            )
-        reward = torch.exp(- 5 * torch.norm(dist_outside)).reshape(-1)
+            torch.max(self.target_area_box[0] - object_pos, torch.zeros_like(object_pos)),  # lower bound
+            torch.max(object_pos - self.target_area_box[1], torch.zeros_like(object_pos)),  # upper bound
+        )
+        reward = torch.exp(-5 * torch.norm(dist_outside)).reshape(-1)
 
         return reward
 

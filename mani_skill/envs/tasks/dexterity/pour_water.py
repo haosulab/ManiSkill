@@ -21,6 +21,7 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
+
 @register_env(
     "PourWater-v1",
     max_episode_steps=300,
@@ -44,23 +45,7 @@ class PourWaterEnv(BaseEnv):
         **kwargs,
     ):
         self.robot_init_qpos_noise = robot_init_qpos_noise
-        # self.obj_init_pos_noise = obj_init_pos_noise
-        # self.obj_heights: torch.Tensor = torch.Tensor()
-        # if (
-        #     not isinstance(difficulty_level, int)
-        #     or difficulty_level >= 4
-        #     or difficulty_level < 0
-        # ):
-        #     raise ValueError(
-        #         f"Difficulty level must be a int within 0-3, but get {difficulty_level}"
-        #     )
-        # self.difficulty_level = difficulty_level
-        # if self.difficulty_level >= 2:
-        #     if reconfiguration_freq is None:
-        #         if num_envs == 1:
-        #             reconfiguration_freq = 1
-        #         else:
-        #             reconfiguration_freq = 0
+
         super().__init__(
             *args,
             # robot_uids="allegro_hand_right_floating",
@@ -85,9 +70,7 @@ class PourWaterEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(
-            eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height]
-        )
+        pose = sapien_utils.look_at(eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
@@ -96,99 +79,23 @@ class PourWaterEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(
-            env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
-        )
+        self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
-        
 
+        # === Load a cup (Dynamic) ===
+        cup_builder = self.scene.create_actor_builder()
+        cup_mesh_file = str(
+            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0081@00001/model.obj"
+        )
+        cup_builder.add_visual_from_file(cup_mesh_file)
+        cup_builder.add_convex_collision_from_file(cup_mesh_file, density=200)
 
-        # load a notebook 
-        loader = self.scene.create_urdf_loader()
-        loader.fix_root_link = False
-        loader.load_multiple_collisions_from_file = True 
-        articulation_builder = loader.parse("/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/arctic/notebook/notebook.urdf")["articulation_builders"]
-        builder = articulation_builder[0]
-        builder.set_scene_idxs(scene_idxs=[0])
-
-        self.init_notebook_pose = sapien.Pose(p=[-0.022, -0.204, 0.024], q=[0.513, 0.427, -0.5668, -0.483])
-
-        builder.initial_pose = self.init_notebook_pose
-        self.obj = builder.build(name="notebook") 
-        # self.notebook.set_pose()
-        # # builder = articulation_builders[0]
-        # # builder.add_
-        # #   notebook:
-        # # _type_: URDF
-        # # config:
-        # # pose:
-        #     p: [-0.1582, -0.0128, 0.8297]
-        #     q: [-0.5668, -0.4830, -0.5130, -0.4270]
-        # urdf: ${oc.env:ASSETS}/arctic/notebook/notebook.urdf
-        # load_multiple_collisions_from_file: true
-        # fix_root_link: false
-
-        # obj_heights = []
-        # if self.difficulty_level == 0:
-        #     self.obj = build_cube(
-        #         self.scene,
-        #         half_size=0.04,
-        #         color=np.array([255, 255, 255, 255]) / 255,
-        #         name="cube",
-        #         body_type="dynamic",
-        #     )
-        #     obj_heights.append(0.03)
-        # elif self.difficulty_level == 1:
-        #     half_sizes = (self._batched_episode_rng.randn() * 0.1 + 1) * 0.04
-        #     self._objs: List[Actor] = []
-        #     for i, half_size in enumerate(half_sizes):
-        #         builder = self.scene.create_actor_builder()
-        #         builder.add_box_collision(
-        #             half_size=[half_size] * 3,
-        #         )
-        #         builder.add_box_visual(
-        #             half_size=[half_size] * 3,
-        #             material=sapien.render.RenderMaterial(
-        #                 base_color=np.array([255, 255, 255, 255]) / 255,
-        #             ),
-        #         )
-        #         builder.set_scene_idxs([i])
-        #         self._objs.append(builder.build(name=f"cube-{i}"))
-        #         obj_heights.append(half_size)
-        #     self.obj = Actor.merge(self._objs, name="cube")
-        # elif self.difficulty_level >= 2:
-        #     all_model_ids = np.array(
-        #         list(
-        #             load_json(
-        #                 ASSET_DIR / "assets/mani_skill2_ycb/info_pick_v0.json"
-        #             ).keys()
-        #         )
-        #     )
-        #     model_ids = self._batched_episode_rng.choice(all_model_ids)
-        #     self._objs: List[Actor] = []
-        #     for i, model_id in enumerate(model_ids):
-        #         builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")
-        #         builder.set_scene_idxs([i])
-        #         self._objs.append(builder.build(name=f"{model_id}-{i}"))
-        #     self.obj = Actor.merge(self._objs, name="ycb_object")
-        # else:
-        #     raise ValueError(
-        #         f"Difficulty level must be an int within 0-4, but get {self.difficulty_level}"
-        #     )
-
-        # if self.difficulty_level < 2:
-        #     # for levels 0 and 1 we already know object heights. For other levels we need to compute them
-        #     self.obj_heights = common.to_tensor(obj_heights, device=self.device)
+        self.init_cup_pose = Pose.create_from_pq([-0.242, 0.167, 0.015 + 0.001], [-0.6635, 0.6121, -0.3087, -0.2997])
+        cup_builder.initial_pose = self.init_cup_pose
+        self.cup = cup_builder.build(name="cup")
 
     def _after_reconfigure(self, options: dict):
         pass
-        # if self.difficulty_level >= 2:
-        #     self.obj_heights = []
-        #     for obj in self._objs:
-        #         collision_mesh = obj.get_first_collision_mesh()
-        #         # this value is used to set object pose so the bottom is at z=0
-        #         self.obj_heights.append(-collision_mesh.bounding_box.bounds[0, 2])
-        #     self.obj_heights = common.to_tensor(self.obj_heights, device=self.device)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         self._initialize_actors(env_idx)
@@ -200,56 +107,9 @@ class PourWaterEnv(BaseEnv):
             # Initialize object pose
             self.table_scene.initialize(env_idx)
 
-            xyz = torch.zeros((b, 3))
-            xyz[:, :2] = (
-                torch.rand((b, 2)) * self.notebook_spawn_half_size * 2
-                - self.notebook_spawn_half_size
-            )
-            xyz[:, 0] += self.notebook_spawn_center[0]
-            xyz[:, 1] += self.notebook_spawn_center[1]
-
-            xyz[:, 2] = self.notebook_height
-
-            qs = self.init_notebook_pose.q
-            # qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
-            self.obj.set_pose(Pose.create_from_pq(xyz, qs))
-            self.obj.set_qpos([0])
-            # pose = self.obj.pose
-            # new_pos = torch.randn((b, 3)) * self.obj_init_pos_noise
-            # # hand_init_height is robot hand position while the 0.03 is a margin to ensure
-            # new_pos[:, 2] = (
-            #     torch.abs(new_pos[:, 2]) + self.hand_init_height + self.obj_heights
-            # )
-            # pose.raw_pose[:, 0:3] = new_pos
-            # pose.raw_pose[:, 3:7] = torch.tensor([[1, 0, 0, 0]])
-            # self.obj.set_pose(pose)
-
-            # Initialize object axis
-            # if self.difficulty_level <= 2:
-            #     axis = torch.ones((b,), dtype=torch.long) * 2
-            # else:
-            #     axis = torch.randint(0, 3, (b,), dtype=torch.long)
-            # self.rot_dir = F.one_hot(axis, num_classes=3)
-
-            # Sample a unit vector on the tangent plane of rotating axis
-            # vector_axis = (axis + 1) % 3
-            # vector = F.one_hot(vector_axis, num_classes=3)
-
-            # Initialize task related cache
-            # self.unit_vector = vector
-            # self.prev_unit_vector = vector.clone()
-            self.success_threshold = torch.pi / 2
-            # self.cum_rotation_angle = torch.zeros((b,))
-
-            # # Controller parameters
-            # stiffness = torch.tensor(self.agent.controller.configs["hand"].stiffness)
-            # damping = torch.tensor(self.agent.controller.configs["hand"].damping)
-            # force_limit = torch.tensor(self.agent.controller.configs["hand"].force_limit)
-            # self.controller_param = (
-            #     stiffness.expand(b, self.agent.robot.dof[0]),
-            #     damping.expand(b, self.agent.robot.dof[0]),
-            #     force_limit.expand(b, self.agent.robot.dof[0]),
-            # )
+            cup_pose = self.init_cup_pose
+            cup_pose.p[:, :2] += torch.rand((b, 2)) * self.cup_spawn_half_size * 2 - self.cup_spawn_half_size
+            self.cup.set_pose(cup_pose)
 
     def _initialize_agent(self, env_idx: torch.Tensor):
         with torch.device(self.device):
@@ -262,7 +122,12 @@ class PourWaterEnv(BaseEnv):
             self.agent.robot.set_pose(
                 Pose.create_from_pq(
                     torch.tensor([0.0, 0, self.hand_init_height]),
-                    torch.tensor([0, 0.707, 0, -0.707,]),
+                    torch.tensor([
+                        0,
+                        0.707,
+                        0,
+                        -0.707,
+                    ]),
                 )
             )
 
@@ -273,7 +138,7 @@ class PourWaterEnv(BaseEnv):
         #     obs = dict(rotation_angle = self.obj.qpos[:, 0])
         #     # if self.obs_mode_struct.use_state:
         #     #     obs.update(
-                    
+
         #     #         # obj_pose=vectorize_pose(self.obj.pose),
         #     #         # obj_tip_vec=info["obj_tip_vec"].view(self.num_envs, 12),
         #     #     )
@@ -284,38 +149,38 @@ class PourWaterEnv(BaseEnv):
         with torch.device(self.device):
             # 1. rotation angle
 
-        #     obj_pose = self.obj.pose
-        #     new_unit_vector = quaternion_apply(obj_pose.q, self.unit_vector)
-        #     new_unit_vector -= (
-        #         torch.sum(new_unit_vector * self.rot_dir, dim=-1, keepdim=True)
-        #         * self.rot_dir
-        #     )
-        #     new_unit_vector = new_unit_vector / torch.linalg.norm(
-        #         new_unit_vector, dim=-1, keepdim=True
-        #     )
-        #     angle = torch.acos(
-        #         torch.clip(
-        #             torch.sum(new_unit_vector * self.prev_unit_vector, dim=-1), 0, 1
-        #         )
-        #     )
-        #     # We do not expect the rotation angle for a single step to be so large
-        #     angle = torch.clip(angle, -torch.pi / 20, torch.pi / 20)
-        #     self.prev_unit_vector = new_unit_vector
+            #     obj_pose = self.obj.pose
+            #     new_unit_vector = quaternion_apply(obj_pose.q, self.unit_vector)
+            #     new_unit_vector -= (
+            #         torch.sum(new_unit_vector * self.rot_dir, dim=-1, keepdim=True)
+            #         * self.rot_dir
+            #     )
+            #     new_unit_vector = new_unit_vector / torch.linalg.norm(
+            #         new_unit_vector, dim=-1, keepdim=True
+            #     )
+            #     angle = torch.acos(
+            #         torch.clip(
+            #             torch.sum(new_unit_vector * self.prev_unit_vector, dim=-1), 0, 1
+            #         )
+            #     )
+            #     # We do not expect the rotation angle for a single step to be so large
+            #     angle = torch.clip(angle, -torch.pi / 20, torch.pi / 20)
+            #     self.prev_unit_vector = new_unit_vector
 
-        #     # 2. object velocity
-        #     obj_vel = torch.linalg.norm(self.obj.get_linear_velocity(), dim=-1)
+            #     # 2. object velocity
+            #     obj_vel = torch.linalg.norm(self.obj.get_linear_velocity(), dim=-1)
 
-        #     # 3. object falling
-        #     obj_fall = (obj_pose.p[:, 2] < self.hand_init_height - 0.05).to(torch.bool)
+            #     # 3. object falling
+            #     obj_fall = (obj_pose.p[:, 2] < self.hand_init_height - 0.05).to(torch.bool)
 
-        #     # 4. finger object distance
-        #     tip_poses = [vectorize_pose(link.pose) for link in self.agent.tip_links]
-        #     tip_poses = torch.stack(tip_poses, dim=1)  # (b, 4, 7)
-        #     obj_tip_vec = tip_poses[..., :3] - obj_pose.p[:, None, :]  # (b, 4, 3)
-        #     obj_tip_dist = torch.linalg.norm(obj_tip_vec, dim=-1)  # (b, 4)
+            #     # 4. finger object distance
+            #     tip_poses = [vectorize_pose(link.pose) for link in self.agent.tip_links]
+            #     tip_poses = torch.stack(tip_poses, dim=1)  # (b, 4, 7)
+            #     obj_tip_vec = tip_poses[..., :3] - obj_pose.p[:, None, :]  # (b, 4, 3)
+            #     obj_tip_dist = torch.linalg.norm(obj_tip_vec, dim=-1)  # (b, 4)
 
-        #     # 5. cum rotation angle
-        #     self.cum_rotation_angle += angle
+            #     # 5. cum rotation angle
+            #     self.cum_rotation_angle += angle
             # import pdb; pdb.set_trace()
             self.cum_rotation_angle = self.obj.qpos[:, 0]
             success = self.cum_rotation_angle > self.success_threshold
@@ -327,10 +192,7 @@ class PourWaterEnv(BaseEnv):
         #     qf = qpos_error * self.controller_param[0] - qvel * self.controller_param[1]
         #     qf = torch.clip(qf, -self.controller_param[2], self.controller_param[2])
         #     power = torch.sum(qf * qvel, dim=-1)
-        return dict(
-                rotation_angle = self.obj.qpos[:, 0],
-                success = success
-                )
+        return dict(rotation_angle=self.obj.qpos[:, 0], success=success)
         # return dict(
         #     rotation_angle=angle,
         #     obj_vel=obj_vel,
@@ -344,7 +206,7 @@ class PourWaterEnv(BaseEnv):
         # )
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # pass 
+        # pass
         # # 1. rotation reward
         angle = info["rotation_angle"]
         reward = 20 * angle
@@ -374,7 +236,6 @@ class PourWaterEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # pass 
+        # pass
         # this should be equal to compute_dense_reward / max possible reward
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 4.0
-
