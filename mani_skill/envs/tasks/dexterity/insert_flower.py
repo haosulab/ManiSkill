@@ -1,7 +1,9 @@
+from pathlib import Path
 from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
+import sapien.physx as physx
 import torch
 import torch.nn.functional as F
 
@@ -20,7 +22,7 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
-import sapien.physx as physx
+
 
 @register_env(
     "InsertFlower-v1",
@@ -31,6 +33,7 @@ class InsertFlowerEnv(BaseEnv):
     _clearance = 0.003
     hand_init_height = 0.25
     flower_spawn_half_size = 0.05
+    asset_path = Path(__file__).parents[5] / "assets"
 
     def __init__(
         self,
@@ -83,11 +86,9 @@ class InsertFlowerEnv(BaseEnv):
 
         # === Load Vase (Static) ===
         vase_builder = self.scene.create_actor_builder()
-        vase_visual_mesh_file = str(
-            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0080@00001/model.obj"
-        )
+        vase_visual_mesh_file = str(self.asset_path / "oakink/object_repair/align_ds/O02@0080@00001/model.obj")
         vase_collision_mesh_file = str(
-            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0080@00001/model.obj.coacd.ply"
+            self.asset_path / "oakink/object_repair/align_ds/O02@0080@00001/model.obj.coacd.ply"
         )
         vase_builder.add_visual_from_file(vase_visual_mesh_file)
         vase_builder.add_multiple_convex_collisions_from_file(vase_collision_mesh_file)
@@ -100,23 +101,25 @@ class InsertFlowerEnv(BaseEnv):
 
         # === Load Flower (Dynamic) ===
         flower_builder = self.scene.create_actor_builder()
-        flower_mesh_file = str(
-            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0081@00001/model.obj"
-        )
+        flower_mesh_file = str(self.asset_path / "oakink/object_repair/align_ds/O02@0081@00001/model.obj")
         flower_collision_file = str(
-            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0081@00001/model.obj.coacd.ply"
+            self.asset_path / "oakink/object_repair/align_ds/O02@0081@00001/model.obj.coacd.ply"
         )
         flower_builder.add_visual_from_file(flower_mesh_file)
-                # flower_builder.set_density(200.0)
+        # flower_builder.set_density(200.0)
         flower_material = physx.PhysxMaterial(static_friction=1, dynamic_friction=1, restitution=1)
-# (
+        # (
         #     static_friction=1.0, dynamic_friction=1.0, restitution=1.0
         # )
-        flower_builder.add_multiple_convex_collisions_from_file(flower_collision_file, density=200, material=flower_material)
+        flower_builder.add_multiple_convex_collisions_from_file(
+            flower_collision_file, density=200, material=flower_material
+        )
 
         # flower_builder.set_material(flower_material)
-# Pose([-0.269485, 0.0198321, 0.016], )
-        self.init_flower_pose = Pose.create_from_pq([-0.242, 0., 0.015 + 0.001], [-0.352413, -0.258145, -0.635074, 0.637062])
+        # Pose([-0.269485, 0.0198321, 0.016], )
+        self.init_flower_pose = Pose.create_from_pq(
+            [-0.242, 0.0, 0.015 + 0.001], [-0.352413, -0.258145, -0.635074, 0.637062]
+        )
         flower_builder.initial_pose = self.init_flower_pose
         self.flower = flower_builder.build(name="flower")
 
@@ -125,7 +128,6 @@ class InsertFlowerEnv(BaseEnv):
         #         shape.physical_material.dynamic_friction = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
         #         shape.physical_material.static_friction = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
         #         shape.physical_material.restitution = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
-
 
         self.target_area_box = list(self.target_area.values())
         # Convert target_area into tensor for fast computation
@@ -198,3 +200,7 @@ class InsertFlowerEnv(BaseEnv):
         # pass
         # this should be equal to compute_dense_reward / max possible reward
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 4.0
+
+
+if __name__ == "__main__":
+    print(InsertFlowerEnv.asset_path)
