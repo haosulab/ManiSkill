@@ -20,7 +20,7 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
-
+import sapien.physx as physx
 
 @register_env(
     "InsertFlower-v1",
@@ -83,11 +83,14 @@ class InsertFlowerEnv(BaseEnv):
 
         # === Load Vase (Static) ===
         vase_builder = self.scene.create_actor_builder()
-        vase_mesh_file = str(
+        vase_visual_mesh_file = str(
             "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0080@00001/model.obj"
         )
-        vase_builder.add_visual_from_file(vase_mesh_file)
-        vase_builder.add_convex_collision_from_file(vase_mesh_file)
+        vase_collision_mesh_file = str(
+            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0080@00001/model.obj.coacd.ply"
+        )
+        vase_builder.add_visual_from_file(vase_visual_mesh_file)
+        vase_builder.add_multiple_convex_collisions_from_file(vase_collision_mesh_file)
         vase_builder.initial_pose = Pose.create_from_pq(
             [-0.2509, -0.2027, 0.102 + 0.001], [0.8712, 0.0069, 0.0082, 0.4908]
         )
@@ -100,17 +103,29 @@ class InsertFlowerEnv(BaseEnv):
         flower_mesh_file = str(
             "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0081@00001/model.obj"
         )
+        flower_collision_file = str(
+            "/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/oakink/object_repair/align_ds/O02@0081@00001/model.obj.coacd.ply"
+        )
         flower_builder.add_visual_from_file(flower_mesh_file)
-        flower_builder.add_convex_collision_from_file(flower_mesh_file, density=200)
-        # flower_builder.set_density(200.0)
-        # flower_material = self.scene.create_physical_material(
+                # flower_builder.set_density(200.0)
+        flower_material = physx.PhysxMaterial(static_friction=1, dynamic_friction=1, restitution=1)
+# (
         #     static_friction=1.0, dynamic_friction=1.0, restitution=1.0
         # )
-        # flower_builder.set_material(flower_material)
+        flower_builder.add_multiple_convex_collisions_from_file(flower_collision_file, density=200, material=flower_material)
 
-        self.init_flower_pose = Pose.create_from_pq([-0.242, 0.167, 0.015 + 0.001], [-0.6635, 0.6121, -0.3087, -0.2997])
+        # flower_builder.set_material(flower_material)
+# Pose([-0.269485, 0.0198321, 0.016], )
+        self.init_flower_pose = Pose.create_from_pq([-0.242, 0., 0.015 + 0.001], [-0.352413, -0.258145, -0.635074, 0.637062])
         flower_builder.initial_pose = self.init_flower_pose
         self.flower = flower_builder.build(name="flower")
+
+        # for i, obj in enumerate(self.flower._objs):
+        #     for shape in obj.collision_shapes:
+        #         shape.physical_material.dynamic_friction = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+        #         shape.physical_material.static_friction = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+        #         shape.physical_material.restitution = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+
 
         self.target_area_box = list(self.target_area.values())
         # Convert target_area into tensor for fast computation

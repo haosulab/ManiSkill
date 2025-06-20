@@ -63,7 +63,7 @@ class OpenNotebookEnv(BaseEnv):
         #             reconfiguration_freq = 0
         super().__init__(
             *args,
-            robot_uids="allegro_hand_right_floating",
+            # robot_uids="allegro_hand_right_floating",
             num_envs=num_envs,
             reconfiguration_freq=reconfiguration_freq,
             **kwargs,
