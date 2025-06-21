@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Union
 
 import numpy as np
+from pathlib import Path
 import sapien
 import torch
 import torch.nn.functional as F
@@ -21,6 +22,7 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, vectorize_pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
+
 @register_env(
     "OpenNotebook-v1",
     max_episode_steps=300,
@@ -32,6 +34,7 @@ class OpenNotebookEnv(BaseEnv):
     notebook_spawn_half_size = 0.05
     notebook_spawn_center = (-0.022, -0.204)
     notebook_height = 0.024
+    asset_path = Path(__file__).parents[5] / "assets"
 
     def __init__(
         self,
@@ -85,9 +88,7 @@ class OpenNotebookEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(
-            eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height]
-        )
+        pose = sapien_utils.look_at(eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
@@ -96,25 +97,23 @@ class OpenNotebookEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(
-            env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
-        )
+        self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
-        
 
-
-        # load a notebook 
+        # load a notebook
         loader = self.scene.create_urdf_loader()
         loader.fix_root_link = False
-        loader.load_multiple_collisions_from_file = True 
-        articulation_builder = loader.parse("/home/yulin/Documents/yulin/vr-teleop/vr_teleop/assets/arctic/notebook/notebook.urdf")["articulation_builders"]
+        loader.load_multiple_collisions_from_file = True
+        articulation_builder = loader.parse(str(self.asset_path / "arctic/notebook/notebook.urdf"))[
+            "articulation_builders"
+        ]
         builder = articulation_builder[0]
         builder.set_scene_idxs(scene_idxs=[0])
 
         self.init_notebook_pose = sapien.Pose(p=[-0.022, -0.204, 0.024], q=[0.513, 0.427, -0.5668, -0.483])
 
         builder.initial_pose = self.init_notebook_pose
-        self.obj = builder.build(name="notebook") 
+        self.obj = builder.build(name="notebook")
         # self.notebook.set_pose()
         # # builder = articulation_builders[0]
         # # builder.add_
@@ -201,10 +200,7 @@ class OpenNotebookEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
 
             xyz = torch.zeros((b, 3))
-            xyz[:, :2] = (
-                torch.rand((b, 2)) * self.notebook_spawn_half_size * 2
-                - self.notebook_spawn_half_size
-            )
+            xyz[:, :2] = torch.rand((b, 2)) * self.notebook_spawn_half_size * 2 - self.notebook_spawn_half_size
             xyz[:, 0] += self.notebook_spawn_center[0]
             xyz[:, 1] += self.notebook_spawn_center[1]
 
@@ -262,7 +258,12 @@ class OpenNotebookEnv(BaseEnv):
             self.agent.robot.set_pose(
                 Pose.create_from_pq(
                     torch.tensor([0.0, 0, self.hand_init_height]),
-                    torch.tensor([0, 0.707, 0, -0.707,]),
+                    torch.tensor([
+                        0,
+                        0.707,
+                        0,
+                        -0.707,
+                    ]),
                 )
             )
 
@@ -273,7 +274,7 @@ class OpenNotebookEnv(BaseEnv):
         #     obs = dict(rotation_angle = self.obj.qpos[:, 0])
         #     # if self.obs_mode_struct.use_state:
         #     #     obs.update(
-                    
+
         #     #         # obj_pose=vectorize_pose(self.obj.pose),
         #     #         # obj_tip_vec=info["obj_tip_vec"].view(self.num_envs, 12),
         #     #     )
@@ -284,38 +285,38 @@ class OpenNotebookEnv(BaseEnv):
         with torch.device(self.device):
             # 1. rotation angle
 
-        #     obj_pose = self.obj.pose
-        #     new_unit_vector = quaternion_apply(obj_pose.q, self.unit_vector)
-        #     new_unit_vector -= (
-        #         torch.sum(new_unit_vector * self.rot_dir, dim=-1, keepdim=True)
-        #         * self.rot_dir
-        #     )
-        #     new_unit_vector = new_unit_vector / torch.linalg.norm(
-        #         new_unit_vector, dim=-1, keepdim=True
-        #     )
-        #     angle = torch.acos(
-        #         torch.clip(
-        #             torch.sum(new_unit_vector * self.prev_unit_vector, dim=-1), 0, 1
-        #         )
-        #     )
-        #     # We do not expect the rotation angle for a single step to be so large
-        #     angle = torch.clip(angle, -torch.pi / 20, torch.pi / 20)
-        #     self.prev_unit_vector = new_unit_vector
+            #     obj_pose = self.obj.pose
+            #     new_unit_vector = quaternion_apply(obj_pose.q, self.unit_vector)
+            #     new_unit_vector -= (
+            #         torch.sum(new_unit_vector * self.rot_dir, dim=-1, keepdim=True)
+            #         * self.rot_dir
+            #     )
+            #     new_unit_vector = new_unit_vector / torch.linalg.norm(
+            #         new_unit_vector, dim=-1, keepdim=True
+            #     )
+            #     angle = torch.acos(
+            #         torch.clip(
+            #             torch.sum(new_unit_vector * self.prev_unit_vector, dim=-1), 0, 1
+            #         )
+            #     )
+            #     # We do not expect the rotation angle for a single step to be so large
+            #     angle = torch.clip(angle, -torch.pi / 20, torch.pi / 20)
+            #     self.prev_unit_vector = new_unit_vector
 
-        #     # 2. object velocity
-        #     obj_vel = torch.linalg.norm(self.obj.get_linear_velocity(), dim=-1)
+            #     # 2. object velocity
+            #     obj_vel = torch.linalg.norm(self.obj.get_linear_velocity(), dim=-1)
 
-        #     # 3. object falling
-        #     obj_fall = (obj_pose.p[:, 2] < self.hand_init_height - 0.05).to(torch.bool)
+            #     # 3. object falling
+            #     obj_fall = (obj_pose.p[:, 2] < self.hand_init_height - 0.05).to(torch.bool)
 
-        #     # 4. finger object distance
-        #     tip_poses = [vectorize_pose(link.pose) for link in self.agent.tip_links]
-        #     tip_poses = torch.stack(tip_poses, dim=1)  # (b, 4, 7)
-        #     obj_tip_vec = tip_poses[..., :3] - obj_pose.p[:, None, :]  # (b, 4, 3)
-        #     obj_tip_dist = torch.linalg.norm(obj_tip_vec, dim=-1)  # (b, 4)
+            #     # 4. finger object distance
+            #     tip_poses = [vectorize_pose(link.pose) for link in self.agent.tip_links]
+            #     tip_poses = torch.stack(tip_poses, dim=1)  # (b, 4, 7)
+            #     obj_tip_vec = tip_poses[..., :3] - obj_pose.p[:, None, :]  # (b, 4, 3)
+            #     obj_tip_dist = torch.linalg.norm(obj_tip_vec, dim=-1)  # (b, 4)
 
-        #     # 5. cum rotation angle
-        #     self.cum_rotation_angle += angle
+            #     # 5. cum rotation angle
+            #     self.cum_rotation_angle += angle
             # import pdb; pdb.set_trace()
             self.cum_rotation_angle = self.obj.qpos[:, 0]
             success = self.cum_rotation_angle > self.success_threshold
@@ -327,10 +328,7 @@ class OpenNotebookEnv(BaseEnv):
         #     qf = qpos_error * self.controller_param[0] - qvel * self.controller_param[1]
         #     qf = torch.clip(qf, -self.controller_param[2], self.controller_param[2])
         #     power = torch.sum(qf * qvel, dim=-1)
-        return dict(
-                rotation_angle = self.obj.qpos[:, 0],
-                success = success
-                )
+        return dict(rotation_angle=self.obj.qpos[:, 0], success=success)
         # return dict(
         #     rotation_angle=angle,
         #     obj_vel=obj_vel,
@@ -344,7 +342,7 @@ class OpenNotebookEnv(BaseEnv):
         # )
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # pass 
+        # pass
         # # 1. rotation reward
         angle = info["rotation_angle"]
         reward = 20 * angle
@@ -374,7 +372,6 @@ class OpenNotebookEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # pass 
+        # pass
         # this should be equal to compute_dense_reward / max possible reward
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 4.0
-
