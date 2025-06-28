@@ -1243,7 +1243,8 @@ class BaseEnv(gym.Env):
         sim_state = self.scene.get_sim_state()
         controller_state = self.agent.get_controller_state()
         # Remove any empty keys from controller_state
-        controller_state = {k: v for k, v in controller_state.items() if v}
+        if isinstance(self.agent.controller, dict):
+            controller_state = {k: v for k, v in controller_state.items() if len(v) > 0}
         if len(controller_state) > 0:
             sim_state["controller"] = controller_state
         return sim_state
