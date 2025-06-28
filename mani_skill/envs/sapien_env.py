@@ -1241,7 +1241,10 @@ class BaseEnv(gym.Env):
         Get environment state dictionary. Override to include task information (e.g., goal)
         """
         sim_state = self.scene.get_sim_state()
-        controller_state = self.agent.controller.get_state()
+        controller_state = self.agent.get_controller_state()
+        # Remove any empty keys from controller_state
+        if isinstance(self.agent.controller, dict):
+            controller_state = {k: v for k, v in controller_state.items() if len(v) > 0}
         if len(controller_state) > 0:
             sim_state["controller"] = controller_state
         return sim_state
