@@ -3,6 +3,7 @@ Utilities for determining the simulation backend and devices
 """
 import platform
 from dataclasses import dataclass
+from typing import Union
 
 import sapien
 import torch
@@ -18,8 +19,8 @@ class BackendInfo:
     """the device on which the physics simulation is running"""
     sim_backend: str
     """the backend name of the physics simulation"""
-    render_device: sapien.Device
-    """the device on which the renderer is running"""
+    render_device: Union[sapien.Device, None]
+    """the device on which the renderer is running. If none then we disable rendering."""
     render_backend: str
     """the backend name of the renderer"""
 
@@ -70,6 +71,8 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
             render_device = sapien.Device("cpu")
         elif render_backend[:4] == "cuda":
             render_device = sapien.Device(render_backend)
+        elif render_backend == "none" or render_backend is None:
+            render_device = None
         else:
             # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
             render_device = sapien.Device(render_backend)

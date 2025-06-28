@@ -98,12 +98,18 @@ class BaseEnv(gym.Env):
         sim_backend (str): By default this is "auto". If sim_backend is "auto", then if ``num_envs == 1``, we use the PhysX CPU sim backend, otherwise
             we use the PhysX GPU sim backend and automatically pick a GPU to use.
             Can also be "physx_cpu" or "physx_cuda" to force usage of a particular sim backend.
-            To select a particular GPU to run the simulation on, you can pass "cuda:n" where n is the ID of the GPU,
+            To select a particular GPU to run the simulation on, you can pass "physx_cuda:n" where n is the ID of the GPU,
             similar to the way PyTorch selects GPUs.
             Note that if this is "physx_cpu", num_envs can only be equal to 1.
 
-        render_backend (str): By default this is "gpu". If render_backend is "gpu", then we auto select a GPU to render with.
-            It can be "cuda:n" where n is the ID of the GPU to render with. If this is "cpu", then we render on the CPU.
+        render_backend (str): By default this is "gpu". If render_backend is "gpu" or it's alias "sapien_cuda", then we auto select a GPU to render with.
+            It can be "sapien_cuda:n" where n is the ID of the GPU to render with. If this is "cpu" or "sapien_cpu", then we try to render on the CPU.
+            If this is "none" or None, then we disable rendering.
+
+            Note that some environments may require rendering functionalities to work. Moreover
+            it is sometimes difficult to determine before running an environment if your machine can render or not. If you encounter some issue with
+            rendering you can first try to double check your NVIDIA drivers / Vulkan drivers are setup correctly. If you don't need to do rendering
+            you can simply disable it by setting render_backend to "none" or None.
 
         parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
             This is only really useful for generating cool videos showing all environments at once but it is not recommended
