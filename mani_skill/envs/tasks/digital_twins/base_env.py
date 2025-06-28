@@ -94,7 +94,6 @@ class BaseDigitalTwinEnv(BaseEnv):
 
     def _after_reconfigure(self, options: dict):
         super()._after_reconfigure(options)
-        self._objects_to_remove_from_greenscreen = []
 
         if self.rgb_overlay_mode != "none":
             # after reconfiguration in CPU/GPU sim we have initialized all ids of objects in the scene.
@@ -119,6 +118,7 @@ class BaseDigitalTwinEnv(BaseEnv):
                     self._rgb_overlay_images[camera_name] = common.to_tensor(
                         rgb_overlay_img, device=self.device
                     )
+        self._objects_to_remove_from_greenscreen = []
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
