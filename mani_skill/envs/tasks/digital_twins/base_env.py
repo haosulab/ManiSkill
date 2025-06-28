@@ -94,17 +94,17 @@ class BaseDigitalTwinEnv(BaseEnv):
 
     def _after_reconfigure(self, options: dict):
         super()._after_reconfigure(options)
-        # after reconfiguration in CPU/GPU sim we have initialized all ids of objects in the scene.
-        # and can now get the list of segmentation ids to keep
+        self._objects_to_remove_from_greenscreen = []
 
         if self.rgb_overlay_mode != "none":
+            # after reconfiguration in CPU/GPU sim we have initialized all ids of objects in the scene.
+            # and can now get the list of segmentation ids to keep
             per_scene_ids = []
             for object in self._objects_to_remove_from_greenscreen:
                 per_scene_ids.append(object.per_scene_id)
             self._segmentation_ids_to_keep = torch.unique(
                 torch.concatenate(per_scene_ids)
             )
-            self._objects_to_remove_from_greenscreen = []
 
             # load the overlay images
             for camera_name in self.rgb_overlay_paths.keys():
