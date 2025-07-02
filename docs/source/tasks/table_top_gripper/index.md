@@ -41,6 +41,14 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><p>50</p></td>
 </tr>
 <tr class="row-odd">
+<td><p><a href="#peghitball-v1">PegHitBall-v1</a></p></td>
+<td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PegHitBall-v1_rt_thumb_first.png' alt='PegHitBall-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PegHitBall-v1_rt_thumb_last.png' alt='PegHitBall-v1'></div></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>✅</p></td>
+<td><p>100</p></td>
+</tr>
+<tr class="row-odd">
 <td><p><a href="#peginsertionside-v1">PegInsertionSide-v1</a></p></td>
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_first.png' alt='PegInsertionSide-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PegInsertionSide-v1_rt_thumb_last.png' alt='PegInsertionSide-v1'></div></td>
 <td><p>✅</p></td>
@@ -236,6 +244,33 @@ A simple task where the objective is to move a peg laying on the table to any up
 <div style="display: flex; justify-content: center;">
 <video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/LiftPegUpright-v1_rt_thumb_first.png">
 <source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/LiftPegUpright-v1_rt.mp4" type="video/mp4">
+</video>
+</div>
+
+## PegHitBall-v1
+
+![dense-reward][dense-reward-badge]
+![sparse-reward][sparse-reward-badge]
+![demos][demos-badge]
+:::{dropdown} Task Card
+:icon: note
+:color: primary
+
+**Task Description:**
+Pick up a orange-white peg and strike a ball into a goal.
+
+**Randomizations:**
+- The peg's xy position is randomized on top of the table in the region [-0.15, 0.15] x [0.40, 0.50]. Its half-length is sampled from [0.09, 0.12] and half-width/radius from [0.018, 0.025]; the peg lies flat with its head facing the ball/goal.
+- The ball's xy position is randomized on the table in the region [-0.15, -0.05]. The y-position is fixed. It is placed flat on the surface.
+- The goal region's xy position (red/white disk) is randomized on the table in the region [-0.15, 0.15] x [-0.65, -0.50].
+
+**Success Conditions:**
+- The ball's xy position is within goal_radius (default 0.1) of the target's xy position by euclidean distance.
+:::
+
+<div style="display: flex; justify-content: center;">
+<video preload="none" controls="True" width="100%" style="max-width: min(100%, 512px);" poster="../../_static/env_thumbnails/PegHitBall-v1_rt_thumb_first.png">
+<source src="https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PegHitBall-v1_rt.mp4" type="video/mp4">
 </video>
 </div>
 
