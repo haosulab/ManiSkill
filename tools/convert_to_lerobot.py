@@ -178,7 +178,7 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
     for i, length in enumerate(episode_lengths):
         episodes_data.append({
             "episode_index": i,
-            "tasks": ["Pick up the cube and place it"],
+            "tasks": ["Pick the cube to the target position."],
             "length": length
         })
     
@@ -188,7 +188,7 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
     
     # tasks.jsonl
     with open(base_path / "meta" / "tasks.jsonl", 'w') as f:
-        f.write(json.dumps({"task_index": 0, "task": "Pick up the cube and place it"}) + '\n')
+        f.write(json.dumps({"task_index": 0, "task": "Pick the cube to the target position."}) + '\n')
     
     # info.json
     info_data = {
