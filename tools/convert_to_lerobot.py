@@ -64,6 +64,43 @@ def create_video_from_frames(frames: np.ndarray, output_path: str, fps: int = 30
     out.release()
 
 
+def calculate_image_statistics_from_raw(all_rgb_data: List[np.ndarray]) -> Dict[str, Any]:
+    """Computing image statistics from RGB data"""    
+    valid_rgb_data = [rgb for rgb in all_rgb_data if rgb.size > 0]    
+    all_pixels = []
+    total_frames = 0
+    
+    for episode_rgb in valid_rgb_data:
+        # episode_rgb shape: (num_frames, H, W, 3), values: [0, 255]
+        normalized_rgb = episode_rgb.astype(np.float32) / 255.0
+        
+        pixels = normalized_rgb.reshape(-1, 3)  # (num_pixels, 3)
+        if len(pixels) > 50000:  
+            indices = np.random.choice(len(pixels), 50000, replace=False)
+            pixels = pixels[indices]
+        
+        all_pixels.extend(pixels)
+        total_frames += len(episode_rgb)
+    
+    all_pixels = np.array(all_pixels)  # (total_pixels, 3)
+    
+    stats = {
+        'mean': [[[float(all_pixels[:, 0].mean())]], 
+                 [[float(all_pixels[:, 1].mean())]], 
+                 [[float(all_pixels[:, 2].mean())]]],
+        'std': [[[float(all_pixels[:, 0].std())]], 
+                [[float(all_pixels[:, 1].std())]], 
+                [[float(all_pixels[:, 2].std())]]],
+        'max': [[[float(all_pixels[:, 0].max())]], 
+                [[float(all_pixels[:, 1].max())]], 
+                [[float(all_pixels[:, 2].max())]]],
+        'min': [[[float(all_pixels[:, 0].min())]], 
+                [[float(all_pixels[:, 1].min())]], 
+                [[float(all_pixels[:, 2].min())]]]
+    }
+    return stats
+
+
 def extract_robot_state(joints: np.ndarray) -> np.ndarray:
     """Extract robot state from joint array (first 7 joints for Panda)."""
     return joints[:, :7]
@@ -94,8 +131,7 @@ def process_episode(episode_data: Dict[str, np.ndarray], episode_idx: int, task_
     
     return pd.DataFrame(df_data)
 
-
-def calculate_statistics(all_dataframes: List[pd.DataFrame]) -> Dict[str, Any]:
+def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data: List[np.ndarray]) -> Dict[str, Any]:
     """Calculate statistics for all data."""
     combined_df = pd.concat(all_dataframes, ignore_index=True)
     stats = {}
@@ -118,6 +154,9 @@ def calculate_statistics(all_dataframes: List[pd.DataFrame]) -> Dict[str, Any]:
         'min': states.min(axis=0).tolist()
     }
     
+    stats['observation.images.main'] = calculate_image_statistics_from_raw(all_rgb_data)
+
+
     # Scalar field statistics
     for field in ['timestamp', 'frame_index', 'episode_index', 'index', 'task_index']:
         values = combined_df[field].values
@@ -225,6 +264,7 @@ def main():
     print(f"Found {len(npz_files)} .npz files")
     
     all_dataframes = []
+    all_rgb_data = []
     episode_lengths = []
     global_index = 0
     
@@ -232,6 +272,9 @@ def main():
         with np.load(npz_file) as data:
             episode_data = {key: data[key] for key in data.keys()}
         
+        if 'rgb' in episode_data:
+            all_rgb_data.append(episode_data['rgb'])
+  
         df = process_episode(episode_data, episode_idx)
         
         episode_length = len(df)
@@ -248,8 +291,7 @@ def main():
         all_dataframes.append(df)
         episode_lengths.append(episode_length)
     
-    print("Calculating statistics...")
-    stats = calculate_statistics(all_dataframes)
+    stats = calculate_statistics(all_dataframes, all_rgb_data)
     
     with open(base_path / "meta" / "stats.json", 'w') as f:
         json.dump(stats, f, indent=2)
