@@ -95,6 +95,11 @@ class SO101(BaseAgent):
         self.finger2_link = self.robot.links_map["moving_jaw_so101_v1_link"]
         self.finger1_tip = self.finger1_link
         self.finger2_tip = self.finger2_link
+        
+        # Enable self-collision for gripper to work with new collision meshes
+        self.robot.set_self_collision(True)
+        for link in self.robot.links:
+            link.set_collision_groups(1, 1, 1, 1)
 
     @property
     def tcp_pos(self):
