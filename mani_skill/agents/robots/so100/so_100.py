@@ -1,4 +1,5 @@
 import copy
+from copy import deepcopy
 
 import numpy as np
 import sapien
@@ -44,35 +45,78 @@ class SO100(BaseAgent):
         ),
     )
 
+    arm_joint_names = [
+        'Rotation', 
+        'Pitch', 
+        'Elbow', 
+        'Wrist_Pitch', 
+        'Wrist_Roll'
+    ]
+    gripper_joint_names = [
+        'Jaw'
+    ]
+
     @property
     def _controller_configs(self):
-        pd_joint_pos = PDJointPosControllerConfig(
-            [joint.name for joint in self.robot.active_joints],
+        arm_pd_joint_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
             lower=None,
             upper=None,
-            stiffness=[1e3] * 6,
-            damping=[1e2] * 6,
+            stiffness=[1e3] * 5,
+            damping=[1e2] * 5,
             force_limit=100,
             normalize_action=False,
         )
-
-        pd_joint_delta_pos = PDJointPosControllerConfig(
-            [joint.name for joint in self.robot.active_joints],
-            -0.1,
-            0.1,
-            stiffness=[1e3] * 6,
-            damping=[1e2] * 6,
+        arm_pd_joint_delta_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
+            lower=-0.1,
+            upper=0.1,
+            stiffness=[1e3] * 5,
+            damping=[1e2] * 5,
             force_limit=100,
             use_delta=True,
             use_target=False,
         )
-        pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
-        pd_joint_target_delta_pos.use_target = True
+        arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
+        arm_pd_joint_target_delta_pos.use_target = True
+
+        gripper_pd_joint_pos = PDJointPosControllerConfig(
+            self.gripper_joint_names,
+            lower=-0.01,  # a trick to have force when the object is thin
+            upper=1.7,
+            stiffness=[1e3],
+            damping=[1e2],
+            force_limit=100,
+        )
+        
+
+        # pd_joint_pos = PDJointPosControllerConfig(
+        #     [joint.name for joint in self.robot.active_joints],
+        #     lower=None,
+        #     upper=None,
+        #     stiffness=[1e3] * 6,
+        #     damping=[1e2] * 6,
+        #     force_limit=100,
+        #     normalize_action=False,
+        # )
+
+        # pd_joint_delta_pos = PDJointPosControllerConfig(
+        #     [joint.name for joint in self.robot.active_joints],
+        #     -0.1,
+        #     0.1,
+        #     stiffness=[1e3] * 6,
+        #     damping=[1e2] * 6,
+        #     force_limit=100,
+        #     use_delta=True,
+        #     use_target=False,
+        # )
+        # pd_joint_target_delta_pos = copy.deepcopy(pd_joint_delta_pos)
+        # pd_joint_target_delta_pos.use_target = True
 
         controller_configs = dict(
-            pd_joint_delta_pos=pd_joint_delta_pos,
-            pd_joint_pos=pd_joint_pos,
-            pd_joint_target_delta_pos=pd_joint_target_delta_pos,
+            pd_joint_delta_pos=dict(arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_pos),
+            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
+            pd_joint_target_delta_pos=dict(arm=arm_pd_joint_target_delta_pos, gripper=gripper_pd_joint_pos)
         )
         return deepcopy_dict(controller_configs)
 

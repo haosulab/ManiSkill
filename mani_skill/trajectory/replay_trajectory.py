@@ -95,21 +95,18 @@ def sanity_check_and_format_seed(episode):
     """sanity checks the trajectory seed aligns with the episode seed. reformats the reset kwargs seed if missing or formatted wrong"""
     if "seed" in episode["reset_kwargs"]:
         if isinstance(episode["reset_kwargs"]["seed"], list):
-
-            assert (
-                len(episode["reset_kwargs"]["seed"]) == 1
-            ), f"found multiple seeds for one trajectory (id={episode['episode_id']}) in the reset kwargs which means it is ambiguous which seed to use"
+            assert len(episode["reset_kwargs"]["seed"]) == 1, (
+                f"found multiple seeds for one trajectory (id={episode['episode_id']}) in the reset kwargs which means it is ambiguous which seed to use"
+            )
             episode["reset_kwargs"]["seed"] = episode["reset_kwargs"]["seed"][0]
-        assert (
-            episode["reset_kwargs"]["seed"] == episode["episode_seed"]
-        ), f"found mismatch between trajectory seed and episode seed (id={episode['episode_id']})"
+        assert episode["reset_kwargs"]["seed"] == episode["episode_seed"], (
+            f"found mismatch between trajectory seed and episode seed (id={episode['episode_id']})"
+        )
     else:
         episode["reset_kwargs"]["seed"] = episode["episode_seed"]
 
 
-def replay_parallelized_sim(
-    args: Args, env: RecordEpisode, pbar, episodes, trajectories
-):
+def replay_parallelized_sim(args: Args, env: RecordEpisode, pbar, episodes, trajectories):
     pbar.reset(total=len(episodes))
     warned_reset_kwargs_options = False
     # split all episodes into batches of args.num_envs environments and process each batch in parallel, truncating where necessary
@@ -129,9 +126,9 @@ def replay_parallelized_sim(
         trajectory_ids = [episode["episode_id"] for episode in episode_batch]
         episode_lens = np.array([episode["elapsed_steps"] for episode in episode_batch])
         ori_control_mode = episode_batch[0]["control_mode"]
-        assert all(
-            [episode["control_mode"] == ori_control_mode for episode in episode_batch]
-        ), "Replay trajectory with parallelized environments is only supported for trajectories with the same control mode"
+        assert all([episode["control_mode"] == ori_control_mode for episode in episode_batch]), (
+            "Replay trajectory with parallelized environments is only supported for trajectories with the same control mode"
+        )
         episode_batch_max_len = max(episode_lens)
         seeds = torch.tensor(
             [episode["episode_seed"] for episode in episode_batch],
@@ -144,7 +141,6 @@ def replay_parallelized_sim(
         original_actions_batch = []
         env_states_batch = []  # list of batched env states shape (max_steps, D)
         for i, trajectory_id in enumerate(trajectory_ids):
-
             # sanity check seeds and warn user if reset kwargs includes options (which are not supported in GPU sim replay)
             traj = trajectories[f"traj_{trajectory_id}"]
             episode = episode_batch[i]
@@ -166,9 +162,7 @@ def replay_parallelized_sim(
                 actions = np.concatenate(
                     [
                         actions,
-                        np.zeros(
-                            (episode_batch_max_len - len(actions), actions.shape[1])
-                        ),
+                        np.zeros((episode_batch_max_len - len(actions), actions.shape[1])),
                     ],
                     axis=0,
                 )
@@ -176,9 +170,7 @@ def replay_parallelized_sim(
             original_actions_batch.append(actions)
         for t in range(episode_batch_max_len + 1):
             env_states_batch.append(
-                trajectory_utils.list_of_dicts_to_dict(
-                    [env_states_list[i][t] for i in range(len(env_states_list))]
-                )
+                trajectory_utils.list_of_dicts_to_dict([env_states_list[i][t] for i in range(len(env_states_list))])
             )
 
         original_actions_batch = np.stack(original_actions_batch, axis=1)
@@ -195,19 +187,14 @@ def replay_parallelized_sim(
                         for k in x.keys():
                             recursive_replace(x[k], y[k])
 
-                recursive_replace(
-                    env._trajectory_buffer.state, common.batch(env_states_batch[0])
-                )
+                recursive_replace(env._trajectory_buffer.state, common.batch(env_states_batch[0]))
                 recursive_replace(
                     env._trajectory_buffer.observation,
                     common.to_numpy(common.batch(env.base_env.get_obs())),
                 )
 
         # replay with env states / actions
-        if (
-            args.target_control_mode is None
-            or ori_control_mode == args.target_control_mode
-        ):
+        if args.target_control_mode is None or ori_control_mode == args.target_control_mode:
             flushed_trajectories = np.zeros(len(episode_batch), dtype=bool)
             # mark the fake padding trajectories as flushed
             if episode_batch_index == len(batches) - 1 and episode_pad > 0:
@@ -234,21 +221,15 @@ def replay_parallelized_sim(
                         if args.discard_timeout:
                             envs_to_flush &= (truncated == False).cpu().numpy()
                         successful_replays += envs_to_flush.sum()
-                        env.flush_trajectory(
-                            env_idxs_to_flush=np.where(envs_to_flush)[0]
-                        )
+                        env.flush_trajectory(env_idxs_to_flush=np.where(envs_to_flush)[0])
         else:
             raise NotImplementedError(
                 "Replay with different control modes are not supported when replaying on GPU parallelized environments"
             )
-    return ReplayResult(
-        num_replays=len(episodes), successful_replays=successful_replays
-    )
+    return ReplayResult(num_replays=len(episodes), successful_replays=successful_replays)
 
 
-def replay_cpu_sim(
-    args: Args, env: RecordEpisode, ori_env, pbar, episodes, trajectories
-):
+def replay_cpu_sim(args: Args, env: RecordEpisode, ori_env, pbar, episodes, trajectories):
     successful_replays = 0
     for episode in episodes:
         sanity_check_and_format_seed(episode)
@@ -271,9 +252,7 @@ def replay_cpu_sim(
 
             # set first environment state and update recorded env state
             if args.use_first_env_state or args.use_env_states:
-                ori_env_states = trajectory_utils.dict_to_list_of_dicts(
-                    trajectories[traj_id]["env_states"]
-                )
+                ori_env_states = trajectory_utils.dict_to_list_of_dicts(trajectories[traj_id]["env_states"])
                 if ori_env is not None:
                     ori_env.set_state_dict(ori_env_states[0])
                 env.base_env.set_state_dict(ori_env_states[0])
@@ -288,9 +267,7 @@ def replay_cpu_sim(
                             for k in x.keys():
                                 recursive_replace(x[k], y[k])
 
-                    recursive_replace(
-                        env._trajectory_buffer.state, common.batch(ori_env_states[0])
-                    )
+                    recursive_replace(env._trajectory_buffer.state, common.batch(ori_env_states[0]))
                     fixed_obs = env.base_env.get_obs()
                     recursive_replace(
                         env._trajectory_buffer.observation,
@@ -305,13 +282,12 @@ def replay_cpu_sim(
                 args.target_control_mode is None
                 or ori_control_mode == args.target_control_mode
                 or not args.use_env_states
-            ), "Cannot use env states when trying to \
+            ), (
+                "Cannot use env states when trying to \
                 convert from one control mode to another. This is because control mode conversion causes there to be changes \
                 in how many actions are taken to achieve the same states"
-            if (
-                args.target_control_mode is None
-                or ori_control_mode == args.target_control_mode
-            ):
+            )
+            if args.target_control_mode is None or ori_control_mode == args.target_control_mode:
                 n = len(ori_actions)
                 if pbar is not None:
                     pbar.reset(total=n)
@@ -370,9 +346,7 @@ def replay_cpu_sim(
             env.flush_video(save=False)
             tqdm.write(f"Episode {episode_id} is not replayed successfully. Skipping")
 
-    return ReplayResult(
-        num_replays=len(episodes), successful_replays=successful_replays
-    )
+    return ReplayResult(num_replays=len(episodes), successful_replays=successful_replays)
 
 
 def _main_helper(x):
@@ -398,6 +372,8 @@ def _main(
     # Load associated json
     json_path = traj_path.replace(".h5", ".json")
     json_data = io_utils.load_json(json_path)
+
+    env_kwargs["sim_config"]["scene_config"]["gravity"] = np.array(env_kwargs["sim_config"]["scene_config"]["gravity"])
     env = gym.make(env_id, **env_kwargs)
     # TODO (support adding wrappers to the recorded data?)
 
@@ -438,9 +414,7 @@ def _main(
         env,
         output_dir,
         trajectory_name=new_traj_name,
-        video_fps=(
-            args.video_fps if args.video_fps is not None else env.unwrapped.control_freq
-        ),
+        video_fps=(args.video_fps if args.video_fps is not None else env.unwrapped.control_freq),
         **record_episode_kwargs,
     )
 
@@ -454,9 +428,7 @@ def _main(
     if use_cpu_backend:
         inds = np.arange(len(episodes))
         inds = np.array_split(inds, num_procs)[proc_id]
-        replay_result = replay_cpu_sim(
-            args, env, ori_env, pbar, [episodes[index] for index in inds], ori_h5_file
-        )
+        replay_result = replay_cpu_sim(args, env, ori_env, pbar, [episodes[index] for index in inds], ori_h5_file)
     else:
         replay_result = replay_parallelized_sim(args, env, pbar, episodes, ori_h5_file)
 
@@ -482,11 +454,7 @@ def main(args: Args):
 
     ### Checks and setting up env kwargs ###
     # First we determine how to setup the environment to replay demonstrations and raise relevant warnings to the user
-    if (
-        "sim_backend" in ori_env_kwargs
-        and ori_env_kwargs["sim_backend"] != args.sim_backend
-        and args.use_env_states
-    ):
+    if "sim_backend" in ori_env_kwargs and ori_env_kwargs["sim_backend"] != args.sim_backend and args.use_env_states:
         logger.warning(
             f"Warning: Using different backend ({args.sim_backend}) than the original used to collect the trajectory data "
             f"({ori_env_kwargs['sim_backend']}). This may cause replay failures due to "
@@ -513,9 +481,7 @@ def main(args: Args):
     if args.shader is not None:
         env_kwargs["shader_dir"] = args.shader  # change all shaders
     env_kwargs["reward_mode"] = args.reward_mode
-    env_kwargs[
-        "render_mode"
-    ] = (
+    env_kwargs["render_mode"] = (
         args.render_mode
     )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
 
@@ -538,8 +504,7 @@ def main(args: Args):
 
     # if missing info or auto sim backend is provided, we try to infer which backend is being used
     if "sim_backend" not in env_kwargs or (
-        env_kwargs["sim_backend"] == "auto"
-        and ("num_envs" not in env_kwargs or env_kwargs["num_envs"] == 1)
+        env_kwargs["sim_backend"] == "auto" and ("num_envs" not in env_kwargs or env_kwargs["num_envs"] == 1)
     ):
         env_kwargs["sim_backend"] = "physx_cpu"
     env_kwargs["num_envs"] = args.num_envs
@@ -591,9 +556,7 @@ def main(args: Args):
                     os.remove(json_path)
             replay_result = ReplayResult(
                 num_replays=sum([x.num_replays for x in replay_results_list]),
-                successful_replays=sum(
-                    [x.successful_replays for x in replay_results_list]
-                ),
+                successful_replays=sum([x.successful_replays for x in replay_results_list]),
             )
         else:
             _, replay_result = _main(
@@ -610,7 +573,7 @@ def main(args: Args):
     pbar.close()
     print(
         f"Replayed {replay_result.num_replays} episodes, "
-        f"{replay_result.successful_replays}/{replay_result.num_replays}={replay_result.successful_replays/replay_result.num_replays*100:.2f}% demos saved"
+        f"{replay_result.successful_replays}/{replay_result.num_replays}={replay_result.successful_replays / replay_result.num_replays * 100:.2f}% demos saved"
     )
 
 
