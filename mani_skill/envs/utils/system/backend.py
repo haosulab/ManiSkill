@@ -43,7 +43,16 @@ render_backend_name_mapping = {
 }
 
 
+def parse_backend_device_id(backend: str) -> tuple[str, int]:
+    if ":" in backend:
+        return backend.split(":")
+    return backend, None
+
+
 def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> BackendInfo:
+    # Parse sim_backend string to check for CUDA device specification
+    sim_backend, sim_device_id = parse_backend_device_id(sim_backend)
+    render_backend, render_device_id = parse_backend_device_id(render_backend)
     sim_backend = sim_backend_name_mapping[sim_backend]
     render_backend = render_backend_name_mapping.get(render_backend, render_backend)
     if sim_backend == "physx_cpu":
@@ -51,7 +60,11 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
         sim_device = sapien.Device("cpu")
     elif sim_backend == "physx_cuda":
         device = torch.device("cuda")
-        sim_device = sapien.Device("cuda")
+        sim_device = (
+            sapien.Device(f"cuda:{sim_device_id}")
+            if sim_device_id is not None
+            else sapien.Device("cuda")
+        )
     elif sim_backend[:4] == "cuda":
         device = torch.device(sim_backend)
         sim_device = sapien.Device(sim_backend)
@@ -66,7 +79,11 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
                 "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
             )
         elif render_backend == "sapien_cuda":
-            render_device = sapien.Device("cuda")
+            render_device = (
+                sapien.Device(f"cuda:{render_device_id}")
+                if render_device_id is not None
+                else sapien.Device("cuda")
+            )
         elif render_backend == "sapien_cpu":
             render_device = sapien.Device("cpu")
         elif render_backend[:4] == "cuda":
