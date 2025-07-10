@@ -26,21 +26,23 @@ class SO101(BaseAgent):
         link=dict(
             gripper_link=dict(material="gripper", patch_radius=0.1, min_patch_radius=0.1),
             moving_jaw_so101_v1_link=dict(material="gripper", patch_radius=0.1, min_patch_radius=0.1),
+            finger1_tip=dict(material="gripper", patch_radius=0.1, min_patch_radius=0.1),
+            finger2_tip=dict(material="gripper", patch_radius=0.1, min_patch_radius=0.1),
         ),
     )
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0, -1.1]),
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
+            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0.0, -1.74533]),  # Fully closed gripper
+            pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
         zero=Keyframe(
             qpos=np.array([0.0] * 6),
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
+            pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
         extended=Keyframe(
-            qpos=np.array([0, -0.7854, 0.7854, 0, 0, -0.5]),
-            pose=sapien.Pose(q=euler2quat(0, 0, np.pi / 2)),
+            qpos=np.array([0, -0.7854, 0.7854, 0, 0, 0.174533]),  # Fully open gripper
+            pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
     )
 
@@ -61,20 +63,20 @@ class SO101(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             lower=None,
             upper=None,
-            stiffness=[1.2e3] * 6,  # Slightly higher stiffness for SO101
-            damping=[1.2e2] * 6,
-            force_limit=120,  # Higher force limit for SO101
+            stiffness=1e3,
+            damping=1e2,
+            force_limit=100,
             normalize_action=False,
         )
 
         # Improved delta position control for SO101
         pd_joint_delta_pos = PDJointPosControllerConfig(
             [joint.name for joint in self.robot.active_joints],
-            [-0.06, -0.06, -0.06, -0.06, -0.06, -0.25],  # Slightly larger delta for SO101
-            [0.06, 0.06, 0.06, 0.06, 0.06, 0.25],
-            stiffness=[1.2e3] * 6,
-            damping=[1.2e2] * 6,
-            force_limit=120,
+            [-0.05, -0.05, -0.05, -0.05, -0.05, -0.2],  # Match gripper joint limits
+            [0.05, 0.05, 0.05, 0.05, 0.05, 0.2],
+            stiffness=[1e3] * 6,
+            damping=[1e2] * 6,
+            force_limit=100,
             use_delta=True,
             use_target=False,
         )
@@ -93,13 +95,8 @@ class SO101(BaseAgent):
         super()._after_loading_articulation()
         self.finger1_link = self.robot.links_map["gripper_link"]
         self.finger2_link = self.robot.links_map["moving_jaw_so101_v1_link"]
-        self.finger1_tip = self.finger1_link
-        self.finger2_tip = self.finger2_link
-        
-        # Enable self-collision for gripper to work with new collision meshes
-        self.robot.set_self_collision(True)
-        for link in self.robot.links:
-            link.set_collision_groups(1, 1, 1, 1)
+        self.finger1_tip = self.robot.links_map["finger1_tip"]
+        self.finger2_tip = self.robot.links_map["finger2_tip"]
 
     @property
     def tcp_pos(self):
@@ -110,14 +107,8 @@ class SO101(BaseAgent):
     def tcp_pose(self):
         return Pose.create_from_pq(self.tcp_pos, self.finger1_link.pose.q)
 
-    def is_grasping(self, object: Actor, min_force=0.6, max_angle=105):
-        """Check if the robot is grasping an object
-
-        Args:
-            object (Actor): The object to check if the robot is grasping
-            min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.6.
-            max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 105.
-        """
+    def is_grasping(self, object: Actor, min_force=0.5, max_angle=120):
+        """Check if the robot is grasping an object (more lenient parameters)"""
         l_contact_forces = self.scene.get_pairwise_contact_forces(
             self.finger1_link, object
         )

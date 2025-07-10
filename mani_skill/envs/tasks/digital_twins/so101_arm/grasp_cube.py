@@ -87,7 +87,7 @@ class SO101GraspCubeEnv(BaseDigitalTwinEnv):
             pos=[0.5, 0.3, 0.35],
             target=[0.3, 0.0, 0.1],
         ),
-        spawn_box_pos=[0.3, 0.05],
+        spawn_box_pos=[0.30, 0.05],
         spawn_box_half_size=0.2 / 2,
         **kwargs,
     ):
@@ -264,7 +264,7 @@ class SO101GraspCubeEnv(BaseDigitalTwinEnv):
 
         # a hardcoded initial joint configuration for the robot to start from
         self.rest_qpos = torch.tensor(
-            [0, 0, 0, np.pi / 2, np.pi / 2, 0],
+            [0.0, 0.0, 0.0, np.pi / 2, np.pi / 2, 0],
             device=self.device,
         )
         # hardcoded pose for the table that places it such that the robot base is at 0 and on the edge of the table.
@@ -454,14 +454,6 @@ class SO101GraspCubeEnv(BaseDigitalTwinEnv):
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
-        # note the info object is the data returned by the evaluate function. We can reuse information
-        # to save compute time.
-        # this reward function essentially has two stages, before and after grasping.
-        # in stage 1 we reward the robot for reaching the object and grasping it.
-        # in stage 2 if the robot is grasping the object, we reward it for controlling the robot returning to the predefined rest pose.
-        # in all stages we penalize the robot for touching the table.
-        # this reward function is very simple and can easily be improved to learn more robust behaviors or solve more complex problems.
-
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.agent.tcp_pose.p, axis=1
         )
