@@ -11,12 +11,13 @@ import sapien.physx as physx
 import torch
 import tyro
 
+# import torch
+from line_profiler import profile
+
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.envs.utils.system.backend import parse_sim_and_render_backend
 from mani_skill.render.utils import can_render
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
-
-# import torch
 
 
 @dataclass
@@ -119,15 +120,26 @@ def create_franka_floor_scene(sub_scenes: list[sapien.Scene]):
     )
     builder.set_scene(sub_scenes[0])
     builder.build()
+
+    builder = sub_scenes[0].create_actor_builder()
+    builder.add_box_visual(half_size=[0.02, 0.02, 0.02])
+    builder.add_box_collision(half_size=[0.02, 0.02, 0.02])
+    builder.set_initial_pose(sapien.Pose([0.3, 0, 0.02], [1, 0, 0, 0]))
+    for scene in sub_scenes:
+        builder.set_scene(scene)
+        builder.build()
+
+    # lighting
     for scene in sub_scenes:
         # scene.add_ground(altitude=0, render=True, render_material=sapien.render.RenderMaterial(base_color=[0.8, 0.8, 0.8, 1]))
         scene.set_ambient_light([0.3, 0.3, 0.3])
 
 
+@profile
 def main(args: Args):
     # initialize the scenes
     sim_config = SimConfig(
-        sim_freq=120, control_freq=120, gpu_memory_config=GPUMemoryConfig()
+        sim_freq=100, control_freq=100, gpu_memory_config=GPUMemoryConfig()
     )
     sapien.physx.enable_gpu()
     sub_scenes = setup_sapien_scenes(args.num_envs, sim_config)
@@ -145,39 +157,33 @@ def main(args: Args):
 
     create_franka_floor_scene(sub_scenes)
 
-    # builder = sub_scenes[0].create_actor_builder()
-    # builder.add_box_collision(half_size=[0.1, 0.1, 0.1])
-    # builder.add_box_visual(half_size=[0.1, 0.1, 0.1])
-    # builder.add_box_visual(half_size=[0.2, 0.2, 0.2])
-    # builder.set_initial_pose(sapien.Pose([0, 0, 5]))
-
-    # for scene in sub_scenes:
-    #     builder.set_scene(scene)
-    #     a0 = builder.build()
-
     px.gpu_init()  # NOTE this will take one physics step
 
     start_time = time.perf_counter()
-    for _ in range(args.num_steps):
-        # TODO (stao): take action
-        if args.random_actions:
-            action = torch.rand(size=(args.num_envs, 9))
-            px.cuda_articulation_target_qpos.torch()[:] = action
-            px.gpu_apply_articulation_target_position()
 
-        for _ in range(physics_steps_per_control_step):
-            if args.step_physics:
-                px.step()
-        if args.fetch_observations:
-            px.gpu_fetch_articulation_qpos()
-            px.gpu_fetch_articulation_qvel()
-            px.gpu_fetch_rigid_dynamic_data()
-            # qpos = px.cuda_articulation_qpos.torch()
-            # qvel = px.cuda_articulation_qvel.torch()
-            # pose = px.cuda_rigid_body_data.torch()
-            torch.cuda.synchronize()
-            # import ipdb; ipdb.set_trace()
+    @profile
+    def loop():
+        for _ in range(args.num_steps):
+            # TODO (stao): take action
+            if args.random_actions:
+                action = torch.rand(size=(args.num_envs, 9))
+                px.cuda_articulation_target_qpos.torch()[:] = action
+                px.gpu_apply_articulation_target_position()
 
+            for _ in range(physics_steps_per_control_step):
+                if args.step_physics:
+                    px.step()
+            if args.fetch_observations:
+                px.gpu_fetch_articulation_qpos()
+                px.gpu_fetch_articulation_qvel()
+                px.gpu_fetch_rigid_dynamic_data()
+                px.cuda_articulation_qpos.torch()
+                px.cuda_articulation_qvel.torch()
+                px.cuda_rigid_body_data.torch()
+                # torch.cuda.synchronize()
+                # import ipdb; ipdb.set_trace()
+
+    loop()
     end_time = time.perf_counter()
     frames = args.num_steps * args.num_envs
     print(f"FPS: {frames / (end_time - start_time):,.2f}")
