@@ -251,9 +251,10 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     def drive_target(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Setting drive targets of individual joints is not implemented yet."
-            )
+            self.articulation.px.cuda_articulation_target_qpos[
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.active_index,
+            ] = arg1
         else:
             if arg1.shape == ():
                 arg1 = arg1.reshape(

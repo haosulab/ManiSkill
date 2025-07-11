@@ -862,7 +862,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         if self.scene.gpu_sim_enabled:
             targets = common.to_tensor(targets, device=self.device)
             gx, gy = self.get_joint_target_indices(joint_indices)
-            self.px.cuda_articulation_target_qpos.torch()[gx, gy] = targets
+            self.px.cuda_articulation_target_qpos.torch()[
+                gx[self.scene._reset_mask], gy[self.scene._reset_mask]
+            ] = targets
         else:
             for i, joint in enumerate(joints):
                 joint.set_drive_target(targets[0, i])
