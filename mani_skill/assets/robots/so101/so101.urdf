@@ -337,11 +337,11 @@
 
   <!-- Joint from gripper to moving_jaw_so101_v1 -->
   <joint name="gripper" type="revolute">
-    <origin xyz="0.0202 0.0188 -0.0234" rpy="1.5708 -1.5708 -1.41553e-15"/>
+    <origin xyz="0.0202 0.0188 -0.0234" rpy="1.5708 -0.909 -1.41553e-15"/>
     <parent link="gripper_link"/>
     <child link="moving_jaw_so101_v1_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-1.74533" upper="0.174533"/>
+    <limit effort="0" velocity="10" lower="-1.13778" upper="1.16081"/>
   </joint>
 
   <transmission name="gripper_trans">
@@ -361,7 +361,7 @@
     <parent link="wrist_link"/>
     <child link="gripper_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-2.74385" upper="2.84121"/>
+    <limit effort="0" velocity="10" lower="-2.93145" upper="2.92988"/>
   </joint>
 
   <transmission name="wrist_roll_trans">
@@ -381,7 +381,7 @@
     <parent link="lower_arm_link"/>
     <child link="wrist_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-1.65806" upper="1.65806"/>
+    <limit effort="0" velocity="10" lower="-1.81130" upper="1.80816"/>
   </joint>
 
   <transmission name="wrist_flex_trans">
@@ -398,11 +398,11 @@
   <!-- Joint from upper_arm to lower_arm -->
   <!-- Note: 5-degree calibration offset applied to joint limits -->
   <joint name="elbow_flex" type="revolute">
-    <origin xyz="-0.11257 -0.028 1.73763e-16" rpy="-3.63608e-16 8.74301e-16 1.5708"/>
+    <origin xyz="-0.11257 -0.028 1.73763e-16" rpy="-3.63608e-16 0.03 1.5708"/>
     <parent link="upper_arm_link"/>
     <child link="lower_arm_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-1.69" upper="1.69"/>
+    <limit effort="0" velocity="10" lower="-1.70012" upper="1.7046"/>
   </joint>
 
   <transmission name="elbow_flex_trans">
@@ -418,11 +418,11 @@
 
   <!-- Joint from shoulder to upper_arm -->
   <joint name="shoulder_lift" type="revolute">
-    <origin xyz="-0.0303992 -0.0182778 -0.0542" rpy="-1.5708 -1.5708 0"/>
+    <origin xyz="-0.0303992 -0.0182778 -0.0542" rpy="-1.5708 -1.728 0"/>
     <parent link="shoulder_link"/>
     <child link="upper_arm_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-1.74533" upper="1.74533"/>
+    <limit effort="0" velocity="10" lower="-1.82736" upper="1.83346"/>
   </joint>
 
   <transmission name="shoulder_lift_trans">
@@ -442,7 +442,7 @@
     <parent link="base_link"/>
     <child link="shoulder_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-1.91986" upper="1.91986"/>
+    <limit effort="0" velocity="10" lower="-2.15967042" upper="2.03383"/>
   </joint>
 
   <transmission name="shoulder_pan_trans">

@@ -13,10 +13,10 @@ from mani_skill.utils import common
 from mani_skill.utils.structs.types import Array
 
 try:
-    from lerobot.common.cameras.camera import Camera
-    from lerobot.common.motors.motors_bus import MotorNormMode
-    from lerobot.common.robots.robot import Robot
-    from lerobot.common.utils.robot_utils import busy_wait
+    from cameras.camera import Camera
+    from lerobot.motors.motors_bus import MotorNormMode
+    from lerobot.robots.robot import Robot
+    from lerobot.utils.robot_utils import busy_wait
 except ImportError:
     pass
 
@@ -58,6 +58,8 @@ class LeRobotRealAgent(BaseRealAgent):
         # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
         if self.real_robot.name == "so100_follower":
             qpos["elbow_flex.pos"] = qpos["elbow_flex.pos"] + 6.8
+        elif self.real_robot.name == "so101_follower":
+            pass
         self.real_robot.send_action(qpos)
 
     def reset(self, qpos: Array):
@@ -113,6 +115,8 @@ class LeRobotRealAgent(BaseRealAgent):
         # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
         if self.real_robot.name == "so100_follower":
             qpos_deg["elbow_flex"] = qpos_deg["elbow_flex"] - 6.8
+        elif self.real_robot.name == "so101_follower":
+            pass
         if self._motor_keys is None:
             self._motor_keys = list(qpos_deg.keys())
         qpos_deg = common.flatten_state_dict(qpos_deg)

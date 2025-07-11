@@ -33,7 +33,7 @@ class SO101(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0.0, -1.74533]),  # Fully closed gripper
+            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0.0, -1.13778]),  # Fully closed gripper
             pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
         zero=Keyframe(
@@ -41,7 +41,7 @@ class SO101(BaseAgent):
             pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
         extended=Keyframe(
-            qpos=np.array([0, -0.7854, 0.7854, 0, 0, 0.174533]),  # Fully open gripper
+            qpos=np.array([0, -0.7854, 0.7854, 0, 0, 1.16081]),  # Fully open gripper
             pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
     )
