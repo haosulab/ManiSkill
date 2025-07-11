@@ -276,8 +276,6 @@ class OpenCabinetDrawerEnv(BaseEnv):
             qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
             self.cabinet.set_qpos(qlimits[env_idx, :, 0])
             self.cabinet.set_qvel(self.cabinet.qpos[env_idx] * 0)
-            self.handle_link.joint.set_drive_properties(stiffness=10, damping=1)
-            self.handle_link.joint.set_drive_target(1.0)
 
             # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
             # themselves on the first step. It's unclear why this happens on GPU sim only atm.
