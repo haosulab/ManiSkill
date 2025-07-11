@@ -6,6 +6,7 @@ import torch
 
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots import SO100, Fetch, Panda, WidowXAI, XArm6Robotiq
+from mani_skill.agents.robots import SO101
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
 from mani_skill.sensors.camera import CameraConfig
@@ -39,9 +40,10 @@ class PickCubeEnv(BaseEnv):
         "fetch",
         "xarm6_robotiq",
         "so100",
+        "so101",
         "widowxai",
     ]
-    agent: Union[Panda, Fetch, XArm6Robotiq, SO100, WidowXAI]
+    agent: Union[Panda, Fetch, XArm6Robotiq, SO100, SO101, WidowXAI]
     cube_half_size = 0.02
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
@@ -178,7 +180,7 @@ class PickCubeEnv(BaseEnv):
         qvel = self.agent.robot.get_qvel()
         if self.robot_uids in ["panda", "widowxai"]:
             qvel = qvel[..., :-2]
-        elif self.robot_uids == "so100":
+        elif self.robot_uids in ["so100", "so101"]:
             qvel = qvel[..., :-1]
         static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
         reward += static_reward * info["is_obj_placed"]
@@ -215,3 +217,14 @@ class PickCubeWidowXAIEnv(PickCubeEnv):
 
 
 PickCubeWidowXAIEnv.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="WidowXAI")
+
+
+@register_env("PickCubeSO101-v1", max_episode_steps=50)
+class PickCubeSO101Env(PickCubeEnv):
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeSO101-v1_rt.mp4"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, robot_uids="so101", **kwargs)
+
+
+PickCubeSO101Env.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="SO101")
