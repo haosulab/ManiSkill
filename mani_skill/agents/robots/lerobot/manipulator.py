@@ -41,7 +41,7 @@ class LeRobotRealAgent(BaseRealAgent):
         self._cached_qpos = None
         self._motor_keys: List[str] = None
 
-        if self.real_robot.name == "so100_follower":
+        if self.real_robot.name == "so100_follower" or self.real_robot.name == "so101_follower":
             self.real_robot.bus.motors["gripper"].norm_mode = MotorNormMode.DEGREES
 
     def start(self):
