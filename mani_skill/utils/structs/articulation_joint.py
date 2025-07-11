@@ -252,7 +252,8 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         arg1 = common.to_tensor(arg1, device=self.device)
         if self.scene.gpu_sim_enabled:
             self.articulation.px.cuda_articulation_target_qpos[
-                self._data_index, self.active_index
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.active_index,
             ] = arg1
         else:
             if arg1.shape == ():
