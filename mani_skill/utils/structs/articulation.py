@@ -897,15 +897,20 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_velocity_targets(
         self,
         targets: Array,
-        joints: List[ArticulationJoint] = None,
-        joint_indices: torch.Tensor = None,
+        joints: Optional[List[ArticulationJoint]] = None,
+        joint_indices: Optional[torch.Tensor] = None,
     ):
         """
-        Set drive velocity targets on active joints. Joint indices are required to be given for GPU sim, and joint objects are required for the CPU sim
+        Set drive velocity targets on active joints given joints. For GPU simulation only joint_indices argument is supported, which should be a 1D list of the active joint indices in the articulation.
+
+        joints argument will always be used when possible and is the recommended approach. On CPU simulation the joints argument is required, joint_indices is not supported.
         """
         if self.scene.gpu_sim_enabled:
             targets = common.to_tensor(targets, device=self.device)
-            gx, gy = self.get_joint_target_indices(joint_indices)
+            if joints is not None:
+                gx, gy = self.get_joint_target_indices(joints)
+            else:
+                gx, gy = self.get_joint_target_indices(joint_indices)
             self.px.cuda_articulation_target_qvel.torch()[gx, gy] = targets
         else:
             for i, joint in enumerate(joints):
