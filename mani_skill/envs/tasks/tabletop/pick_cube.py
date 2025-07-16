@@ -129,8 +129,6 @@ class PickCubeEnv(BaseEnv):
             goal_xyz[:, 1] += self.cube_spawn_center[1]
             goal_xyz[:, 2] = torch.rand((b)) * self.max_goal_height + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
-            self.agent.robot.links[2].joint.set_drive_target(torch.zeros(b))
-            print(self.agent.robot.links[2].joint.drive_target)
 
     def _get_obs_extra(self, info: Dict):
         # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
