@@ -240,18 +240,25 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def drive_target(self) -> torch.Tensor:
+        assert (
+            self.active_index is not None
+        ), "Cannot get drive position targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Getting drive targets of individual joints is not implemented yet."
-            )
+            return self.articulation.px.cuda_articulation_target_qpos.torch()[
+                self._data_index,
+                self.active_index,
+            ]
         else:
             return torch.from_numpy(self._objs[0].drive_target[None, :])
 
     @drive_target.setter
     def drive_target(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
+        assert (
+            self.active_index is not None
+        ), "Cannot set drive position targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            self.articulation.px.cuda_articulation_target_qpos[
+            self.articulation.px.cuda_articulation_target_qpos.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
                 self.active_index,
             ] = arg1
@@ -264,20 +271,28 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def drive_velocity_target(self) -> torch.Tensor:
+        assert (
+            self.active_index is not None
+        ), "Cannot get drive velocity targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Cannot read drive velocity targets at the moment in GPU simulation"
-            )
+            return self.articulation.px.cuda_articulation_target_qvel.torch()[
+                self._data_index,
+                self.active_index,
+            ]
         else:
             return torch.from_numpy(self._objs[0].drive_velocity_target[None, :])
 
     @drive_velocity_target.setter
     def drive_velocity_target(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
+        assert (
+            self.active_index is not None
+        ), "Cannot set drive velocity targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Cannot set drive velocity targets at the moment in GPU simulation"
-            )
+            self.articulation.px.cuda_articulation_target_qvel.torch()[
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.active_index,
+            ] = arg1
         else:
             if arg1.shape == ():
                 arg1 = arg1.reshape(
