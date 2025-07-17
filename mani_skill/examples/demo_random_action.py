@@ -92,6 +92,7 @@ def main(args: Args):
         args.env_id,
         **env_kwargs
     )
+    import ipdb; ipdb.set_trace()
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
