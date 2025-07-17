@@ -5,7 +5,7 @@
 
   <!-- Materials -->
   <material name="3d_printed">
-    <color rgba="1.0 0.82 0.12 1.0"/>
+    <color rgba="0.95 0.95 0.95 1.0"/>
   </material>
   <material name="sts3215">
     <color rgba="0.1 0.1 0.1 1.0"/>
@@ -337,11 +337,11 @@
 
   <!-- Joint from gripper to moving_jaw_so101_v1 -->
   <joint name="gripper" type="revolute">
-    <origin xyz="0.0202 0.0188 -0.0234" rpy="1.5708 -0.909 -1.41553e-15"/>
+    <origin xyz="0.0202 0.0188 -0.0234" rpy="1.5708 -5.24284e-08 -1.41553e-15"/>
     <parent link="gripper_link"/>
     <child link="moving_jaw_so101_v1_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0" velocity="10" lower="-1.13778" upper="1.16081"/>
+    <limit effort="10" velocity="10" lower="-0.174533" upper="2.0944"/>
   </joint>
 
   <transmission name="gripper_trans">
@@ -357,7 +357,7 @@
 
   <!-- Joint from wrist to gripper -->
   <joint name="wrist_roll" type="revolute">
-    <origin xyz="5.55112e-17 -0.0611 0.0181" rpy="1.5708 0.0486795 3.14159"/>
+    <origin xyz="5.55112e-17 -0.0611 0.0181" rpy="1.5708 0 3.09159"/>
     <parent link="wrist_link"/>
     <child link="gripper_link"/>
     <axis xyz="0 0 1"/>
@@ -377,7 +377,7 @@
 
   <!-- Joint from lower_arm to wrist -->
   <joint name="wrist_flex" type="revolute">
-    <origin xyz="-0.1349 0.0052 3.62355e-17" rpy="4.02456e-15 8.67362e-16 -1.5708"/>
+    <origin xyz="-0.1349 0.0052 3.62355e-17" rpy="4.02456e-15 8.67362e-16 -1.6708"/>
     <parent link="lower_arm_link"/>
     <child link="wrist_link"/>
     <axis xyz="0 0 1"/>
@@ -398,7 +398,7 @@
   <!-- Joint from upper_arm to lower_arm -->
   <!-- Note: 5-degree calibration offset applied to joint limits -->
   <joint name="elbow_flex" type="revolute">
-    <origin xyz="-0.11257 -0.028 1.73763e-16" rpy="-3.63608e-16 0.03 1.5708"/>
+    <origin xyz="-0.11257 -0.028 1.73763e-16" rpy="-3.63608e-16 8.74301e-16 1.4408"/>
     <parent link="upper_arm_link"/>
     <child link="lower_arm_link"/>
     <axis xyz="0 0 1"/>
@@ -418,7 +418,7 @@
 
   <!-- Joint from shoulder to upper_arm -->
   <joint name="shoulder_lift" type="revolute">
-    <origin xyz="-0.0303992 -0.0182778 -0.0542" rpy="-1.5708 -1.728 0"/>
+    <origin xyz="-0.0303992 -0.0182778 -0.0542" rpy="-1.5708 -1.6208 0.03"/>
     <parent link="shoulder_link"/>
     <child link="upper_arm_link"/>
     <axis xyz="0 0 1"/>
@@ -438,7 +438,7 @@
 
   <!-- Joint from base to shoulder -->
   <joint name="shoulder_pan" type="revolute">
-    <origin xyz="0.0388353 -8.97657e-09 0.0624" rpy="3.14159 4.18253e-17 -3.14159"/>
+    <origin xyz="0.0388353 -8.97657e-09 0.0624" rpy="3.14159 4.18253e-17 -3.20159"/>
     <parent link="base_link"/>
     <child link="shoulder_link"/>
     <axis xyz="0 0 1"/>
@@ -458,7 +458,7 @@
 
   <!-- fake joints for useful data -->
   <joint name="finger1_tip_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="-0.01 -0.0 -0.086"/>
+    <origin rpy="0 0 0" xyz="-0.002 -0.0 -0.092"/>
     <parent link="gripper_link"/>
     <child link="finger1_tip"/>
   </joint>
@@ -471,7 +471,7 @@
   </link>
 
   <joint name="finger2_tip_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="-0.01 -0.064 0.02"/>
+    <origin rpy="0 0 0" xyz="-0.01 -0.077 0.02"/>
     <parent link="moving_jaw_so101_v1_link"/>
     <child link="finger2_tip"/>
   </joint>

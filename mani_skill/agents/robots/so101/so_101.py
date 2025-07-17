@@ -33,15 +33,15 @@ class SO101(BaseAgent):
 
     keyframes = dict(
         rest=Keyframe(
-            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0.0, -1.13778]),  # Fully closed gripper
+            qpos=np.array([0, -1.5708, 1.5708, 0.66, 0.0, -10 * np.pi/180]),  # Fully closed gripper
             pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
         zero=Keyframe(
-            qpos=np.array([0.0] * 6),
+            qpos=np.array([0, 0, 0, 0, 0, 0]),
             pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
         extended=Keyframe(
-            qpos=np.array([0, -0.7854, 0.7854, 0, 0, 1.16081]),  # Fully open gripper
+            qpos=np.array([0, -0.7854, 0.7854, 0, 0, 100 * np.pi/180]),  # Fully open gripper
             pose=sapien.Pose(q=list(euler2quat(0, 0, np.pi / 2))),
         ),
     )
@@ -107,7 +107,7 @@ class SO101(BaseAgent):
     def tcp_pose(self):
         return Pose.create_from_pq(self.tcp_pos, self.finger1_link.pose.q)
 
-    def is_grasping(self, object: Actor, min_force=0.5, max_angle=120):
+    def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object (more lenient parameters)"""
         l_contact_forces = self.scene.get_pairwise_contact_forces(
             self.finger1_link, object
