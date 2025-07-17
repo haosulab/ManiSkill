@@ -83,9 +83,9 @@ class SO101GraspCubeEnv(BaseDigitalTwinEnv):
         ] = SO101GraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
         base_camera_settings=dict(
-            fov=52 * np.pi / 180,
-            pos=[0.5, 0.3, 0.35],
-            target=[0.3, 0.0, 0.1],
+            fov=0.8256,
+            pos=[0.69, 0.37, 0.28],
+            target=[0.185, -0.15, 0.0],
         ),
         spawn_box_pos=[0.30, 0.05],
         spawn_box_half_size=0.2 / 2,
@@ -264,7 +264,7 @@ class SO101GraspCubeEnv(BaseDigitalTwinEnv):
 
         # a hardcoded initial joint configuration for the robot to start from
         self.rest_qpos = torch.tensor(
-            [0.0, 0.0, 0.0, np.pi / 2, np.pi / 2, 0],
+            [0, 0, 0, np.pi / 2, np.pi / 2, 0],
             device=self.device,
         )
         # hardcoded pose for the table that places it such that the robot base is at 0 and on the edge of the table.
