@@ -73,9 +73,9 @@ This is how the camera's intrinsic and extrinsic values are saved for each captu
 * `intrinsic.txt`
     This file stores the camera's **3x3 intrinsic matrix (K)**. This matrix defines the camera's internal properties like focal length and optical center. It is saved only once, as it doesn't change during the scan. The format is:
 
-    $$
+    $
     K = \begin{bmatrix} f_x & 0 & c_x \\ 0 & f_y & c_y \\ 0 & 0 & 1 \end{bmatrix}
-    $$
+    $
 
     Where:
     * $f_x, f_y$ are the focal lengths in pixels.
