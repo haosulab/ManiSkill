@@ -16,7 +16,7 @@ from mani_skill.utils.structs.actor import Actor
 @register_agent(asset_download_ids=["xarm6"])
 class XArm6Robotiq(BaseAgent):
     uid = "xarm6_robotiq"
-    urdf_path = f"{ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xarm6/xarm6_robotiq.urdf"
 
     urdf_config = dict(
         _materials=dict(
@@ -101,6 +101,8 @@ class XArm6Robotiq(BaseAgent):
     gripper_force_limit = 0.1
     gripper_friction = 1
     ee_link_name = "eef"
+
+    active_gripper_joint_inds = [6, 8]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -212,7 +214,6 @@ class XArm6Robotiq(BaseAgent):
         # -------------------------------------------------------------------------- #
         # Gripper
         # -------------------------------------------------------------------------- #
-
         # Define a passive controller config to simply "turn off" other joints from being controlled and set their properties (damping/friction) to 0.
         # These joints are controlled passively by the mimic controller later on.
         passive_finger_joint_names = [
@@ -227,7 +228,6 @@ class XArm6Robotiq(BaseAgent):
             damping=0,
             friction=0,
         )
-
         finger_joint_names = ["left_outer_knuckle_joint", "right_outer_knuckle_joint"]
 
         # Use a mimic controller config to define one action to control both fingers
@@ -381,6 +381,12 @@ class XArm6Robotiq(BaseAgent):
             self.robot.get_links(), self.ee_link_name
         )
 
+    def get_proprioception(self):
+        obs = super().get_proprioception()
+        obs["qpos"] = obs["qpos"][..., :6]
+        obs["qvel"] = obs["qvel"][..., :6]
+        return obs
+
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         l_contact_forces = self.scene.get_pairwise_contact_forces(
             self.finger1_link, object
@@ -414,6 +420,19 @@ class XArm6Robotiq(BaseAgent):
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
         return sapien.Pose(T)
+
+    def get_gripper_width(self):
+        """
+        Get the width of the gripper from 0 to 1
+        0 is fully closed, 1 is fully open
+        """
+        gripper_qpos_min = self.robot.get_qlimits()[0, self.active_gripper_joint_inds[0], 0]
+        gripper_qpos_max = self.robot.get_qlimits()[0, self.active_gripper_joint_inds[0], 1]
+        max_gripper_width = gripper_qpos_max - gripper_qpos_min
+        gripper_qpos = torch.mean(self.robot.get_qpos()[:, self.active_gripper_joint_inds], axis=1)
+        # For robotiq, the gripper is closed at max qpos and open at min qpos
+        gripper_width_inv = (gripper_qpos - gripper_qpos_min) / max_gripper_width
+        return 1 - gripper_width_inv
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-6]
