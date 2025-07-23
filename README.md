@@ -78,7 +78,7 @@ If you use ManiSkill3 (versions `mani_skill>=3.0.0`) in your work, please cite t
   journal = {Robotics: Science and Systems},
   year={2025},
 }
-
+```
 
 ## License
 
