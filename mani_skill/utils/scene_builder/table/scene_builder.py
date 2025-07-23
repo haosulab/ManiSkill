@@ -91,8 +91,8 @@ class TableSceneBuilder(SceneBuilder):
         builder.add_box_collision(pose=sapien.Pose(), half_size=wall_half)
         builder.add_box_visual   (pose=sapien.Pose(), half_size=wall_half, material=white_mat)
 
+        builder.initial_pose = wall_pose
         wall_actor = builder.build_static(name="white_wall")
-        wall_actor.set_pose(wall_pose)
         
         return wall_actor
 

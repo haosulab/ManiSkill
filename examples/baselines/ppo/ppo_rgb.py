@@ -54,6 +54,8 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "PickCube-v1"
     """the id of the environment"""
+    robot_uids: str = "panda"
+    """the uid of the robot to use in the environment"""
     include_state: bool = True
     """whether to include state information in observations"""
     total_timesteps: int = 10000000
@@ -122,6 +124,23 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
+
+
+def build_checkpoint(agent, args, envs):
+    """
+    Pack everything you might need at inference time into one dict.
+    """
+    ckpt = {
+        "model": agent.state_dict(),          
+        "obs_rms": getattr(envs, "obs_rms", None),
+        "cfg": vars(args),                    
+        "meta": {
+            "torch": torch.__version__,
+            "mani_skill": mani_skill.__version__,
+        },
+    }
+    return ckpt
+
 
 class DictArray(object):
     def __init__(self, buffer_shape, element_space, data_dict=None, device=None):
@@ -304,7 +323,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(obs_mode="rgb", render_mode=args.render_mode, sim_backend="physx_cuda")
+    env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb", render_mode=args.render_mode, sim_backend="physx_cuda")
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
@@ -416,7 +435,8 @@ if __name__ == "__main__":
                 break
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/ckpt_{iteration}.pt"
-            torch.save(agent.state_dict(), model_path)
+            # torch.save(agent.state_dict(), model_path)
+            torch.save(build_checkpoint(agent, args, envs), model_path)
             print(f"model saved to {model_path}")
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -587,7 +607,8 @@ if __name__ == "__main__":
         logger.add_scalar("time/total_rollout+update_time", cumulative_times["rollout_time"] + cumulative_times["update_time"], global_step)
     if args.save_model and not args.evaluate:
         model_path = f"runs/{run_name}/final_ckpt.pt"
-        torch.save(agent.state_dict(), model_path)
+        # torch.save(agent.state_dict(), model_path)
+        torch.save(build_checkpoint(agent, args, envs), model_path)
         print(f"model saved to {model_path}")
 
     envs.close()
