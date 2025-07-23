@@ -1,13 +1,9 @@
---find-links https://data.pyg.org/whl/torch-2.5.1+cu124.html
-torch==2.5.1
-torch_scatter
-torchaudio==2.5.1
-torchprofile==0.0.4
-torchvision==0.20.1
 numpy==1.26.4
 sapien==3.0.0b1
 scikit-learn==1.6.0
 scipy==1.14.1
+sympy==1.13.1
+fsspec
 h5py==3.12.1
 grpcio==1.68.1
 gymnasium==0.29.1
