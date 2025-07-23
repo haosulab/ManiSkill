@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import sapien
@@ -8,12 +8,17 @@ import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots import SO100, Fetch, Panda, WidowXAI, XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sensors.camera import CameraConfig        # Build cubes separately for each parallel environment to enable domain randomization
+
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import Actor
+
+from sapien.physx import PhysxRigidBodyComponent
+from sapien.render import RenderBodyComponent
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -83,7 +88,7 @@ class PickCubeEnv(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
-            self, robot_init_qpos_noise=self.robot_init_qpos_noise
+            self, robot_init_qpos_noise=self.robot_init_qpos_noise, custom_table=True
         )
         self.table_scene.build()
         self.cube = actors.build_cube(
@@ -117,7 +122,7 @@ class PickCubeEnv(BaseEnv):
             xyz[:, 1] += self.cube_spawn_center[1]
 
             xyz[:, 2] = self.cube_half_size
-            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True)
+            qs = randomization.random_quaternions(b, lock_x=True, lock_y=True, lock_z=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
             goal_xyz = torch.zeros((b, 3))
@@ -134,12 +139,12 @@ class PickCubeEnv(BaseEnv):
         # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
         obs = dict(
             is_grasped=info["is_grasped"],
-            tcp_pose=self.agent.tcp_pose.raw_pose,
-            goal_pos=self.goal_site.pose.p,
+            # tcp_pose=self.agent.tcp.pose.raw_pose,
+            # goal_pos=self.goal_site.pose.p,
         )
         if "state" in self.obs_mode:
             obs.update(
-                obj_pose=self.cube.pose.raw_pose,
+                # obj_pose=self.cube.pose.raw_pose,
                 tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp_pose.p,
                 obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
             )
@@ -158,6 +163,27 @@ class PickCubeEnv(BaseEnv):
             "is_robot_static": is_robot_static,
             "is_grasped": is_grasped,
         }
+
+    def staged_rewards(self, obs: Any, action: torch.Tensor, info: Dict):
+        tcp_to_obj_dist = torch.linalg.norm(
+            self.cube.pose.p - self.agent.tcp.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+
+        is_grasped = info["is_grasped"]
+
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_site.pose.p - self.cube.pose.p, axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        place_reward *= is_grasped
+
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        static_reward *= info["is_obj_placed"]
+
+        return reaching_reward.mean(), is_grasped.mean(), place_reward.mean(), static_reward.mean()
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
         tcp_to_obj_dist = torch.linalg.norm(
@@ -215,3 +241,52 @@ class PickCubeWidowXAIEnv(PickCubeEnv):
 
 
 PickCubeWidowXAIEnv.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="WidowXAI")
+
+
+@register_env("PickCubeDR-v1", max_episode_steps=50)
+class PickCubeDR(PickCubeEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _load_scene(self, options: dict):
+        '''
+            Custom load_scene where every parallel environment has a different color for the cube.
+        '''
+        self.table_scene = TableSceneBuilder(
+            self, robot_init_qpos_noise=self.robot_init_qpos_noise, custom_table=True
+        )
+        self.table_scene.build()
+        self.goal_site = actors.build_sphere(
+            self.scene,
+            radius=self.goal_thresh,
+            color=[0, 1, 0, 1],
+            name="goal_site",
+            body_type="kinematic",
+            add_collision=False,
+            initial_pose=sapien.Pose(),
+        )
+        self._hidden_objects.append(self.goal_site)
+
+        # Build cubes separately for each parallel environment to enable domain randomization        
+        self._cubes: List[Actor] = []
+        for i in range(self.num_envs):
+            builder = self.scene.create_actor_builder()
+            builder.add_box_collision(half_size=[self.cube_half_size] * 3)
+            builder.add_box_visual(
+                half_size=[self.cube_half_size] * 3, 
+                material=sapien.render.RenderMaterial(
+                    base_color=self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1]
+                )
+            )
+            builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
+            builder.set_scene_idxs([i])
+            self._cubes.append(builder.build(name=f"cube_{i}"))
+            self.remove_from_state_dict_registry(self._cubes[-1])  # remove individual cube from state dict
+
+        # Merge all cubes into a single Actor object
+        self.cube = Actor.merge(self._cubes, name="cube")
+        print(f"number of cubes: {len(self._cubes)}")
+        self.add_to_state_dict_registry(self.cube)  # add merged cube to state dict
+
+
+PickCubeDR.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="Panda")
