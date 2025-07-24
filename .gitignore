@@ -47,3 +47,5 @@ htmlcov/
 
 # Mapping results
 /mapping/images
+/runs/
+/wandb/

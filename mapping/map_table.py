@@ -26,6 +26,18 @@ parser.add_argument(
     action="store_true",
     help="Enable the SAPIEN viewer for real-time visualization."
 )
+parser.add_argument(
+    "--save",
+    dest="save",
+    action="store_true",
+    help="Save the trained voxel grid & decoder."
+)
+parser.add_argument(
+    "--pca",
+    dest="pca",
+    action="store_true",
+    help="Generate PCA visualization of voxel features."
+)
 args = parser.parse_args()
 
 # --------------------------------------------------------------------------- #
@@ -82,8 +94,6 @@ os.makedirs(IMG_DIR, exist_ok=True)
 INTRINSIC_TXT = os.path.join(IMG_DIR, "intrinsic.txt")
 PLY_PATH      = os.path.join(IMG_DIR, "point_cloud.ply")
 HTML_PATH     = os.path.join(IMG_DIR, "point_cloud.html")
-
-CLIP_NPY_PATH = os.path.join(IMG_DIR, "clip_features.npy")
 
 # Paths to save learned grid / decoder
 GRID_PT_PATH    = os.path.join(IMG_DIR, "voxel_grid.pt")
@@ -287,15 +297,15 @@ print(f"[HTML] wrote {HTML_PATH}")
 #  Save mappings (grid + decoder) & CLIP features                             #
 # --------------------------------------------------------------------------- #
 
-if loss_history:
+if args.save:
     grid.save_dense(GRID_PT_PATH)
     torch.save(decoder.state_dict(), DECODER_PT_PATH)
     print(f"[SAVE] voxel grid → {GRID_PT_PATH}\n       implicit decoder → {DECODER_PT_PATH}")
 
-    # --------------------------------------------------------------------- #
-    #  PCA visualization of voxel features                                  #
-    # --------------------------------------------------------------------- #
-
+# --------------------------------------------------------------------- #
+#  PCA visualization of voxel features                                  #
+# --------------------------------------------------------------------- #
+if args.pca:
     print("[VIS] running PCA on voxel features …")
 
     # use down-sampled point cloud vertices as probe points
