@@ -7,6 +7,7 @@ import gymnasium as gym
 import imageio.v2 as imageio
 import sapien
 import mani_skill.envs.tasks.tabletop.table_scan
+import mani_skill.envs.tasks.tabletop.table_scan_discrete
 
 parser = argparse.ArgumentParser(description="Scan an object and generate a point cloud.")
 parser.add_argument(
@@ -47,7 +48,8 @@ def hide_robot_visuals(robot):
 
 render_mode = "human" if args.viewer else "rgb_array"
 env = gym.make(
-    "TableScan-v0",
+    # "TableScan-v0",
+    "TableScanDiscreteInit-v0",
     robot_uids="xarm6_robotiq",
     obs_mode="rgbd",
     control_mode="pd_joint_pos",
