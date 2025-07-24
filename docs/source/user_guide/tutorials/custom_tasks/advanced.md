@@ -76,7 +76,7 @@ class MyCustomTask(BaseEnv):
         # etc.
 ```
 
-Properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple diverse simulation of diverse objects/geometries.
+Properties that exist regardless of geometry like object pose can be easily fetched after merging actors. This enables simple diverse simulation of diverse objects/geometries. Furthermore the `Actor.merge` function is fairly flexible, you do not necessarily need to ensure there the number of actors merged is equal to or even divisible by the number of parallel environments (stored in `self.num_envs`). Merge operations are simply a way to view batched data across different link objects via a single object.
 
 ### Merging Articulations
 
@@ -101,7 +101,7 @@ Properties that exist regardless of articulation include the base link's data (e
 
 ### Merging Links
 
-Similar to Actors, you can also merge any list of links sourced from any articulations you create. Upon merging, ManiSkill will also create a merged joint object that gives easy access to qpos values of links/joints you need without having to mess with complex indexing of padded data.
+Similar to Actors, you can also merge any list of links sourced from any articulations you create. Upon merging, ManiSkill will also create a merged joint object that gives easy access to data of the the parent joints of each link without having to work with complex indexing of padded data. The joint merged object is only available if every link merged is not a root link as root links do not have a parent joint. Furthermore the `Link.merge` function is fairly flexible, you do not necessarily need to ensure there the number of links merged is equal to or even divisible by the number of parallel environments (stored in `self.num_envs`). Merge operations are simply a way to view batched data across different link objects via a single object.
 
 
 ```python

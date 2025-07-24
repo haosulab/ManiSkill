@@ -7,6 +7,7 @@ We recommend going through this document first and playing with some of the demo
 - To get started with RL follow the [RL setup page](../reinforcement_learning/index.md).
 - To get started with IL follow the [IL setup page](../learning_from_demos/index.md).
 - To learn how to build your own tasks follow the [task creation tutorial](../tutorials/custom_tasks/index.md).
+- To leverage sim2real tools and do sim2real manipulation with ManiSkill, follow the [sim2real tooling tutorial](../tutorials/sim2real/index.md)
 
 ## Interface
 

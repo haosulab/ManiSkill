@@ -124,7 +124,7 @@
     </collision>
   </link>
   <joint
-    name="Rotation"
+    name="shoulder_pan"
     type="revolute">
     <origin
       xyz="0 -0.0452 0.0165"
@@ -137,8 +137,8 @@
       xyz="0 -1 0" />
       <!-- note for the so100 arm there is no well defined effort/velocity limits at the moment -->
     <limit
-      lower="-2.1"
-      upper="2.1"
+      lower="-2.0"
+      upper="2.0"
       effort="0"
       velocity="0" />
   </joint>
@@ -200,20 +200,20 @@
     </collision>
   </link>
   <joint
-    name="Pitch"
+    name="shoulder_lift"
     type="revolute">
     <origin
       xyz="0 0.1025 0.0306"
-      rpy="1.5708 0 0" />
+      rpy="0 0 0" />
     <parent
       link="Rotation_Pitch" />
     <child
       link="Upper_Arm" />
     <axis
-      xyz="-1 0 0" />
+      xyz="1 0 0" />
     <limit
-      lower="-0.1"
-      upper="3.45"
+      lower="-1.5708"
+      upper="1.5708"
       effort="0"
       velocity="0" />
   </joint>
@@ -275,11 +275,11 @@
     </collision>
   </link>
   <joint
-    name="Elbow"
+    name="elbow_flex"
     type="revolute">
     <origin
       xyz="0 0.11257 0.028"
-      rpy="-1.5708 0 0" />
+      rpy="0 0 0" />
     <parent
       link="Upper_Arm" />
     <child
@@ -287,8 +287,8 @@
     <axis
       xyz="1 0 0" />
     <limit 
-      lower="-0.2"
-      upper="3.14159"
+      lower="-1.5708"
+      upper="1.5708"
       effort="0"
       velocity="0" />
   </joint>
@@ -350,7 +350,7 @@
     </collision>
   </link>
   <joint
-    name="Wrist_Pitch"
+    name="wrist_flex"
     type="revolute">
     <origin
       xyz="0 0.0052 0.1349"
@@ -425,7 +425,7 @@
     </collision>
   </link>
   <joint
-    name="Wrist_Roll"
+    name="wrist_roll"
     type="revolute">
     <origin
       xyz="0 -0.0601 0"
@@ -435,7 +435,7 @@
     <child
       link="Fixed_Jaw" />
     <axis
-      xyz="0 -1 0" />
+      xyz="0 1 0" />
     <limit 
       lower="-3.14159"
       upper="3.14159"
@@ -498,11 +498,11 @@
     </collision>
   </link>
   <joint
-    name="Jaw"
+    name="gripper"
     type="revolute">
     <origin
       xyz="-0.0202 -0.0244 0"
-      rpy="3.1416 0 3.33" />
+      rpy="0 3.14159 -0.9" />
     <parent
       link="Fixed_Jaw" />
     <child
@@ -510,8 +510,8 @@
     <axis
       xyz="0 0 1" />
     <limit 
-      lower="0"
-      upper="1.7"
+      lower="-1.1"
+      upper="1.1"
       effort="0"
       velocity="0" />
   </joint>

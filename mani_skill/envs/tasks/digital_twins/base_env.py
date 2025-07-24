@@ -94,26 +94,31 @@ class BaseDigitalTwinEnv(BaseEnv):
 
     def _after_reconfigure(self, options: dict):
         super()._after_reconfigure(options)
-        # after reconfiguration in CPU/GPU sim we have initialized all ids of objects in the scene.
-        # and can now get the list of segmentation ids to keep
-        per_scene_ids = []
-        for object in self._objects_to_remove_from_greenscreen:
-            per_scene_ids.append(object.per_scene_id)
-        self._segmentation_ids_to_keep = torch.unique(torch.concatenate(per_scene_ids))
-        self._objects_to_remove_from_greenscreen = []
 
-        # load the overlay images
-        for camera_name in self.rgb_overlay_paths.keys():
-            sensor = self._sensor_configs[camera_name]
-            if isinstance(sensor, CameraConfig):
-                if isinstance(self._rgb_overlay_images[camera_name], torch.Tensor):
-                    continue
-                rgb_overlay_img = cv2.resize(
-                    self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
-                )
-                self._rgb_overlay_images[camera_name] = common.to_tensor(
-                    rgb_overlay_img, device=self.device
-                )
+        if self.rgb_overlay_mode != "none":
+            # after reconfiguration in CPU/GPU sim we have initialized all ids of objects in the scene.
+            # and can now get the list of segmentation ids to keep
+            per_scene_ids = []
+            for object in self._objects_to_remove_from_greenscreen:
+                per_scene_ids.append(object.per_scene_id)
+            self._segmentation_ids_to_keep = torch.unique(
+                torch.concatenate(per_scene_ids)
+            )
+
+            # load the overlay images
+            for camera_name in self.rgb_overlay_paths.keys():
+                sensor = self._sensor_configs[camera_name]
+                if isinstance(sensor, CameraConfig):
+                    if isinstance(self._rgb_overlay_images[camera_name], torch.Tensor):
+                        continue
+                    rgb_overlay_img = cv2.resize(
+                        self._rgb_overlay_images[camera_name],
+                        (sensor.width, sensor.height),
+                    )
+                    self._rgb_overlay_images[camera_name] = common.to_tensor(
+                        rgb_overlay_img, device=self.device
+                    )
+        self._objects_to_remove_from_greenscreen = []
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""

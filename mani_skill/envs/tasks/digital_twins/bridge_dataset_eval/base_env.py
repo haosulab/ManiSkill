@@ -195,6 +195,10 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.model_db: Dict[str, Dict] = io_utils.load_json(
             BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
+        
+        self.consecutive_grasp = None
+        self.episode_stats = None
+        
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
@@ -454,17 +458,21 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             )[0, :, 0]
             """target object bbox size (3, )"""
 
+            if self.consecutive_grasp is None:
+                self.consecutive_grasp = torch.zeros(self.num_envs, dtype=torch.int32).to(self.device)
+            if self.episode_stats is None:
+                self.episode_stats = dict(
+                    moved_correct_obj=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
+                    moved_wrong_obj=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
+                    is_src_obj_grasped=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
+                    consecutive_grasp=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
+                )
             # stats to track
-            self.consecutive_grasp = torch.zeros((b,), dtype=torch.int32)
-            self.episode_stats = dict(
-                # all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
-                moved_correct_obj=torch.zeros((b,), dtype=torch.bool),
-                moved_wrong_obj=torch.zeros((b,), dtype=torch.bool),
-                # near_tgt_obj=torch.zeros((b,), dtype=torch.bool),
-                is_src_obj_grasped=torch.zeros((b,), dtype=torch.bool),
-                # is_closest_to_tgt=torch.zeros((b,), dtype=torch.bool),
-                consecutive_grasp=torch.zeros((b,), dtype=torch.bool),
-            )
+            self.consecutive_grasp[env_idx] = 0
+            self.episode_stats["moved_correct_obj"][env_idx] = 0
+            self.episode_stats["moved_wrong_obj"][env_idx] = 0
+            self.episode_stats["is_src_obj_grasped"][env_idx] = 0
+            self.episode_stats["consecutive_grasp"][env_idx] = 0
 
     def _settle(self, t: int = 0.5):
         """run the simulation for some steps to help settle the objects"""
