@@ -962,7 +962,7 @@ class BaseEnv(gym.Env):
             obs = self.get_obs(info)
         else:
             obs = self._last_obs
-            tree.replace(obs, env_idx, reset_to_env_states_obs)
+            tree.replace(obs, env_idx, common.to_tensor(reset_to_env_states_obs, device=self.device))
         info["reconfigure"] = reconfigure
         self._last_obs = obs
         return obs, info
