@@ -61,7 +61,7 @@ class CachedResetWrapper(gym.Wrapper):
                         )
                     ),
                 )
-                state = self.env.get_wrapper_attr("get_state")()
+                state = self.env.get_wrapper_attr("get_state_dict")()
                 if self.cached_resets_config.num_resets - self._num_cached_resets < self.num_envs:
                     obs = tree.slice(
                         obs, slice(0, self.cached_resets_config.num_resets - self._num_cached_resets)
@@ -75,7 +75,7 @@ class CachedResetWrapper(gym.Wrapper):
                 self._cached_resets_env_states.append(
                     common.to_tensor(state, device=self.cached_resets_config.device)
                 )
-                self._num_cached_resets += len(state)
+                self._num_cached_resets += self.num_envs
             self._cached_resets_env_states = tree.cat(self._cached_resets_env_states)
             self._cached_resets_obs_buffer = tree.cat(self._cached_resets_obs_buffer)
 
