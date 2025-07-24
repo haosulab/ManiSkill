@@ -85,6 +85,8 @@ class CachedResetWrapper(gym.Wrapper):
 
     def reset(self, seed=None, options=None):
         env_idx = None
+        if options is None:
+            options = dict()
         if "env_idx" in options:
             env_idx = options["env_idx"]
         if self._cached_resets_env_states is not None:
