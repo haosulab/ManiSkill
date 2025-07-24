@@ -37,7 +37,7 @@ from mani_skill.sensors.camera import (
     update_camera_configs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
-from mani_skill.utils import common, gym_utils, sapien_utils
+from mani_skill.utils import common, gym_utils, sapien_utils, tree
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SimConfig
@@ -962,7 +962,7 @@ class BaseEnv(gym.Env):
             obs = self.get_obs(info)
         else:
             obs = self._last_obs
-            obs[env_idx] = reset_to_env_states_obs
+            tree.replace(obs, env_idx, reset_to_env_states_obs)
         info["reconfigure"] = reconfigure
         self._last_obs = obs
         return obs, info

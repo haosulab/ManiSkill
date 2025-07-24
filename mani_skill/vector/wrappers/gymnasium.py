@@ -89,10 +89,10 @@ class ManiSkillVectorEnv(VectorEnv):
         self,
         *,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = dict(),
+        options: Optional[dict] = None,
     ):
         obs, info = self._env.reset(seed=seed, options=options)
-        if "env_idx" in options:
+        if options is not None and "env_idx" in options:
             env_idx = options["env_idx"]
             mask = torch.zeros(self.num_envs, dtype=bool, device=self.base_env.device)
             mask[env_idx] = True
