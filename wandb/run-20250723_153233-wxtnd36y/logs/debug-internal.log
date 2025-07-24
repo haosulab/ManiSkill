@@ -1,0 +1,13 @@
+{"time":"2025-07-23T15:32:33.890340157-07:00","level":"INFO","msg":"stream: starting","core version":"0.21.0"}
+{"time":"2025-07-23T15:32:34.254887112-07:00","level":"INFO","msg":"stream: created new stream","id":"wxtnd36y"}
+{"time":"2025-07-23T15:32:34.254993181-07:00","level":"INFO","msg":"stream: started","id":"wxtnd36y"}
+{"time":"2025-07-23T15:32:34.255126422-07:00","level":"INFO","msg":"writer: Do: started","stream_id":"wxtnd36y"}
+{"time":"2025-07-23T15:32:34.255248487-07:00","level":"INFO","msg":"handler: started","stream_id":"wxtnd36y"}
+{"time":"2025-07-23T15:32:34.255343759-07:00","level":"INFO","msg":"sender: started","stream_id":"wxtnd36y"}
+{"time":"2025-07-23T17:04:35.156465285-07:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/w5chung-uc-san-diego/%22ManiSkill-RL%22/wxtnd36y/file_stream","body":"\n<html><head>\n<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">\n<title>502 Server Error</title>\n</head>\n<body text=#000000 bgcolor=#ffffff>\n<h1>Error: Server Error</h1>\n<h2>The server encountered a temporary error and could not complete your request.<p>Please try again in 30 seconds.</h2>\n<h2></h2>\n</body></html>\n"}
+{"time":"2025-07-23T17:15:04.153937025-07:00","level":"INFO","msg":"stream: closing","id":"wxtnd36y"}
+{"time":"2025-07-23T17:15:05.370825336-07:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-07-23T17:15:05.61927011-07:00","level":"INFO","msg":"handler: closed","stream_id":"wxtnd36y"}
+{"time":"2025-07-23T17:15:05.619335067-07:00","level":"INFO","msg":"writer: Close: closed","stream_id":"wxtnd36y"}
+{"time":"2025-07-23T17:15:05.619379358-07:00","level":"INFO","msg":"sender: closed","stream_id":"wxtnd36y"}
+{"time":"2025-07-23T17:15:05.619475882-07:00","level":"INFO","msg":"stream: closed","id":"wxtnd36y"}

@@ -1,0 +1,501 @@
+[33;1m2025-07-23 14:38:56,623 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:38:56,625 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+####
+args.num_iterations=3906 args.num_envs=512 args.num_eval_envs=8
+args.minibatch_size=800 args.batch_size=25600 args.update_epochs=4
+####
+Epoch: 1, global_step=0
+Evaluating
+[33;1m2025-07-23 14:38:57,288 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:38:57,289 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:38:59,017 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:38:59,019 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=3.3386096954345703
+eval_episode_len_mean=50.0
+eval_reward_mean=0.06677219271659851
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_1.pt
+SPS: 3758
+Epoch: 2, global_step=25600
+SPS: 4726
+Epoch: 3, global_step=51200
+SPS: 5146
+Epoch: 4, global_step=76800
+SPS: 5366
+Epoch: 5, global_step=102400
+SPS: 5504
+Epoch: 6, global_step=128000
+SPS: 5598
+Epoch: 7, global_step=153600
+SPS: 5666
+Epoch: 8, global_step=179200
+SPS: 5719
+Epoch: 9, global_step=204800
+SPS: 5755
+Epoch: 10, global_step=230400
+SPS: 5783
+Epoch: 11, global_step=256000
+SPS: 5802
+Epoch: 12, global_step=281600
+SPS: 5816
+Epoch: 13, global_step=307200
+SPS: 5827
+Epoch: 14, global_step=332800
+SPS: 5837
+Epoch: 15, global_step=358400
+SPS: 5844
+Epoch: 16, global_step=384000
+SPS: 5852
+Epoch: 17, global_step=409600
+SPS: 5858
+Epoch: 18, global_step=435200
+SPS: 5863
+Epoch: 19, global_step=460800
+SPS: 5868
+Epoch: 20, global_step=486400
+SPS: 5923
+Epoch: 21, global_step=512000
+Evaluating
+[33;1m2025-07-23 14:40:23,080 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:40:23,081 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:40:25,128 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:40:25,130 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=21.13434600830078
+eval_episode_len_mean=50.0
+eval_reward_mean=0.42268693447113037
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_21.pt
+SPS: 5772
+Epoch: 22, global_step=537600
+SPS: 5780
+Epoch: 23, global_step=563200
+SPS: 5788
+Epoch: 24, global_step=588800
+SPS: 5795
+Epoch: 25, global_step=614400
+SPS: 5802
+Epoch: 26, global_step=640000
+SPS: 5808
+Epoch: 27, global_step=665600
+SPS: 5814
+Epoch: 28, global_step=691200
+SPS: 5819
+Epoch: 29, global_step=716800
+SPS: 5824
+Epoch: 30, global_step=742400
+SPS: 5828
+Epoch: 31, global_step=768000
+SPS: 5833
+Epoch: 32, global_step=793600
+SPS: 5869
+Epoch: 33, global_step=819200
+SPS: 5872
+Epoch: 34, global_step=844800
+SPS: 5875
+Epoch: 35, global_step=870400
+SPS: 5877
+Epoch: 36, global_step=896000
+SPS: 5880
+Epoch: 37, global_step=921600
+SPS: 5883
+Epoch: 38, global_step=947200
+SPS: 5886
+Epoch: 39, global_step=972800
+SPS: 5889
+Epoch: 40, global_step=998400
+SPS: 5892
+Epoch: 41, global_step=1024000
+Evaluating
+[33;1m2025-07-23 14:41:50,425 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:41:50,427 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:41:52,571 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:41:52,581 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=19.654518127441406
+eval_episode_len_mean=50.0
+eval_reward_mean=0.3930903971195221
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_41.pt
+SPS: 5813
+Epoch: 42, global_step=1049600
+SPS: 5818
+Epoch: 43, global_step=1075200
+SPS: 5822
+Epoch: 44, global_step=1100800
+SPS: 5826
+Epoch: 45, global_step=1126400
+SPS: 5831
+Epoch: 46, global_step=1152000
+SPS: 5853
+Epoch: 47, global_step=1177600
+SPS: 5856
+Epoch: 48, global_step=1203200
+SPS: 5860
+Epoch: 49, global_step=1228800
+SPS: 5863
+Epoch: 50, global_step=1254400
+SPS: 5867
+Epoch: 51, global_step=1280000
+SPS: 5870
+Epoch: 52, global_step=1305600
+SPS: 5872
+Epoch: 53, global_step=1331200
+SPS: 5875
+Epoch: 54, global_step=1356800
+SPS: 5878
+Epoch: 55, global_step=1382400
+SPS: 5880
+Epoch: 56, global_step=1408000
+SPS: 5883
+Epoch: 57, global_step=1433600
+SPS: 5886
+Epoch: 58, global_step=1459200
+SPS: 5888
+Epoch: 59, global_step=1484800
+SPS: 5890
+Epoch: 60, global_step=1510400
+SPS: 5893
+Epoch: 61, global_step=1536000
+Evaluating
+[33;1m2025-07-23 14:43:17,275 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:43:17,276 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:43:19,318 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:43:19,320 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=20.23954963684082
+eval_episode_len_mean=50.0
+eval_reward_mean=0.404790997505188
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_61.pt
+SPS: 5842
+Epoch: 62, global_step=1561600
+SPS: 5845
+Epoch: 63, global_step=1587200
+SPS: 5848
+Epoch: 64, global_step=1612800
+SPS: 5850
+Epoch: 65, global_step=1638400
+SPS: 5853
+Epoch: 66, global_step=1664000
+SPS: 5855
+Epoch: 67, global_step=1689600
+SPS: 5858
+Epoch: 68, global_step=1715200
+SPS: 5860
+Epoch: 69, global_step=1740800
+SPS: 5863
+Epoch: 70, global_step=1766400
+SPS: 5865
+Epoch: 71, global_step=1792000
+SPS: 5868
+Epoch: 72, global_step=1817600
+SPS: 5870
+Epoch: 73, global_step=1843200
+SPS: 5872
+Epoch: 74, global_step=1868800
+SPS: 5874
+Epoch: 75, global_step=1894400
+SPS: 5876
+Epoch: 76, global_step=1920000
+SPS: 5878
+Epoch: 77, global_step=1945600
+SPS: 5880
+Epoch: 78, global_step=1971200
+SPS: 5882
+Epoch: 79, global_step=1996800
+SPS: 5884
+Epoch: 80, global_step=2022400
+SPS: 5886
+Epoch: 81, global_step=2048000
+Evaluating
+[33;1m2025-07-23 14:44:44,585 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:44:44,587 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:44:46,657 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:44:46,659 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=22.745933532714844
+eval_episode_len_mean=50.0
+eval_reward_mean=0.45491862297058105
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_81.pt
+SPS: 5847
+Epoch: 82, global_step=2073600
+SPS: 5850
+Epoch: 83, global_step=2099200
+SPS: 5852
+Epoch: 84, global_step=2124800
+SPS: 5855
+Epoch: 85, global_step=2150400
+SPS: 5857
+Epoch: 86, global_step=2176000
+SPS: 5859
+Epoch: 87, global_step=2201600
+SPS: 5862
+Epoch: 88, global_step=2227200
+SPS: 5864
+Epoch: 89, global_step=2252800
+SPS: 5866
+Epoch: 90, global_step=2278400
+SPS: 5869
+Epoch: 91, global_step=2304000
+SPS: 5871
+Epoch: 92, global_step=2329600
+SPS: 5874
+Epoch: 93, global_step=2355200
+SPS: 5876
+Epoch: 94, global_step=2380800
+SPS: 5878
+Epoch: 95, global_step=2406400
+SPS: 5879
+Epoch: 96, global_step=2432000
+SPS: 5881
+Epoch: 97, global_step=2457600
+SPS: 5892
+Epoch: 98, global_step=2483200
+SPS: 5893
+Epoch: 99, global_step=2508800
+SPS: 5895
+Epoch: 100, global_step=2534400
+SPS: 5896
+Epoch: 101, global_step=2560000
+Evaluating
+[33;1m2025-07-23 14:46:10,803 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:46:10,804 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:46:12,957 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:46:12,958 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=20.59276580810547
+eval_episode_len_mean=50.0
+eval_reward_mean=0.4118552803993225
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_101.pt
+SPS: 5864
+Epoch: 102, global_step=2585600
+SPS: 5865
+Epoch: 103, global_step=2611200
+SPS: 5878
+Epoch: 104, global_step=2636800
+SPS: 5880
+Epoch: 105, global_step=2662400
+SPS: 5881
+Epoch: 106, global_step=2688000
+SPS: 5883
+Epoch: 107, global_step=2713600
+SPS: 5884
+Epoch: 108, global_step=2739200
+SPS: 5885
+Epoch: 109, global_step=2764800
+SPS: 5895
+Epoch: 110, global_step=2790400
+SPS: 5896
+Epoch: 111, global_step=2816000
+SPS: 5898
+Epoch: 112, global_step=2841600
+SPS: 5900
+Epoch: 113, global_step=2867200
+SPS: 5901
+Epoch: 114, global_step=2892800
+SPS: 5902
+Epoch: 115, global_step=2918400
+SPS: 5904
+Epoch: 116, global_step=2944000
+SPS: 5905
+Epoch: 117, global_step=2969600
+SPS: 5906
+Epoch: 118, global_step=2995200
+SPS: 5907
+Epoch: 119, global_step=3020800
+SPS: 5908
+Epoch: 120, global_step=3046400
+SPS: 5909
+Epoch: 121, global_step=3072000
+Evaluating
+[33;1m2025-07-23 14:47:36,489 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:47:36,491 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:47:38,547 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:47:38,549 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=21.593873977661133
+eval_episode_len_mean=50.0
+eval_reward_mean=0.431877464056015
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_121.pt
+SPS: 5883
+Epoch: 122, global_step=3097600
+SPS: 5884
+Epoch: 123, global_step=3123200
+SPS: 5885
+Epoch: 124, global_step=3148800
+SPS: 5887
+Epoch: 125, global_step=3174400
+SPS: 5888
+Epoch: 126, global_step=3200000
+SPS: 5889
+Epoch: 127, global_step=3225600
+SPS: 5890
+Epoch: 128, global_step=3251200
+SPS: 5891
+Epoch: 129, global_step=3276800
+SPS: 5893
+Epoch: 130, global_step=3302400
+SPS: 5894
+Epoch: 131, global_step=3328000
+SPS: 5895
+Epoch: 132, global_step=3353600
+SPS: 5896
+Epoch: 133, global_step=3379200
+SPS: 5897
+Epoch: 134, global_step=3404800
+SPS: 5898
+Epoch: 135, global_step=3430400
+SPS: 5899
+Epoch: 136, global_step=3456000
+SPS: 5910
+Epoch: 137, global_step=3481600
+SPS: 5911
+Epoch: 138, global_step=3507200
+SPS: 5912
+Epoch: 139, global_step=3532800
+SPS: 5913
+Epoch: 140, global_step=3558400
+SPS: 5914
+Epoch: 141, global_step=3584000
+Evaluating
+[33;1m2025-07-23 14:49:02,611 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:49:02,612 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:49:04,646 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:49:04,647 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=21.48058319091797
+eval_episode_len_mean=50.0
+eval_reward_mean=0.4296116828918457
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_141.pt
+SPS: 5892
+Epoch: 142, global_step=3609600
+SPS: 5893
+Epoch: 143, global_step=3635200
+SPS: 5894
+Epoch: 144, global_step=3660800
+SPS: 5895
+Epoch: 145, global_step=3686400
+SPS: 5896
+Epoch: 146, global_step=3712000
+SPS: 5897
+Epoch: 147, global_step=3737600
+SPS: 5905
+Epoch: 148, global_step=3763200
+SPS: 5906
+Epoch: 149, global_step=3788800
+SPS: 5907
+Epoch: 150, global_step=3814400
+SPS: 5908
+Epoch: 151, global_step=3840000
+SPS: 5909
+Epoch: 152, global_step=3865600
+SPS: 5910
+Epoch: 153, global_step=3891200
+SPS: 5911
+Epoch: 154, global_step=3916800
+SPS: 5911
+Epoch: 155, global_step=3942400
+SPS: 5912
+Epoch: 156, global_step=3968000
+SPS: 5913
+Epoch: 157, global_step=3993600
+SPS: 5914
+Epoch: 158, global_step=4019200
+SPS: 5915
+Epoch: 159, global_step=4044800
+SPS: 5916
+Epoch: 160, global_step=4070400
+SPS: 5923
+Epoch: 161, global_step=4096000
+Evaluating
+[33;1m2025-07-23 14:50:28,099 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:50:28,101 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+[33;1m2025-07-23 14:50:30,138 - mani_skill  - WARNING - Mimic targets dictionary is missing for controller config for xarm6_robotiq. Assuming the first joint is the control joint and the second joint is the mimic joint[0m
+[33;1m2025-07-23 14:50:30,139 - mani_skill  - WARNING - No initial pose set for actor builder of table-custom, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/haosulab/ManiSkill/issues/421.[0m
+Evaluated 400 steps resulting in 8 episodes
+eval_success_once_mean=0.0
+eval_return_mean=22.03594398498535
+eval_episode_len_mean=50.0
+eval_reward_mean=0.4407188892364502
+eval_success_at_end_mean=0.0
+model saved to runs/PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3/ckpt_161.pt
+SPS: 5904
+Epoch: 162, global_step=4121600
+SPS: 5905
+Epoch: 163, global_step=4147200
+SPS: 5905
+Epoch: 164, global_step=4172800
+SPS: 5913
+Epoch: 165, global_step=4198400
+SPS: 5914
+Epoch: 166, global_step=4224000
+SPS: 5915
+Epoch: 167, global_step=4249600
+SPS: 5916
+Epoch: 168, global_step=4275200
+SPS: 5917
+Epoch: 169, global_step=4300800
+SPS: 5918
+Epoch: 170, global_step=4326400
+SPS: 5919
+Epoch: 171, global_step=4352000
+SPS: 5919
+Epoch: 172, global_step=4377600
+Traceback (most recent call last):
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/examples/baselines/ppo/ppo_rgb.py", line 460, in <module>
+    lastgaelam = 0
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/vector/wrappers/gymnasium.py", line 113, in step
+    obs, rew, terminations, truncations, infos = self._env.step(actions)
+  File "/home/woojeh/miniconda3/envs/icra2025/lib/python3.10/site-packages/gymnasium/core.py", line 522, in step
+    observation, reward, terminated, truncated, info = self.env.step(action)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/utils/registration.py", line 161, in step
+    observation, reward, terminated, truncated, info = self.env.step(action)
+  File "/home/woojeh/miniconda3/envs/icra2025/lib/python3.10/site-packages/gymnasium/wrappers/order_enforcing.py", line 56, in step
+    return self.env.step(action)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 1021, in step
+    obs = self.get_obs(info, unflattened=True)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 524, in get_obs
+    obs = self._get_obs_with_sensor_data(info)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 625, in _get_obs_with_sensor_data
+    sensor_data=self._get_obs_sensor_data(apply_texture_transforms),
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 616, in _get_obs_sensor_data
+    torch.cuda.synchronize()
+  File "/home/woojeh/miniconda3/envs/icra2025/lib/python3.10/site-packages/torch/cuda/__init__.py", line 954, in synchronize
+    return torch._C._cuda_synchronize()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/examples/baselines/ppo/ppo_rgb.py", line 460, in <module>
+    lastgaelam = 0
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/vector/wrappers/gymnasium.py", line 113, in step
+    obs, rew, terminations, truncations, infos = self._env.step(actions)
+  File "/home/woojeh/miniconda3/envs/icra2025/lib/python3.10/site-packages/gymnasium/core.py", line 522, in step
+    observation, reward, terminated, truncated, info = self.env.step(action)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/utils/registration.py", line 161, in step
+    observation, reward, terminated, truncated, info = self.env.step(action)
+  File "/home/woojeh/miniconda3/envs/icra2025/lib/python3.10/site-packages/gymnasium/wrappers/order_enforcing.py", line 56, in step
+    return self.env.step(action)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 1021, in step
+    obs = self.get_obs(info, unflattened=True)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 524, in get_obs
+    obs = self._get_obs_with_sensor_data(info)
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 625, in _get_obs_with_sensor_data
+    sensor_data=self._get_obs_sensor_data(apply_texture_transforms),
+  File "/home/woojeh/Documents/ICRA2025/ManiSkill/mani_skill/envs/sapien_env.py", line 616, in _get_obs_sensor_data
+    torch.cuda.synchronize()
+  File "/home/woojeh/miniconda3/envs/icra2025/lib/python3.10/site-packages/torch/cuda/__init__.py", line 954, in synchronize
+    return torch._C._cuda_synchronize()
+KeyboardInterrupt
