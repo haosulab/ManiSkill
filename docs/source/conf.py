@@ -97,12 +97,11 @@ autoapi_dirs = ["../../mani_skill/"]
 # is not meant to be used by the user
 autoapi_ignore = [
     "*/mani_skill/utils/scene_builder/*.py",
-    "*/mani_skill/envs/{tasks,scenes}/*.py",
-    "*/mani_skill/agents/*.py",
+    "*/mani_skill/agents/robots/*.py",
     "*/mani_skill/examples/*.py",
     "*/mani_skill/render/*.py",
-    "*/mani_skill/sensors/*.py",
-    "*/mani_skill/trajectory/*.py",
+    # depth_camera is outdated and needs to be upgraded
+    "*/mani_skill/sensors/depth_camera.py",
     "*/mani_skill/vector/*.py"
 ]
 autoapi_keep_files = True
