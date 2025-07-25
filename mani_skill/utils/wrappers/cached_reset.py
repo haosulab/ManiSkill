@@ -1,11 +1,14 @@
+from dataclasses import asdict, dataclass
+from typing import List, Optional, Union
+
 import dacite
 import gymnasium as gym
+import torch
+
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, tree
-import torch
-from typing import List, Optional, Union
-from dataclasses import asdict, dataclass
 from mani_skill.utils.structs.types import Device
+
 
 @dataclass
 class CachedResetsConfig:
@@ -19,23 +22,34 @@ class CachedResetsConfig:
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
 
+
 class CachedResetWrapper(gym.Wrapper):
     """
     Cached reset wrapper for ManiSkill3 environments. Caching resets allows you to skip slower parts of the reset function call and boost environment FPS as a result.
 
     Args:
         env: The environment to wrap.
-        reset_to_env_states: A dictionary with keys "env_states" and optionally "obs". "env_states" is a dictionary of environment states to reset to. 
+        reset_to_env_states: A dictionary with keys "env_states" and optionally "obs". "env_states" is a dictionary of environment states to reset to.
             "obs" contains the corresponding observations generated at those env states. If reset_to_env_states is not provided, the wrapper will sample reset states
             from the environment using the given seed.
-        cached_resets_config: 
+        config: A dictionary or a `CachedResetsConfig` object that contains the configuration for the cached resets.
     """
-    def __init__(self, env: gym.Env, reset_to_env_states: dict = None, cached_resets_config: Union[CachedResetsConfig, dict] = CachedResetsConfig()):
+
+    def __init__(
+        self,
+        env: gym.Env,
+        reset_to_env_states: Optional[dict] = None,
+        config: Union[CachedResetsConfig, dict] = CachedResetsConfig(),
+    ):
         super().__init__(env)
         self.num_envs = self.base_env.num_envs
-        if isinstance(cached_resets_config, CachedResetsConfig):
-            cached_resets_config = cached_resets_config.dict()
-        self.cached_resets_config = dacite.from_dict(data_class=CachedResetsConfig, data=cached_resets_config, config=dacite.Config(strict=True))
+        if isinstance(config, CachedResetsConfig):
+            config = config.dict()
+        self.cached_resets_config = dacite.from_dict(
+            data_class=CachedResetsConfig,
+            data=config,
+            config=dacite.Config(strict=True),
+        )
         cached_data_device = self.cached_resets_config.device
         if cached_data_device is None:
             cached_data_device = self.base_env.device
@@ -56,20 +70,34 @@ class CachedResetWrapper(gym.Wrapper):
                         env_idx=torch.arange(
                             0,
                             min(
-                                self.cached_resets_config.num_resets - self._num_cached_resets,
+                                self.cached_resets_config.num_resets
+                                - self._num_cached_resets,
                                 self.num_envs,
                             ),
-                            device=self.device,
+                            device=self.base_env.device,
                         )
                     ),
                 )
                 state = self.env.get_wrapper_attr("get_state_dict")()
-                if self.cached_resets_config.num_resets - self._num_cached_resets < self.num_envs:
+                if (
+                    self.cached_resets_config.num_resets - self._num_cached_resets
+                    < self.num_envs
+                ):
                     obs = tree.slice(
-                        obs, slice(0, self.cached_resets_config.num_resets - self._num_cached_resets)
+                        obs,
+                        slice(
+                            0,
+                            self.cached_resets_config.num_resets
+                            - self._num_cached_resets,
+                        ),
                     )
                     state = tree.slice(
-                        state, slice(0, self.cached_resets_config.num_resets - self._num_cached_resets)
+                        state,
+                        slice(
+                            0,
+                            self.cached_resets_config.num_resets
+                            - self._num_cached_resets,
+                        ),
                     )
                 self._cached_resets_obs_buffer.append(
                     common.to_tensor(obs, device=self.cached_resets_config.device)
@@ -81,15 +109,20 @@ class CachedResetWrapper(gym.Wrapper):
             self._cached_resets_env_states = tree.cat(self._cached_resets_env_states)
             self._cached_resets_obs_buffer = tree.cat(self._cached_resets_obs_buffer)
 
-        self._cached_resets_env_states = common.to_tensor(self._cached_resets_env_states, device=cached_data_device)
+        self._cached_resets_env_states = common.to_tensor(
+            self._cached_resets_env_states, device=cached_data_device
+        )
         if self._cached_resets_obs_buffer is not None:
-            self._cached_resets_obs_buffer = common.to_tensor(self._cached_resets_obs_buffer, device=cached_data_device)
+            self._cached_resets_obs_buffer = common.to_tensor(
+                self._cached_resets_obs_buffer, device=cached_data_device
+            )
 
     @property
     def base_env(self) -> BaseEnv:
         return self.env.unwrapped
 
-    def reset(self, 
+    def reset(
+        self,
         *args,
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = None,
@@ -104,13 +137,15 @@ class CachedResetWrapper(gym.Wrapper):
             sampled_ids = torch.randint(
                 0,
                 self._num_cached_resets,
-                size=(len(env_idx) if env_idx is not None else self.num_envs, ),
+                size=(len(env_idx) if env_idx is not None else self.num_envs,),
                 device=self.base_env.device,
             )
             options["reset_to_env_states"] = dict(
                 env_states=tree.slice(self._cached_resets_env_states, sampled_ids),
             )
             if self._cached_resets_obs_buffer is not None:
-                options["reset_to_env_states"]["obs"] = tree.slice(self._cached_resets_obs_buffer, sampled_ids)
+                options["reset_to_env_states"]["obs"] = tree.slice(
+                    self._cached_resets_obs_buffer, sampled_ids
+                )
         obs, info = self.env.reset(seed=seed, options=options)
         return obs, info
