@@ -175,7 +175,7 @@ def main(args):
 
     # generate plot for RT/google dataset settings, which is 1x 640x480 cameras
     for obs_mode in ["RGB", "Depth"]:
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots()
         ax.set_title(f"{args.env_id}: FPS with 1x 640x480 {obs_mode} Cameras")
         draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": obs_mode.lower(), "num_cameras": 1, "camera_width": 640, "camera_height": 480}, annotate_label="env.step/gpu_mem_use")
         plt.legend()
@@ -187,7 +187,7 @@ def main(args):
 
     # generate plot for droit dataset settings, which is 3x 320x180 cameras
     for obs_mode in ["RGB", "Depth"]:
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots()
         ax.set_title(f"{args.env_id}: FPS with 3x 320x180 {obs_mode} Cameras")
         draw_bar_plot_envs_vs_fps(ax, data, {"env_id": args.env_id, "obs_mode": obs_mode.lower(), "num_cameras": 3, "camera_width": 320, "camera_height": 180}, annotate_label="env.step/gpu_mem_use")
         save_path = osp.join(root_save_path, f"fps_droid_dataset_setup_{obs_mode.lower()}.png")
@@ -224,19 +224,16 @@ def main(args):
         print(f"Saved figure to {save_path}")
 
 
-
-
     ### Special figures for maniskill ###
-    if "maniskill" in data.keys():
+    if "ManiSkill3" in data.keys():
         # Generate line plots of rendering FPS for different env_ids against number of parallel environments
-        fig, ax = plt.subplots(figsize=(10, 4))
+        fig, ax = plt.subplots(figsize=(10, 6))
         ax.grid(True)
         ax.set_xlabel("Number of Parallel Environments")
         ax.set_ylabel("FPS")
         ax.set_title("Simulation+Rendering FPS vs Number of Parallel Environments for Different Tasks")
-
-        df = data["maniskill"]
-        df = df[(df["obs_mode"] == "rgb") & (df["num_envs"] >= 16) & (df["num_cameras"] == 1) & (df["camera_width"] == 128)]
+        df = data["ManiSkill3"]
+        df = df[(df["obs_mode"] == "rgb") & (df["num_envs"] >= 16) & (df["num_envs"] <= 1024) & (df["num_cameras"] == 1) & (df["camera_width"] == 128)]
         env_ids = df["env_id"].unique()
         for i, env_id in enumerate(env_ids):
             env_df = df[df["env_id"] == env_id].sort_values("num_envs")

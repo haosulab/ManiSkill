@@ -145,7 +145,7 @@ class PDJointPosMimicController(PDJointPosController):
                 }
             else:
                 raise ValueError(
-                    "Mimic targets dictionary is missing. Please provide a mimic targets dictionary to setup mimic controllers withh more than 2 joints"
+                    "Mimic targets dictionary is missing. Please provide a mimic targets dictionary to setup mimic controllers with more than 2 joints"
                 )
 
         self._multiplier = torch.ones(

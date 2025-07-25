@@ -4,7 +4,7 @@
 
 Robot UID: `floating_inspire_hand_right`
 
-Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_inspire_hand/floating_inspire_hand.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/floating_inspire_hand/floating_inspire_hand.py)
+Agent Class Code: [https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/inspire_hand/floating_inspire_hand.py](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/agents/robots/inspire_hand/floating_inspire_hand.py)
 
 Quality: B (Stable, but some values are unrealistic)
 

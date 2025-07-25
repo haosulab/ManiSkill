@@ -314,7 +314,7 @@ for cam_name in obs["sensor_data"].keys():
 
 ## External Forces / Perturbation based Randomization
 
-For training/evaluating robust robotics policies it is common to apply random external forces to objects in the scene.
+For training/evaluating robust robotics policies, it is common to apply random external forces to objects in the scene.
 
 For {py:class}`mani_skill.utils.structs.Actor` objects you can apply external forces to the body's center of mass by calling the `apply_force` method.
 

@@ -117,9 +117,9 @@ class AllegroHandRight(BaseAgent):
         joint_target_delta_pos.use_target = True
 
         controller_configs = dict(
-            pd_joint_delta_pos=joint_delta_pos,
-            pd_joint_pos=joint_pos,
-            pd_joint_target_delta_pos=joint_target_delta_pos,
+            pd_joint_delta_pos=dict(hand=joint_delta_pos),
+            pd_joint_pos=dict(hand=joint_pos),
+            pd_joint_target_delta_pos=dict(hand=joint_target_delta_pos),
         )
 
         # Make a deepcopy in case users modify any config

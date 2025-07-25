@@ -118,7 +118,7 @@ sudo apt-get install libvulkan1
 To test your installation of Vulkan:
 
 ```bash
-sudo apt-get install vulkan-utils
+sudo apt-get install vulkan-tools
 vulkaninfo
 ```
 

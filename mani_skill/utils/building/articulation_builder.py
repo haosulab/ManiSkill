@@ -78,8 +78,9 @@ class ArticulationBuilder(SapienArticulationBuilder):
             )
 
             entity.add_component(link_component)
-            if b.visual_records:
-                entity.add_component(b.build_render_component())
+            if self.scene.can_render():
+                if b.visual_records:
+                    entity.add_component(b.build_render_component())
             entity.name = b.name
 
             link_component.name = f"{name_prefix}{b.name}"

@@ -35,6 +35,18 @@
     "quality": "B",
     "name": "D'Claw"
   },
+  "fixed_inspire_hand_left": {
+    "quality": "B",
+    "name": "Fixed Inspire Hand Left"
+  },
+  "fixed_inspire_hand_right": {
+    "quality": "B",
+    "name": "Fixed Inspire Hand Right"
+  },
+  "floating_inspire_hand_left": {
+    "quality": "B",
+    "name": "Floating Inspire Hand Left"
+  },
   "floating_inspire_hand_right": {
     "quality": "B",
     "name": "Floating Inspire Hand Right"
@@ -118,5 +130,13 @@
   "xarm7_ability": {
     "quality": "A",
     "name": "XArm7 Ability"
+  },
+  "widowxai": {
+    "quality": "B",
+    "name": "WidowX AI"
+  },
+  "widowxai_wristcam": {
+    "quality": "B",
+    "name": "WidowX AI with wrist camera"
   }
 }

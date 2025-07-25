@@ -3,6 +3,7 @@ Utilities for determining the simulation backend and devices
 """
 import platform
 from dataclasses import dataclass
+from typing import Union
 
 import sapien
 import torch
@@ -18,8 +19,8 @@ class BackendInfo:
     """the device on which the physics simulation is running"""
     sim_backend: str
     """the backend name of the physics simulation"""
-    render_device: sapien.Device
-    """the device on which the renderer is running"""
+    render_device: Union[sapien.Device, None]
+    """the device on which the renderer is running. If none then we disable rendering."""
     render_backend: str
     """the backend name of the renderer"""
 
@@ -44,7 +45,7 @@ render_backend_name_mapping = {
 
 def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> BackendInfo:
     sim_backend = sim_backend_name_mapping[sim_backend]
-    render_backend = render_backend_name_mapping[render_backend]
+    render_backend = render_backend_name_mapping.get(render_backend, render_backend)
     if sim_backend == "physx_cpu":
         device = torch.device("cpu")
         sim_device = sapien.Device("cpu")
@@ -57,21 +58,33 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
     else:
         raise ValueError(f"Invalid simulation backend: {sim_backend}")
 
-    if platform.system() == "Darwin":
-        render_device = sapien.Device("cpu")
-        render_backend = "sapien_cpu"
-        logger.warning(
-            "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
-        )
-    elif render_backend == "sapien_cuda":
-        render_device = sapien.Device("cuda")
-    elif render_backend == "sapien_cpu":
-        render_device = sapien.Device("cpu")
-    elif render_backend[:4] == "cuda":
-        render_device = sapien.Device(render_backend)
-    else:
-        # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
-        render_device = sapien.Device(render_backend)
+    try:
+        if platform.system() == "Darwin":
+            render_device = sapien.Device("cpu")
+            render_backend = "sapien_cpu"
+            logger.warning(
+                "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
+            )
+        elif render_backend == "sapien_cuda":
+            render_device = sapien.Device("cuda")
+        elif render_backend == "sapien_cpu":
+            render_device = sapien.Device("cpu")
+        elif render_backend[:4] == "cuda":
+            render_device = sapien.Device(render_backend)
+        elif render_backend == "none" or render_backend is None:
+            render_device = None
+        else:
+            # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
+            render_device = sapien.Device(render_backend)
+    except RuntimeError as e:
+        if str(e) == 'failed to find device "cuda"':
+            logger.warning(
+                f'Requested to use render device "{render_backend}", but CUDA device was not found. Falling back to "cpu" device. Rendering might be disabled.'
+            )
+            render_device = sapien.Device("cpu")
+            render_backend = "sapien_cpu"
+        else:
+            raise
     return BackendInfo(
         device=device,
         sim_device=sim_device,

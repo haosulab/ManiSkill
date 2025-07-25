@@ -8,7 +8,7 @@ The wrapper works with both single environments and parallel environments.
 
 The behavior of the wrapper is shown by the following figure :   
 
-<img src="images/action_repeat.svg"/>
+<img src="https://raw.githubusercontent.com/haosulab/ManiSkill/refs/heads/main/docs/source/user_guide/wrappers/images/action_repeat.svg"/>
 
 The figure illustrates an example when using `num_envs=3` (so 3 parallel envs) and an action repeat with `repeat=3`.  
 Until all environments are done or until the action (`action_1`) has been repeated 3 times, we perform a step in the environment by re-using the same action (`action_1`).  

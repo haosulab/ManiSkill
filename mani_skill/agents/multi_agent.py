@@ -70,6 +70,18 @@ class MultiAgent(BaseAgent, Generic[T]):
         for agent in self.agents:
             agent.controller.before_simulation_step()
 
+    def get_controller_state(self):
+        """
+        Get the state of the controller.
+        """
+        return {
+            uid: agent.get_controller_state() for uid, agent in self.agents_dict.items()
+        }
+
+    def set_controller_state(self, state: Dict):
+        for uid, agent in self.agents_dict.items():
+            agent.set_controller_state(state[uid])
+
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #

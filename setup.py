@@ -7,7 +7,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 # update this version when a new official pypi release is made
-__version__ = "3.0.0b20"
+__version__ = "3.0.0b21"
 
 
 def get_package_version():

@@ -3,9 +3,9 @@ name: Publish nightly pypi distributions
 # based on https://github.com/pytorch/rl/blob/main/.github/workflows/nightly_build.yml
 
 on:
-  schedule:
-    # runs at 23:59 PST every day
-    - cron:  '59 7 * * *'
+  # schedule:
+  #   # runs at 23:59 PST every day
+  #   - cron:  '59 7 * * *'
   # or manually trigger it
   workflow_dispatch:
   push:
