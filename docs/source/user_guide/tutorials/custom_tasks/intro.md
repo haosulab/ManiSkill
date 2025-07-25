@@ -32,7 +32,7 @@ If you have any questions or issues, feel free to ask in our [discord](https://d
 
 ## Setting up the Task Class
 
-All tasks are defined by their own class and must inherit `BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the time limit of the task.
+All tasks are defined by their own class and must inherit {py:class}`~mani_skill.envs.sapien_env.BaseEnv`, similar to the design of many other robot learning simulation frameworks. You must then also register the class with a decorator so that the environment can be easily created via the `gym.make(env_id=...)` command in the future. Environment registration is done via `@register_env(env_id, max_episode_steps=...)` where `max_episode_steps` indicates the time limit of the task.
 
 ```python
 import sapien
