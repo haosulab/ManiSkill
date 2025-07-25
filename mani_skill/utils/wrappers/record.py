@@ -357,16 +357,15 @@ class RecordEpisode(gym.Wrapper):
         self,
         *args,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = dict(),
+        options: Optional[dict] = None,
         **kwargs,
     ):
-
         if self.save_on_reset:
             if self.save_video and self.num_envs == 1:
                 self.flush_video()
             # if doing a full reset then we flush all trajectories including incompleted ones
             if self._trajectory_buffer is not None:
-                if "env_idx" not in options:
+                if options is None or "env_idx" not in options:
                     self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs))
                 else:
                     self.flush_trajectory(
@@ -415,7 +414,7 @@ class RecordEpisode(gym.Wrapper):
             if self.record_env_state:
                 first_step.state = common.to_numpy(common.batch(state_dict))
             env_idx = np.arange(self.num_envs)
-            if "env_idx" in options:
+            if options is not None and "env_idx" in options:
                 env_idx = common.to_numpy(options["env_idx"])
             if self._trajectory_buffer is None:
                 # Initialize trajectory buffer on the first episode based on given observation (which should be generated after all wrappers)

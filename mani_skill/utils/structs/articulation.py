@@ -888,7 +888,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             else:
                 gx, gy = self.get_joint_target_indices(joint_indices)
             self.px.cuda_articulation_target_qpos.torch()[
-                gx[self.scene._reset_mask], gy[self.scene._reset_mask]
+                gx[self.scene._reset_mask[self._scene_idxs]], gy[self.scene._reset_mask[self._scene_idxs]]
             ] = targets
         else:
             for i, joint in enumerate(joints):
@@ -911,7 +911,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 gx, gy = self.get_joint_target_indices(joints)
             else:
                 gx, gy = self.get_joint_target_indices(joint_indices)
-            self.px.cuda_articulation_target_qvel.torch()[gx, gy] = targets
+            self.px.cuda_articulation_target_qvel.torch()[
+                gx[self.scene._reset_mask[self._scene_idxs]], gy[self.scene._reset_mask[self._scene_idxs]]
+            ] = targets
         else:
             for i, joint in enumerate(joints):
                 joint.set_drive_velocity_target(targets[0, i])
