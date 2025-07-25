@@ -6,8 +6,7 @@ Subpackages:
 
 ```{toctree}
 :titlesonly:
-:maxdepth: 1
-:glob:
-*
+:maxdepth: 4
+mani_skill
 
 ```

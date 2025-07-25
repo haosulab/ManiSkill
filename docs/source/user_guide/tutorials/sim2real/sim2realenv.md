@@ -31,7 +31,7 @@ sim_env.close()
 real_env.close()
 ```
 
-For those familiar with Gymnasium/Reinforcement Learning (RL), we also support simulation wrappers on real environments. In order to re-use the wrappers you may have used for RL training in simulation, you simply apply those wrappers to the `sim_env` before passing it into the `Sim2RealEnv` constructor. A common wrapper is the [FlattenRGBDObservationWrapper](../wrappers/flatten.md#flatten-rgbd-observations) which flattens the observation space to a dictionary with a "state" key and a "rgb" and/or "depth" key. The example below will show how to apply the wrapper and then create a real environment interface and print the observation data/shapes.
+For those familiar with Gymnasium/Reinforcement Learning (RL), we also support simulation wrappers on real environments. In order to re-use the wrappers you may have used for RL training in simulation, you simply apply those wrappers to the `sim_env` before passing it into the `Sim2RealEnv` constructor. A common wrapper is the [FlattenRGBDObservationWrapper](../../wrappers/flatten.md#flatten-rgbd-observations) which flattens the observation space to a dictionary with a "state" key and a "rgb" and/or "depth" key. The example below will show how to apply the wrapper and then create a real environment interface and print the observation data/shapes.
 
 ```python
 from mani_skill.utils.wrappers.flatten import FlattenRGBDObservationWrapper
