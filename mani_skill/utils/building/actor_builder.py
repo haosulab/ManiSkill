@@ -179,11 +179,12 @@ class ActorBuilder(SAPIENActorBuilder):
         build the raw sapien entity. Modifies original SAPIEN function to accept new procedurally generated render components
         """
         entity = sapien.Entity()
-        if self.visual_records or len(self._procedural_shapes) > 0:
-            render_component = self.build_render_component()
-            for shape in self._procedural_shapes:
-                render_component.attach(shape)
-            entity.add_component(render_component)
+        if self.scene.can_render():
+            if self.visual_records or len(self._procedural_shapes) > 0:
+                render_component = self.build_render_component()
+                for shape in self._procedural_shapes:
+                    render_component.attach(shape)
+                entity.add_component(render_component)
         entity.add_component(self.build_physx_component())
         entity.name = self.name
         return entity
@@ -202,7 +203,6 @@ class ActorBuilder(SAPIENActorBuilder):
             and self.name not in self.scene.actors
         ), "built actors in ManiSkill must have unique names and cannot be None or empty strings"
 
-        num_actors = self.scene.num_envs
         if self.scene_idxs is not None:
             self.scene_idxs = common.to_tensor(
                 self.scene_idxs, device=self.scene.device

@@ -85,6 +85,36 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
+    <a href="fixed_inspire_hand_left">
+        <img src="../_static/robot_images/fixed_inspire_hand_left/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Fixed Inspire Hand Left">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="fixed_inspire_hand_left"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Fixed Inspire Hand Left</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
+    </div>
+</div>
+
+<div class="gallery-item">
+    <a href="fixed_inspire_hand_right">
+        <img src="../_static/robot_images/fixed_inspire_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Fixed Inspire Hand Right">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="fixed_inspire_hand_right"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Fixed Inspire Hand Right</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
+    </div>
+</div>
+
+<div class="gallery-item">
+    <a href="floating_inspire_hand_left">
+        <img src="../_static/robot_images/floating_inspire_hand_left/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Inspire Hand Left">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="floating_inspire_hand_left"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Floating Inspire Hand Left</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
+    </div>
+</div>
+
+<div class="gallery-item">
     <a href="floating_inspire_hand_right">
         <img src="../_static/robot_images/floating_inspire_hand_right/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Floating Inspire Hand Right">
     </a>
@@ -285,6 +315,26 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
+    <a href="widowxai">
+        <img src="../_static/robot_images/widowxai/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX AI">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="widowxai"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">WidowX AI</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
+    </div>
+</div>
+
+<div class="gallery-item">
+    <a href="widowxai_wristcam">
+        <img src="../_static/robot_images/widowxai_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="WidowX AI with wrist camera">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="widowxai_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">WidowX AI with wrist camera</p></a>
+        <p style="margin-top: 0px;">Quality: B</p>
+    </div>
+</div>
+
+<div class="gallery-item">
     <a href="xarm6_nogripper">
         <img src="../_static/robot_images/xarm6_nogripper/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="XArm6 with No Gripper">
     </a>
@@ -336,6 +386,9 @@ allegro_hand_right/index
 allegro_hand_right_touch/index
 dclaw/index
 fetch/index
+fixed_inspire_hand_left/index
+fixed_inspire_hand_right/index
+floating_inspire_hand_left/index
 floating_inspire_hand_right/index
 floating_panda_gripper/index
 floating_robotiq_2f_85_gripper/index
@@ -356,6 +409,8 @@ unitree_go2/index
 unitree_h1/index
 unitree_h1_simplified/index
 widowx250s/index
+widowxai/index
+widowxai_wristcam/index
 xarm6_nogripper/index
 xarm6_robotiq/index
 xarm6_robotiq_wristcam/index

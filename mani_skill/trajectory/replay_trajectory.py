@@ -27,6 +27,7 @@ from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.trajectory.utils.actions import conversion as action_conversion
 from mani_skill.utils import common, io_utils, wrappers
 from mani_skill.utils.logging_utils import logger
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 
 
@@ -375,6 +376,11 @@ def _main(
 
     env_kwargs["sim_config"]["scene_config"]["gravity"] = np.array(env_kwargs["sim_config"]["scene_config"]["gravity"])
     env = gym.make(env_id, **env_kwargs)
+    if isinstance(env.action_space, gym.spaces.Dict):
+        logger.warning(
+            "We currently do not track which wrappers are used when recording trajectories but majority of the time in multi-agent envs with dictionary action spaces the actions are stored as flat vectors. We will flatten the action space with the ManiSkill provided FlattenActionSpaceWrapper. If you do not want this behavior you can copy the replay trajectory code yourself and modify it as needed."
+        )
+        env = FlattenActionSpaceWrapper(env)
     # TODO (support adding wrappers to the recorded data?)
 
     # if pbar is not None:
