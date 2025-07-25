@@ -41,10 +41,17 @@ class TableSceneBuilder(SceneBuilder):
             p=[-0.12, 0, -0.9196429], q=euler2quat(0, 0, np.pi / 2)
         )
         table = builder.build_kinematic(name="table-workspace")
-        aabb = (
-            table._objs[0]
-            .find_component_by_type(sapien.render.RenderBodyComponent)
-            .compute_global_aabb_tight()
+        # aabb = (
+        #     table._objs[0]
+        #     .find_component_by_type(sapien.render.RenderBodyComponent)
+        #     .compute_global_aabb_tight()
+        # )
+        # value of the call above is saved below
+        aabb = np.array(
+            [
+                [-0.7402168, -1.2148621, -0.91964257],
+                [0.4688596, 1.2030163, 3.5762787e-07],
+            ]
         )
         self.table_length = aabb[1, 0] - aabb[0, 0]
         self.table_width = aabb[1, 1] - aabb[0, 1]
@@ -270,6 +277,9 @@ class TableSceneBuilder(SceneBuilder):
                 )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
+        elif self.env.robot_uids in ["widowxai", "widowxai_wristcam"]:
+            qpos = self.env.agent.keyframes["ready_to_grasp"].qpos
+            self.env.agent.reset(qpos)
         elif self.env.robot_uids == "so100":
             qpos = np.array([0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0])
             qpos = (
@@ -279,19 +289,6 @@ class TableSceneBuilder(SceneBuilder):
                 + qpos
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(
-                sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
-            )
-        
-        elif self.env.robot_uids == "ur_10e":
-            # qpos = np.array([0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0])
-            # qpos = (
-            #     self.env._episode_rng.normal(
-            #         0, self.robot_init_qpos_noise, (b, len(qpos))
-            #     )
-            #     + qpos
-            # )
-            # self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(
                 sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
             )

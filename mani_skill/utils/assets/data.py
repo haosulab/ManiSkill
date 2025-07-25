@@ -189,6 +189,11 @@ def initialize_data_sources():
         url="https://github.com/haosulab/ManiSkill-XArm6/archive/refs/tags/v0.1.0.zip",
         target_path="robots/xarm6",
     )
+    DATA_SOURCES["oakink-v2"] = DataSource(
+        source_type="task_assets",
+        url="https://huggingface.co/datasets/haosulab/OakInk-v2/resolve/main/object_repair.zip",
+        target_path="tasks/oakink-v2",
+    )
 
 
 def expand_data_group_into_individual_data_source_ids(data_group_id: str):

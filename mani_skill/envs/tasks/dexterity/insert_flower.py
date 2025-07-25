@@ -6,7 +6,7 @@ import sapien
 import sapien.physx as physx
 import torch
 import torch.nn.functional as F
-
+import os 
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots import FloatingInspireHandRight
@@ -27,20 +27,20 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 @register_env(
     "InsertFlower-v1",
     max_episode_steps=300,
+    asset_download_ids=["oakink-v2"]
 )
 class InsertFlowerEnv(BaseEnv):
     agent: Union[FloatingInspireHandRight]
     _clearance = 0.003
     hand_init_height = 0.25
     flower_spawn_half_size = 0.05
-    asset_path = Path(__file__).parents[5] / "assets"
+    asset_path = f"{ASSET_DIR}/tasks/oakink-v2/align_ds"
 
     def __init__(
         self,
         *args,
+        robot_uids="allegro_hand_right_floating",
         robot_init_qpos_noise=0.02,
-        # obj_init_pos_noise=0.02,
-        # difficulty_level: int = -1,
         num_envs=1,
         reconfiguration_freq=None,
         **kwargs,
@@ -50,7 +50,7 @@ class InsertFlowerEnv(BaseEnv):
 
         super().__init__(
             *args,
-            # robot_uids="allegro_hand_right_floating",
+            robot_uids=robot_uids,
             num_envs=num_envs,
             reconfiguration_freq=reconfiguration_freq,
             **kwargs,
@@ -86,9 +86,9 @@ class InsertFlowerEnv(BaseEnv):
 
         # === Load Vase (Static) ===
         vase_builder = self.scene.create_actor_builder()
-        vase_visual_mesh_file = str(self.asset_path / "oakink/object_repair/align_ds/O02@0080@00001/model.obj")
-        vase_collision_mesh_file = str(
-            self.asset_path / "oakink/object_repair/align_ds/O02@0080@00001/model.obj.coacd.ply"
+        vase_visual_mesh_file = os.path.join(self.asset_path, "O02@0080@00001/model.obj")
+        vase_collision_mesh_file = os.path.join(
+            self.asset_path, "O02@0080@00001/model.obj.coacd.ply"
         )
         vase_builder.add_visual_from_file(vase_visual_mesh_file)
         vase_builder.add_multiple_convex_collisions_from_file(vase_collision_mesh_file)
@@ -96,39 +96,26 @@ class InsertFlowerEnv(BaseEnv):
             [-0.2509, -0.2027, 0.102 + 0.001], [0.8712, 0.0069, 0.0082, 0.4908]
         )
 
-        # vase_builder.set_mass(0.0)  # static
         self.vase = vase_builder.build_static(name="vase")
 
         # === Load Flower (Dynamic) ===
         flower_builder = self.scene.create_actor_builder()
-        flower_mesh_file = str(self.asset_path / "oakink/object_repair/align_ds/O02@0081@00001/model.obj")
-        flower_collision_file = str(
-            self.asset_path / "oakink/object_repair/align_ds/O02@0081@00001/model.obj.coacd.ply"
+        flower_mesh_file = os.path.join(self.asset_path, "O02@0081@00001/model.obj")
+        flower_collision_file = os.path.join(
+            self.asset_path, "O02@0081@00001/model.obj.coacd.ply"
         )
         flower_builder.add_visual_from_file(flower_mesh_file)
-        # flower_builder.set_density(200.0)
+
         flower_material = physx.PhysxMaterial(static_friction=1, dynamic_friction=1, restitution=1)
-        # (
-        #     static_friction=1.0, dynamic_friction=1.0, restitution=1.0
-        # )
         flower_builder.add_multiple_convex_collisions_from_file(
             flower_collision_file, density=200, material=flower_material
         )
 
-        # flower_builder.set_material(flower_material)
-        # Pose([-0.269485, 0.0198321, 0.016], )
         self.init_flower_pose = Pose.create_from_pq(
             [-0.242, 0.0, 0.015 + 0.001], [-0.352413, -0.258145, -0.635074, 0.637062]
         )
         flower_builder.initial_pose = self.init_flower_pose
         self.flower = flower_builder.build(name="flower")
-
-        # for i, obj in enumerate(self.flower._objs):
-        #     for shape in obj.collision_shapes:
-        #         shape.physical_material.dynamic_friction = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
-        #         shape.physical_material.static_friction = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
-        #         shape.physical_material.restitution = 1 # self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
-
         self.target_area_box = list(self.target_area.values())
         # Convert target_area into tensor for fast computation
         self.target_area_box = torch.tensor(self.target_area_box, device=self.device, dtype=torch.float32).view(2, 3)
@@ -143,10 +130,9 @@ class InsertFlowerEnv(BaseEnv):
     def _initialize_actors(self, env_idx: torch.Tensor):
         with torch.device(self.device):
             b = len(env_idx)
-            # Initialize object pose
+
             self.table_scene.initialize(env_idx)
 
-            # Reset flower posexyz = torch.zeros((b, 3))
             flower_pose = self.init_flower_pose
             flower_pose.p[:, :2] += torch.rand((b, 2)) * self.flower_spawn_half_size * 2 - self.flower_spawn_half_size
             self.flower.set_pose(flower_pose)
@@ -186,7 +172,6 @@ class InsertFlowerEnv(BaseEnv):
         return {"success": is_within}
 
     def compute_dense_reward(self, obs: Any, action: Array, info: Dict) -> float:
-        # return 0
         object_pos = self.flower.pose.p
         dist_outside = torch.max(
             torch.max(self.target_area_box[0] - object_pos, torch.zeros_like(object_pos)),  # lower bound
@@ -197,8 +182,6 @@ class InsertFlowerEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        # pass
-        # this should be equal to compute_dense_reward / max possible reward
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 4.0
 
 

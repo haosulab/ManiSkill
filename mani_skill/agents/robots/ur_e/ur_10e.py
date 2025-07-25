@@ -1,13 +1,11 @@
 import numpy as np
 import sapien
 
-import torch 
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.pose import Pose
+
 
 @register_agent(asset_download_ids=["ur10e"])
 class UR10e(BaseAgent):
@@ -45,31 +43,3 @@ class UR10e(BaseAgent):
                 use_delta=True,
             ),
         )
-    
-    # def _after_loading_articulation(self):
-    #     super()._after_loading_articulation()
-    #     return 
-    #     self.finger1_link = self.robot.links_map["Fixed_Jaw"]
-    #     self.finger2_link = self.robot.links_map["Moving_Jaw"]
-    #     self.finger1_tip = self.robot.links_map["Fixed_Jaw_tip"]
-    #     self.finger2_tip = self.robot.links_map["Moving_Jaw_tip"]
-
-    
-    # @property
-    # def tcp_pos(self):
-    #     # computes the tool center point as the mid point between the the fixed and moving jaw's tips
-    #     return (self.finger1_tip.pose.p + self.finger2_tip.pose.p) / 2
-
-    # @property
-    # def tcp_pose(self):
-    #     return Pose.create_from_pq(self.tcp_pos, self.finger1_link.pose.q)
-
-
-    # def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
-    #     return False
-
-    # def is_static(self, threshold=0.2):
-    #     qvel = self.robot.get_qvel()[
-    #         :, :-2
-    #     ]  # exclude the gripper joint and gripper rotation joint.
-    #     return torch.max(torch.abs(qvel), 1)[0] <= threshold
