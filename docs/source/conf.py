@@ -102,7 +102,6 @@ autoapi_ignore = [
     "*/mani_skill/render/*.py",
     # depth_camera is outdated and needs to be upgraded
     "*/mani_skill/sensors/depth_camera.py",
-    "*/mani_skill/vector/*.py"
 ]
 autoapi_keep_files = True
 autoapi_root = "api"
