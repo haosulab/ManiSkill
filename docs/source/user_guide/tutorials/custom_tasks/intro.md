@@ -49,7 +49,7 @@ class PushCubeEnv(BaseEnv):
 
 At the start of any task, you must load in all objects (robots, assets, articulations, lighting etc.) into each parallel environment, also known as a sub-scene. This is also known as **reconfiguration** and generally only ever occurs once. Loading these objects is done in the `_load_scene` function of your custom task class. The objective is to simply load objects in with initial poses that ensure they don't collide on the first step, and nothing else. For GPU simulation at this stage you cannot change any object states (like velocities, qpos), only initial poses can be modified. Changing/randomizing states is done in the section on [episode initialization / randomization](#episode-initialization--randomization).
 
-Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an `ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature for enabling heterogeneous simulation).
+Building objects in ManiSkill is nearly the exact same as it is in SAPIEN. You create an {py:class}`~mani_skill.utils.building.actor_builder.ActorBuilder` via `self.scene.create_actor_builder` and via the actor builder add visual and collision shapes. Visual shapes only affect visual rendering processes while collision shapes affect the physical simulation. ManiSkill further will create the actor for you in every sub-scene (unless you use [scene-masks/scene-idxs](./advanced.md#scene-masks), a more advanced feature for enabling heterogeneous simulation).
 
 ### Building Robots
 
@@ -116,7 +116,7 @@ You can build a **kinematic** actor with `builder.build_kinematic` and a **stati
 
 Note that by default, if an object does not have an initial pose set in its builder, ManiSkill will set it to a default pose of `q=[1,0,0,0], p=[0,0,0]` and give a warning. For simple tasks this may not matter but when working with more complex objects and articulations, it is strongly recommended to set initial poses for all objects as GPU simulation might run into bugs/issues if the objects at their initial poses collide.
 
-We also provide some functions that build some more complex shapes that you can use by importing the following:
+We also provide some functions that build some more complex shapes that you can use by importing the {py:class}`~mani_skill.utils.building.actors` package:
 ```python
 from mani_skill.utils.building import actors
 ```

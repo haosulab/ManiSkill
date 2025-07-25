@@ -14,6 +14,36 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 
+def get_actor_builder(
+    scene: ManiSkillScene, id: str, add_collision: bool = True, add_visual: bool = True
+) -> ActorBuilder:
+    """Returns an :py:class:`~mani_skill.utils.building.actor_builder.ActorBuilder` given an ID specifying which dataset/source and then the ID of the asset.
+
+    Currently these IDs are hardcoded for a few datasets. We may add more actor datasets in the future for easy loading by users
+
+    Args:
+        scene: The ManiSkillScene. If building a custom task this is generally just self.scene
+        id (str): The unique ID identifying the dataset and the ID of the actor in that dataset to build. The format should be
+            "<dataset_id>:<actor_id_in_dataset>"
+        add_collision (bool): Whether to include the collision shapes/meshes
+        add_visual (bool): Whether to include visual shapes/meshes
+    """
+    splits = id.split(":")
+    dataset_source = splits[0]
+    actor_id = ":".join(splits[1:])
+
+    if dataset_source == "ycb":
+        from mani_skill.utils.building.actors.ycb import get_ycb_builder
+
+        builder = get_ycb_builder(
+            scene=scene, id=actor_id, add_collision=add_collision, add_visual=add_visual
+        )
+    else:
+        raise RuntimeError(f"No dataset with id {dataset_source} was found")
+
+    return builder
+
+
 def _build_by_type(
     builder: ActorBuilder,
     name,
