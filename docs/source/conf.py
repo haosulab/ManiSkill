@@ -99,7 +99,6 @@ autoapi_ignore = [
     "*/mani_skill/utils/scene_builder/*.py",
     "*/mani_skill/envs/{tasks,scenes}/*.py",
     "*/mani_skill/agents/*.py",
-    "*/mani_skill/evaluation/*.py",
     "*/mani_skill/examples/*.py",
     "*/mani_skill/render/*.py",
     "*/mani_skill/sensors/*.py",
