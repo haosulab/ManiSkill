@@ -27,6 +27,8 @@ class GPUMemoryConfig:
     )  # 262144 is SAPIEN default but most tasks work with 2**25
     found_lost_aggregate_pairs_capacity: int = 2**10
     total_aggregate_pairs_capacity: int = 2**10
+    collision_stack_size: int = 64 * 64 * 1024  # this is the same default as SAPIEN
+    """Increase this if you get 'Collision stack overflow detected'"""
 
     def dict(self):
         return {k: v for k, v in asdict(self).items()}
