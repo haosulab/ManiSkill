@@ -91,10 +91,10 @@ autodoc_member_order = "groupwise"
 # autoapi configs
 autoapi_type = "python"
 autoapi_dirs = ["../../mani_skill/"]
-
+autoapi_options =  ['members', 'undoc-members', 'private-members', 'show-inheritance', 'show-module-summary', 'special-members', 'imported-members', ]
 # there's quite a few files that do not need to be documented because they just contain e.g. example scripts or
 # some very specific files for specific objects (e.g. some scene builders), or are just internally used functions that
-# is not meant to be used by the user
+# are not meant to be used by the user
 autoapi_ignore = [
     "*/mani_skill/utils/scene_builder/*.py",
     "*/mani_skill/agents/robots/*.py",
