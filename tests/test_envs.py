@@ -195,16 +195,17 @@ def test_env_raise_value_error_for_nan_actions():
 
 @pytest.mark.parametrize("env_id", STATIONARY_ENV_IDS)
 def test_states(env_id):
-    env: BaseEnv = gym.make(env_id)
+    env = gym.make(env_id)
+    base_env: BaseEnv = env.unwrapped
     obs, _ = env.reset(seed=1000)
     for _ in range(5):
         env.step(env.action_space.sample())
-    state = env.get_state_dict()
+    state = base_env.get_state_dict()
     obs = env.get_obs()
 
     for _ in range(50):
         env.step(env.action_space.sample())
-    env.set_state_dict(state)
+    base_env.set_state_dict(state)
     new_obs = env.get_obs()
     assert_obs_equal(obs, new_obs)
     env.close()

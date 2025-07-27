@@ -16,9 +16,7 @@ from gymnasium.vector.utils import batch_space
 
 import mani_skill.render.utils as render_utils
 from mani_skill import logger
-from mani_skill.agents import REGISTERED_AGENTS
-from mani_skill.agents.base_agent import BaseAgent
-from mani_skill.agents.multi_agent import MultiAgent
+from mani_skill.agents import REGISTERED_AGENTS, BaseAgent, MultiAgent
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.envs.utils.observations import (
     parse_obs_mode_to_struct,
@@ -42,7 +40,6 @@ from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import tile_images
-from mani_skill.viewer import create_viewer
 
 
 class BaseEnv(gym.Env):
@@ -741,7 +738,7 @@ class BaseEnv(gym.Env):
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         if self.scene.can_render(): self._setup_sensors(options)
         if self.render_mode == "human" and self._viewer is None:
-            self._viewer = create_viewer(self._viewer_camera_config)
+            self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
         if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
@@ -852,7 +849,7 @@ class BaseEnv(gym.Env):
         options["reconfigure"] is True, will call self._reconfigure() which deletes the entire physx scene and reconstructs everything.
         Users building custom tasks generally do not need to override this function.
 
-        If options["reset_to_env_states"] is given, we expect there to be options["reset_to_env_states"]["env_states"] and optionally options["reset_to_env_states"]["obs"], both with 
+        If options["reset_to_env_states"] is given, we expect there to be options["reset_to_env_states"]["env_states"] and optionally options["reset_to_env_states"]["obs"], both with
         batch size equal to the number of environments being reset. "env_states" can be a dictionary or flat tensor and we skip calling the environment's _initialize_episode function which
         generates the initial state on a normal reset. If "obs" is given we skip calling the environment's get_obs function which can save some compute/time.
 
@@ -928,7 +925,7 @@ class BaseEnv(gym.Env):
         if "reset_to_env_states" in options:
             env_states = options["reset_to_env_states"]["env_states"]
             reset_to_env_states_obs = options["reset_to_env_states"].get("obs", None)
-            if isinstance(env_states, dict):            
+            if isinstance(env_states, dict):
                 self.set_state_dict(env_states, env_idx)
             else:
                 self.set_state(env_states, env_idx)
@@ -1344,7 +1341,7 @@ class BaseEnv(gym.Env):
         for obj in self._hidden_objects:
             obj.show_visual()
         if self._viewer is None:
-            self._viewer = create_viewer(self._viewer_camera_config)
+            self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
             self._setup_viewer()
         if self.gpu_sim_enabled and self.scene._gpu_sim_initialized:
             self.scene.px.sync_poses_gpu_to_cpu()
