@@ -5,6 +5,7 @@ import torch
 
 from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.utils import gym_utils
 from mani_skill.utils.structs.types import SimConfig
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tests.utils import (
@@ -16,9 +17,20 @@ from tests.utils import (
     SINGLE_ARM_STATIONARY_ROBOTS,
     STATIONARY_ENV_IDS,
     assert_isinstance,
-    assert_obs_equal,
     tree_map,
 )
+
+
+def make_env_with_gym_make_vec(env_id: str, num_envs: int, env_kwargs: dict):
+    if gym_utils.IS_GYMNASIUM_1:
+        return gym.make_vec(env_id, num_envs=num_envs, **env_kwargs)
+    else:
+        return gym.make_vec(
+            env_id,
+            num_envs=num_envs,
+            vectorization_mode="custom",
+            vector_kwargs=env_kwargs,
+        )
 
 
 @pytest.mark.gpu_sim
@@ -44,11 +56,10 @@ def test_envs_obs_modes(env_id, obs_mode):
         assert x.device == torch.device("cuda:0")
 
     PREPROCESSED_OBS_MODES = ["pointcloud"]
-    env = gym.make_vec(
+    env = make_env_with_gym_make_vec(
         env_id,
         num_envs=16,
-        vectorization_mode="custom",
-        vector_kwargs=dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
+        env_kwargs=dict(obs_mode=obs_mode, sim_config=LOW_MEM_SIM_CONFIG),
     )
     base_env = env.base_env
     obs, _ = env.reset()
