@@ -92,8 +92,8 @@ autodoc_member_order = "groupwise"
 autoapi_type = "python"
 autoapi_dirs = ["../../mani_skill/"]
 
-# there's general quite a few files that do not need to be documented because they just contain e.g. example scripts or
-# some very specific files for specific objects (e.g. some scene builders), or is just internally used functions that
+# there's quite a few files that do not need to be documented because they just contain e.g. example scripts or
+# some very specific files for specific objects (e.g. some scene builders), or are just internally used functions that
 # is not meant to be used by the user
 autoapi_ignore = [
     "*/mani_skill/utils/scene_builder/*.py",
