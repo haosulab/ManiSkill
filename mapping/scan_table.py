@@ -25,6 +25,7 @@ args = parser.parse_args()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 IMG_DIR = os.path.join(SCRIPT_DIR, "images")
 os.makedirs(IMG_DIR, exist_ok=True)
+rgb_frames = []
 
 INTRINSIC_TXT = os.path.join(IMG_DIR, "intrinsic.txt")
 PLY_PATH      = os.path.join(IMG_DIR, "point_cloud.ply")
@@ -48,8 +49,7 @@ def hide_robot_visuals(robot):
 
 render_mode = "human" if args.viewer else "rgb_array"
 env = gym.make(
-    # "TableScan-v0",
-    "TableScanDiscreteInit-v0",
+    "TableScan-v0",
     robot_uids="xarm6_robotiq",
     obs_mode="rgbd",
     control_mode="pd_joint_pos",
@@ -78,6 +78,7 @@ def capture():
     p = obs["sensor_param"]["moving_camera"]
 
     rgb_np   = np.squeeze(d["rgb"].cpu().numpy()).astype(np.uint8)
+    rgb_frames.append(rgb_np)
     depth_np = np.squeeze(d["depth"].cpu().numpy())
     K        = np.squeeze(p["intrinsic_cv"].cpu().numpy())
     E_cv     = np.squeeze(p["extrinsic_cv"].cpu().numpy())
@@ -192,6 +193,16 @@ if args.viewer:
     while not viewer.window.should_close and time.time() - start < 120:
         viewer.render()
     viewer.close()
+
+VIDEO_PATH = os.path.join(IMG_DIR, "capture_rgb.mp4")
+if rgb_frames:
+    # make sure all frames are identical size
+    assert len({img.shape for img in rgb_frames}) == 1, "inconsistent frame sizes"
+    imageio.mimsave(VIDEO_PATH, rgb_frames, fps=10)
+    print(f"[VIDEO] wrote {VIDEO_PATH}")
+else:
+    print("[WARN] no RGB frames collected?")
+
 
 env.close()
 print("Done.")

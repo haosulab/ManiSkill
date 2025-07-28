@@ -63,17 +63,17 @@ class TableScanDiscreteInitEnv(BaseEnv):
             #     far=100,
             #     mount=self.agent.tcp,
             # )
-            # CameraConfig(
-            #     "hand_cam",
-            #     pose=real_pose,
-            #     # width=640,
-            #     # height=480,
-            #     width=128,
-            #     height=128,
-            #     fov=np.pi * 0.4,
-            #     near=0.01,
-            #     far=100,
-            # )
+            CameraConfig(
+                "hand_cam",
+                pose=real_pose,
+                # width=640,
+                # height=480,
+                width=128,
+                height=128,
+                fov=np.pi * 0.4,
+                near=0.01,
+                far=100,
+            ),
             moving_camera
         ]
         
@@ -109,37 +109,47 @@ class TableScanDiscreteInitEnv(BaseEnv):
     def _load_agent(self, options: Dict):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
         
-    def _load_lighting(self, options: dict):
-        for scene in self.scene.sub_scenes:
-            scene.ambient_light = [np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6)]
-            scene.add_directional_light(np.random.uniform(-1, 1, 3), [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=4096)
-            scene.add_directional_light([0, 0, -1], [1, 1, 1])
+    # MARK: This is for lighting randomization, which we currently do not use
+    # def _load_lighting(self, options: dict):
+    #     for scene in self.scene.sub_scenes:
+    #         scene.ambient_light = [np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6)]
+    #         scene.add_directional_light(np.random.uniform(-1, 1, 3), [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=4096)
+    #         scene.add_directional_light([0, 0, -1], [1, 1, 1])
 
     def _load_scene(self, options: Dict):
         self.table_scene = TableSceneBuilder(
-            env=self, custom_table=True, randomize_colors=True
+            env=self, custom_table=True, randomize_colors=False, # MARK: Trigger this as True for domain randomization
         )
         self.table_scene.build()
         
-        ### Cube randomization: Build cubes separately for each parallel environment to enable domain randomization        
-        self._cubes: List[Actor] = []
-        for i in range(self.num_envs):
-            builder = self.scene.create_actor_builder()
-            builder.add_box_collision(half_size=[self.cube_half_size] * 3)
-            builder.add_box_visual(
-                half_size=[self.cube_half_size] * 3, 
-                material=sapien.render.RenderMaterial(
-                    base_color=self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1]
-                )
-            )
-            builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
-            builder.set_scene_idxs([i])
-            self._cubes.append(builder.build(name=f"cube_{i}"))
-            self.remove_from_state_dict_registry(self._cubes[-1])  # remove individual cube from state dict
+        # MARK: We first comment out the domain randomization part
+        # ### Cube randomization: Build cubes separately for each parallel environment to enable domain randomization        
+        # self._cubes: List[Actor] = []
+        # for i in range(self.num_envs):
+        #     builder = self.scene.create_actor_builder()
+        #     builder.add_box_collision(half_size=[self.cube_half_size] * 3)
+        #     builder.add_box_visual(
+        #         half_size=[self.cube_half_size] * 3, 
+        #         material=sapien.render.RenderMaterial(
+        #             base_color=self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1]
+        #         )
+        #     )
+        #     builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
+        #     builder.set_scene_idxs([i])
+        #     self._cubes.append(builder.build(name=f"cube_{i}"))
+        #     self.remove_from_state_dict_registry(self._cubes[-1])  # remove individual cube from state dict
 
-        # Merge all cubes into a single Actor object
-        self.cube = Actor.merge(self._cubes, name="cube")
-        self.add_to_state_dict_registry(self.cube)  # add merged cube to state dict
+        # # Merge all cubes into a single Actor object
+        # self.cube = Actor.merge(self._cubes, name="cube")
+        # self.add_to_state_dict_registry(self.cube)  # add merged cube to state dict
+        
+        self.cube = actors.build_cube(
+            self.scene,
+            half_size=self.cube_half_size,
+            color=[1, 0, 0, 1],
+            name="cube",
+            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
+        )
         
         self.table_center = [0, 0, self.table_scene.table_height/2]
         self.cam_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
