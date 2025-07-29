@@ -47,5 +47,9 @@ htmlcov/
 
 # Mapping results
 /mapping/images
+/mapping/dataset
+/mapping/poses
+/mapping/reloaded_output
+/mapping/multi_env_maps
 /runs/
 /wandb/

@@ -54,6 +54,33 @@ The script is controlled via command-line flags to customize its behavior.
 
 ---
 
+## Replaying & Visualising the Scan (`multi_scan.py`)
+
+Once you have generated `poses.txt` and `intrinsic.txt` with **`scan_table.py`**
+you can *replay* those camera trajectories in parallel environments and export
+a neatly tiled video for quick visual inspection.
+
+### What the script does
+
+* **Loads the saved poses** (`poses/poses.txt`).
+* **Spawns several parallel environments** (`--batch-size` per process).
+* **Sets every environment’s camera to the same pose** and renders an RGB
+  frame.
+* **Tiles the RGB frames into a square grid** and appends the grid ‑ frame to a
+  video.
+* **Repeats** until all poses are rendered.
+* Saves one MP4 **per chunk** (e.g. `grid_chunk0.mp4`, `grid_chunk1.mp4` when
+  `--num-envs 32 --batch-size 16`).
+
+### Basic usage
+
+```bash
+# render 32 environments in two 4×4 grid videos
+python multi_scan.py --num-envs 32 --batch-size 16
+```
+
+---
+
 ## Understanding the Output Files 📁
 
 After running the script, an `images/` directory will be created in the same folder as `scan.py`. It contains the following files:

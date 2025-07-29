@@ -1,0 +1,26 @@
+diff --git a/mani_skill/envs/tasks/tabletop/pick_cube.py b/mani_skill/envs/tasks/tabletop/pick_cube.py
+index 40fb72c..b390c29 100644
+--- a/mani_skill/envs/tasks/tabletop/pick_cube.py
++++ b/mani_skill/envs/tasks/tabletop/pick_cube.py
+@@ -156,7 +156,12 @@ class PickCubeEnv(BaseEnv):
+             <= self.goal_thresh
+         )
+         is_grasped = self.agent.is_grasping(self.cube)
++        # qvel = self.agent.robot.get_qvel()
++        # if self.robot_uids in ["panda", "widowxai", "xarm6_robotiq"]:
++        #     qvel = qvel[..., :-2]
++        # is_robot_static = torch.linalg.norm(qvel, dim=1) < 0.2
+         is_robot_static = self.agent.is_static(0.2)
++        
+         return {
+             "success": is_obj_placed & is_robot_static,
+             "is_obj_placed": is_obj_placed,
+@@ -202,7 +207,7 @@ class PickCubeEnv(BaseEnv):
+         reward += place_reward * is_grasped
+ 
+         qvel = self.agent.robot.get_qvel()
+-        if self.robot_uids in ["panda", "widowxai"]:
++        if self.robot_uids in ["panda", "widowxai", "xarm6_robotiq"]:
+             qvel = qvel[..., :-2]
+         elif self.robot_uids == "so100":
+             qvel = qvel[..., :-1]

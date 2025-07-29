@@ -1,0 +1,22 @@
+2025-07-23 14:22:38,775 INFO    MainThread:1520339 [wandb_setup.py:_flush():80] Current SDK version is 0.21.0
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_setup.py:_flush():80] Configure stats pid to 1520339
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_setup.py:_flush():80] Loading settings from /home/woojeh/.config/wandb/settings
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_setup.py:_flush():80] Loading settings from /home/woojeh/Documents/ICRA2025/ManiSkill/wandb/settings
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_setup.py:_flush():80] Loading settings from environment variables
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_init.py:setup_run_log_directory():703] Logging user logs to /home/woojeh/Documents/ICRA2025/ManiSkill/wandb/run-20250723_142238-zvao00xo/logs/debug.log
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_init.py:setup_run_log_directory():704] Logging internal logs to /home/woojeh/Documents/ICRA2025/ManiSkill/wandb/run-20250723_142238-zvao00xo/logs/debug-internal.log
+2025-07-23 14:22:38,776 INFO    MainThread:1520339 [wandb_init.py:init():830] calling init triggers
+2025-07-23 14:22:38,777 INFO    MainThread:1520339 [wandb_init.py:init():835] wandb.init called with sweep_config: {}
+config: {'exp_name': 'PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3', 'seed': 1, 'torch_deterministic': True, 'cuda': True, 'track': True, 'wandb_project_name': '"ManiSkill-RL"', 'wandb_entity': None, 'wandb_group': 'PPO', 'capture_video': True, 'save_model': True, 'evaluate': False, 'checkpoint': None, 'render_mode': 'all', 'env_id': 'PickCube-v1', 'robot_uids': 'xarm6_robotiq', 'include_state': True, 'total_timesteps': 100000000, 'learning_rate': 0.0003, 'num_envs': 512, 'num_eval_envs': 8, 'partial_reset': True, 'eval_partial_reset': False, 'num_steps': 50, 'num_eval_steps': 50, 'reconfiguration_freq': None, 'eval_reconfiguration_freq': 1, 'control_mode': 'pd_joint_vel', 'anneal_lr': False, 'gamma': 0.8, 'gae_lambda': 0.9, 'num_minibatches': 32, 'update_epochs': 4, 'norm_adv': True, 'clip_coef': 0.2, 'clip_vloss': False, 'ent_coef': 0.0, 'vf_coef': 0.5, 'max_grad_norm': 0.5, 'target_kl': 0.2, 'reward_scale': 1.0, 'eval_freq': 20, 'save_train_video_freq': None, 'finite_horizon_gae': False, 'batch_size': 25600, 'minibatch_size': 800, 'num_iterations': 3906, 'env_cfg': {'robot_uids': 'xarm6_robotiq', 'obs_mode': 'rgb', 'render_mode': 'all', 'sim_backend': 'physx_cuda', 'control_mode': 'pd_joint_vel', 'num_envs': 512, 'env_id': 'PickCube-v1', 'reward_mode': 'normalized_dense', 'env_horizon': 50, 'partial_reset': True}, 'eval_env_cfg': {'robot_uids': 'xarm6_robotiq', 'obs_mode': 'rgb', 'render_mode': 'all', 'sim_backend': 'physx_cuda', 'control_mode': 'pd_joint_vel', 'num_envs': 8, 'env_id': 'PickCube-v1', 'reward_mode': 'normalized_dense', 'env_horizon': 50, 'partial_reset': True}, '_wandb': {'code_path': 'code/examples/baselines/ppo/ppo_rgb.py'}}
+2025-07-23 14:22:38,777 INFO    MainThread:1520339 [wandb_init.py:init():871] starting backend
+2025-07-23 14:22:38,984 INFO    MainThread:1520339 [wandb_init.py:init():874] sending inform_init request
+2025-07-23 14:22:38,987 INFO    MainThread:1520339 [wandb_init.py:init():882] backend started and connected
+2025-07-23 14:22:38,989 INFO    MainThread:1520339 [wandb_init.py:init():953] updated telemetry
+2025-07-23 14:22:38,997 INFO    MainThread:1520339 [wandb_init.py:init():977] communicating run to backend with 90.0 second timeout
+2025-07-23 14:22:39,775 INFO    MainThread:1520339 [wandb_init.py:init():1029] starting run threads in backend
+2025-07-23 14:22:39,862 INFO    MainThread:1520339 [wandb_run.py:_console_start():2458] atexit reg
+2025-07-23 14:22:39,862 INFO    MainThread:1520339 [wandb_run.py:_redirect():2306] redirect: wrap_raw
+2025-07-23 14:22:39,862 INFO    MainThread:1520339 [wandb_run.py:_redirect():2375] Wrapping output streams.
+2025-07-23 14:22:39,862 INFO    MainThread:1520339 [wandb_run.py:_redirect():2398] Redirects installed.
+2025-07-23 14:22:39,863 INFO    MainThread:1520339 [wandb_init.py:init():1075] run started, returning control to user process
+2025-07-23 14:25:48,177 INFO    MsgRouterThr:1520339 [mailbox.py:close():129] [no run ID] Closing mailbox, abandoning 1 handles.

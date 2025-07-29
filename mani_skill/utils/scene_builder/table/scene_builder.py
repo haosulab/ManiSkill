@@ -18,11 +18,12 @@ class TableSceneBuilder(SceneBuilder):
     """A simple scene builder that adds a table to the scene such that the height of the table is at 0, and
     gives reasonable initial poses for robots."""
 
-    def __init__(self, env, robot_init_qpos_noise=0.02, custom_table=False):
+    def __init__(self, env, robot_init_qpos_noise=0.02, custom_table=False, randomize_colors=False):
         super().__init__(env, robot_init_qpos_noise)
         self.custom_table = custom_table
+        self.randomize_colors = randomize_colors
 
-    def _build_custom_table(self, length: float, width: float, height: float):
+    def _build_custom_table(self, length: float, width: float, height: float, random_i = -1):
         """
         Build a custom table with specified dimensions.
         
@@ -42,8 +43,13 @@ class TableSceneBuilder(SceneBuilder):
         table_pose = sapien.Pose(p=[0, 0, height/2])  # center of the table
         builder.add_box_collision(table_pose, table_half_size)
         
-        # Tabletop (black)
-        tabletop_material = sapien.render.RenderMaterial(base_color=[0.1, 0.1, 0.1, 1.0])
+        # Tabletop
+        if random_i >= 0:
+            tabletop_material = sapien.render.RenderMaterial(base_color=self.env._batched_episode_rng[random_i].uniform(low=0., high=0.5, size=(3, )).tolist() + [1])
+            builder.set_scene_idxs([random_i])
+        else:
+            # default: black tabletop
+            tabletop_material = sapien.render.RenderMaterial(base_color=[0.1, 0.1, 0.1, 1.0])
         tabletop_thickness = 0.05
         builder.add_box_visual(
             pose=sapien.Pose(p=[0, 0, height - tabletop_thickness/2]),
@@ -51,8 +57,7 @@ class TableSceneBuilder(SceneBuilder):
             material=tabletop_material
         )
         
-        # Table legs (light gray)
-        leg_material = sapien.render.RenderMaterial(base_color=[0.9, 0.9, 0.9, 1.0])
+        # Table legs
         leg_height = height - tabletop_thickness/2
         leg_margin = 0.03  # margin from corners
         leg_size = 0.05  # square legs
@@ -64,15 +69,23 @@ class TableSceneBuilder(SceneBuilder):
             [-width/2 + leg_margin, -length/2 + leg_margin, leg_height/2], # back left
         ]
         
+        if random_i >= 0:
+            leg_material = sapien.render.RenderMaterial(base_color=self.env._batched_episode_rng[random_i].uniform(low=0.5, high=1., size=(3, )).tolist() + [1])
+        else:
+            leg_material = sapien.render.RenderMaterial(base_color=[0.9, 0.9, 0.9, 1.0])
         for leg_pos in leg_positions:
             builder.add_box_visual(
                 pose=sapien.Pose(p=leg_pos),
                 half_size=[leg_size/2, leg_size/2, leg_height/2],
                 material=leg_material
             )
-        
+        builder.initial_pose = sapien.Pose(p=[0, 0, -height])
         # Build the final table actor
-        return builder.build_kinematic(name="table-custom")
+        if random_i >= 0:
+            table_actor = builder.build_kinematic(name=f"table-custom-{random_i}")
+        else:
+            table_actor = builder.build_kinematic(name="table-custom")
+        return table_actor
     
     def _build_custom_wall(self, table_pose: sapien.Pose, length: float):
         wall_size = [0.2, 10.0, 4.0]

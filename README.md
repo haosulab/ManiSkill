@@ -16,11 +16,11 @@ This guide provides step-by-step instructions to set up the environment for this
 First, create a dedicated Conda environment for this project using Python 3.10. Then, activate the newly created environment.
 
 ```bash
-# Create the environment named 'icra2025'
-conda create -n icra2025 python=3.10
+# Create the environment named 'icra2026'
+conda create -n icra2026 python=3.10
 
 # Activate the environment
-conda activate icra2025
+conda activate icra2026
 ```
 
 ### 2. Install PyTorch with CUDA 12.4
