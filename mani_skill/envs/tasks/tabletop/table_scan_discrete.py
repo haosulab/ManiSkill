@@ -15,6 +15,9 @@ from mani_skill.utils.registration import register_env
 from mani_skill.agents.robots import XArm6Robotiq
 from mani_skill.utils.structs import Actor
 
+from sapien.physx import PhysxRigidBodyComponent
+from sapien.render import RenderBodyComponent
+ 
 @register_env("TableScanDiscreteInit-v0", max_episode_steps=1_000)
 class TableScanDiscreteInitEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["xarm6_robotiq"]
@@ -135,6 +138,38 @@ class TableScanDiscreteInitEnv(BaseEnv):
         # Merge all cubes into a single Actor object
         self.cube = Actor.merge(self._cubes, name="cube")
         self.add_to_state_dict_registry(self.cube)  # add merged cube to state dict
+
+        ### Agent randomization
+        for link in self.agent.robot.links:
+            for i, obj in enumerate(link._objs):
+                # modify the i-th object which is in parallel environment i
+                
+                # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
+                rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
+                if rigid_body_component is not None:
+                    # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
+                    rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
+                
+                # modifying per collision shape properties such as friction values
+                for shape in obj.collision_shapes:
+                    shape.physical_material.dynamic_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                    shape.physical_material.static_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                    shape.physical_material.restitution = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+
+                render_body_component: RenderBodyComponent = obj.entity.find_component_by_type(RenderBodyComponent)
+                if render_body_component is not None:
+                    for render_shape in render_body_component.render_shapes:
+                        for part in render_shape.parts:
+                            # you can change color, use texture files etc.
+                            part.material.set_base_color(self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1])
+                            # note that textures must use the sapien.render.RenderTexture2D 
+                            # object which allows passing a texture image file path
+                            part.material.set_base_color_texture(None)
+                            part.material.set_normal_texture(None)
+                            part.material.set_emission_texture(None)
+                            part.material.set_transmission_texture(None)
+                            part.material.set_metallic_texture(None)
+                            part.material.set_roughness_texture(None)
         
         # self.cube = actors.build_cube(
         #     self.scene,
