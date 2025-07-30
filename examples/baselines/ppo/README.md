@@ -26,20 +26,21 @@ You can start training an agent by running the `ppo_rgb.py` script from your ter
 ### Example Command
 
 ```bash
-python examples/baselines/ppo/ppo_rgb.py \
-    --env_id=PickCube-v1 \
+python examples/baselines/ppo/visual_ppo.py \
+    --env_id=TableScanDiscreteInit-v0 \
     --robot_uids=xarm6_robotiq \
     --control_mode=pd_joint_vel \
-    --exp_name=PickCube_xarm6_ppo \
-    --num_envs=512 \
+    --exp_name=PickCubeMatched3_xarm6_robotiq_jv_ppo_rgb_3 \
+    --num_envs=64 \
     --num_eval_envs=8 \
     --eval_freq=20 \
     --total_timesteps=100_000_000 \
-    --num_steps=50 \
+    --num_minibatches=32 \
+    --num_eval_steps=50 \
     --gamma=0.8 \
+    --update_epochs=4 \
     --capture-video \
-    --track \
-    --wandb_project_name "ManiSkill-RL"
+    --track --wandb_project_name "ICRA2026";
 ```
 
 This command will initialize the training process, and you'll see output in your terminal. If you use the `--track` flag, you can monitor the agent's learning progress, including success rates and rewards, in real-time on [Weights & Biases](https://wandb.ai/). Videos of the agent's performance will be saved in the `runs/` directory.

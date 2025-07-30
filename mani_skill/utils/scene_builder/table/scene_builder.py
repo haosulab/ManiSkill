@@ -12,6 +12,7 @@ from mani_skill.agents.multi_agent import MultiAgent
 from mani_skill.agents.robots.fetch import FETCH_WHEELS_COLLISION_BIT
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
+from mani_skill.utils.structs import Actor
 
 
 class TableSceneBuilder(SceneBuilder):
@@ -113,7 +114,17 @@ class TableSceneBuilder(SceneBuilder):
         if self.custom_table:
             # Use custom table with specified dimensions - height of the glb table, length and width matching real table
             self.table_height = 0.91964292762787
-            self.table = self._build_custom_table(length=1.52, width=0.76, height=self.table_height)
+            if self.randomize_colors:
+                # Build tables separately for each parallel environment to enable domain randomization        
+                self._tables: List[Actor] = []
+                for i in range(self.env.num_envs):
+                    self._tables.append(self._build_custom_table(length=1.52, width=0.76, height=self.table_height, random_i=i))
+                    self.env.remove_from_state_dict_registry(self._tables[-1])  # remove individual cube from state dict
+
+                # Merge all tables into a single Actor object
+                self.table = Actor.merge(self._tables, name="table")
+            else:
+                self.table = self._build_custom_table(length=1.52, width=0.76, height=self.table_height)
             table_pose_world = sapien.Pose(p=[0, 0, self.table_height/2])
             self.wall  = self._build_custom_wall(table_pose_world, length=1.52)
 
@@ -167,6 +178,15 @@ class TableSceneBuilder(SceneBuilder):
             self.scene_objects: List[sapien.Entity] = [self.table, self.wall, self.ground]
         else:
             self.scene_objects: List[sapien.Entity] = [self.table, self.ground]
+
+    def cleanup(self):
+        """Clean up individual table actors created for domain randomization to prevent memory leaks."""
+        if hasattr(self, '_tables'):
+            # Remove individual tables from the scene
+            for table in self._tables:
+                if hasattr(table, 'entity') and table.entity is not None:
+                    self.env.scene.remove_actor(table)
+            self._tables.clear()
 
     def initialize(self, env_idx: torch.Tensor):
         # table_height = 0.9196429
