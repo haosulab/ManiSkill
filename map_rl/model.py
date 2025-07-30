@@ -1,8 +1,12 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions.normal import Normal
 import gymnasium as gym
+
+from transformer import TransformerEncoder, ActionTransformerDecoder, StateProj
+from utils import transform, get_3d_coordinates
 
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
@@ -113,13 +117,91 @@ class NatureCNN(nn.Module):
         return torch.cat(encoded_tensor_list, dim=1)
 
 
+class CNN(nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
+        self.cnn =  nn.Sequential(
+            # 128 → 64
+            nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3),
+            nn.ReLU(inplace=True),
+            # 64 → 32
+            nn.Conv2d(64, 256, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            # 32 → 16
+            nn.Conv2d(256, 768, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+        )                       
+    def forward(self, x):
+        return self.cnn(x)
+
+
+class ActionModel(nn.Module):
+    def __init__(self, sample_obs):
+        super().__init__()
+
+        self.cnn = CNN(in_channels=sample_obs["rgb"].shape[-1])
+        self.state_mlp = StateProj(state_dim=13, output_dim=768)
+
+        self.transformer_encoder = TransformerEncoder(
+            input_dim=768,
+            hidden_dim=1024,
+            num_layers=1,
+            num_heads=8,
+        )
+
+        self.transformer_decoder = ActionTransformerDecoder(
+            d_model=768,
+            nhead=8,
+            num_decoder_layers=4,
+            dim_feedforward=768,
+            dropout=0.1,
+            action_dim=13,
+        )
+
+    def _process_rgb(self, rgb_obs):
+        rgb = rgb_obs.permute(0, 3, 1, 2)
+        rgb = transform(rgb.float() / 255.0)
+        return self.cnn(rgb)
+
+    def _process_state(self, state_obs):
+        return self.state_mlp(state_obs).unsqueeze(1)
+
+    def _get_world_coordinates(self, depth_obs, pose_obs):
+        depth = depth_obs.permute(0, 3, 1, 2) / 1000.0
+        depth = F.interpolate(depth, size=(16, 16), mode="nearest-exact")
+        
+        world_coords, _ = get_3d_coordinates(depth, pose_obs, 64, 64, 64, 64)
+        return world_coords.permute(0, 2, 3, 1)
+
+    def forward(self, observations):
+        # 1. Process individual inputs
+        features = self._process_rgb(observations["rgb"])
+        state = self._process_state(observations["state"])
+        world_coords = self._get_world_coordinates(
+            observations["depth"],
+            observations["sensor_param"]["base_camera"]["extrinsic_cv"],
+        )
+
+        # 2. Reshape features and coordinates for Transformer
+        world_coords_flat = world_coords.reshape(world_coords.shape[0], -1, 3)
+        feats_flat = features.permute(0, 2, 3, 1).reshape(
+            features.shape[0], -1, features.shape[1]
+        )
+
+        # 3. Pass through Transformer encoder and decoder
+        visual_token = self.transformer_encoder(token=feats_flat, coords=world_coords_flat)
+        action = self.transformer_decoder(memory=feats_flat, state=state).squeeze(1)
+
+        return action
+
+
 class Agent(nn.Module):
     """Actor-Critic network (Gaussian continuous actions) built on NatureCNN features."""
 
     def __init__(self, envs, sample_obs):
         super().__init__()
-        self.feature_net = NatureCNN(sample_obs=sample_obs)
-        latent_size = self.feature_net.out_features
+        self.feature_net = ActionModel(sample_obs= sample_obs)
+        latent_size = 768
 
         # Critic
         self.critic = nn.Sequential(
@@ -162,8 +244,8 @@ class Agent(nn.Module):
         return probs.sample()
 
     def get_action_and_value(self, x, action=None):
-        x = self.feature_net(x) # x.keys() = dict_keys(['state', 'rgb', 'depth'])
-        action_mean = self.actor_mean(x) # action_mean.shape = (batch_size, 512) # 512 = 256 * 2
+        x = self.feature_net(x)
+        action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
@@ -174,4 +256,4 @@ class Agent(nn.Module):
             probs.log_prob(action).sum(1),
             probs.entropy().sum(1),
             self.critic(x),
-        ) 
+        )
