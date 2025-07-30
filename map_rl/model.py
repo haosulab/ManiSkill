@@ -200,9 +200,10 @@ class Agent(nn.Module):
 
     def __init__(self, envs, sample_obs):
         super().__init__()
-        self.feature_net = ActionModel(sample_obs= sample_obs)
-        latent_size = 768
-
+        self.feature_net = NatureCNN(sample_obs=sample_obs)
+        # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
+        latent_size = self.feature_net.out_features
+        
         # Critic
         self.critic = nn.Sequential(
             layer_init(nn.Linear(latent_size, 512)),
