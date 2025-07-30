@@ -31,6 +31,7 @@ class DictArray(object):
                         torch.uint8 if v.dtype == np.uint8 else
                         torch.int16 if v.dtype == np.int16 else
                         torch.int32 if v.dtype == np.int32 else
+                        torch.bool if v.dtype in (np.bool_, bool) else
                         v.dtype
                     )
                     self.data[k] = torch.zeros(buffer_shape + v.shape, dtype=dtype, device=device)
@@ -161,8 +162,8 @@ class Agent(nn.Module):
         return probs.sample()
 
     def get_action_and_value(self, x, action=None):
-        x = self.feature_net(x)
-        action_mean = self.actor_mean(x)
+        x = self.feature_net(x) # x.keys() = dict_keys(['state', 'rgb', 'depth'])
+        action_mean = self.actor_mean(x) # action_mean.shape = (batch_size, 512) # 512 = 256 * 2
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
