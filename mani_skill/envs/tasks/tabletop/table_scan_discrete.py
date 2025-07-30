@@ -5,6 +5,7 @@ from transforms3d.euler import euler2quat
 
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
 from mani_skill.utils.structs import Pose, GPUMemoryConfig, SimConfig
 from mani_skill.utils.building import actors
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
@@ -14,21 +15,36 @@ from mani_skill.utils.registration import register_env
 from mani_skill.agents.robots import XArm6Robotiq
 from mani_skill.utils.structs import Actor
 
+from sapien.physx import PhysxRigidBodyComponent
+from sapien.render import RenderBodyComponent
+ 
 @register_env("TableScanDiscreteInit-v0", max_episode_steps=1_000)
 class TableScanDiscreteInitEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["xarm6_robotiq"]
     agent: XArm6Robotiq
         
     cube_half_size = 0.02
-    cube_spawn_half_size = 0.1
+    goal_thresh = 0.025
+    cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
-    CAM_RADIUS = 0.3
-    VIEW_HEIGHTS = [0.35, 0.42, 0.55, 0.7]
-    CAM_SPEED  = np.deg2rad(2) # rad / sim-step (≈115 °/s at 60 Hz)
-
-    THETA_MIN    = np.deg2rad(-90)
-    THETA_MAX    = np.deg2rad( 90)
     
+
+    def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+        self.robot_init_qpos_noise = robot_init_qpos_noise
+        if robot_uids in PICK_CUBE_CONFIGS:
+            cfg = PICK_CUBE_CONFIGS[robot_uids]
+        else:
+            cfg = PICK_CUBE_CONFIGS["panda"]
+        self.cube_half_size = cfg["cube_half_size"]
+        self.goal_thresh = cfg["goal_thresh"]
+        self.cube_spawn_half_size = cfg["cube_spawn_half_size"]
+        self.cube_spawn_center = cfg["cube_spawn_center"]
+        self.max_goal_height = cfg["max_goal_height"]
+        self.sensor_cam_eye_pos = cfg["sensor_cam_eye_pos"]
+        self.sensor_cam_target_pos = cfg["sensor_cam_target_pos"]
+        self.human_cam_eye_pos = cfg["human_cam_eye_pos"]
+        self.human_cam_target_pos = cfg["human_cam_target_pos"]
+        super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     # Specify default simulation/gpu memory configurations to override any default values
     @property
@@ -46,11 +62,9 @@ class TableScanDiscreteInitEnv(BaseEnv):
         down90 = euler2quat(0,  -np.pi/2, 0)        
         hand_cam_pose = sapien.Pose(offset, down90)
         real_pose = sapien_utils.look_at(eye=[0.508, -0.5, 0.42], target=[-0.522, 0.2, 0])
-        moving_camera = CameraConfig(
-                            "moving_camera", pose=sapien.Pose(), width=224, height=224, 
-                            fov=np.pi * 0.4, near=0.01, far=100, 
-                            mount=self.cam_mount
-                        )
+        base_cam_pose = sapien_utils.look_at(
+            eye=self.sensor_cam_eye_pos, target=self.sensor_cam_target_pos
+        )
 
         return [
             # CameraConfig(
@@ -63,38 +77,19 @@ class TableScanDiscreteInitEnv(BaseEnv):
             #     far=100,
             #     mount=self.agent.tcp,
             # )
-            CameraConfig(
-                "hand_cam",
-                pose=real_pose,
-                # width=640,
-                # height=480,
-                width=128,
-                height=128,
-                fov=np.pi * 0.4,
-                near=0.01,
-                far=100,
-            ),
-            moving_camera
+            # CameraConfig(
+            #     "hand_cam",
+            #     pose=real_pose,
+            #     # width=640,
+            #     # height=480,
+            #     width=128,
+            #     height=128,
+            #     fov=np.pi * 0.4,
+            #     near=0.01,
+            #     far=100,
+            # ),
+            CameraConfig("base_camera", base_cam_pose, 128, 128, np.pi / 2, 0.01, 100)
         ]
-        
-    def _before_simulation_step(self):
-        super()._before_simulation_step()
-
-        pos = self.table_center + np.array([
-            self._cam_radius * np.cos(self._cam_theta),
-            self._cam_radius * np.sin(self._cam_theta),
-            self._cam_height,
-        ])
-        self.cam_mount.set_pose(sapien_utils.look_at(pos, self.table_center))
-
-        self._cam_theta += self._cam_speed
-
-        if self._cam_theta > self._theta_max or self._cam_theta < self._theta_min:
-            self._cam_theta = np.clip(self._cam_theta, self._theta_min, self._theta_max)
-            self._cam_speed *= -1
-
-            self._cam_idx   = (self._cam_idx + 1) % len(self.VIEW_HEIGHTS)
-            self._cam_height = self.VIEW_HEIGHTS[self._cam_idx]
 
     @property
     def _default_human_render_camera_configs(self):
@@ -102,67 +97,103 @@ class TableScanDiscreteInitEnv(BaseEnv):
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
+
     @property
     def _supports_sensor_data(self):
         return True
 
-    def _load_agent(self, options: Dict):
-        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+    def _load_agent(self, options: dict, initial_agent_poses = sapien.Pose(p=[-0.615, 0, 0]), build_separate: bool = False):
+        super()._load_agent(options, initial_agent_poses, build_separate)
         
     # MARK: This is for lighting randomization, which we currently do not use
-    # def _load_lighting(self, options: dict):
-    #     for scene in self.scene.sub_scenes:
-    #         scene.ambient_light = [np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6)]
-    #         scene.add_directional_light(np.random.uniform(-1, 1, 3), [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=4096)
-    #         scene.add_directional_light([0, 0, -1], [1, 1, 1])
+    def _load_lighting(self, options: dict):
+        for scene in self.scene.sub_scenes:
+            scene.ambient_light = [np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6), np.random.uniform(0.2, 0.6)]
+            scene.add_directional_light(np.random.uniform(-1, 1, 3), [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=4096)
+            scene.add_directional_light([0, 0, -1], [1, 1, 1])
 
     def _load_scene(self, options: Dict):
         self.table_scene = TableSceneBuilder(
-            env=self, custom_table=True, randomize_colors=False, # MARK: Trigger this as True for domain randomization
+            env=self, custom_table=True, randomize_colors=True, # MARK: Trigger this as True for domain randomization
         )
         self.table_scene.build()
         
         # MARK: We first comment out the domain randomization part
         # ### Cube randomization: Build cubes separately for each parallel environment to enable domain randomization        
-        # self._cubes: List[Actor] = []
-        # for i in range(self.num_envs):
-        #     builder = self.scene.create_actor_builder()
-        #     builder.add_box_collision(half_size=[self.cube_half_size] * 3)
-        #     builder.add_box_visual(
-        #         half_size=[self.cube_half_size] * 3, 
-        #         material=sapien.render.RenderMaterial(
-        #             base_color=self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1]
-        #         )
-        #     )
-        #     builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
-        #     builder.set_scene_idxs([i])
-        #     self._cubes.append(builder.build(name=f"cube_{i}"))
-        #     self.remove_from_state_dict_registry(self._cubes[-1])  # remove individual cube from state dict
+        self._cubes: List[Actor] = []
+        for i in range(self.num_envs):
+            builder = self.scene.create_actor_builder()
+            builder.add_box_collision(half_size=[self.cube_half_size] * 3)
+            builder.add_box_visual(
+                half_size=[self.cube_half_size] * 3, 
+                material=sapien.render.RenderMaterial(
+                    base_color=self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1]
+                )
+            )
+            builder.initial_pose = sapien.Pose(p=[0, 0, self.cube_half_size])
+            builder.set_scene_idxs([i])
+            self._cubes.append(builder.build(name=f"cube_{i}"))
+            self.remove_from_state_dict_registry(self._cubes[-1])  # remove individual cube from state dict
 
-        # # Merge all cubes into a single Actor object
-        # self.cube = Actor.merge(self._cubes, name="cube")
-        # self.add_to_state_dict_registry(self.cube)  # add merged cube to state dict
+        # Merge all cubes into a single Actor object
+        self.cube = Actor.merge(self._cubes, name="cube")
+        self.add_to_state_dict_registry(self.cube)  # add merged cube to state dict
+
+        ### Agent randomization
+        for link in self.agent.robot.links:
+            for i, obj in enumerate(link._objs):
+                # modify the i-th object which is in parallel environment i
+                
+                # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
+                rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
+                if rigid_body_component is not None:
+                    # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
+                    rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
+                
+                # modifying per collision shape properties such as friction values
+                for shape in obj.collision_shapes:
+                    shape.physical_material.dynamic_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                    shape.physical_material.static_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                    shape.physical_material.restitution = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+
+                render_body_component: RenderBodyComponent = obj.entity.find_component_by_type(RenderBodyComponent)
+                if render_body_component is not None:
+                    for render_shape in render_body_component.render_shapes:
+                        for part in render_shape.parts:
+                            # you can change color, use texture files etc.
+                            part.material.set_base_color(self._batched_episode_rng[i].uniform(low=0., high=1., size=(3, )).tolist() + [1])
+                            # note that textures must use the sapien.render.RenderTexture2D 
+                            # object which allows passing a texture image file path
+                            part.material.set_base_color_texture(None)
+                            part.material.set_normal_texture(None)
+                            part.material.set_emission_texture(None)
+                            part.material.set_transmission_texture(None)
+                            part.material.set_metallic_texture(None)
+                            part.material.set_roughness_texture(None)
         
-        self.cube = actors.build_cube(
-            self.scene,
-            half_size=self.cube_half_size,
-            color=[1, 0, 0, 1],
-            name="cube",
-            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
-        )
+        # self.cube = actors.build_cube(
+        #     self.scene,
+        #     half_size=self.cube_half_size,
+        #     color=[1, 0, 0, 1],
+        #     name="cube",
+        #     initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
+        # )
         
         self.table_center = [0, 0, self.table_scene.table_height/2]
-        self.cam_mount = self.scene.create_actor_builder().build_kinematic("camera_mount")
         
-        self._theta_min  = self.THETA_MIN
-        self._theta_max  = self.THETA_MAX
-        self._cam_theta  = self._theta_min         
-        self._cam_speed  = self.CAM_SPEED
+        ### Non-randomized objects
+        self.goal_site = actors.build_sphere(
+            self.scene,
+            radius=self.goal_thresh,
+            color=[0, 1, 0, 1],
+            name="goal_site",
+            body_type="kinematic",
+            add_collision=False,
+            initial_pose=sapien.Pose(),
+        )
+        self._hidden_objects.append(self.goal_site)
 
-        self._cam_idx    = 0                       
-        self._cam_height = self.VIEW_HEIGHTS[self._cam_idx]
-        self._cam_radius = self.CAM_RADIUS
-        
+
     def _reconfigure(self, options=dict()):
         """Clean up individual actors created for domain randomization to prevent memory leaks during resets."""
         if hasattr(self, '_cubes'):
@@ -198,11 +229,87 @@ class TableScanDiscreteInitEnv(BaseEnv):
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True, lock_z=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
-    def evaluate(self):
-        return {"success": torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)}
+    def _get_obs_extra(self, info: Dict):
+        # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
+        obs = dict(
+            is_grasped=info["is_grasped"],
+            # tcp_pose=self.agent.tcp.pose.raw_pose,
+            # goal_pos=self.goal_site.pose.p,
+        )
+        if "state" in self.obs_mode:
+            obs.update(
+                # obj_pose=self.cube.pose.raw_pose,
+                tcp_to_obj_pos=self.cube.pose.p - self.agent.tcp_pose.p,
+                obj_to_goal_pos=self.goal_site.pose.p - self.cube.pose.p,
+            )
+        return obs
 
-    def compute_dense_reward(self, *_, **__):
-        return torch.zeros(self.num_envs, device=self.device)
+    def evaluate(self):
+        is_obj_placed = (
+            torch.linalg.norm(self.goal_site.pose.p - self.cube.pose.p, axis=1)
+            <= self.goal_thresh
+        )
+        is_grasped = self.agent.is_grasping(self.cube)
+        is_robot_static = self.agent.is_static(0.2)
+        return {
+            "success": is_obj_placed & is_robot_static,
+            "is_obj_placed": is_obj_placed,
+            "is_robot_static": is_robot_static,
+            "is_grasped": is_grasped,
+        }
+
+    def staged_rewards(self, obs: Any, action: torch.Tensor, info: Dict):
+        tcp_to_obj_dist = torch.linalg.norm(
+            self.cube.pose.p - self.agent.tcp.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+
+        is_grasped = info["is_grasped"]
+
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_site.pose.p - self.cube.pose.p, axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        place_reward *= is_grasped
+
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+        static_reward *= info["is_obj_placed"]
+
+        return reaching_reward.mean(), is_grasped.mean(), place_reward.mean(), static_reward.mean()
+
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+        tcp_to_obj_dist = torch.linalg.norm(
+            self.cube.pose.p - self.agent.tcp_pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+        reward = reaching_reward
+
+        is_grasped = info["is_grasped"]
+        reward += is_grasped
+
+        obj_to_goal_dist = torch.linalg.norm(
+            self.goal_site.pose.p - self.cube.pose.p, axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * is_grasped
+
+        qvel = self.agent.robot.get_qvel()
+        if self.robot_uids in ["panda", "widowxai"]:
+            qvel = qvel[..., :-2]
+        elif self.robot_uids == "so100":
+            qvel = qvel[..., :-1]
+        static_reward = 1 - torch.tanh(5 * torch.linalg.norm(qvel, axis=1))
+        reward += static_reward * info["is_obj_placed"]
+
+        reward[info["success"]] = 5
+        return reward
+
+    def compute_normalized_dense_reward(
+        self, obs: Any, action: torch.Tensor, info: Dict
+    ):
+        return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
 
     def get_table_center(self):
         return self.table_center
