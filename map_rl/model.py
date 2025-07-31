@@ -227,15 +227,15 @@ class Agent(nn.Module):
 
     # Convenience helpers -----------------------------------------------------
 
-    def get_features(self, x):
+    def get_features(self, x, map_features=None):
         return self.feature_net(x)
 
-    def get_value(self, x):
-        x = self.feature_net(x)
+    def get_value(self, x, map_features=None):
+        x = self.get_features(x, map_features=map_features)
         return self.critic(x)
 
-    def get_action(self, x, deterministic: bool = False):
-        x = self.feature_net(x)
+    def get_action(self, x, map_features=None, deterministic: bool = False):
+        x = self.get_features(x, map_features=map_features)
         action_mean = self.actor_mean(x)
         if deterministic:
             return action_mean
@@ -244,8 +244,8 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         return probs.sample()
 
-    def get_action_and_value(self, x, action=None):
-        x = self.feature_net(x)
+    def get_action_and_value(self, x, map_features=None, action=None):
+        x = self.get_features(x, map_features=map_features)
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)

@@ -229,11 +229,11 @@ if __name__ == "__main__":
             print(f"[ERROR] Map directory not found: {args.map_dir}. Exiting.")
             exit()
         
-        # Visualize the first map
-        if grids and decoder:
-            print("--- Visualizing map features for the first environment ---")
-            visualize_decoded_features_pca(grids[0], decoder, device=device)
-            print("--- Visualization done. Continuing with training/evaluation. ---")
+        # debug: Visualize the first map
+        # if grids and decoder:
+        #     print("--- Visualizing map features for the first environment ---")
+        #     visualize_decoded_features_pca(grids[0], decoder, device=device)
+        #     print("--- Visualization done. Continuing with training/evaluation. ---")
 
     # env setup
     # env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda")
@@ -329,7 +329,7 @@ if __name__ == "__main__":
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, map_features=grids, deterministic=True))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -365,7 +365,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs, map_features=grids)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -395,12 +395,12 @@ if __name__ == "__main__":
                 with torch.no_grad():
                     idx = torch.arange(args.num_envs, device=device)[done_mask]
                     if len(idx) > 0:
-                        final_values[step, idx] = agent.get_value(final_obs).view(-1)
+                        final_values[step, idx] = agent.get_value(final_obs, map_features=[grid for i, grid in enumerate(grids) if done_mask[i]]).view(-1)
         rollout_time = time.perf_counter() - rollout_time
         cumulative_times["rollout_time"] += rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
-            next_value = agent.get_value(next_obs).reshape(1, -1)
+            next_value = agent.get_value(next_obs, map_features=grids).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
@@ -460,7 +460,7 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], map_features=[grids[i % args.num_envs] for i in mb_inds], action=b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
