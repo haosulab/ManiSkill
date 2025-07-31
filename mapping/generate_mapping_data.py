@@ -78,7 +78,7 @@ for chunk_idx in range(chunk_count):
         reward_mode="none",
     )
     # Use a different seed for each chunk to get different objects
-    env.reset(seed=args.seed + chunk_idx)
+    env.reset(seed=args.seed)
     # ------------------------------------------------------------------ #
     # Prepare output directories for the current batch
     # ------------------------------------------------------------------ #

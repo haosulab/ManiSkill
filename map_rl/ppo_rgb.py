@@ -36,7 +36,7 @@ from mapping.mapping_lib.visualization import visualize_decoded_features_pca
 class Args:
     exp_name: Optional[str] = None
     """the name of this experiment"""
-    seed: int = 1
+    seed: int = 0
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -62,7 +62,7 @@ class Args:
     """the environment rendering mode"""
 
     # Algorithm specific arguments
-    env_id: str = "PickCube-v1"
+    env_id: str = "PickCubeDiscreteInit-v1"
     """the id of the environment"""
     robot_uids: str = "panda"
     """the uid of the robot to use in the environment"""
