@@ -74,7 +74,7 @@ class Args:
     """the learning rate of the optimizer"""
     num_envs: int = 512
     """the number of parallel environments"""
-    num_eval_envs: int = 8
+    num_eval_envs: int = 100
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
     """whether to let parallel environments reset upon termination instead of truncation"""
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
-    agent = Agent(envs, sample_obs=next_obs).to(device)
+    agent = Agent(envs, sample_obs=next_obs, decoder=decoder if args.use_map else None).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
@@ -329,7 +329,7 @@ if __name__ == "__main__":
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, map_features=grids, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, map_features=grids if args.use_map else None, deterministic=True))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -365,7 +365,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs, map_features=grids)
+                action, logprob, _, value = agent.get_action_and_value(next_obs, map_features=grids if args.use_map else None)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -395,12 +395,13 @@ if __name__ == "__main__":
                 with torch.no_grad():
                     idx = torch.arange(args.num_envs, device=device)[done_mask]
                     if len(idx) > 0:
-                        final_values[step, idx] = agent.get_value(final_obs, map_features=[grid for i, grid in enumerate(grids) if done_mask[i]]).view(-1)
+                        final_grids = [grid for i, grid in enumerate(grids) if done_mask[i]] if args.use_map else None
+                        final_values[step, idx] = agent.get_value(final_obs, map_features=final_grids).view(-1)
         rollout_time = time.perf_counter() - rollout_time
         cumulative_times["rollout_time"] += rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
-            next_value = agent.get_value(next_obs, map_features=grids).reshape(1, -1)
+            next_value = agent.get_value(next_obs, map_features=grids if args.use_map else None).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
@@ -460,7 +461,8 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], map_features=[grids[i % args.num_envs] for i in mb_inds], action=b_actions[mb_inds])
+                mb_grids = [grids[i % args.num_envs] for i in mb_inds] if args.use_map else None
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], map_features=mb_grids, action=b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 

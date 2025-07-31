@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions.normal import Normal
 import gymnasium as gym
+from typing import Optional, List
 
 from transformer import TransformerEncoder, ActionTransformerDecoder, StateProj
 from utils import transform, get_3d_coordinates
@@ -70,19 +71,41 @@ class DictArray(object):
         return DictArray(new_buffer_shape, None, data_dict=new_dict)
 
 
-class NatureCNN(nn.Module):
-    """Nature CNN feature extractor (RGB images + optional state vector)."""
-
-    def __init__(self, sample_obs):
+class PointNet(nn.Module):
+    def __init__(self, input_dim, output_dim=256):
         super().__init__()
+        self.net = nn.Sequential(
+            layer_init(nn.Linear(input_dim, 256)),
+            nn.LayerNorm(256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, 256)),
+            nn.LayerNorm(256),
+            nn.ReLU(),
+            layer_init(nn.Linear(256, output_dim)),
+            nn.LayerNorm(output_dim),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        x = self.net(x)
+        return torch.max(x, dim=1)[0]
+
+
+class MapAwareFeatureExtractor(nn.Module):
+    def __init__(self, sample_obs, decoder: Optional[nn.Module] = None):
+        super().__init__()
+        self.decoder = decoder
+        if self.decoder:
+            self.decoder.eval()
+            for p in self.decoder.parameters():
+                p.requires_grad = False
 
         extractors = {}
         self.out_features = 0
         feature_size = 256
 
+        # Nature CNN for RGB
         in_channels = sample_obs["rgb"].shape[-1]
-
-        # Nature CNN backbone for image input
         cnn = nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=8, stride=4, padding=0),
             nn.ReLU(),
@@ -92,14 +115,13 @@ class NatureCNN(nn.Module):
             nn.ReLU(),
             nn.Flatten(),
         )
-
         with torch.no_grad():
             n_flatten = cnn(sample_obs["rgb"].float().permute(0, 3, 1, 2).cpu()).shape[1]
             fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
         extractors["rgb"] = nn.Sequential(cnn, fc)
         self.out_features += feature_size
 
-        # Optional low-dimensional state vector
+        # State MLP
         if "state" in sample_obs:
             state_size = sample_obs["state"].shape[-1]
             extractors["state"] = nn.Linear(state_size, 256)
@@ -107,13 +129,52 @@ class NatureCNN(nn.Module):
 
         self.extractors = nn.ModuleDict(extractors)
 
-    def forward(self, observations) -> torch.Tensor:
+        # Map Feature Encoder (PointNet)
+        if self.decoder:
+            # Coords (3) + Decoded Feature Dim
+            # Decoded feature dim is decoder's output_dim
+            map_feature_dim = 3 + 768 # from map_multi_table.py
+            self.map_encoder = PointNet(input_dim=map_feature_dim, output_dim=256)
+            self.out_features += 256
+
+    def forward(self, observations, map_features: Optional[List] = None) -> torch.Tensor:
         encoded_tensor_list = []
-        for key, extractor in self.extractors.items():
-            obs = observations[key]
-            if key == "rgb":
-                obs = obs.float().permute(0, 3, 1, 2) / 255.0
-            encoded_tensor_list.append(extractor(obs))
+        batch_size = observations['rgb'].shape[0]
+
+        # Process standard observations
+        encoded_tensor_list.append(
+            self.extractors['rgb'](observations['rgb'].float().permute(0, 3, 1, 2) / 255.0)
+        )
+        if "state" in self.extractors:
+            encoded_tensor_list.append(self.extractors['state'](observations['state']))
+
+        # Process map features if available
+        if map_features and self.decoder:
+            with torch.no_grad():
+
+                # level 1 is the second level
+                all_coords = [grid.levels[1].coords for grid in map_features]
+                
+                max_len = max(len(c) for c in all_coords)
+                
+                padded_features = []
+                for i, grid in enumerate(map_features):
+                    coords = all_coords[i]
+                    grid_feats = grid.query_voxel_feature(coords)
+                    decoded_feats = self.decoder(grid_feats)
+                    
+                    combined = torch.cat([coords, decoded_feats], dim=-1)
+                    
+                    pad_len = max_len - len(coords)
+                    if pad_len > 0:
+                        padding = torch.zeros(pad_len, combined.shape[1], device=combined.device)
+                        combined = torch.cat([combined, padding], dim=0)
+                    padded_features.append(combined)
+            
+            padded_features = torch.stack(padded_features)
+            map_encoding = self.map_encoder(padded_features)
+            encoded_tensor_list.append(map_encoding)
+
         return torch.cat(encoded_tensor_list, dim=1)
 
 
@@ -198,10 +259,9 @@ class ActionModel(nn.Module):
 class Agent(nn.Module):
     """Actor-Critic network (Gaussian continuous actions) built on NatureCNN features."""
 
-    def __init__(self, envs, sample_obs):
+    def __init__(self, envs, sample_obs, decoder: Optional[nn.Module] = None):
         super().__init__()
-        self.feature_net = NatureCNN(sample_obs=sample_obs)
-        # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
+        self.feature_net = MapAwareFeatureExtractor(sample_obs=sample_obs, decoder=decoder)
         latent_size = self.feature_net.out_features
         
         # Critic
@@ -228,7 +288,7 @@ class Agent(nn.Module):
     # Convenience helpers -----------------------------------------------------
 
     def get_features(self, x, map_features=None):
-        return self.feature_net(x)
+        return self.feature_net(x, map_features=map_features)
 
     def get_value(self, x, map_features=None):
         x = self.get_features(x, map_features=map_features)
