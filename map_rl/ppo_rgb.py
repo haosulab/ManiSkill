@@ -1,6 +1,9 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 from collections import defaultdict
-import os
 import random
 import time
 from dataclasses import dataclass
@@ -22,6 +25,12 @@ from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, Flatten
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from model import DictArray, Agent
+
+# Mapping-related imports
+from mapping.mapping_lib.voxel_hash_table import VoxelHashTable
+from mapping.mapping_lib.implicit_decoder import ImplicitDecoder
+from mapping.mapping_lib.visualization import visualize_decoded_features_pca
+
 
 @dataclass
 class Args:
@@ -113,6 +122,14 @@ class Args:
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = False
 
+    # Map-related arguments
+    use_map: bool = True
+    """if toggled, use the pre-trained environment map features as part of the observation"""
+    map_dir: str = "mapping/multi_env_maps"
+    """Directory where the trained environment maps are stored."""
+    decoder_path: str = "mapping/multi_env_maps/shared_decoder.pt"
+    """Path to the trained shared decoder model."""
+
     # to be filled in runtime
     batch_size: int = 0
     """the batch size (computed in runtime)"""
@@ -172,6 +189,51 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+
+    # --- Load Maps and Decoder ---
+    grids, decoder = None, None
+    if args.use_map:
+        print("--- Loading maps and decoder for PPO training ---")
+        # 1. Load Decoder
+        try:
+            decoder = ImplicitDecoder(
+                voxel_feature_dim=64 * 2, # GRID_FEAT_DIM * GRID_LVLS from map_multi_table.py
+                hidden_dim=768,
+                output_dim=768,
+            ).to(device)
+            decoder.load_state_dict(torch.load(args.decoder_path, map_location=device))
+            decoder.eval()
+            for param in decoder.parameters():
+                param.requires_grad = False
+            print(f"Loaded shared decoder from {args.decoder_path}")
+        except FileNotFoundError:
+            print(f"[ERROR] Decoder file not found at {args.decoder_path}. Exiting.")
+            exit()
+
+        # 2. Load Grids
+        grids = []
+        if os.path.exists(args.map_dir):
+            print(f"Loading maps from {args.map_dir}...")
+            # Load one map for each parallel environment
+            num_maps_to_load = args.num_envs if not args.evaluate else args.num_eval_envs
+            for i in range(num_maps_to_load):
+                grid_path = os.path.join(args.map_dir, f"env_{i:03d}_grid.sparse.pt")
+                if not os.path.exists(grid_path):
+                    print(f"[ERROR] Map file not found: {grid_path}. Needed for parallel env {i}. Exiting.")
+                    exit()
+                
+                grid = VoxelHashTable.load_sparse(grid_path, device=device)
+                grids.append(grid)
+            print(f"--- Loaded {len(grids)} environment maps. ---")
+        else:
+            print(f"[ERROR] Map directory not found: {args.map_dir}. Exiting.")
+            exit()
+        
+        # Visualize the first map
+        if grids and decoder:
+            print("--- Visualizing map features for the first environment ---")
+            visualize_decoded_features_pca(grids[0], decoder, device=device)
+            print("--- Visualization done. Continuing with training/evaluation. ---")
 
     # env setup
     # env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda")

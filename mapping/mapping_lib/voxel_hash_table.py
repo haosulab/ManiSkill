@@ -154,7 +154,7 @@ class VoxelHashTable(nn.Module):
         resolution: float = 0.12,
         num_levels: int = 2,
         level_scale: float = 2.0,
-        feature_dim: int = 32,
+        feature_dim: int = 64,
         hash_table_size: int = 2**21,
         scene_bound_min: Tuple[float,float,float]=(-2.6,-8.1,0),
         scene_bound_max: Tuple[float,float,float]=( 4.6, 4.7,3.1),
