@@ -73,13 +73,14 @@ class PDEEPosController(PDJointPosController):
 
     def reset(self):
         super().reset()
-        if self._target_pose is None:
-            self._target_pose = self.ee_pose_at_base
-        else:
-            # TODO (stao): this is a strange way to mask setting individual batched pose parts
-            self._target_pose.raw_pose[
-                self.scene._reset_mask
-            ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
+        if self.config.use_target:
+            if self._target_pose is None:
+                self._target_pose = self.ee_pose_at_base
+            else:
+                # TODO (stao): this is a strange way to mask setting individual batched pose parts
+                self._target_pose.raw_pose[
+                    self.scene._reset_mask
+                ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
 
     def compute_target_pose(self, prev_ee_pose_at_base, action):
         # Keep the current rotation and change the position
@@ -106,14 +107,20 @@ class PDEEPosController(PDJointPosController):
         else:
             prev_ee_pose_at_base = self.ee_pose_at_base
 
-        self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
+        # we only need to use the target pose for CPU sim or if a virtual target is enabled
+        # if we have no virtual target and using the gpu sim we can directly use the given action without
+        # having to recompute the new target pose based on the action delta.
+        ik_via_target_pose = self.config.use_target or not self.scene.gpu_sim_enabled
+        if ik_via_target_pose:
+            self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
+
         pos_only = type(self.config) == PDEEPosControllerConfig
         self._target_qpos = self.kinematics.compute_ik(
             self._target_pose,
             self.articulation.get_qpos(),
             pos_only=pos_only,
             action=action,
-            use_delta_ik_solver=True,
+            use_delta_ik_solver=not ik_via_target_pose,
             delta_solver_config=self.config.delta_solver_config,
         )
         if self._target_qpos is None:
