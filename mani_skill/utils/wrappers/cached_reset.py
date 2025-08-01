@@ -61,7 +61,7 @@ class CachedResetWrapper(gym.Wrapper):
             self._num_cached_resets = len(self._cached_resets_env_states)
         else:
             if self.cached_resets_config.num_resets is None:
-                self.cached_resets_config.num_resets = 16384
+                self.cached_resets_config.num_resets = self.num_envs
             self._cached_resets_env_states = []
             self._cached_resets_obs_buffer = []
             while self._num_cached_resets < self.cached_resets_config.num_resets:
