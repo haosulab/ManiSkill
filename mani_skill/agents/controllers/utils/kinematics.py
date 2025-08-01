@@ -214,18 +214,10 @@ class Kinematics:
                 return result.solutions[:, 0, :]
             else:
                 jacobian = self.pk_chain.jacobian(q0)
-                # code commented out below is the fast kinematics method
-                # jacobian = (
-                #     self.fast_kinematics_model.jacobian_mixed_frame_pytorch(
-                #         self.articulation.get_qpos()[:, self.active_ancestor_joint_idxs]
-                #     )
-                #     .view(-1, len(self.active_ancestor_joints), 6)
-                #     .permute(0, 2, 1)
-                # )
-                # jacobian = jacobian[:, :, self.qmask]
                 if pos_only:
-                    jacobian = jacobian[:, 0:3]
-
+                    action = torch.hstack(
+                        [action, torch.zeros(action.shape[0], 3, device=self.device)]
+                    )
                 # NOTE (arth): use only the parts of the jacobian that correspond to the active joints
                 jacobian = jacobian[:, :, self.qmask]
 
