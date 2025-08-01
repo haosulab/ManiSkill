@@ -151,13 +151,13 @@ class VoxelHashTable(nn.Module):
     """
     def __init__(
         self,
-        resolution: float = 0.05,
+        resolution: float = 0.06,
         num_levels: int = 2,
         level_scale: float = 2.0,
         feature_dim: int = 64,
         hash_table_size: int = 2**21,
-        scene_bound_min: Tuple[float,float,float]=(-2.6,-8.1,0),
-        scene_bound_max: Tuple[float,float,float]=( 4.6, 4.7,3.1),
+        scene_bound_min: Tuple[float,float,float]=(-0.8, -1.0, -0.5),
+        scene_bound_max: Tuple[float,float,float]=(0.4,  1.0,  0.5),
         device: str = "cuda:0",
         mode: str = "train",
         sparse_data: Optional[Dict] = None,
@@ -190,7 +190,7 @@ class VoxelHashTable(nn.Module):
                     _InferLevel(pay, feature_dim, hash_table_size,
                                 primes, dev))
         else:
-            raise ValueError("mode must be 'train' or 'infer'")
+            raise ValueError("mode must be 'train' or 'infer'") 
 
     # forward -----------------------------------------------------------------
     def query_voxel_feature(self, pts):  # (M,3) → (M, d*L)
