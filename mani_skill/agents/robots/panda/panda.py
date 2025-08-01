@@ -122,11 +122,10 @@ class Panda(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
-        arm_pd_ee_pose = PDEEPoseControllerConfig_Fast(
+        arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=None,
             pos_upper=None,
-            use_target=True,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
@@ -135,18 +134,6 @@ class Panda(BaseAgent):
             use_delta=False,
             normalize_action=False,
         )
-        # arm_pd_ee_pose = PDEEPoseControllerConfig(
-        #     joint_names=self.arm_joint_names,
-        #     pos_lower=None,
-        #     pos_upper=None,
-        #     stiffness=self.arm_stiffness,
-        #     damping=self.arm_damping,
-        #     force_limit=self.arm_force_limit,
-        #     ee_link=self.ee_link_name,
-        #     urdf_path=self.urdf_path,
-        #     use_delta=False,
-        #     normalize_action=False,
-        # )
 
         arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
         arm_pd_ee_target_delta_pos.use_target = True

@@ -187,16 +187,21 @@ class Kinematics:
         pos_only: bool = False,
         action=None,
         use_delta_ik_solver: bool = False,
+        delta_solver_config: dict = dict(type="levenberg_marquardt"),
     ):
-        """Given a target pose, via inverse kinematics compute the target joint positions that will achieve the target pose
+        """Given a target pose, initial joint positions, this computes the target joint positions that will achieve the target pose.
+
+            An action representing the delta pose from the current pose at q0 to the target pose can also be provided along with setting use_delta_ik_solver=True
+            to enable the faster delta IK based solvers.
 
         Args:
             target_pose (Pose): target pose of the end effector in the world frame. note this is not relative to the robot base frame!
             q0 (torch.Tensor): initial joint positions of every active joint in the articulation
             pos_only (bool): if True, only the position of the end link is considered in the IK computation
             action (torch.Tensor): delta action to be applied to the articulation. Used for fast delta IK solutions on the GPU.
-            use_delta_ik_solver (bool): If true, returns the target joint positions that correspond with a delta IK solution. This is specifically
-                used for GPU simulation to determine which GPU IK algorithm to use.
+            use_delta_ik_solver (bool): If true, returns the target joint positions that correspond with a delta IK solution. This is specifically used for GPU simulation to determine which GPU IK algorithm to use.
+            delta_solver_config (dict): configuration for the delta IK solver. Default is `dict(type="levenberg_marquardt")`. type can be one of     "levenberg_marquardt" or "pseudo_inverse".
+
         """
         if self.use_gpu_ik:
             q0 = q0[:, self.active_ancestor_joint_idxs]
@@ -221,8 +226,18 @@ class Kinematics:
                 # NOTE (arth): use only the parts of the jacobian that correspond to the active joints
                 jacobian = jacobian[:, :, self.qmask]
 
-                # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
-                delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
+                if delta_solver_config["type"] == "levenberg_marquardt":
+                    lambd = 0.0001  # Regularization parameter to ensure J^T * J is non-singular.
+                    J_T = jacobian.transpose(1, 2)
+                    lfs_A = torch.bmm(J_T, jacobian) + lambd * torch.eye(
+                        len(self.qmask), device=self.device
+                    )  # [n ndof ndof]
+                    rhs_B = torch.bmm(J_T, action.unsqueeze(-1))  # [n ndof 1]
+                    delta_joint_pos = torch.linalg.solve(lfs_A, rhs_B)  # [n ndof 1]
+
+                elif delta_solver_config["type"] == "pseudo_inverse":
+                    # NOTE (stao): this method of IK is from https://mathweb.ucsd.edu/~sbuss/ResearchWeb/ikmethods/iksurvey.pdf by Samuel R. Buss
+                    delta_joint_pos = torch.linalg.pinv(jacobian) @ action.unsqueeze(-1)
 
                 return q0[:, self.qmask] + delta_joint_pos.squeeze(-1)
         else:
