@@ -1,3 +1,7 @@
+```{eval-rst}
+:orphan:
+```
+
 # MacOS Installation
 
 ManiSkill supports MacOS and can let you run CPU simulation and the standard rendering. GPU simulation is currently not yet supported on MacOS. To get started we strongly recommend setting up a python conda/mamba environment with python version >= 3.9. You can then install ManiSkill as follows

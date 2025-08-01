@@ -47,7 +47,7 @@ def get_dependencies():
         "pynvml",  # gpu monitoring
         "tyro>=0.8.5",  # nice, typed, command line arg parser
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
-        "sapien>=3.0.0.b1;platform_system=='Linux'",
+        "sapien>=3.0.0;platform_system=='Linux'",
         "sapien>=3.0.0.b1;platform_system=='Windows'",
     ]
     # NOTE (stao): until sapien is uploaded to pypi with mac support, users need to install manually below as so
@@ -130,6 +130,7 @@ def main(argv):
                 "sphinxcontrib-video",
                 "sphinx-togglebutton",
                 "sphinx_design",
+                "sphinx-autoapi",
             ],
         },
     )

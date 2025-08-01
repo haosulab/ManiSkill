@@ -1,3 +1,3 @@
-from .draw import *
-from .draw_triangle import *
-from .draw_svg import *
+from .draw import TableTopFreeDrawEnv
+from .draw_svg import DrawSVGEnv
+from .draw_triangle import DrawTriangleEnv
