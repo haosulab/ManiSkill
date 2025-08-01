@@ -5,7 +5,7 @@ import sapien
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import SO100, Fetch, Panda, WidowXAI, XArm6Robotiq
+from mani_skill.agents.robots import XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
 from mani_skill.sensors.camera import CameraConfig        # Build cubes separately for each parallel environment to enable domain randomization
@@ -46,9 +46,9 @@ class PickCubeEnv(BaseEnv):
         "so100",
         "widowxai",
     ]
-    agent: Union[Panda, Fetch, XArm6Robotiq, SO100, WidowXAI]
+    agent: Union[XArm6Robotiq]
     cube_half_size = 0.02
-    goal_thresh = 0.025
+    goal_thresh = 0.025  
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
 

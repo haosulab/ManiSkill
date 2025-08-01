@@ -19,7 +19,7 @@ class TableScanDiscreteNoRobotEnv(BaseEnv):
 
     # Constants
     cube_half_size = 0.02
-    cube_spawn_half_size = 0.05
+    cube_spawn_half_size = 0.1
     cube_spawn_center = (0, 0)
 
     def __init__(self, *args, **kwargs):

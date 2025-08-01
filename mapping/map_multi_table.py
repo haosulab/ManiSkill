@@ -84,7 +84,7 @@ parser.add_argument(
 parser.add_argument(
     "--epochs",
     type=int,
-    default=10,
+    default=30,
     help="Number of training epochs per environment."
 )
 parser.add_argument(
@@ -127,8 +127,8 @@ OPT_LR = 1e-3
 # --------------------------------------------------------------------------- #
 #  Scene bounds (should match map_table.py)                                   #
 # --------------------------------------------------------------------------- #
-SCENE_MIN = (-0.6, -0.8, -0.3)
-SCENE_MAX = (0.2,  0.8,  0.3)
+SCENE_MIN = (-0.8, -1.0, -0.5)
+SCENE_MAX = (0.4,  1.0,  0.5)
 
 # --------------------------------------------------------------------------- #
 #  Helper functions                                                           #
@@ -166,7 +166,7 @@ def main():
     grids = {}
     for env_dir in env_dirs:
         grid = VoxelHashTable(
-            resolution=0.05,
+            resolution=0.06,
             num_levels=GRID_LVLS,
             feature_dim=GRID_FEAT_DIM,
             scene_bound_min=SCENE_MIN,

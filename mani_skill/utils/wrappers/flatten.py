@@ -25,13 +25,15 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
     always have a "state" key. If sep_depth is False, rgb and depth will be merged into a single "rgbd" key.
     """
 
-    def __init__(self, env, rgb=True, depth=True, state=True, sep_depth=True) -> None:
+    def __init__(self, env, rgb=True, depth=True, state=True, sep_depth=True, include_camera_params=False, include_segmentation=False) -> None:
         self.base_env: BaseEnv = env.unwrapped
         super().__init__(env)
         self.include_rgb = rgb
         self.include_depth = depth
+        self.include_segmentation = include_segmentation
         self.sep_depth = sep_depth
         self.include_state = state
+        self.include_camera_params = include_camera_params
 
         # check if rgb/depth data exists in first camera's sensor data
         first_cam = next(iter(self.base_env._init_raw_obs["sensor_data"].values()))
@@ -39,24 +41,32 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
             self.include_depth = False
         if "rgb" not in first_cam:
             self.include_rgb = False
+        if "segmentation" not in first_cam:
+            self.include_segmentation = False
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
     def observation(self, observation: Dict):
         sensor_data = observation.pop("sensor_data")
-        del observation["sensor_param"]
+        # Pop sensor parameters from the raw observation so they are not flattened
+        sensor_param = observation.pop("sensor_param", None)
+
         rgb_images = []
         depth_images = []
+        segmentation_images = []
         for cam_data in sensor_data.values():
             if self.include_rgb:
                 rgb_images.append(cam_data["rgb"])
             if self.include_depth:
                 depth_images.append(cam_data["depth"])
-
+            if self.include_segmentation:
+                segmentation_images.append(cam_data["segmentation"])
         if len(rgb_images) > 0:
             rgb_images = torch.concat(rgb_images, axis=-1)
         if len(depth_images) > 0:
             depth_images = torch.concat(depth_images, axis=-1)
+        if len(segmentation_images) > 0:
+            segmentation_images = torch.concat(segmentation_images, axis=-1)
         # flatten the rest of the data which should just be state data
         observation = common.flatten_state_dict(
             observation, use_torch=True, device=self.base_env.device
@@ -74,6 +84,10 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 ret["rgbd"] = torch.concat([rgb_images, depth_images], axis=-1)
         elif self.include_depth and not self.include_rgb:
             ret["depth"] = depth_images
+        if self.include_camera_params and sensor_param is not None:
+            ret["sensor_param"] = sensor_param
+        if self.include_segmentation and len(segmentation_images) > 0:
+            ret["segmentation"] = segmentation_images
         return ret
 
 
