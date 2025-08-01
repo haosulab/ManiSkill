@@ -358,7 +358,7 @@ class BaseAgent:
 
         # robot state
         root_link = self.robot.get_links()[0]
-        state["robot_root_pose"] = root_link.get_pose()
+        state["robot_root_pose"] = root_link.pose
         state["robot_root_vel"] = root_link.get_linear_velocity()
         state["robot_root_qvel"] = root_link.get_angular_velocity()
         state["robot_qpos"] = self.robot.get_qpos()
