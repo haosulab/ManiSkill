@@ -65,7 +65,7 @@ class CachedResetWrapper(gym.Wrapper):
             self._cached_resets_obs_buffer = []
             while self._num_cached_resets < self.cached_resets_config.num_resets:
                 obs, _ = self.env.reset(
-                    seed=self.cached_resets_config.seed,
+                    seed=self.cached_resets_config.seed if self._num_cached_resets == 0 else None,
                     options=dict(
                         env_idx=torch.arange(
                             0,
