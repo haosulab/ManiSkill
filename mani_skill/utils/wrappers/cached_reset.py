@@ -19,9 +19,6 @@ class CachedResetsConfig:
     seed: Optional[int] = None
     """The seed to use for generating the cached reset states."""
 
-    def dict(self):
-        return {k: v for k, v in asdict(self).items()}
-
 
 class CachedResetWrapper(gym.Wrapper):
     """
@@ -42,9 +39,11 @@ class CachedResetWrapper(gym.Wrapper):
         config: Union[CachedResetsConfig, dict] = CachedResetsConfig(),
     ):
         super().__init__(env)
+
+        # setup config
         self.num_envs = self.base_env.num_envs
         if isinstance(config, CachedResetsConfig):
-            config = config.dict()
+            config = config.asdict()
         self.cached_resets_config = dacite.from_dict(
             data_class=CachedResetsConfig,
             data=config,
@@ -53,6 +52,8 @@ class CachedResetWrapper(gym.Wrapper):
         cached_data_device = self.cached_resets_config.device
         if cached_data_device is None:
             cached_data_device = self.base_env.device
+
+        # cache env_states and optionally obs
         self._num_cached_resets = 0
         if reset_to_env_states is not None:
             self._cached_resets_env_states = reset_to_env_states["env_states"]
@@ -60,12 +61,12 @@ class CachedResetWrapper(gym.Wrapper):
             self._num_cached_resets = len(self._cached_resets_env_states)
         else:
             if self.cached_resets_config.num_resets is None:
-                self.cached_resets_config.num_resets = 16384
+                self.cached_resets_config.num_resets = self.num_envs
             self._cached_resets_env_states = []
             self._cached_resets_obs_buffer = []
             while self._num_cached_resets < self.cached_resets_config.num_resets:
                 obs, _ = self.env.reset(
-                    seed=self.cached_resets_config.seed,
+                    seed=self.cached_resets_config.seed if self._num_cached_resets == 0 else None,
                     options=dict(
                         env_idx=torch.arange(
                             0,
