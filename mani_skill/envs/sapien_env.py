@@ -264,7 +264,16 @@ class BaseEnv(gym.Env):
         common.dict_merge(merged_gpu_sim_config, sim_config)
         self.sim_config = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_config, config=dacite.Config(strict=True))
         """the final sim config after merging user overrides with the environment default"""
-        physx.set_gpu_memory_config(**self.sim_config.gpu_memory_config.dict())
+        gpu_mem_config = self.sim_config.gpu_memory_config.dict()
+
+        # NOTE (stao): there isn't a easy way to check of collision_stack_size is supported for the installed sapien3 version
+        # to get around that we just try and except. To be removed once mac/windows platforms can upgrade to latest sapien versions
+        try:
+            physx.set_gpu_memory_config(**gpu_mem_config)
+        except TypeError:
+            gpu_mem_config.pop("collision_stack_size")
+            physx.set_gpu_memory_config(**gpu_mem_config)
+
         sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
 
         # Set simulation and control frequency
