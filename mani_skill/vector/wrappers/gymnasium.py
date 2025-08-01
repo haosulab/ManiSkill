@@ -11,14 +11,13 @@ from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from gymnasium import Env
+
     from mani_skill.envs.sapien_env import BaseEnv
 
 
 class ManiSkillVectorEnv(VectorEnv):
     """
     Gymnasium Vector Env implementation for ManiSkill environments running on the GPU for parallel simulation and optionally parallel rendering
-
-    Note that currently this also assumes modeling tasks as infinite horizon (e.g. terminations is always False, only reset when timelimit is reached)
 
     Args:
         env: The environment created via gym.make / after wrappers are applied. If a string is given, we use gym.make(env) to create an environment
@@ -89,10 +88,10 @@ class ManiSkillVectorEnv(VectorEnv):
         self,
         *,
         seed: Optional[Union[int, List[int]]] = None,
-        options: Optional[dict] = dict(),
+        options: Optional[dict] = None,
     ):
         obs, info = self._env.reset(seed=seed, options=options)
-        if "env_idx" in options:
+        if options is not None and "env_idx" in options:
             env_idx = options["env_idx"]
             mask = torch.zeros(self.num_envs, dtype=bool, device=self.base_env.device)
             mask[env_idx] = True
