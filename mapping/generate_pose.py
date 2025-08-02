@@ -1,4 +1,5 @@
 import os, time, argparse
+from pathlib import Path
 import numpy as np
 import open3d as o3d
 import plotly.graph_objs as go
@@ -22,27 +23,16 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-IMG_DIR = os.path.join(SCRIPT_DIR, "images")
-os.makedirs(IMG_DIR, exist_ok=True)
+SCRIPT_DIR = Path(__file__).resolve().parent
+IMG_DIR = SCRIPT_DIR / "images"
+IMG_DIR.mkdir(exist_ok=True)
+POSE_DIR = SCRIPT_DIR / "poses"
+POSE_DIR.mkdir(exist_ok=True)
 rgb_frames = []
 
-INTRINSIC_TXT = os.path.join(IMG_DIR, "intrinsic.txt")
-PLY_PATH      = os.path.join(IMG_DIR, "point_cloud.ply")
-HTML_PATH     = os.path.join(IMG_DIR, "point_cloud.html")
-
-def frustum_lines(K: np.ndarray, E_cv: np.ndarray, W: int, H: int, depth=0.25):
-    fx, fy, cx, cy = K[0,0], K[1,1], K[0,2], K[1,2]
-    pix = np.array([[0, 0], [W - 1, 0], [W - 1, H - 1], [0, H - 1]])
-    dirs = np.stack([(pix[:,0]-cx)/fx,
-                     (pix[:,1]-cy)/fy,
-                     np.ones(4)], axis=1)
-    pts_cam = np.vstack([np.zeros(3), dirs * depth])
-    homo    = np.hstack([pts_cam, np.ones((5,1))])
-
-    cam_to_world = np.linalg.inv(np.vstack([E_cv, [0,0,0,1]]))
-
-    return (cam_to_world @ homo.T).T[:, :3]
+INTRINSIC_TXT = IMG_DIR / "intrinsic.txt"
+PLY_PATH      = IMG_DIR / "point_cloud.ply"
+HTML_PATH     = IMG_DIR / "point_cloud.html"
 
 def hide_robot_visuals(robot):
     robot.set_root_pose(sapien.Pose([1e3, 1e3, 1e3]))
@@ -66,13 +56,13 @@ if args.viewer:
     if not isinstance(viewer, sapien.utils.Viewer):
         raise TypeError("Env did not return a SAPIEN Viewer.")
 
-poses = []
 pts_all, rgb_all = [], []
 frusta = []
 calib_written = False
+frame_idx = 0
 
 def capture():
-    global calib_written
+    global calib_written, frame_idx
     obs = env.get_obs()
     d = obs["sensor_data"]["moving_camera"]
     p = obs["sensor_param"]["moving_camera"]
@@ -83,13 +73,16 @@ def capture():
     K        = np.squeeze(p["intrinsic_cv"].cpu().numpy())
     E_cv     = np.squeeze(p["extrinsic_cv"].cpu().numpy())
 
+    pose_path = POSE_DIR / f"{frame_idx:04d}.npy"
+    np.save(pose_path, E_cv)
+    print(f"[POSE] wrote {pose_path}")
+    frame_idx += 1
+    
     H, W, _ = rgb_np.shape
 
-    if args.frustum:
-        frusta.append(frustum_lines(K, E_cv, W, H))
 
     if not calib_written:
-        np.savetxt(INTRINSIC_TXT, K, fmt="%.8f")
+        np.savetxt(str(INTRINSIC_TXT), K, fmt="%.8f")
         calib_written = True
 
     if np.max(depth_np) == 0:
@@ -109,7 +102,6 @@ def capture():
         return
 
     cam_to_world = np.linalg.inv(np.vstack([E_cv, [0, 0, 0, 1]]))
-    poses.append(cam_to_world[:3])
     pcd.transform(cam_to_world)
     pts_all.append(np.asarray(pcd.points))
     rgb_all.append(np.asarray(pcd.colors))
@@ -140,14 +132,8 @@ pcd = o3d.geometry.PointCloud()
 pcd.points  = o3d.utility.Vector3dVector(np.vstack(pts_all))
 pcd.colors  = o3d.utility.Vector3dVector(np.vstack(rgb_all))
 pcd         = pcd.voxel_down_sample(0.02)
-o3d.io.write_point_cloud(PLY_PATH, pcd)
+o3d.io.write_point_cloud(str(PLY_PATH), pcd)
 print(f"[PLY] wrote {PLY_PATH}")
-
-POSES_TXT = os.path.join(IMG_DIR, "poses.txt")
-with open(POSES_TXT, "w") as f:
-    for T in poses:
-        f.write(" ".join(f"{v:.12e}" for v in T.flatten()) + "\n")
-print(f"[POSES] wrote {POSES_TXT}")
 
 pts  = np.asarray(pcd.points)
 cols = (np.asarray(pcd.colors) * 255).astype(np.uint8)
@@ -161,30 +147,9 @@ fig.add_trace(go.Scatter3d(
                 opacity=0.8),
     name="PCD"))
 
-if args.frustum:
-    print("[INFO] Adding frustum visualizations to the plot.")
-    for F in frusta:
-        x_lines, y_lines, z_lines = [], [], []
-        far_plane_order = [1, 2, 3, 4, 1]
-        x_lines.extend(F[far_plane_order, 0].tolist() + [None])
-        y_lines.extend(F[far_plane_order, 1].tolist() + [None])
-        z_lines.extend(F[far_plane_order, 2].tolist() + [None])
-
-        for i in range(1, 5):
-            apex_order = [0, i]
-            x_lines.extend(F[apex_order, 0].tolist() + [None])
-            y_lines.extend(F[apex_order, 1].tolist() + [None])
-            z_lines.extend(F[apex_order, 2].tolist() + [None])
-
-        fig.add_trace(go.Scatter3d(
-            x=x_lines, y=y_lines, z=z_lines,
-            mode="lines",
-            line=dict(width=2, color="royalblue"),
-            showlegend=False))
-
 fig.update_layout(scene=dict(aspectmode="data"),
                   margin=dict(l=0,r=0,b=0,t=0))
-pyo.plot(fig, filename=HTML_PATH, auto_open=False)
+pyo.plot(fig, filename=str(HTML_PATH), auto_open=False)
 print(f"[HTML] wrote {HTML_PATH}")
 
 if args.viewer:
@@ -193,16 +158,6 @@ if args.viewer:
     while not viewer.window.should_close and time.time() - start < 120:
         viewer.render()
     viewer.close()
-
-VIDEO_PATH = os.path.join(IMG_DIR, "capture_rgb.mp4")
-if rgb_frames:
-    # make sure all frames are identical size
-    assert len({img.shape for img in rgb_frames}) == 1, "inconsistent frame sizes"
-    imageio.mimsave(VIDEO_PATH, rgb_frames, fps=10)
-    print(f"[VIDEO] wrote {VIDEO_PATH}")
-else:
-    print("[WARN] no RGB frames collected?")
-
 
 env.close()
 print("Done.")
