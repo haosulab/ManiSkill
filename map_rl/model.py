@@ -121,7 +121,7 @@ class LocalFeatureFusion(nn.Module):
         n_heads: int = 8,
         ff_mult: int = 4,
         radius: float = 0.06,
-        k: int = 8,
+        k: int = 4,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -236,14 +236,14 @@ class MapAwareFeatureExtractor(nn.Module):
         self.out_features = 0
 
         # ------------------------------------------------------------------ CNN -
-        # Pre-trained ResNet-18 up to the last conv block (512-D feature map).
+        # Pre-trained ResNet-18 up to layer2 (128-D feature map).
         resnet = models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        self.cnn                    = nn.Sequential(*list(resnet.children())[:-2])
-        self.rgb_feature_dim        = 512    # channel dimension after layer4
+        self.cnn                    = nn.Sequential(*list(resnet.children())[:6])
+        self.rgb_feature_dim        = 128    # channel dimension after layer2
 
         with torch.no_grad():
             dummy           = sample_obs["rgb"].float().permute(0, 3, 1, 2) / 255.0
-            cnn_out_shape   = self.cnn(dummy.cpu()).shape          # (B, 512, H', W')
+            cnn_out_shape   = self.cnn(dummy.cpu()).shape          # (B, 128, H', W')
             n_flatten       = self.rgb_feature_dim * cnn_out_shape[2] * cnn_out_shape[3]
 
         # Global RGB head (always available – even if map is disabled).
@@ -256,7 +256,7 @@ class MapAwareFeatureExtractor(nn.Module):
         if self.decoder is not None:                 # build map-specific modules
             map_feature_dim          = 3 + 768
             self.map_encoder         = PointNet(map_feature_dim, 256)
-            self.local_fusion        = LocalFeatureFusion(dim=self.rgb_feature_dim, k=8)
+            self.local_fusion        = LocalFeatureFusion(dim=self.rgb_feature_dim, k=4)
             self.map_feature_proj    = nn.Linear(768, self.rgb_feature_dim)
 
             fused_flat               = self.rgb_feature_dim * cnn_out_shape[2] * cnn_out_shape[3]
