@@ -179,7 +179,11 @@ class LocalFeatureFusion(nn.Module):
     ) -> torch.Tensor:
         B, N, C = q_feat.shape
         idx, invalid = self._neigh_indices(q_xyz, kv_xyz, kv_pad)  # (B, N, k)
-        
+
+        # Debug        
+        # num_valid = (~invalid).sum()
+        # print(f"Number of valid neighbors: {num_valid.item()}")
+
         # gather neighbor coordinates / features
         batch = torch.arange(B, device=q_feat.device).view(B, 1, 1)
         neigh_xyz  = kv_xyz[batch.expand_as(idx), idx]             # (B, N, k, 3)
@@ -322,75 +326,99 @@ class MapAwareFeatureExtractor(nn.Module):
             
             q_feat = rgb_features.permute(0, 2, 3, 1).reshape(batch_size, -1, self.rgb_feature_dim) # B, H*W, C
 
-            # START: Sanity check visualization for local feature fusion
-            if True:
-                import plotly.graph_objects as go
+            # Debug: Sanity check visualization for local feature fusion
+            # if False: # True:
+            #     import plotly.graph_objects as go
 
-                # Visualize batch 0
-                q_xyz_vis = q_xyz[0].detach().cpu().numpy()
-                kv_xyz_vis = kv_xyz[0].detach().cpu().numpy()
-                kv_pad_vis = kv_pad[0].detach().cpu().numpy()
+            #     # Visualize batch 0
+            #     q_xyz_vis = q_xyz[0].detach().cpu().numpy()
+            #     kv_xyz_vis = kv_xyz[0].detach().cpu().numpy()
+            #     kv_pad_vis = kv_pad[0].detach().cpu().numpy()
 
-                # Filter out padded points in kv_xyz
-                kv_xyz_vis = kv_xyz_vis[~kv_pad_vis]
+            #     # --------------------------------------------
+            #     # Measure distances between q_xyz and kv_xyz
+            #     # for environment 0 (debugging)
+            #     # --------------------------------------------
+            #     # Filter out padded kv_xyz points
+            #     kv_xyz_valid = kv_xyz_vis[~kv_pad_vis]
 
-                # Create Plotly figure
-                fig = go.Figure()
+            #     # Compute pairwise distances (N_query, N_kv)
+            #     import numpy as np
+            #     dist_matrix = np.linalg.norm(
+            #         q_xyz_vis[:, None, :] - kv_xyz_valid[None, :, :],
+            #         axis=-1
+            #     )
 
-                # Add q_xyz points
-                fig.add_trace(go.Scatter3d(
-                    x=q_xyz_vis[:, 0],
-                    y=q_xyz_vis[:, 1],
-                    z=q_xyz_vis[:, 2],
-                    mode='markers',
-                    marker=dict(
-                        size=2,
-                        color='red',                # set color to red
-                        opacity=0.8
-                    ),
-                    name='q_xyz',
-                    hoverinfo='text',
-                    text=[f'q: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in q_xyz_vis]
-                ))
+            #     # For each query point, find the nearest kv point
+            #     min_dists = dist_matrix.min(axis=1)
 
-                # Add kv_xyz points
-                fig.add_trace(go.Scatter3d(
-                    x=kv_xyz_vis[:, 0],
-                    y=kv_xyz_vis[:, 1],
-                    z=kv_xyz_vis[:, 2],
-                    mode='markers',
-                    marker=dict(
-                        size=2,
-                        color='blue',               # set color to blue
-                        opacity=0.8
-                    ),
-                    name='kv_xyz',
-                    hoverinfo='text',
-                    text=[f'kv: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in kv_xyz_vis]
-                ))
+            #     print("--- Distance statistics between q_xyz and kv_xyz (env0) ---")
+            #     print(f"Number of q points : {len(q_xyz_vis)}")
+            #     print(f"Number of kv points: {len(kv_xyz_valid)}")
+            #     print(f"Min distance       : {min_dists.min():.6f}")
+            #     print(f"Max distance       : {min_dists.max():.6f}")
+            #     print(f"Mean distance      : {min_dists.mean():.6f}")
 
-                # Add coordinate frame
-                fig.add_trace(go.Scatter3d(x=[0, 0.1], y=[0, 0], z=[0, 0], mode='lines', line=dict(color='red', width=4), name='X-axis'))
-                fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0.1], z=[0, 0], mode='lines', line=dict(color='green', width=4), name='Y-axis'))
-                fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 0.1], mode='lines', line=dict(color='blue', width=4), name='Z-axis'))
+            #     # Filter out padded points in kv_xyz
+            #     kv_xyz_vis = kv_xyz_vis[~kv_pad_vis]
 
-                fig.update_layout(
-                    title='3D Point Cloud Visualization',
-                    scene=dict(
-                        xaxis_title='X',
-                        yaxis_title='Y',
-                        zaxis_title='Z',
-                        aspectmode='data'
-                    ),
-                    margin=dict(l=0, r=0, b=0, t=40)
-                )
+            #     # Create Plotly figure
+            #     fig = go.Figure()
 
-                # Save to HTML
-                fig.write_html("visualization.html")
-                print("Visualization saved to visualization.html")
+            #     # Add q_xyz points
+            #     fig.add_trace(go.Scatter3d(
+            #         x=q_xyz_vis[:, 0],
+            #         y=q_xyz_vis[:, 1],
+            #         z=q_xyz_vis[:, 2],
+            #         mode='markers',
+            #         marker=dict(
+            #             size=2,
+            #             color='red',                # set color to red
+            #             opacity=0.8
+            #         ),
+            #         name='q_xyz',
+            #         hoverinfo='text',
+            #         text=[f'q: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in q_xyz_vis]
+            #     ))
 
-                import sys
-                sys.exit() # Stop execution after saving visualization
+            #     # Add kv_xyz points
+            #     fig.add_trace(go.Scatter3d(
+            #         x=kv_xyz_vis[:, 0],
+            #         y=kv_xyz_vis[:, 1],
+            #         z=kv_xyz_vis[:, 2],
+            #         mode='markers',
+            #         marker=dict(
+            #             size=2,
+            #             color='blue',               # set color to blue
+            #             opacity=0.8
+            #         ),
+            #         name='kv_xyz',
+            #         hoverinfo='text',
+            #         text=[f'kv: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in kv_xyz_vis]
+            #     ))
+
+            #     # Add coordinate frame
+            #     fig.add_trace(go.Scatter3d(x=[0, 0.1], y=[0, 0], z=[0, 0], mode='lines', line=dict(color='red', width=4), name='X-axis'))
+            #     fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0.1], z=[0, 0], mode='lines', line=dict(color='green', width=4), name='Y-axis'))
+            #     fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 0.1], mode='lines', line=dict(color='blue', width=4), name='Z-axis'))
+
+            #     fig.update_layout(
+            #         title='3D Point Cloud Visualization',
+            #         scene=dict(
+            #             xaxis_title='X',
+            #             yaxis_title='Y',
+            #             zaxis_title='Z',
+            #             aspectmode='data'
+            #         ),
+            #         margin=dict(l=0, r=0, b=0, t=40)
+            #     )
+
+            #     # Save to HTML
+            #     fig.write_html("visualization.html")
+            #     print("Visualization saved to visualization.html")
+
+            #     import sys
+            #     sys.exit() # Stop execution after saving visualization
             # END: Sanity check visualization
 
             fused_features = self.local_fusion(q_xyz, q_feat, kv_xyz, kv_feat, kv_pad) # B, H*W, C
