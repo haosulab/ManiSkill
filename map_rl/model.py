@@ -117,7 +117,7 @@ class LocalFeatureFusion(nn.Module):
         dim: int,
         n_heads: int = 8,
         ff_mult: int = 4,
-        radius: float = 0.2,
+        radius: float = 0.1,
         k: int = 8,
         dropout: float = 0.1,
     ):
@@ -179,7 +179,7 @@ class LocalFeatureFusion(nn.Module):
     ) -> torch.Tensor:
         B, N, C = q_feat.shape
         idx, invalid = self._neigh_indices(q_xyz, kv_xyz, kv_pad)  # (B, N, k)
-
+        
         # gather neighbor coordinates / features
         batch = torch.arange(B, device=q_feat.device).view(B, 1, 1)
         neigh_xyz  = kv_xyz[batch.expand_as(idx), idx]             # (B, N, k, 3)
@@ -310,7 +310,7 @@ class MapAwareFeatureExtractor(nn.Module):
             
             # Unproject to get 3D coordinates for each pixel in the feature map
             feat_h, feat_w = rgb_features.shape[2], rgb_features.shape[3]
-            depth_resampled = F.interpolate(depth, size=(feat_h, feat_w), mode='nearest')
+            depth_resampled = F.interpolate(depth, size=(feat_h, feat_w), mode='nearest-exact')
 
             # We need camera intrinsics for the original image size
             og_h, og_w = observations["rgb"].shape[1], observations["rgb"].shape[2]
@@ -319,12 +319,13 @@ class MapAwareFeatureExtractor(nn.Module):
             fx, fy, cx, cy = 64, 64, 64, 64
             q_xyz, _ = get_3d_coordinates(depth_resampled, pose, fx=fx, fy=fy, cx=cx, cy=cy, original_size=(og_h, og_w))
             q_xyz = q_xyz.permute(0, 2, 3, 1).reshape(batch_size, -1, 3) # B, H*W, 3
-
+            
             q_feat = rgb_features.permute(0, 2, 3, 1).reshape(batch_size, -1, self.rgb_feature_dim) # B, H*W, C
 
             # START: Sanity check visualization for local feature fusion
             if True:
-                import open3d as o3d
+                import plotly.graph_objects as go
+
                 # Visualize batch 0
                 q_xyz_vis = q_xyz[0].detach().cpu().numpy()
                 kv_xyz_vis = kv_xyz[0].detach().cpu().numpy()
@@ -333,18 +334,63 @@ class MapAwareFeatureExtractor(nn.Module):
                 # Filter out padded points in kv_xyz
                 kv_xyz_vis = kv_xyz_vis[~kv_pad_vis]
 
-                pcd_q = o3d.geometry.PointCloud()
-                pcd_q.points = o3d.utility.Vector3dVector(q_xyz_vis)
-                pcd_q.paint_uniform_color([1, 0, 0])  # Red for q_xyz
+                # Create Plotly figure
+                fig = go.Figure()
 
-                pcd_kv = o3d.geometry.PointCloud()
-                pcd_kv.points = o3d.utility.Vector3dVector(kv_xyz_vis)
-                pcd_kv.paint_uniform_color([0, 0, 1])  # Blue for kv_xyz
+                # Add q_xyz points
+                fig.add_trace(go.Scatter3d(
+                    x=q_xyz_vis[:, 0],
+                    y=q_xyz_vis[:, 1],
+                    z=q_xyz_vis[:, 2],
+                    mode='markers',
+                    marker=dict(
+                        size=2,
+                        color='red',                # set color to red
+                        opacity=0.8
+                    ),
+                    name='q_xyz',
+                    hoverinfo='text',
+                    text=[f'q: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in q_xyz_vis]
+                ))
 
-                # Create a coordinate frame
-                origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1, origin=[0, 0, 0])
+                # Add kv_xyz points
+                fig.add_trace(go.Scatter3d(
+                    x=kv_xyz_vis[:, 0],
+                    y=kv_xyz_vis[:, 1],
+                    z=kv_xyz_vis[:, 2],
+                    mode='markers',
+                    marker=dict(
+                        size=2,
+                        color='blue',               # set color to blue
+                        opacity=0.8
+                    ),
+                    name='kv_xyz',
+                    hoverinfo='text',
+                    text=[f'kv: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in kv_xyz_vis]
+                ))
 
-                o3d.visualization.draw_geometries([pcd_q, pcd_kv, origin])
+                # Add coordinate frame
+                fig.add_trace(go.Scatter3d(x=[0, 0.1], y=[0, 0], z=[0, 0], mode='lines', line=dict(color='red', width=4), name='X-axis'))
+                fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0.1], z=[0, 0], mode='lines', line=dict(color='green', width=4), name='Y-axis'))
+                fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 0.1], mode='lines', line=dict(color='blue', width=4), name='Z-axis'))
+
+                fig.update_layout(
+                    title='3D Point Cloud Visualization',
+                    scene=dict(
+                        xaxis_title='X',
+                        yaxis_title='Y',
+                        zaxis_title='Z',
+                        aspectmode='data'
+                    ),
+                    margin=dict(l=0, r=0, b=0, t=40)
+                )
+
+                # Save to HTML
+                fig.write_html("visualization.html")
+                print("Visualization saved to visualization.html")
+
+                import sys
+                sys.exit() # Stop execution after saving visualization
             # END: Sanity check visualization
 
             fused_features = self.local_fusion(q_xyz, q_feat, kv_xyz, kv_feat, kv_pad) # B, H*W, C
