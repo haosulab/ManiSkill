@@ -120,7 +120,7 @@ class LocalFeatureFusion(nn.Module):
         dim: int,
         n_heads: int = 8,
         ff_mult: int = 4,
-        radius: float = 0.06,
+        radius: float = 0.12,
         k: int = 4,
         dropout: float = 0.1,
     ):

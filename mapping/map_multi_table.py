@@ -140,8 +140,8 @@ OPT_LR = 1e-3
 # --------------------------------------------------------------------------- #
 #  Scene bounds (should match map_table.py)                                   #
 # --------------------------------------------------------------------------- #
-SCENE_MIN = (-0.8, -1.0, -0.5)
-SCENE_MAX = (0.4,  1.0,  0.5)
+SCENE_MIN = (-0.8, -1.0, -0.3)
+SCENE_MAX = (0.4,  1.0,  0.3)
 
 # --------------------------------------------------------------------------- #
 #  Helper functions                                                           #
@@ -187,7 +187,7 @@ def main():
     grids = {}
     for env_dir in env_dirs:
         grid = VoxelHashTable(
-            resolution=0.06,
+            resolution=0.12,
             num_levels=GRID_LVLS,
             feature_dim=GRID_FEAT_DIM,
             scene_bound_min=SCENE_MIN,
