@@ -96,12 +96,19 @@ parser.add_argument(
 parser.add_argument(
     "--pca",
     action="store_true",
-    help="Generate PCA visualization of voxel features for env_000."
+    help="Generate PCA visualization of voxel features for the specified environment(s)."
 )
 parser.add_argument(
     "--vis-fine-grid",
     action="store_true",
-    help="Generate visualization of the finest voxel grid vertices for env_000."
+    help="Generate visualization of the finest voxel grid vertices for the specified environment(s)."
+)
+parser.add_argument(
+    "--envs",
+    type=str,
+    nargs='+',
+    default=['env_000', 'env_001', 'env_002', 'env_003', 'env_004', 'env_005', 'env_006', 'env_007', 'env_008', 'env_009'],
+    help="List of environment directory names to visualize (e.g., env_000 env_001)."
 )
 args = parser.parse_args()
 
@@ -180,7 +187,7 @@ def main():
     grids = {}
     for env_dir in env_dirs:
         grid = VoxelHashTable(
-            resolution=0.12,
+            resolution=0.06,
             num_levels=GRID_LVLS,
             feature_dim=GRID_FEAT_DIM,
             scene_bound_min=SCENE_MIN,
@@ -335,10 +342,10 @@ def main():
             print(f"[VIS] [ERROR] Intrinsic file not found at {intrinsic_path}. Skipping PCA.")
         else:
             K = np.loadtxt(intrinsic_path)
-            env_dir_name = 'env_000'
-            if env_dir_name not in grids:
-                print(f"[VIS] Grid for {env_dir_name} not found, skipping PCA.")
-            else:
+            for env_dir_name in args.envs:
+                if env_dir_name not in grids:
+                    print(f"[VIS] Grid for {env_dir_name} not found, skipping PCA.")
+                    continue
                 env_dir = dataset_path / env_dir_name
                 grid = grids[env_dir_name]
                 print(f"\n[VIS] Running PCA on voxel features for {env_dir_name} ...")
@@ -421,10 +428,10 @@ def main():
 
     # --- Fine-level Voxel Grid Visualization ---
     if args.vis_fine_grid:
-        env_dir_name = 'env_000'
-        if env_dir_name not in grids:
-            print(f"[VIS-GRID] Grid for {env_dir_name} not found, skipping visualization.")
-        else:
+        for env_dir_name in args.envs:
+            if env_dir_name not in grids:
+                print(f"[VIS-GRID] Grid for {env_dir_name} not found, skipping visualization.")
+                continue
             grid = grids[env_dir_name]
             print(f"\n[VIS-GRID] Visualizing finest voxel grid for {env_dir_name} ...")
             

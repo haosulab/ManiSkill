@@ -21,6 +21,7 @@ class _TrainLevel(nn.Module):
         super().__init__()
         self.res, self.d, self.buckets, self.primes = res, d, buckets, primes
         self.smin = torch.tensor(smin, device=dev, dtype=torch.float)
+        self.smax = torch.tensor(smax, device=dev, dtype=torch.float)
         xs = torch.arange(smin[0], smax[0], res, device=dev)
         ys = torch.arange(smin[1], smax[1], res, device=dev)
         zs = torch.arange(smin[2], smax[2], res, device=dev)
@@ -63,7 +64,9 @@ class _TrainLevel(nn.Module):
         used = self.get_accessed_indices()
         return dict(resolution=self.res,
                     coords=self.coords[used].cpu(),
-                    features=self.voxel_features[used].cpu())
+                    features=self.voxel_features[used].cpu(),
+                    smin=self.smin.cpu(),
+                    smax=self.smax.cpu())
 
     # ---------- internals
     def _lookup(self, idxg):
@@ -107,7 +110,9 @@ class _InferLevel(nn.Module):
         self.register_buffer('hash2vox',
             torch.full((buckets,), -1, dtype=torch.long, device=dev),
             persistent=False)
-        self.smin = coords.min(0)[0].float()
+        # Use provided scene minimum/maximum if available
+        self.smin = torch.tensor(pay['smin'], device=dev).float()
+        self.smax = torch.tensor(pay['smax'], device=dev).float()
         idx = torch.floor((coords - self.smin) / self.res).long()
         hv  = (idx * self.primes).sum(-1) % buckets
 
