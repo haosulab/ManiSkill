@@ -230,7 +230,8 @@ class MapAwareFeatureExtractor(nn.Module):
             Voxel-feature decoder.  If None, the whole map branch is skipped.
         """
         super().__init__()
-        self.decoder = decoder     # None: RGB-only mode
+        # Store decoder as a plain attribute so its parameters are not registered
+        object.__setattr__(self, "_decoder", decoder)  # None → RGB-only mode
 
         feature_size = 256
         self.out_features = 0
@@ -253,7 +254,7 @@ class MapAwareFeatureExtractor(nn.Module):
         self.out_features += feature_size
 
         # ---------------------------------------------------------------- Map 3-D -
-        if self.decoder is not None:                 # build map-specific modules
+        if self._decoder is not None:                 # build map-specific modules
             map_feature_dim          = 3 + 768
             self.map_encoder         = PointNet(map_feature_dim, 256)
             self.local_fusion        = LocalFeatureFusion(dim=self.rgb_feature_dim, k=4)
@@ -302,7 +303,7 @@ class MapAwareFeatureExtractor(nn.Module):
         rgb_vec  = self.rgb_proj(rgb_fmap)          # (B, 256)
 
         # Fast path: RGB-only ----------------------------------------------------
-        if not use_map or self.decoder is None or map_features is None:
+        if not use_map or self._decoder is None or map_features is None:
             encoded.append(rgb_vec)
 
         # Map-aware path ---------------------------------------------------------
@@ -315,7 +316,7 @@ class MapAwareFeatureExtractor(nn.Module):
 
             # 2) Decode all voxels in a single call ------------------------------
             with torch.no_grad():
-                dec_cat = self.decoder(torch.cat(raw_batch, dim=0))          # (ΣL, 768)
+                dec_cat = self._decoder(torch.cat(raw_batch, dim=0))          # (ΣL, 768)
 
             dec_split = dec_cat.split([c.size(0) for c in coords_batch], dim=0)
 
