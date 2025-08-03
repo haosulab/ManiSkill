@@ -22,8 +22,9 @@ class TableScanDiscreteNoRobotEnv(BaseEnv):
     cube_spawn_half_size = 0.1
     cube_spawn_center = (0, 0)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, grid_dim: int = 10, **kwargs):
 
+        self.grid_dim = grid_dim
         self._traj_idx = 0
         self.camera_mount_offset = 0
         super().__init__(*args, **kwargs)
@@ -103,19 +104,36 @@ class TableScanDiscreteNoRobotEnv(BaseEnv):
     def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
         self.step_count = 0
         with torch.device(self.device):
-            b = len(env_idx)
+            # Support external global indexing for map generation
+            if options is not None and "global_idx" in options:
+                gidx = options["global_idx"]
+                if isinstance(gidx, torch.Tensor):
+                    gidx = gidx.to(env_idx.device)
+                else:
+                    gidx = torch.as_tensor(gidx, device=env_idx.device)
+                assert len(gidx) == len(env_idx), "global_idx length mismatch"
+                eff_idx = gidx.long()
+            else:
+                eff_idx = env_idx.long()
+
+            b = len(eff_idx)
             self.table_scene.initialize(env_idx)
             
             xyz = torch.zeros((b, 3))
             
-            # Cube position chosen from a 10x10 grid
-            grid_idx = env_idx % 100
-            x_grid = grid_idx // 10
-            y_grid = grid_idx % 10
-            xyz[:, 0] = torch.linspace(0, 1, 10)[x_grid] * self.cube_spawn_half_size * 2 - self.cube_spawn_half_size
-            xyz[:, 1] = torch.linspace(0, 1, 10)[y_grid] * self.cube_spawn_half_size * 2 - self.cube_spawn_half_size
-            xyz[:, 0] += self.cube_spawn_center[0]
-            xyz[:, 1] += self.cube_spawn_center[1]
+            # Cube position chosen from a configurable N×N grid
+            grid_dim = self.grid_dim
+            x_grid = eff_idx // grid_dim
+            y_grid = eff_idx %  grid_dim
+
+            lin = torch.linspace(
+                -self.cube_spawn_half_size,
+                 self.cube_spawn_half_size,
+                 grid_dim,
+                 device=xyz.device,
+            )
+            xyz[:, 0] = lin[x_grid] + self.cube_spawn_center[0]
+            xyz[:, 1] = lin[y_grid] + self.cube_spawn_center[1]
             xyz[:, 2] = self.cube_half_size
  
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True, lock_z=True)

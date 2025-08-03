@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Tuple
 
 import numpy as np
 import sapien
@@ -351,37 +351,89 @@ PickCubeDR.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="xarm6_robotiq")
 
 
 class DiscreteInitMixin:
-    """Mixin class that provides discrete initialization for cube positions on a 10x10 grid."""
-    
+    """Mixin that supports *discrete* environment initialisation on an N×N grid.
+
+    The grid resolution can be configured via the ``grid_dim`` argument that is
+    forwarded to the environment constructor.  By default we reproduce the
+    previous behaviour with ``grid_dim=10`` (100 unique environments).
+    """
+
+    # ---------------------------------------------------------------------
+    # Constructor – stores the grid dimension before calling the parent __init__
+    # ---------------------------------------------------------------------
+    def __init__(self, *args, grid_dim: int = 10, **kwargs):
+        self.grid_dim = grid_dim  # number of cells per axis (grid_dim x grid_dim)
+        super().__init__(*args, **kwargs)
+
+    # ---------------------------------------------------------------------
+    # Helper to convert a linear env-index → (x,y) grid coordinates
+    # ---------------------------------------------------------------------
+    def _index_to_xy(self, idx: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        x_grid = idx // self.grid_dim
+        y_grid = idx %  self.grid_dim
+        return x_grid, y_grid
+
+    # ---------------------------------------------------------------------
+    # Episode initialisation
+    # ---------------------------------------------------------------------
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        """Place cube and goal according to the unique *environment index*.
+
+        The caller can supply a key ``global_idx`` in *options* containing a
+        1-D list/array/torch.Tensor of length = ``len(env_idx)`` that specifies
+        which global (x, y) cell each parallel environment should correspond
+        to.  If absent, we fall back to the local ``env_idx`` numbering (0…K-1).
+        """
         with torch.device(self.device):
-            b = len(env_idx)
+            # Resolve the *effective* indices for this reset -------------------
+            if options is not None and "global_idx" in options:
+                gidx = options["global_idx"]
+                if isinstance(gidx, torch.Tensor):
+                    gidx = gidx.to(env_idx.device)
+                else:
+                    gidx = torch.as_tensor(gidx, device=env_idx.device)
+                assert len(gidx) == len(env_idx), "global_idx length mismatch"
+                eff_idx = gidx.long()
+            else:
+                eff_idx = env_idx.long()
+
+            b = len(eff_idx)
             self.table_scene.initialize(env_idx)
-            xyz = torch.zeros((b, 3))
-            
-            # Cube position chosen from a 10x10 grid
-            grid_idx = env_idx % 100
-            x_grid = grid_idx // 10
-            y_grid = grid_idx % 10
-            xyz[:, 0] = torch.linspace(0, 1, 10)[x_grid] * self.cube_spawn_half_size * 2 - self.cube_spawn_half_size
-            xyz[:, 1] = torch.linspace(0, 1, 10)[y_grid] * self.cube_spawn_half_size * 2 - self.cube_spawn_half_size
-            xyz[:, 0] += self.cube_spawn_center[0]
-            xyz[:, 1] += self.cube_spawn_center[1]
+
+            # Buffer for cube positions (B,3)
+            xyz = torch.zeros((b, 3), device=env_idx.device)
+
+            # Map env-indices → discrete grid coordinates
+            x_grid, y_grid = self._index_to_xy(eff_idx)
+
+            # Equally-spaced centres along one axis (size = grid_dim)
+            lin = torch.linspace(
+                -self.cube_spawn_half_size,
+                 self.cube_spawn_half_size,
+                 self.grid_dim,
+                 device=env_idx.device,
+            )
+
+            # Assign positions and apply centre offset
+            xyz[:, 0] = lin[x_grid] + self.cube_spawn_center[0]
+            xyz[:, 1] = lin[y_grid] + self.cube_spawn_center[1]
             xyz[:, 2] = self.cube_half_size
- 
+
+            # Random cube orientation (axis-aligned)
             qs = randomization.random_quaternions(b, lock_x=True, lock_y=True, lock_z=True)
             self.cube.set_pose(Pose.create_from_pq(xyz, qs))
 
+            # Goal site placed 20 cm above the cube
             goal_xyz = xyz.clone()
             goal_xyz[:, 2] = xyz[:, 2] + 0.2
-
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
+
 
 
 @register_env("PickCubeDiscreteInit-v1", max_episode_steps=50)
 class PickCubeDiscreteInit(DiscreteInitMixin, PickCubeEnv):
-    def __init__(self, *args, robot_uids="xarm6_robotiq", **kwargs):
-        super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, **kwargs)
+    def __init__(self, *args, robot_uids="xarm6_robotiq", grid_dim: int = 10, **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, grid_dim=grid_dim, **kwargs)
 
 
 PickCubeDiscreteInit.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="xarm6_robotiq")
@@ -389,8 +441,8 @@ PickCubeDiscreteInit.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="xarm6_robot
 
 @register_env("PickCubeDRDiscreteInit-v1", max_episode_steps=50)
 class PickCubeDRDiscreteInit(DiscreteInitMixin, PickCubeDR):
-    def __init__(self, *args, robot_uids="xarm6_robotiq", **kwargs):
-        super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, **kwargs)
+    def __init__(self, *args, robot_uids="xarm6_robotiq", grid_dim: int = 10, **kwargs):
+        super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, grid_dim=grid_dim, **kwargs)
 
 
 PickCubeDRDiscreteInit.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="xarm6_robotiq")

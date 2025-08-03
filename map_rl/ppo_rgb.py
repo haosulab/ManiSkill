@@ -122,6 +122,10 @@ class Args:
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = False
 
+    # Environment discretisation
+    grid_dim: int = 10
+    """Number of cells per axis used for discrete initialisation (N×N grid)."""
+
     # Map-related arguments
     use_map: bool = True
     """if toggled, use the pre-trained environment map features as part of the observation"""
@@ -210,24 +214,31 @@ if __name__ == "__main__":
             print(f"[ERROR] Decoder file not found at {args.decoder_path}. Exiting.")
             exit()
 
-        # 2. Load Grids
-        grids = []
-        if os.path.exists(args.map_dir):
-            print(f"Loading maps from {args.map_dir}...")
-            # Load one map for each parallel environment
-            num_maps_to_load = args.num_envs if not args.evaluate else args.num_eval_envs
-            for i in range(num_maps_to_load):
-                grid_path = os.path.join(args.map_dir, f"env_{i:03d}_grid.sparse.pt")
-                if not os.path.exists(grid_path):
-                    print(f"[ERROR] Map file not found: {grid_path}. Needed for parallel env {i}. Exiting.")
-                    exit()
-                
-                grid = VoxelHashTable.load_sparse(grid_path, device=device)
-                grids.append(grid)
-            print(f"--- Loaded {len(grids)} environment maps. ---")
-        else:
+        # 2. Load ALL grids (grid_dim²) and build sampling helper
+        total_envs = args.grid_dim ** 2
+        all_grids = []
+        if not os.path.exists(args.map_dir):
             print(f"[ERROR] Map directory not found: {args.map_dir}. Exiting.")
             exit()
+
+        print(f"Loading {total_envs} maps from {args.map_dir} ...")
+        for i in range(total_envs):
+            grid_path = os.path.join(args.map_dir, f"env_{i:03d}_grid.sparse.pt")
+            if not os.path.exists(grid_path):
+                print(f"[ERROR] Map file not found: {grid_path}. Exiting.")
+                exit()
+            all_grids.append(VoxelHashTable.load_sparse(grid_path, device=device))
+        print(f"--- Loaded {len(all_grids)} maps. ---")
+
+        # --------------------------------------------------------------
+        # Helper for random subset sampling
+        # --------------------------------------------------------------
+        def _sample_grids(n_envs: int):
+            idx = np.random.choice(total_envs, n_envs, replace=False)
+            return idx, [all_grids[i] for i in idx]
+
+        # Initial sample for the very first reset
+        active_indices, grids = _sample_grids(args.num_envs if not args.evaluate else args.num_eval_envs)
         
         # debug: Visualize the first map
         # if grids and decoder:
@@ -237,7 +248,7 @@ if __name__ == "__main__":
 
     # env setup
     # env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda")
-    env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth", render_mode=args.render_mode, sim_backend="physx_cuda")
+    env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth", render_mode=args.render_mode, sim_backend="physx_cuda", grid_dim=args.grid_dim)
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
@@ -302,8 +313,13 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset(seed=args.seed)
-    eval_obs, _ = eval_envs.reset(seed=args.seed)
+    next_obs, _ = envs.reset(seed=args.seed, options={'global_idx': active_indices.tolist()})
+    if args.use_map and 'all_grids' in globals() and len(all_grids) >= args.num_eval_envs:
+        eval_indices, eval_grids = _sample_grids(args.num_eval_envs)
+        eval_obs, _ = eval_envs.reset(seed=args.seed, options={'global_idx': eval_indices.tolist()})
+    else:
+        eval_grids = grids if args.use_map else None
+        eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
@@ -318,18 +334,29 @@ if __name__ == "__main__":
     cumulative_times = defaultdict(float)
 
     for iteration in range(1, args.num_iterations + 1):
+        # --------------------------------------------------------------
+        # Resample subset of environments for this epoch (train)
+        # --------------------------------------------------------------
+        if args.use_map and 'all_grids' in globals() and len(all_grids) > args.num_envs:
+            active_indices, grids = _sample_grids(args.num_envs)
+            next_obs, _ = envs.reset(options={'global_idx': active_indices.tolist()})
+            next_done = torch.zeros(args.num_envs, device=device)
         print(f"Epoch: {iteration}, global_step={global_step}")
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
             print("Evaluating")
             stime = time.perf_counter()
-            eval_obs, _ = eval_envs.reset()
+            # Use FIXED evaluation subset (eval_indices, eval_grids) sampled once at start
+            if args.use_map:
+                eval_obs, _ = eval_envs.reset(options={'global_idx': eval_indices.tolist()})
+            else:
+                eval_obs, _ = eval_envs.reset()
             eval_metrics = defaultdict(list)
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, map_features=grids if args.use_map else None, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, map_features=eval_grids if args.use_map else None, deterministic=True))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
