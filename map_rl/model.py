@@ -117,7 +117,7 @@ class LocalFeatureFusion(nn.Module):
         dim: int,
         n_heads: int = 8,
         ff_mult: int = 4,
-        radius: float = 0.1,
+        radius: float = 0.06,
         k: int = 8,
         dropout: float = 0.1,
     ):
@@ -277,190 +277,81 @@ class MapAwareFeatureExtractor(nn.Module):
             )
 
 
+    # --------------------------------------------------------------------------- #
+    #  MapAwareFeatureExtractor.forward                                           #
+    # --------------------------------------------------------------------------- #
     def forward(self, observations, map_features: Optional[List] = None) -> torch.Tensor:
-        encoded_tensor_list = []
-        batch_size = observations['rgb'].shape[0]
+        B          = observations["rgb"].size(0)    
+        encoded    = []                                           # list of (B, D_i)
 
-        # Process standard observations
-        rgb_obs = observations['rgb'].float().permute(0, 3, 1, 2) / 255.0
-        
-        if map_features and self.decoder:
-            # Local Feature Fusion
+        # ------------------------------------------------------------------ RGB -
+        rgb   = observations["rgb"].float().permute(0, 3, 1, 2) / 255.0
+        rgb_f = self.cnn(rgb)                                     # (B, C_rgb, H', W')
+
+        # ---------------------------------------------------------------- Map 3-D -
+        if map_features is not None and self.decoder is not None:
+            # -------- 1. Gather per-grid coords + raw voxel features -------------
+            coords_list, rawfeat_list = [], []
+            for g in map_features:                                # one Python pass
+                coords            = g.levels[1].coords            # (Lᵢ, 3)
+                rawfeat           = g.query_voxel_feature(coords) # (Lᵢ, F_raw)
+                coords_list.append(coords)
+                rawfeat_list.append(rawfeat)
+
+            # -------- 2. Decode ALL voxel features in one call -------------------
             with torch.no_grad():
-                all_coords = [grid.levels[1].coords for grid in map_features]
-                all_feats = [grid.query_voxel_feature(c) for grid, c in zip(map_features, all_coords)]
-                decoded_feats = [self.decoder(f) for f in all_feats]
-
-                # Get sequence lengths BEFORE padding to create a robust padding mask
-                lengths = [len(c) for c in all_coords]
-
-                kv_xyz = torch.nn.utils.rnn.pad_sequence(all_coords, batch_first=True)
-                kv_feat_raw = torch.nn.utils.rnn.pad_sequence(decoded_feats, batch_first=True)
-                
-                # Create padding mask from original lengths. This is more robust than checking for a
-                # specific padding value like (0,0,0) which could be a valid coordinate.
-                B = len(lengths)
-                max_len = kv_xyz.shape[1]
-                range_tensor = torch.arange(max_len, device=kv_xyz.device).expand(B, max_len)
-                lengths_tensor = torch.tensor(lengths, device=kv_xyz.device).unsqueeze(1)
-                kv_pad = range_tensor >= lengths_tensor
-                
-            kv_feat = self.map_feature_proj(kv_feat_raw)
-
-            depth = observations["depth"].permute(0, 3, 1, 2).float() / 1000.0
-            pose = observations["sensor_param"]["base_camera"]["extrinsic_cv"]
+                raw_cat      = torch.cat(rawfeat_list, dim=0)         # (ΣLᵢ, F_raw)
+                dec_cat      = self.decoder(raw_cat)                  # (ΣLᵢ, 768)
             
-            rgb_features = self.cnn(rgb_obs) # B, C, H, W
-            
-            # Unproject to get 3D coordinates for each pixel in the feature map
-            feat_h, feat_w = rgb_features.shape[2], rgb_features.shape[3]
-            depth_resampled = F.interpolate(depth, size=(feat_h, feat_w), mode='nearest-exact')
+            split_sizes  = [c.size(0) for c in coords_list]
+            dec_list     = dec_cat.split(split_sizes, dim=0)      # list[Lᵢ, 768]
 
-            # We need camera intrinsics for the original image size
-            og_h, og_w = observations["rgb"].shape[1], observations["rgb"].shape[2]
-            
-            # Hardcoded for now
-            fx, fy, cx, cy = 64, 64, 64, 64
-            q_xyz, _ = get_3d_coordinates(depth_resampled, pose, fx=fx, fy=fy, cx=cx, cy=cy, original_size=(og_h, og_w))
-            q_xyz = q_xyz.permute(0, 2, 3, 1).reshape(batch_size, -1, 3) # B, H*W, 3
-            
-            q_feat = rgb_features.permute(0, 2, 3, 1).reshape(batch_size, -1, self.rgb_feature_dim) # B, H*W, C
+            # -------- 3. Pad for local fusion attention --------------------------
+            kv_xyz       = torch.nn.utils.rnn.pad_sequence(coords_list, batch_first=True)  # (B,Lmax,3)
+            kv_raw       = torch.nn.utils.rnn.pad_sequence(dec_list,   batch_first=True)  # (B,Lmax,768)
 
-            # Debug: Sanity check visualization for local feature fusion
-            # if False: # True:
-            #     import plotly.graph_objects as go
+            # key-padding mask: True ➜ ignore
+            lens         = torch.tensor(split_sizes, device=kv_xyz.device)
+            idx_row      = torch.arange(kv_xyz.size(1), device=kv_xyz.device).expand(B, -1)
+            kv_pad       = idx_row >= lens.unsqueeze(1)                                 # (B,Lmax)
+            kv_feat      = self.map_feature_proj(kv_raw)                                # (B,Lmax,C_rgb)
 
-            #     # Visualize batch 0
-            #     q_xyz_vis = q_xyz[0].detach().cpu().numpy()
-            #     kv_xyz_vis = kv_xyz[0].detach().cpu().numpy()
-            #     kv_pad_vis = kv_pad[0].detach().cpu().numpy()
+            # -------- 4. Build query (pixel) 3-D coords + features ----------------
+            depth   = observations["depth"].permute(0, 3, 1, 2).float() / 1000.0
+            pose    = observations["sensor_param"]["base_camera"]["extrinsic_cv"]
+            Hf, Wf  = rgb_f.shape[2:]
+            depth_s = F.interpolate(depth, size=(Hf, Wf), mode="nearest-exact")
 
-            #     # --------------------------------------------
-            #     # Measure distances between q_xyz and kv_xyz
-            #     # for environment 0 (debugging)
-            #     # --------------------------------------------
-            #     # Filter out padded kv_xyz points
-            #     kv_xyz_valid = kv_xyz_vis[~kv_pad_vis]
+            fx = fy = cx = cy = 64                           # TODO: replace with real intrinsics
+            q_xyz, _ = get_3d_coordinates(
+                depth_s, pose, fx=fx, fy=fy, cx=cx, cy=cy,
+                original_size=observations["rgb"].shape[1:3],
+            )
+            q_xyz  = q_xyz.permute(0, 2, 3, 1).reshape(B, -1, 3)                # (B,H'W',3)
+            q_feat = rgb_f.permute(0, 2, 3, 1).reshape(B, -1, self.rgb_feature_dim)  # (B,H'W',C_rgb)
 
-            #     # Compute pairwise distances (N_query, N_kv)
-            #     import numpy as np
-            #     dist_matrix = np.linalg.norm(
-            #         q_xyz_vis[:, None, :] - kv_xyz_valid[None, :, :],
-            #         axis=-1
-            #     )
+            # -------- 5. Local fusion (3-D ↔ 2-D attention) -----------------------
+            fused  = self.local_fusion(q_xyz, q_feat, kv_xyz, kv_feat, kv_pad)   # (B,H'W',C_rgb)
+            fused  = fused.reshape(B, Hf, Wf, -1).permute(0, 3, 1, 2)            # (B,C_rgb,H',W')
+            proj   = self.feature_proj(fused)                                    # (B,256)
+            encoded.append(proj)
 
-            #     # For each query point, find the nearest kv point
-            #     min_dists = dist_matrix.min(axis=1)
-
-            #     print("--- Distance statistics between q_xyz and kv_xyz (env0) ---")
-            #     print(f"Number of q points : {len(q_xyz_vis)}")
-            #     print(f"Number of kv points: {len(kv_xyz_valid)}")
-            #     print(f"Min distance       : {min_dists.min():.6f}")
-            #     print(f"Max distance       : {min_dists.max():.6f}")
-            #     print(f"Mean distance      : {min_dists.mean():.6f}")
-
-            #     # Filter out padded points in kv_xyz
-            #     kv_xyz_vis = kv_xyz_vis[~kv_pad_vis]
-
-            #     # Create Plotly figure
-            #     fig = go.Figure()
-
-            #     # Add q_xyz points
-            #     fig.add_trace(go.Scatter3d(
-            #         x=q_xyz_vis[:, 0],
-            #         y=q_xyz_vis[:, 1],
-            #         z=q_xyz_vis[:, 2],
-            #         mode='markers',
-            #         marker=dict(
-            #             size=2,
-            #             color='red',                # set color to red
-            #             opacity=0.8
-            #         ),
-            #         name='q_xyz',
-            #         hoverinfo='text',
-            #         text=[f'q: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in q_xyz_vis]
-            #     ))
-
-            #     # Add kv_xyz points
-            #     fig.add_trace(go.Scatter3d(
-            #         x=kv_xyz_vis[:, 0],
-            #         y=kv_xyz_vis[:, 1],
-            #         z=kv_xyz_vis[:, 2],
-            #         mode='markers',
-            #         marker=dict(
-            #             size=2,
-            #             color='blue',               # set color to blue
-            #             opacity=0.8
-            #         ),
-            #         name='kv_xyz',
-            #         hoverinfo='text',
-            #         text=[f'kv: ({x:.2f}, {y:.2f}, {z:.2f})' for x, y, z in kv_xyz_vis]
-            #     ))
-
-            #     # Add coordinate frame
-            #     fig.add_trace(go.Scatter3d(x=[0, 0.1], y=[0, 0], z=[0, 0], mode='lines', line=dict(color='red', width=4), name='X-axis'))
-            #     fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0.1], z=[0, 0], mode='lines', line=dict(color='green', width=4), name='Y-axis'))
-            #     fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 0.1], mode='lines', line=dict(color='blue', width=4), name='Z-axis'))
-
-            #     fig.update_layout(
-            #         title='3D Point Cloud Visualization',
-            #         scene=dict(
-            #             xaxis_title='X',
-            #             yaxis_title='Y',
-            #             zaxis_title='Z',
-            #             aspectmode='data'
-            #         ),
-            #         margin=dict(l=0, r=0, b=0, t=40)
-            #     )
-
-            #     # Save to HTML
-            #     fig.write_html("visualization.html")
-            #     print("Visualization saved to visualization.html")
-
-            #     import sys
-            #     sys.exit() # Stop execution after saving visualization
-            # END: Sanity check visualization
-
-            fused_features = self.local_fusion(q_xyz, q_feat, kv_xyz, kv_feat, kv_pad) # B, H*W, C
-            fused_features = fused_features.reshape(batch_size, feat_h, feat_w, -1)
-            fused_features = fused_features.permute(0, 3, 1, 2) # B, C, H, W
-
-            projected_features = self.feature_proj(fused_features)
-            encoded_tensor_list.append(projected_features)
+            # -------- 6. Global map encoding via PointNet ------------------------
+            concat_list = [torch.cat([c, d], dim=-1) for c, d in zip(coords_list, dec_list)]  # (Lᵢ, 3+768)
+            pad_3d      = torch.nn.utils.rnn.pad_sequence(concat_list, batch_first=True)      # (B,Lmax, 771)
+            map_enc     = self.map_encoder(pad_3d)                                # (B,256)
+            encoded.append(map_enc)
 
         else:
-            encoded_tensor_list.append(
-                self.extractors['rgb'](rgb_obs)
-            )
+            # No map features → fallback to standard RGB extractor
+            encoded.append(self.extractors["rgb"](rgb))
 
+        # ------------------------------------------------------------- State MLP -
         if "state" in self.extractors:
-            encoded_tensor_list.append(self.extractors['state'](observations['state']))
+            encoded.append(self.extractors["state"](observations["state"]))
 
-        # Process map features with PointNet
-        if map_features and self.decoder:
-            with torch.no_grad():
-                all_coords = [grid.levels[1].coords for grid in map_features]
-                max_len = max(len(c) for c in all_coords)
-                
-                padded_features = []
-                for i, grid in enumerate(map_features):
-                    coords = all_coords[i]
-                    grid_feats = grid.query_voxel_feature(coords)
-                    decoded_feats = self.decoder(grid_feats)
-                    
-                    combined = torch.cat([coords, decoded_feats], dim=-1)
-                    
-                    pad_len = max_len - len(coords)
-                    if pad_len > 0:
-                        padding = torch.zeros(pad_len, combined.shape[1], device=combined.device)
-                        combined = torch.cat([combined, padding], dim=0)
-                    padded_features.append(combined)
-            
-            padded_features = torch.stack(padded_features)
-            map_encoding = self.map_encoder(padded_features)
-            encoded_tensor_list.append(map_encoding)
-
-        return torch.cat(encoded_tensor_list, dim=1)
+        # ----------------------------------------------------------- Final concat -
+        return torch.cat(encoded, dim=1)                 # (B, self.out_features)
 
 
 class NatureCNN(nn.Module):
