@@ -49,7 +49,7 @@ def get_3d_coordinates(
     fy: float,
     cx: float,
     cy: float,
-    original_size: int = 224,
+    original_size,
 ):
     """
     Computes 3D coordinates from 2D feature maps and depth.
@@ -72,9 +72,14 @@ def get_3d_coordinates(
     
     B, H_feat, W_feat = depth.shape  
 
+    if isinstance(original_size, int):
+        original_h, original_w = original_size, original_size
+    else:
+        original_h, original_w = original_size
+
     # Scale intrinsics
-    scale_x = W_feat / float(original_size)
-    scale_y = H_feat / float(original_size)
+    scale_x = W_feat / float(original_w)
+    scale_y = H_feat / float(original_h)
     fx_new = fx * scale_x
     fy_new = fy * scale_y
     cx_new = cx * scale_x

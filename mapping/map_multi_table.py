@@ -1,4 +1,4 @@
-import os, time, argparse
+import os, time, argparse, glob
 from pathlib import Path
 import numpy as np
 import cv2
@@ -9,6 +9,7 @@ import open3d as o3d
 import plotly.graph_objs as go
 import plotly.offline as pyo
 import random
+from collections import defaultdict
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import Dataset
@@ -42,7 +43,7 @@ class MultiEnvDataset(Dataset):
             depth_t = torch.from_numpy(depth_np).unsqueeze(0).unsqueeze(0).float() / 1000.0
             depth_t = F.interpolate(depth_t, (16, 16), mode="nearest-exact").squeeze() # to (16, 16)
 
-            E_cv = world_to_cam_poses[pose_idx][:3]
+            E_cv = world_to_cam_poses[pose_idx]
             extrinsic_t = torch.from_numpy(E_cv).float()
 
             self.data.append({
@@ -70,10 +71,10 @@ parser.add_argument(
     help="Path to the dataset directory with env_xxx subfolders."
 )
 parser.add_argument(
-    "--poses-file",
+    "--poses-dir",
     type=str,
-    default="mapping/poses.txt",
-    help="Path to the poses.txt file."
+    default="mapping/poses",
+    help="Path to the directory with .npy pose files."
 )
 parser.add_argument(
     "--output-dir",
@@ -84,7 +85,7 @@ parser.add_argument(
 parser.add_argument(
     "--epochs",
     type=int,
-    default=30,
+    default=20,
     help="Number of training epochs per environment."
 )
 parser.add_argument(
@@ -95,7 +96,19 @@ parser.add_argument(
 parser.add_argument(
     "--pca",
     action="store_true",
-    help="Generate PCA visualization of voxel features for env_000."
+    help="Generate PCA visualization of voxel features for the specified environment(s)."
+)
+parser.add_argument(
+    "--vis-fine-grid",
+    action="store_true",
+    help="Generate visualization of the finest voxel grid vertices for the specified environment(s)."
+)
+parser.add_argument(
+    "--envs",
+    type=str,
+    nargs='+',
+    default=['env_000', 'env_001', 'env_002', 'env_003', 'env_004', 'env_005', 'env_006', 'env_007', 'env_008', 'env_009'],
+    help="List of environment directory names to visualize (e.g., env_000 env_001)."
 )
 args = parser.parse_args()
 
@@ -133,16 +146,13 @@ SCENE_MAX = (0.4,  1.0,  0.5)
 # --------------------------------------------------------------------------- #
 #  Helper functions                                                           #
 # --------------------------------------------------------------------------- #
-def load_poses(filepath: str) -> np.ndarray:
-    """Loads poses from file, returns (N, 4, 4) cam_to_world matrices."""
-    poses = []
-    with open(filepath, 'r') as f:
-        for line in f:
-            T = np.fromstring(line, dtype=float, sep=' ')
-            T = T.reshape(3, 4)
-            T = np.vstack([T, [0, 0, 0, 1]])
-            poses.append(T)
-    return np.array(poses)
+def load_w2c_poses_from_dir(dir_path: str) -> np.ndarray:
+    """Loads world-to-camera poses from .npy files, returns (N, 3, 4) matrices."""
+    pose_files = sorted(glob.glob(os.path.join(dir_path, "*.npy")))
+    if not pose_files:
+        raise FileNotFoundError(f"No .npy pose files found in {dir_path}")
+    poses = [np.load(f) for f in pose_files]
+    return np.stack(poses, axis=0)
 
 # --------------------------------------------------------------------------- #
 #  Main processing loop                                                       #
@@ -154,11 +164,22 @@ def main():
         output_path.mkdir(parents=True, exist_ok=True)
 
     try:
-        cam_to_world_poses = load_poses(args.poses_file)
-        world_to_cam_poses = np.linalg.inv(cam_to_world_poses)
+        world_to_cam_poses = load_w2c_poses_from_dir(args.poses_dir)
     except FileNotFoundError:
-        print(f"[ERROR] Poses file not found at {args.poses_file}")
+        print(f"[ERROR] Poses directory '{args.poses_dir}' not found or is empty.")
         return
+
+    # For PCA visualization, we need camera-to-world transformations
+    cam_to_world_poses_list = []
+    for w2c_3x4 in world_to_cam_poses:
+        c2w = np.eye(4)
+        R = w2c_3x4[:3, :3]
+        t = w2c_3x4[:3, 3]
+        c2w[:3, :3] = R.T
+        c2w[:3, 3] = -R.T @ t
+        cam_to_world_poses_list.append(c2w)
+    cam_to_world_poses = np.array(cam_to_world_poses_list)
+
 
     env_dirs = sorted([d for d in dataset_path.iterdir() if d.is_dir() and d.name.startswith('env_')])
 
@@ -175,7 +196,23 @@ def main():
             mode="train",
         )
         grids[env_dir.name] = grid
+        
+        stats = grid.collision_stats()
+        print(f"--- Collision stats for {env_dir.name}: ---")
+        for level_name, stat in stats.items():
+            total = stat['total']
+            collisions = stat['col']
+            if total > 0:
+                percentage = (collisions / total) * 100
+                print(f"  {level_name}: {collisions} collisions out of {total} voxels ({percentage:.2f}%)")
+            else:
+                print(f"  {level_name}: 0 voxels")
+        print("-------------------------------------------------")
+
     
+    # --- Aggregate raw valid coordinates for each environment (for viz) ---
+    agg_coords = defaultdict(list)
+
     # 2. Setup a single optimizer for all grids and the shared decoder
     all_grid_params = [p for grid in grids.values() for p in grid.parameters()]
     optimizer = torch.optim.Adam(all_grid_params + list(decoder.parameters()), lr=OPT_LR)
@@ -210,6 +247,8 @@ def main():
         loss_history = []
         
         for i, sample_idx in enumerate(indices):
+        
+            
             data = dataset[sample_idx]
             env_name = data["env_name"]
 
@@ -223,20 +262,13 @@ def main():
             
             coords_world, _ = get_3d_coordinates(
                 depth_t, extrinsic_t,
-                fx=154.15475464, fy=154.15475464, cx=112, cy=112,
+                fx=154.1548, fy=154.1548, cx=112, cy=112,
             )
 
             B, C_, Hf, Wf = vis_feat.shape
-            feats_flat = vis_feat.permute(0, 2, 3, 1).reshape(-1, C_)
-            coords_flat = coords_world.permute(0, 2, 3, 1).reshape(-1, 3)
-
-            depth_flat = depth_t.view(-1)
-            valid_mask = depth_flat > 0.1
-            if valid_mask.sum() == 0:
-                continue
-
-            coords_valid = coords_flat[valid_mask]
-            feats_valid = feats_flat[valid_mask]
+            feats_valid = vis_feat.permute(0, 2, 3, 1).reshape(-1, C_)
+            coords_valid = coords_world.permute(0, 2, 3, 1).reshape(-1, 3)
+        
 
             in_x = (coords_valid[:,0] >= SCENE_MIN[0]) & (coords_valid[:,0] <= SCENE_MAX[0])
             in_y = (coords_valid[:,1] >= SCENE_MIN[1]) & (coords_valid[:,1] <= SCENE_MAX[1])
@@ -247,7 +279,11 @@ def main():
                 continue
 
             coords_valid = coords_valid[in_bounds].to(DEVICE)
+
+            # accumulate for visualization (store on CPU to save GPU mem)
+            agg_coords[env_name].append(coords_valid.cpu())
             feats_valid = feats_valid[in_bounds].to(DEVICE)
+        
             
             grid = grids[env_name] # Get the correct grid for this environment
             
@@ -269,6 +305,24 @@ def main():
         avg_loss = sum(loss_history) / len(loss_history) if loss_history else 0
         print(f"[Epoch {epoch+1}/{args.epochs}] Avg. Loss: {avg_loss:.4f}")
 
+    # ----------------------------------------------------------------------- #
+    #  Check hash collisions in infer mode                                     #
+    # ----------------------------------------------------------------------- #
+    print("\n[CHECK] Evaluating hash collisions in infer mode for each environment...")
+    for env_name, grid in grids.items():
+        sparse_data = grid.export_sparse()
+        infer_grid = VoxelHashTable(mode="infer", sparse_data=sparse_data, device=DEVICE)
+        stats = infer_grid.collision_stats()
+        print(f"  [Infer] {env_name}:")
+        for level_name, stat in stats.items():
+            total = stat['total']
+            collisions = stat['col']
+            if total > 0:
+                percentage = (collisions / total) * 100
+                print(f"    {level_name}: {collisions} collisions out of {total} voxels ({percentage:.2f}%)")
+            else:
+                print(f"    {level_name}: 0 voxels")
+
     if args.save:
         for env_name, grid in grids.items():
             dense_grid_path = output_path / f"{env_name}_grid.pt"
@@ -282,100 +336,154 @@ def main():
         print(f"[SAVE] Saved shared decoder to {decoder_path}")
     
     # --- PCA Visualization ---
-    # if args.pca:
-    #     intrinsic_path = dataset_path / "intrinsic.txt"
-    #     if not intrinsic_path.exists():
-    #         print(f"[VIS] [ERROR] Intrinsic file not found at {intrinsic_path}. Skipping PCA.")
-    #     else:
-    #         K = np.loadtxt(intrinsic_path)
-    #         for env_idx in range(11): # For env_000 to env_010
-    #             env_dir_name = f'env_{env_idx:03d}'
-    #             if env_dir_name not in grids:
-    #                 print(f"[VIS] Grid for {env_dir_name} not found, skipping PCA.")
-    #                 continue
+    if args.pca:
+        intrinsic_path = dataset_path / "intrinsic.txt"
+        if not intrinsic_path.exists():
+            print(f"[VIS] [ERROR] Intrinsic file not found at {intrinsic_path}. Skipping PCA.")
+        else:
+            K = np.loadtxt(intrinsic_path)
+            for env_dir_name in args.envs:
+                if env_dir_name not in grids:
+                    print(f"[VIS] Grid for {env_dir_name} not found, skipping PCA.")
+                    continue
+                env_dir = dataset_path / env_dir_name
+                grid = grids[env_dir_name]
+                print(f"\n[VIS] Running PCA on voxel features for {env_dir_name} ...")
 
-    #             env_dir = dataset_path / env_dir_name
-    #             grid = grids[env_dir_name]
-    #             print(f"\n[VIS] Running PCA on voxel features for {env_dir_name} ...")
+                rgb_files = sorted(list((env_dir / "rgb").glob("*.png")))
+                depth_files = sorted(list((env_dir / "depth").glob("*.png")))
 
-    #             rgb_files = sorted(list((env_dir / "rgb").glob("*.png")))
-    #             depth_files = sorted(list((env_dir / "depth").glob("*.png")))
+                if not rgb_files or not depth_files:
+                    print(f"[VIS] No image data found in {env_dir_name}, skipping.")
+                else:
+                    pcds = []
+                    img_for_shape = cv2.imread(str(rgb_files[0]))
+                    H, W, _ = img_for_shape.shape
+                    intrinsic = o3d.camera.PinholeCameraIntrinsic(W, H, K[0,0], K[1,1], K[0,2], K[1,2])
 
-    #             if not rgb_files or not depth_files:
-    #                 print(f"[VIS] No image data found in {env_dir_name}, skipping.")
-    #                 continue
+                    for i, (rgb_path, depth_path) in enumerate(zip(rgb_files, depth_files)):
+                        rgb_np = cv2.cvtColor(cv2.imread(str(rgb_path)), cv2.COLOR_BGR2RGB)
+                        depth_np = cv2.imread(str(depth_path), cv2.IMREAD_UNCHANGED)
+                        
+                        if np.max(depth_np) == 0: continue
 
-    #             pcds = []
-    #             img_for_shape = cv2.imread(str(rgb_files[0]))
-    #             H, W, _ = img_for_shape.shape
-    #             intrinsic = o3d.camera.PinholeCameraIntrinsic(W, H, K[0,0], K[1,1], K[0,2], K[1,2])
+                        rgb_o3d = o3d.geometry.Image(rgb_np)
+                        depth_o3d = o3d.geometry.Image(depth_np)
+                        
+                        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+                            rgb_o3d, depth_o3d, depth_scale=1000.0, depth_trunc=10.0, convert_rgb_to_intensity=False
+                        )
+                        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsic)
 
-    #             for i, (rgb_path, depth_path) in enumerate(zip(rgb_files, depth_files)):
-    #                 rgb_np = cv2.cvtColor(cv2.imread(str(rgb_path)), cv2.COLOR_BGR2RGB)
-    #                 depth_np = cv2.imread(str(depth_path), cv2.IMREAD_UNCHANGED)
+                        if pcd.has_points():
+                            pcd.transform(cam_to_world_poses[i])
+                            pcds.append(pcd)
                     
-    #                 if np.max(depth_np) == 0: continue
+                    if not pcds:
+                        print("[VIS] No points generated for PCA. Skipping.")
+                    else:
+                        aggregated_pcd = sum(pcds, o3d.geometry.PointCloud())
+                        vertices_np = np.asarray(aggregated_pcd.points).astype(np.float32)
 
-    #                 rgb_o3d = o3d.geometry.Image(rgb_np)
-    #                 depth_o3d = o3d.geometry.Image(depth_np)
-                    
-    #                 rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
-    #                     rgb_o3d, depth_o3d, depth_scale=1000.0, depth_trunc=10.0, convert_rgb_to_intensity=False
-    #                 )
-    #                 pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsic)
+                        ds_size = 0.05
+                        voxel_idx = np.floor(vertices_np / ds_size).astype(np.int32)
+                        _, uniq = np.unique(voxel_idx, axis=0, return_index=True)
+                        vertices_ds = vertices_np[uniq]
 
-    #                 if pcd.has_points():
-    #                     pcd.transform(cam_to_world_poses[i])
-    #                     pcds.append(pcd)
+                        in_x = (vertices_ds[:,0] >= SCENE_MIN[0]) & (vertices_ds[:,0] <= SCENE_MAX[0])
+                        in_y = (vertices_ds[:,1] >= SCENE_MIN[1]) & (vertices_ds[:,1] <= SCENE_MAX[1])
+                        in_z = (vertices_ds[:,2] >= SCENE_MIN[2]) & (vertices_ds[:,2] <= SCENE_MAX[2])
+                        in_bounds = in_x & in_y & in_z
+                        vertices_vis = vertices_ds[in_bounds]
+                        
+                        if vertices_vis.shape[0] == 0:
+                            print("[VIS] No vertices inside grid bounds; skipping PCA visualization.")
+                        else:
+                            coords_t = torch.from_numpy(vertices_vis).to(DEVICE)
+                            with torch.no_grad():
+                                voxel_feat = grid.query_voxel_feature(coords_t)
+                                feats_t    = decoder(voxel_feat)
+                            
+                            feats_np = feats_t.cpu().numpy()
+                            pca = PCA(n_components=3)
+                            feats_pca = pca.fit_transform(feats_np)
+                            scaler = MinMaxScaler()
+                            feats_pca_norm = scaler.fit_transform(feats_pca)
+                            
+                            p_fig = go.Figure()
+                            p_fig.add_trace(go.Scatter3d(
+                                x=vertices_vis[:,0], y=vertices_vis[:,1], z=vertices_vis[:,2],
+                                mode="markers",
+                                marker=dict(
+                                    size=10,
+                                    color=[f"rgb({int(r*255)},{int(g*255)},{int(b*255)})" for r,g,b in feats_pca_norm],
+                                    opacity=0.8)
+                            ))
+                            p_fig.update_layout(scene=dict(aspectmode="data"), margin=dict(l=0,r=0,b=0,t=0))
+                            
+                            PCA_HTML = output_path / f"{env_dir_name}_pca.html"
+                            pyo.plot(p_fig, filename=str(PCA_HTML), auto_open=False)
+                            print(f"[VIS] PCA visualization for {env_dir_name} saved to {PCA_HTML}")
+
+
+    # --- Fine-level Voxel Grid Visualization ---
+    if args.vis_fine_grid:
+        for env_dir_name in args.envs:
+            if env_dir_name not in grids:
+                print(f"[VIS-GRID] Grid for {env_dir_name} not found, skipping visualization.")
+                continue
+            grid = grids[env_dir_name]
+            print(f"\n[VIS-GRID] Visualizing finest voxel grid for {env_dir_name} ...")
+            
+            # The finest level is the last one in the list as they are sorted coarse to fine.
+            # However, during training setup, they are created from coarse to fine, 
+            # but the resolution is calculated as `resolution * (level_scale ** (num_levels - 1 - lv))`.
+            # This means lv=0 is the coarsest. So we want the last level, lv = num_levels - 1.
+            finest_level = grid.levels[-1]
+            
+            # Get only the vertices that were accessed during training.
+            accessed_indices = finest_level.get_accessed_indices()
+            
+            print(f"[VIS-GRID] Found {len(accessed_indices)} accessed vertices in the finest grid level.")
+
+            if len(accessed_indices) == 0:
+                print("[VIS-GRID] No accessed vertices to visualize. Skipping.")
+            else:
+                all_coords = finest_level.coords
+                vertices = all_coords[accessed_indices].cpu().numpy()
+            
+
+                fig = go.Figure()
+
+                # Plot all coords_valid encountered (red)
+                if env_dir_name in agg_coords and len(agg_coords[env_dir_name]) > 0:
+                    all_coords_vis = torch.cat(agg_coords[env_dir_name], dim=0).numpy()
+                    fig.add_trace(go.Scatter3d(
+                        x=all_coords_vis[:,0], y=all_coords_vis[:,1], z=all_coords_vis[:,2],
+                        mode="markers",
+                        marker=dict(size=2, color='red', opacity=0.6),
+                        name="All coords_valid"
+                    ))
+
+                # Plot accessed vertices (green)
+                fig.add_trace(go.Scatter3d(
+                    x=vertices[:,0], y=vertices[:,1], z=vertices[:,2],
+                    mode="markers",
+                    marker=dict(size=2, color='green', opacity=0.8),
+                    name="Accessed vertices"
+                ))
+                fig.update_layout(
+                    title=f"Accessed Fine-level Voxel Vertices for {env_dir_name}",
+                    scene=dict(aspectmode="data"),
+                    margin=dict(l=0,r=0,b=0,t=0)
+                )
                 
-    #             if not pcds:
-    #                 print("[VIS] No points generated for PCA. Skipping.")
-    #             else:
-    #                 aggregated_pcd = sum(pcds, o3d.geometry.PointCloud())
-    #                 vertices_np = np.asarray(aggregated_pcd.points).astype(np.float32)
-
-    #                 ds_size = 0.05
-    #                 voxel_idx = np.floor(vertices_np / ds_size).astype(np.int32)
-    #                 _, uniq = np.unique(voxel_idx, axis=0, return_index=True)
-    #                 vertices_ds = vertices_np[uniq]
-
-    #                 in_x = (vertices_ds[:,0] >= SCENE_MIN[0]) & (vertices_ds[:,0] <= SCENE_MAX[0])
-    #                 in_y = (vertices_ds[:,1] >= SCENE_MIN[1]) & (vertices_ds[:,1] <= SCENE_MAX[1])
-    #                 in_z = (vertices_ds[:,2] >= SCENE_MIN[2]) & (vertices_ds[:,2] <= SCENE_MAX[2])
-    #                 in_bounds = in_x & in_y & in_z
-    #                 vertices_vis = vertices_ds[in_bounds]
-                    
-    #                 if vertices_vis.shape[0] == 0:
-    #                     print("[VIS] No vertices inside grid bounds; skipping PCA visualization.")
-    #                 else:
-    #                     coords_t = torch.from_numpy(vertices_vis).to(DEVICE)
-    #                     with torch.no_grad():
-    #                         voxel_feat = grid.query_voxel_feature(coords_t)
-    #                         feats_t    = decoder(voxel_feat)
-                        
-    #                     feats_np = feats_t.cpu().numpy()
-    #                     pca = PCA(n_components=3)
-    #                     feats_pca = pca.fit_transform(feats_np)
-    #                     scaler = MinMaxScaler()
-    #                     feats_pca_norm = scaler.fit_transform(feats_pca)
-                        
-    #                     p_fig = go.Figure()
-    #                     p_fig.add_trace(go.Scatter3d(
-    #                         x=vertices_vis[:,0], y=vertices_vis[:,1], z=vertices_vis[:,2],
-    #                         mode="markers",
-    #                         marker=dict(
-    #                             size=10,
-    #                             color=[f"rgb({int(r*255)},{int(g*255)},{int(b*255)})" for r,g,b in feats_pca_norm],
-    #                             opacity=0.8)
-    #                     ))
-    #                     p_fig.update_layout(scene=dict(aspectmode="data"), margin=dict(l=0,r=0,b=0,t=0))
-                        
-    #                     PCA_HTML = output_path / f"{env_dir_name}_pca.html"
-    #                     pyo.plot(p_fig, filename=str(PCA_HTML), auto_open=False)
-    #                     print(f"[VIS] PCA visualization for {env_dir_name} saved to {PCA_HTML}")
+                VIS_HTML_PATH = output_path / f"{env_dir_name}_accessed_fine_grid.html"
+                pyo.plot(fig, filename=str(VIS_HTML_PATH), auto_open=False)
+                print(f"[VIS-GRID] Visualization of accessed vertices saved to {VIS_HTML_PATH}")
 
 
     print("\nDone.")
 
 if __name__ == "__main__":
-    main() 
+    main()
