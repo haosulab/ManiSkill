@@ -217,3 +217,19 @@ transform = transforms.Compose(
         ),
     ]
 )
+
+def get_visual_features_dino(model, x):
+    """
+    x: (B, C, H, W)
+    return: (B, 1024, H//14, W//14)
+    """
+    B, C, H, W = x.size()
+
+    x = model.prepare_tokens_with_masks(x)
+
+    for idx, blk in enumerate(model.blocks):
+        x = blk(x)
+
+    x = x[:, 1:, :].permute(0, 2, 1).reshape(B, 384, H // 14, W // 14).contiguous()
+    
+    return x
