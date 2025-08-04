@@ -72,9 +72,9 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 512
+    num_envs: int = 400
     """the number of parallel environments"""
-    num_eval_envs: int = 100
+    num_eval_envs: int = 20
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
     """whether to let parallel environments reset upon termination instead of truncation"""
@@ -123,7 +123,7 @@ class Args:
     finite_horizon_gae: bool = False
 
     # Environment discretisation
-    grid_dim: int = 10
+    grid_dim: int = 20
     """Number of cells per axis used for discrete initialisation (N×N grid)."""
 
     # Map-related arguments
