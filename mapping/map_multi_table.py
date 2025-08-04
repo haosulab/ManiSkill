@@ -91,6 +91,7 @@ parser.add_argument(
 parser.add_argument(
     "--save",
     action="store_true",
+    default=True,
     help="Save the trained voxel grids & shared decoder."
 )
 parser.add_argument(
