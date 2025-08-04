@@ -110,6 +110,12 @@ parser.add_argument(
     default=['env_000', 'env_001', 'env_002', 'env_003', 'env_004', 'env_005', 'env_006', 'env_007', 'env_008', 'env_009'],
     help="List of environment directory names to visualize (e.g., env_000 env_001)."
 )
+parser.add_argument(
+    "--decoder-path",
+    type=str,
+    default="pretrained/implicit_decoder.pt",
+    help="Path to pre-trained decoder weights (implicit decoder)."
+)
 args = parser.parse_args()
 
 # --------------------------------------------------------------------------- #
@@ -131,9 +137,22 @@ GRID_LVLS         = 2
 GRID_FEAT_DIM     = 64
 decoder = ImplicitDecoder(
     voxel_feature_dim=GRID_FEAT_DIM * GRID_LVLS,
-    hidden_dim=768,
+    hidden_dim=240,
     output_dim=768,
 ).to(DEVICE)
+
+# ----------------------------------------------------------------------- #
+#  Load pre-trained decoder weights if available                          #
+# ----------------------------------------------------------------------- #
+if args.decoder_path and os.path.isfile(args.decoder_path):
+    try:
+        state_dict = torch.load(args.decoder_path, map_location=DEVICE)['model']
+        decoder.load_state_dict(state_dict)
+        print(f"[INIT] Loaded pre-trained decoder weights from {args.decoder_path}")
+    except Exception as e:
+        print(f"[INIT] Failed to load pre-trained decoder weights from {args.decoder_path}: {e}")
+else:
+    print(f"[INIT] No pre-trained decoder weights found at {args.decoder_path}. Using random initialization.")
 
 OPT_LR = 1e-3
 
@@ -198,16 +217,16 @@ def main():
         grids[env_dir.name] = grid
         
         stats = grid.collision_stats()
-        print(f"--- Collision stats for {env_dir.name}: ---")
-        for level_name, stat in stats.items():
-            total = stat['total']
-            collisions = stat['col']
-            if total > 0:
-                percentage = (collisions / total) * 100
-                print(f"  {level_name}: {collisions} collisions out of {total} voxels ({percentage:.2f}%)")
-            else:
-                print(f"  {level_name}: 0 voxels")
-        print("-------------------------------------------------")
+        # print(f"--- Collision stats for {env_dir.name}: ---")
+        # for level_name, stat in stats.items():
+        #     total = stat['total']
+        #     collisions = stat['col']
+        #     if total > 0:
+        #         percentage = (collisions / total) * 100
+        #         print(f"  {level_name}: {collisions} collisions out of {total} voxels ({percentage:.2f}%)")
+        #     else:
+        #         print(f"  {level_name}: 0 voxels")
+        # print("-------------------------------------------------")
 
     
     # --- Aggregate raw valid coordinates for each environment (for viz) ---

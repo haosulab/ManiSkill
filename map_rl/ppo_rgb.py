@@ -202,7 +202,7 @@ if __name__ == "__main__":
         try:
             decoder = ImplicitDecoder(
                 voxel_feature_dim=64 * 2, # GRID_FEAT_DIM * GRID_LVLS from map_multi_table.py
-                hidden_dim=768,
+                hidden_dim=240,
                 output_dim=768,
             ).to(device)
             decoder.load_state_dict(torch.load(args.decoder_path, map_location=device))
