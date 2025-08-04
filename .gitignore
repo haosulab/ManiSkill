@@ -53,3 +53,6 @@ htmlcov/
 /mapping/multi_env_maps
 /runs/
 /wandb/
+
+output.log
+run_scripts/

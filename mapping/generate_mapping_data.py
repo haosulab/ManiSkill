@@ -13,7 +13,8 @@ import glob
 # MARK: Parse command line arguments
 parser = argparse.ArgumentParser(description="Scan an object and generate a point cloud.")
 parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Can be rgb or rgb+depth, rgb+normal, albedo+depth etc. Which ever image-like textures you want to visualize can be tacked on")
-parser.add_argument("-n", "--num-envs", type=int, default=100, help="Total number of environments to process")
+parser.add_argument("-n", "--num-envs", type=int, default=100, help="Total number of environments to process (overridden if --grid-dim is given)")
+parser.add_argument("--grid-dim", type=int, default=None, help="If provided, total_envs will be grid_dim^2 and passed to the environment.")
 parser.add_argument("-s","--seed",type=int, default=0, help="Seed the random actions and environment. Default is no seed",)
 args = parser.parse_args()
 
@@ -53,6 +54,13 @@ def visualize_point_cloud(pcd: o3d.geometry.PointCloud):
     vis.destroy_window()
 
 
+# ------------------------------------------------------------------
+# Adjust num_envs if grid_dim provided
+# ------------------------------------------------------------------
+if args.grid_dim is not None:
+    args.num_envs = args.grid_dim ** 2
+
+# ------------------------------------------------------------------
 if args.seed is not None:
     np.random.seed(args.seed)
 
@@ -90,6 +98,7 @@ env = gym.make(
     robot_uids="none",
     obs_mode=args.obs_mode,
     num_envs=args.num_envs,
+    grid_dim=args.grid_dim if args.grid_dim is not None else 10,
     control_mode="pd_joint_pos",
     reward_mode="none",
 )
