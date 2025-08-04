@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-try:
-    import xformers.ops as xops
-    use_xformers = True
-except ImportError:
-    use_xformers = False
+# try:
+#     import xformers.ops as xops
+#     HAS_XFORMERS = True
+# except ImportError:
+#     HAS_XFORMERS = False
+HAS_XFORMERS = False
+
 from typing import Optional
 from utils import rotary_pe_3d
 import numpy as np
@@ -42,12 +44,15 @@ class TransformerLayer(nn.Module):
         d_model=256, 
         n_heads=8, 
         dim_feedforward=1024, 
-        dropout=0.1
+        dropout=0.1,
+        use_xformers: bool = True,
     ):
         super().__init__()
         self.d_model = d_model
         self.n_heads = n_heads
         self.head_dim = d_model // n_heads
+        self.use_xformers = use_xformers and HAS_XFORMERS
+
         
         self.W_q = nn.Linear(d_model, d_model)
         self.W_k = nn.Linear(d_model, d_model)
@@ -69,7 +74,8 @@ class TransformerLayer(nn.Module):
     def forward(
         self, 
         src: torch.Tensor,
-        coords_src: torch.Tensor = None,
+        key_padding_mask: Optional[torch.Tensor] = None,
+        coords_src: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         B, S, _ = src.shape
         
@@ -81,23 +87,48 @@ class TransformerLayer(nn.Module):
             q = rotary_pe_3d(q, coords_src)
             k = rotary_pe_3d(k, coords_src)
         
-        if use_xformers:
-            q = q.transpose(1, 2)
-            k = k.transpose(1, 2)
-            attn = xops.memory_efficient_attention(q, k, v, p=self.dropout_attn.p if self.training else 0.0)
+        if self.use_xformers:
+            q = q.transpose(1, 2).contiguous()
+            k = k.transpose(1, 2).contiguous()
+            
+            attn_bias = None
+            if key_padding_mask is not None:
+                # xformers >=0.0.23 removed `KeyPaddingMask`. Build a dense bias tensor instead.
+                seq_len = key_padding_mask.size(1)
+                mask = key_padding_mask[:, None, None, :].to(q.dtype)
+                attn_bias = mask.expand(-1, self.n_heads, seq_len, -1) * (-1e9)
+            else:
+                attn_bias = None
+                
+            attn = xops.memory_efficient_attention(
+                q, k, v,
+                attn_bias=attn_bias,
+                p=self.dropout_attn.p if self.training else 0.0,
+            )  # (B, S, H, D)    
+
         else:
             # PyTorch's scaled_dot_product_attention expects (B, n_heads, S, head_dim)
-            v = v.transpose(1, 2)
-            dropout_p = self.dropout_attn.p if self.training else 0.0
-            attn = F.scaled_dot_product_attention(q, k, v, dropout_p=dropout_p)
-            attn = attn.transpose(1, 2) # (B, S, n_heads, head_dim)
+            v = v.transpose(1, 2).contiguous()
+            # Build an attention mask from the key\_padding\_mask (True → ignore)
+            attn_mask = None
+            if key_padding_mask is not None:
+                # expected shape: (B, 1, 1, K) broadcastable to (B, H, Q, K)
+                attn_mask = key_padding_mask[:, None, None, :].to(torch.bool)
+            
+            attn = F.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=attn_mask,
+                dropout_p=self.dropout_attn.p if self.training else 0.0,
+            )
+            attn = attn.transpose(1, 2).contiguous() # (B, S, H, D)
         
-        attn = attn.reshape(B, S, self.d_model)
-        
+        # Collapse heads ---------------------------------------------------
+        attn = attn.reshape(B, S, self.d_model).contiguous()
+
+        # Residual & FF -----------------------------------------------------
         src2 = self.norm1(src + self.dropout_attn(self.out_proj(attn)))
         ff = self.linear2(self.activation(self.linear1(src2)))
         out = self.norm2(src2 + self.dropout_ff(ff))
-        
         return out
 
 class LocalFeatureFusion(nn.Module):
@@ -106,8 +137,8 @@ class LocalFeatureFusion(nn.Module):
         dim: int,
         n_heads: int = 8,
         ff_mult: int = 4,
-        radius: float = 0.12,
-        k: int = 4,
+        radius: float = 0.06,
+        k: int = 2,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -184,23 +215,19 @@ class LocalFeatureFusion(nn.Module):
 
         # concatenate query token with neighbor tokens
         tokens = torch.cat([q_feat.unsqueeze(2), neigh_feat], dim=2)  # (B, N, k+1, C)
-        token_xyz = torch.cat([q_xyz.unsqueeze(2), neigh_xyz], dim=2)  # (B, N, k+1, 3)
+        # token_xyz = torch.cat([q_xyz.unsqueeze(2), neigh_xyz], dim=2)  # (B, N, k+1, 3)
         
         # key-padding mask for attention (True → ignore)
-        pad_mask = torch.cat(
-            [
-                torch.zeros_like(invalid[..., :1]),  # query token (#0) is always valid
-                invalid
-            ],
-            dim=-1
-        ).view(B * N, self.k + 1)                    # (B*N, k+1)
+        key_padding_mask = torch.cat(
+            [torch.zeros_like(invalid[..., :1]), invalid], dim=-1
+        ).view(B * N, self.k + 1)
 
         # reshape to (B*N, S, C) for the transformer layer
         BM = B * N
         fused = self.attn(
             tokens.view(BM, self.k + 1, C).contiguous(),
-            coords_src=token_xyz.view(BM, self.k + 1, 3).contiguous(),
-        )                                            # (BM, k+1, C)
+            key_padding_mask=key_padding_mask,
+        )  # (BM, k+1, C)
 
         # return only the query position (index 0 within each group)
         fused_q = fused[:, 0, :].view(B, N, C) + q_feat

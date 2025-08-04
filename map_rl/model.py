@@ -83,8 +83,8 @@ class MapAwareFeatureExtractor(nn.Module):
         # ------------------------------------------------------------------ CNN -
         # Pre-trained ResNet-18 up to layer2 (128-D feature map).
         resnet = models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        self.cnn                    = nn.Sequential(*list(resnet.children())[:6], nn.Conv2d(128, 192, kernel_size=1))
-        self.rgb_feature_dim        = 192    # channel dimension after layer2
+        self.cnn                    = nn.Sequential(*list(resnet.children())[:6])
+        self.rgb_feature_dim        = 128    # channel dimension after layer2
 
         with torch.no_grad():
             dummy           = sample_obs["rgb"].float().permute(0, 3, 1, 2) / 255.0

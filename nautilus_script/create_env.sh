@@ -7,7 +7,7 @@
 # Adjust the version variables below as needed.
 #
 # ---------------------------- User Settings -----------------------------
-ENV_NAME=xformer_cuda           # 🔧 Conda environment name
+ENV_NAME=xformer_cuda_nautilus           # 🔧 Conda environment name
 PYTHON_VER=3.10                 # 🔧 Python version (3.10)
 CUDA_TAG=cu121                  # 🔧 cu118 · cu121 · etc.
 PT_VER=2.1.2                    # 🔧 PyTorch / torchaudio version
@@ -42,28 +42,31 @@ pip install \
   torchvision=="$TV_VER" \
   torchaudio=="$PT_VER"
 
-echo ">>> 5) Cloning and installing xformers (tag v$XFORMERS_VER) ..."
-git clone --branch "v$XFORMERS_VER" --depth 1 https://github.com/facebookresearch/xformers.git
-pushd xformers >/dev/null
-pip install -q -r requirements.txt
-pip install -q .
-popd >/dev/null
-rm -rf xformers
-
-echo ">>> 6) Installing PyTorch3D ($PYTORCH3D_VER) ..."
-PY_NO_DOT=${PYTHON_VER/./}        # '310'
-PT_NO_DOT=${PT_VER/./}            # '212'
+echo ">>> 5) Installing PyTorch3D ($PYTORCH3D_VER) ..."
+PY_NO_DOT=${PYTHON_VER/./}        # e.g., '310'
+PT_MAJOR_MINOR=$(echo "$PT_VER" | cut -d'.' -f1,2 | tr -d '.')  # '21' for 2.1.*
 CU_NO_DOT=${CUDA_TAG/cu/}         # '121'
-WHEEL_URL="https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py${PY_NO_DOT}_cu${CU_NO_DOT}_pyt${PT_NO_DOT}/download.html"
+WHEEL_URL="https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py${PY_NO_DOT}_cu${CU_NO_DOT}_pyt${PT_MAJOR_MINOR}/download.html"
 
-pip install "pytorch3d==$PYTORCH3D_VER" -f "$WHEEL_URL"
+# Try pre-built wheel first; if not found, fall back to building from source.
+if ! pip install "pytorch3d==$PYTORCH3D_VER" -f "$WHEEL_URL"; then
+  echo ">>> Pre-compiled wheel unavailable. Building PyTorch3D from source (this may take several minutes) ..."
+  # Build dependencies
+  pip install -q "cmake>=3.18" ninja "pybind11>=2.12" "packaging" "tqdm"
+  pip install "git+https://github.com/facebookresearch/pytorch3d.git@v$PYTORCH3D_VER"
+fi
 
-echo ">>> 7) Quick import test ..."
+echo ">>> 6) Quick import test ..."
 python - <<'PYTEST'
-import torch, xformers, pytorch3d
+import torch, pytorch3d
 print("• PyTorch   :", torch.__version__, torch.version.cuda)
-print("• xformers  :", xformers.__version__)
 print("• PyTorch3D :", pytorch3d.__version__)
 PYTEST
 
 echo "✅  Finished!  Activate the environment with:  conda activate $ENV_NAME"
+
+echo ">>> 7) Running mapping scripts ..."
+pip install -e .
+pip install open3d
+pip install tensorboard
+pip install wandb
