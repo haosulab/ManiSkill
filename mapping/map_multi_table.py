@@ -85,7 +85,7 @@ parser.add_argument(
 parser.add_argument(
     "--epochs",
     type=int,
-    default=20,
+    default=10,
     help="Number of training epochs per environment."
 )
 parser.add_argument(
