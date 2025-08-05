@@ -927,21 +927,15 @@ class ManiSkillScene:
             articulation.set_pose(articulation.initial_pose)
 
         if enable_gpu:
-            # Zero out velocities only when relevant data buffers exist.
-            if len(self.non_static_actors) > 0:
-                self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
-                    self.px.cuda_rigid_body_data.torch()[:, 7:]
-                )  # zero out all rigid body linear/angular velocities
-
-            if len(self.articulations) > 0:
-                # Only attempt to clear articulation buffers when articulations are present.
-                self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
-                    self.px.cuda_articulation_qvel.torch()
-                )  # zero out all q velocities
-                self.px.cuda_articulation_qf.torch()[:, :] = torch.zeros_like(
-                    self.px.cuda_articulation_qf.torch()
-                )  # zero out all qf
-
+            self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
+                self.px.cuda_rigid_body_data.torch()[:, 7:]
+            )  # zero out all velocities
+            self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qvel.torch()
+            )  # zero out all q velocities
+            self.px.cuda_articulation_qf.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qf.torch()
+            )  # zero out all qf
 
             self.px.gpu_apply_rigid_dynamic_data()
             self.px.gpu_apply_articulation_root_pose()
