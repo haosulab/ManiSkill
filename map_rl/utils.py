@@ -225,11 +225,23 @@ def get_visual_features_dino(model, x):
     """
     B, C, H, W = x.size()
 
-    x = model.prepare_tokens_with_masks(x)
+    x = model.prepare_tokens_with_masks(x) # B, 257, 384
 
-    for idx, blk in enumerate(model.blocks):
+    for blk in model.blocks:                      # transformer encoder
         x = blk(x)
-
-    x = x[:, 1:, :].permute(0, 2, 1).reshape(B, 384, H // 14, W // 14).contiguous()
+    x = model.norm(x) # B, 257, 384
+    x = x[:, 1:, :].permute(0, 2, 1).reshape(B, 384, H // 14, W // 14).contiguous() # B, 384, H//14, W//14
     
     return x
+
+transform = transforms.Compose(
+    [
+        transforms.Resize(
+            size=224, interpolation=transforms.InterpolationMode.BICUBIC, antialias=True
+        ),
+        transforms.Normalize(
+            mean=(0.48145466, 0.4578275, 0.40821073),
+            std=(0.26862954, 0.26130258, 0.27577711),
+        ),
+    ]
+)
