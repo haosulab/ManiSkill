@@ -1,12 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# try:
-#     import xformers.ops as xops
-#     HAS_XFORMERS = True
-# except ImportError:
-#     HAS_XFORMERS = False
-HAS_XFORMERS = False
+from pytorch3d.ops import ball_query, sample_farthest_points
+import xformers.ops as xops
 
 from typing import Optional
 from utils import rotary_pe_3d
@@ -51,7 +47,7 @@ class TransformerLayer(nn.Module):
         self.d_model = d_model
         self.n_heads = n_heads
         self.head_dim = d_model // n_heads
-        self.use_xformers = use_xformers and HAS_XFORMERS
+        self.use_xformers = use_xformers
 
         
         self.W_q = nn.Linear(d_model, d_model)
@@ -137,7 +133,7 @@ class LocalFeatureFusion(nn.Module):
         dim: int,
         n_heads: int = 8,
         ff_mult: int = 4,
-        radius: float = 0.06,
+        radius: float = 0.1,
         k: int = 2,
         dropout: float = 0.1,
     ):
@@ -148,8 +144,8 @@ class LocalFeatureFusion(nn.Module):
             n_heads=n_heads,
             dim_feedforward=dim * ff_mult,
             dropout=dropout,
+            use_xformers=False
         )
-
     # ----------------------------------------------------------
     # Find neighbor indices within <radius>; pad with query itself
     # ----------------------------------------------------------
@@ -203,15 +199,17 @@ class LocalFeatureFusion(nn.Module):
         # Debug        
         # num_valid = (~invalid).sum()
         # print(f"Number of valid neighbors: {num_valid.item()}")
-
+        
         # gather neighbor coordinates / features
         batch = torch.arange(B, device=q_feat.device).view(B, 1, 1)
         neigh_xyz  = kv_xyz[batch.expand_as(idx), idx]             # (B, N, k, 3)
         neigh_feat = kv_feat[batch.expand_as(idx), idx]            # (B, N, k, C)
-
+        
         # replace padding slots with the query point itself
-        neigh_xyz [invalid] = q_xyz.unsqueeze(2).expand(-1, -1, self.k, -1)[invalid]
-        neigh_feat[invalid] = q_feat.unsqueeze(2).expand(-1, -1, self.k, -1)[invalid]
+        q_xyz_expanded = q_xyz.unsqueeze(2).expand(-1, -1, self.k, -1)  # (B, N, k, 3)
+        q_feat_expanded = q_feat.unsqueeze(2).expand(-1, -1, self.k, -1)  # (B, N, k, C)
+        neigh_xyz[invalid] = q_xyz_expanded[invalid]
+        neigh_feat[invalid] = q_feat_expanded[invalid]
 
         # concatenate query token with neighbor tokens
         tokens = torch.cat([q_feat.unsqueeze(2), neigh_feat], dim=2)  # (B, N, k+1, C)
@@ -230,7 +228,6 @@ class LocalFeatureFusion(nn.Module):
         )  # (BM, k+1, C)
 
         # return only the query position (index 0 within each group)
-        fused_q = fused[:, 0, :].view(B, N, C) + q_feat
-        # fused_q = fused[:, 0, :].view(B, N, C) 
+        fused_q = fused[:, 0, :].view(B, N, C)
         
         return fused_q
