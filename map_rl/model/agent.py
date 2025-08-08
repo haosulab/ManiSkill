@@ -17,7 +17,7 @@ class FeatureExtractor(nn.Module):
             feature_size: int = 256,
             vision_encoder: str = "plain_cnn",
             decoder: Optional[nn.Module] = None,
-            use_map: bool = True,
+            use_map: bool = False,
             use_local_fusion: bool = False,
         ) -> None:
         super().__init__()
