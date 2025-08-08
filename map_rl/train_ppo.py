@@ -149,7 +149,7 @@ class Args:
     """if toggled, use the pre-trained environment map features as part of the observation"""
     use_local_fusion: bool = True
     """if toggled, use the local fusion of the image and map features"""
-    vision_encoder: str = "dino"
+    vision_encoder: str = "dino" # "plain_cnn" or "dino"
     """the vision encoder to use for the agent"""
     map_dir: str = "mapping/multi_env_maps"
     """Directory where the trained environment maps are stored."""

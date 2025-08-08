@@ -11,4 +11,7 @@ python map_rl/train_ppo.py \
     --gamma=0.9 \
     --capture-video \
     --track \
+    --use_map \
+    --use_local_fusion \
+    --vision_encoder=plain_cnn \
     --wandb_project_name "ManiSkill-RL"
