@@ -14,4 +14,12 @@ python map_rl/train_ppo.py \
     --use_map \
     --use_local_fusion \
     --vision_encoder=plain_cnn \
-    --wandb_project_name "ManiSkill-RL"
+    --wandb_project_name "PPO-RL-Map"
+
+
+#plain-cnn / no map (wandb tag "plain-cnn-no-map")
+#plain-cnn / map / no local fusion (wandb tag "plain-cnn-map-no-local-fusion")
+#plain-cnn / map / local fusion (wandb tag "plain-cnn-map-local-fusion")
+#dino / no map (wandb tag "dino-no-map")
+#dino / map / no local fusion (wandb tag "dino-map-no-local-fusion")
+#dino / map / local fusion (wandb tag "dino-map-local-fusion")
