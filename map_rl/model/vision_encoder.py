@@ -20,8 +20,9 @@ class DINO2DFeatureEncoder(nn.Module):
 
         # Load backbone lazily via torch.hub to avoid extra dependencies
         self.backbone = torch.hub.load("facebookresearch/dinov2", model_name)
-        self.dino_output_dim = getattr(self.backbone, "embed_dim", 384)
+        self.dino_output_dim = 384
         self.dino_proj = nn.Conv2d(self.dino_output_dim, embed_dim, kernel_size=1)
+        self.embed_dim = embed_dim
 
         if freeze_backbone:
             for p in self.backbone.parameters():

@@ -149,7 +149,7 @@ class Args:
     """if toggled, use the pre-trained environment map features as part of the observation"""
     use_local_fusion: bool = True
     """if toggled, use the local fusion of the image and map features"""
-    vision_encoder: str = "plain_cnn"
+    vision_encoder: str = "dino"
     """the vision encoder to use for the agent"""
     map_dir: str = "mapping/multi_env_maps"
     """Directory where the trained environment maps are stored."""
@@ -253,6 +253,9 @@ if __name__ == "__main__":
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
     envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=True, state=args.include_state, include_camera_params=True, include_segmentation=True)
     eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=True, state=args.include_state, include_camera_params=True, include_segmentation=True)
+
+    # visalize segmentation id map
+    # print(envs.unwrapped.segmentation_id_map.items())
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
