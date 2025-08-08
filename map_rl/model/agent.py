@@ -17,7 +17,7 @@ class FeatureExtractor(nn.Module):
             feature_size: int = 256,
             vision_encoder: str = "plain_cnn",
             decoder: Optional[nn.Module] = None,
-            use_map: bool = False,
+            use_map: bool = True,
             use_local_fusion: bool = False,
         ) -> None:
         super().__init__()
@@ -26,11 +26,11 @@ class FeatureExtractor(nn.Module):
         object.__setattr__(self, "_decoder", decoder)  # None → RGB-only mode
         
         if vision_encoder == 'dino':
-            self.vision_encoder = DINO2DFeatureEncoder()
-            n_flatten = 36 * self.vision_encoder.embed_dim
+            self.vision_encoder = DINO2DFeatureEncoder(embed_dim=64)
+            n_flatten = 36 * self.vision_encoder.embed_dim # 36 = 6 * 6
         elif vision_encoder == 'plain_cnn':
-            self.vision_encoder = PlainCNNFeatureEncoder(embed_dim=64, target_spatial_size=(6, 6))
-            n_flatten = 36 * self.vision_encoder.embed_dim
+            self.vision_encoder = PlainCNNFeatureEncoder(embed_dim=64)
+            n_flatten = 36 * self.vision_encoder.embed_dim # 36 = 6 * 6
         else:
             raise ValueError(f"Vision encoder {vision_encoder} not supported")
         

@@ -12,6 +12,7 @@ class DINO2DFeatureEncoder(nn.Module):
 
     def __init__(
         self,
+        embed_dim: int = 64,
         model_name: str = "dinov2_vits14",
         freeze_backbone: bool = False,
     ) -> None:
@@ -19,8 +20,8 @@ class DINO2DFeatureEncoder(nn.Module):
 
         # Load backbone lazily via torch.hub to avoid extra dependencies
         self.backbone = torch.hub.load("facebookresearch/dinov2", model_name)
-        self.embed_dim = getattr(self.backbone, "embed_dim", 384)
-        self.dino_proj = nn.Conv2d(384, 384, kernel_size=1)
+        self.dino_output_dim = getattr(self.backbone, "embed_dim", 384)
+        self.dino_proj = nn.Conv2d(self.dino_output_dim, embed_dim, kernel_size=1)
 
         if freeze_backbone:
             for p in self.backbone.parameters():
@@ -61,7 +62,7 @@ class DINO2DFeatureEncoder(nn.Module):
         B, _, H, W = images_bchw.shape
         tokens = self._forward_dino_tokens(images_bchw)  # (B, N, C)
 
-        C = self.embed_dim
+        C = self.dino_output_dim
         Hf, Wf = H // 14, W // 14
         fmap = tokens.permute(0, 2, 1).reshape(B, C, Hf, Wf).contiguous()
         fmap = self.dino_proj(fmap)
@@ -73,53 +74,36 @@ class PlainCNNFeatureEncoder(nn.Module):
     Lightweight CNN that produces a dense 2D feature map.
 
     - Inputs are expected in shape (B, C, H, W) with values in [0, 1].
-    - Outputs a feature map of fixed spatial resolution via adaptive pooling,
-      making it compatible with the rest of the pipeline (e.g., local fusion).
+    - Uses only convolution layers (no pooling) to downsample.
+      For 84×84 inputs, the output spatial size is 6×6.
     """
 
     def __init__(
         self,
         in_channels: int = 3,
         embed_dim: int = 64,
-        target_spatial_size: tuple[int, int] = (6, 6),
     ) -> None:
         super().__init__()
         self.embed_dim = embed_dim
-        self._target_spatial_size = target_spatial_size
 
-        # Convolutional trunk roughly inspired by the provided PlainConv
+        # 84 -> 42 -> 21 -> 11 -> 6 using stride-2, k=3, p=1 convs
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels, 16, kernel_size=3, padding=1, bias=True),
+            nn.Conv2d(in_channels, 32, kernel_size=3, stride=2, padding=1, bias=True),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2),
 
-            nn.Conv2d(16, 32, kernel_size=3, padding=1, bias=True),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias=True),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2),
 
-            nn.Conv2d(32, 64, kernel_size=3, padding=1, bias=True),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1, bias=True),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2),
 
-            nn.Conv2d(64, embed_dim, kernel_size=1, padding=0, bias=True),
+            nn.Conv2d(128, embed_dim, kernel_size=3, stride=2, padding=1, bias=True),
             nn.ReLU(inplace=True),
         )
-
-        # Always adapt spatial size to match downstream assumptions (e.g., 6x6)
-        self.pool_to_fixed = nn.AdaptiveAvgPool2d(self._target_spatial_size)
-
-        # Zero-initialize biases for stability, mirroring the provided snippet
-        self._reset_parameters()
-
-    def _reset_parameters(self) -> None:
-        for _, module in self.named_modules():
-            if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d)):
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
 
     def forward(self, images_bchw: torch.Tensor) -> torch.Tensor:
         if images_bchw.dtype != torch.float32:
             images_bchw = images_bchw.float()
         x = self.cnn(images_bchw)
-        x = self.pool_to_fixed(x)
+
         return x
