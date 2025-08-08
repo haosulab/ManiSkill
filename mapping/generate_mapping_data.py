@@ -53,7 +53,6 @@ def visualize_point_cloud(pcd: o3d.geometry.PointCloud):
     vis.run()
     vis.destroy_window()
 
-
 # ------------------------------------------------------------------
 # Adjust num_envs if grid_dim provided
 # ------------------------------------------------------------------
