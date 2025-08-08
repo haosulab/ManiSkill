@@ -5,7 +5,7 @@ from pytorch3d.ops import ball_query, sample_farthest_points
 import xformers.ops as xops
 
 from typing import Optional
-from utils import rotary_pe_3d
+from utils.operator import rotary_pe_3d
 import numpy as np
 
 

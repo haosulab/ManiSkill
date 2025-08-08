@@ -8,8 +8,8 @@ import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots import XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
-from mani_skill.sensors.camera import CameraConfig        # Build cubes separately for each parallel environment to enable domain randomization
-
+from mani_skill.sensors.camera import CameraConfig        
+8
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
@@ -74,7 +74,7 @@ class PickCubeEnv(BaseEnv):
         pose = sapien_utils.look_at(
             eye=self.sensor_cam_eye_pos, target=self.sensor_cam_target_pos
         )
-        return [CameraConfig("base_camera", pose, 224, 224, np.pi / 2, 0.01, 100)]
+        return [CameraConfig("base_camera", pose, 84, 84, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):

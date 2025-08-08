@@ -2,7 +2,6 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 from collections import defaultdict
 import random
 import time
@@ -19,12 +18,14 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
+import mani_skill
 import mani_skill.envs
 from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-from model import DictArray, Agent
+from model.agent import Agent
+from utils.utils import DictArray, GridSampler, Logger, build_checkpoint
 
 # Mapping-related imports
 from mapping.mapping_lib.voxel_hash_table import VoxelHashTable
@@ -123,7 +124,7 @@ class Args:
     finite_horizon_gae: bool = False
 
     # Environment discretisation
-    grid_dim: int = 20
+    grid_dim: int = 10
     """Number of cells per axis used for discrete initialisation (N×N grid)."""
 
     # Map-related arguments
@@ -141,39 +142,6 @@ class Args:
     """the mini-batch size (computed in runtime)"""
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
-
-
-def build_checkpoint(agent, args, envs):
-    """
-    Pack everything you might need at inference time into one dict.
-    """
-    ckpt = {
-        "model": agent.state_dict(),          
-        "obs_rms": getattr(envs, "obs_rms", None),
-        "cfg": vars(args),                    
-        "meta": {
-            "torch": torch.__version__,
-            "mani_skill": mani_skill.__version__,
-        },
-    }
-    return ckpt
-
-        
-# ----------------------------------------------------------------------
-# Guarantee that the canonical DictArray and Agent from map_rl.model are
-# the active implementations (overrides any duplicate definitions above).
-from model import DictArray as DictArray, Agent as Agent
-
-class Logger:
-    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
-        self.writer = tensorboard
-        self.log_wandb = log_wandb
-    def add_scalar(self, tag, scalar_value, step):
-        if self.log_wandb:
-            wandb.log({tag: scalar_value}, step=step)
-        self.writer.add_scalar(tag, scalar_value, step)
-    def close(self):
-        self.writer.close()
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -230,15 +198,22 @@ if __name__ == "__main__":
             all_grids.append(VoxelHashTable.load_sparse(grid_path, device=device))
         print(f"--- Loaded {len(all_grids)} maps. ---")
 
-        # --------------------------------------------------------------
-        # Helper for random subset sampling
-        # --------------------------------------------------------------
-        def _sample_grids(n_envs: int):
+        # Freeze any grid parameters to avoid accidental training
+        for grid in all_grids:
+            for p in grid.parameters():
+                p.requires_grad = False
+
+        # Sampler for training
+        grid_sampler = GridSampler(all_grids, args.num_envs if not args.evaluate else 1)
+
+        # Helper for a fixed random subset for evaluation
+        def _random_sample_eval(n_envs: int):
             idx = np.random.choice(total_envs, n_envs, replace=False)
             return idx, [all_grids[i] for i in idx]
 
-        # Initial sample for the very first reset
-        active_indices, grids = _sample_grids(args.num_envs if not args.evaluate else args.num_eval_envs)
+        # Initial training/eval subsets
+        active_indices, grids = grid_sampler.sample()
+        eval_indices, eval_grids = _random_sample_eval(args.num_eval_envs)
         
         # debug: Visualize the first map
         # if grids and decoder:
@@ -314,11 +289,10 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed, options={'global_idx': active_indices.tolist()})
-    if args.use_map and 'all_grids' in globals() and len(all_grids) >= args.num_eval_envs:
-        eval_indices, eval_grids = _sample_grids(args.num_eval_envs)
+    if args.use_map:
         eval_obs, _ = eval_envs.reset(seed=args.seed, options={'global_idx': eval_indices.tolist()})
     else:
-        eval_grids = grids if args.use_map else None
+        eval_grids = None
         eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
     print(f"####")
@@ -326,7 +300,7 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     agent = Agent(envs, sample_obs=next_obs, decoder=decoder if args.use_map else None).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    optimizer = optim.AdamW(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
@@ -337,8 +311,9 @@ if __name__ == "__main__":
         # --------------------------------------------------------------
         # Resample subset of environments for this epoch (train)
         # --------------------------------------------------------------
-        if args.use_map and 'all_grids' in globals() and len(all_grids) > args.num_envs:
-            active_indices, grids = _sample_grids(args.num_envs)
+        if args.use_map:
+            # Resample next training subset using GridSampler
+            active_indices, grids = grid_sampler.sample()
             next_obs, _ = envs.reset(options={'global_idx': active_indices.tolist()})
             next_done = torch.zeros(args.num_envs, device=device)
         print(f"Epoch: {iteration}, global_step={global_step}")
