@@ -115,7 +115,7 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = 0.2
     """the target KL divergence threshold"""
-    
+
     # KL penalty (adaptive)
     use_kl_penalty: bool = True
     """if toggled, add KL penalty term to the policy loss and adapt its coef."""
@@ -147,7 +147,7 @@ class Args:
     # Map-related arguments
     use_map: bool = True
     """if toggled, use the pre-trained environment map features as part of the observation"""
-    use_local_fusion: bool = False
+    use_local_fusion: bool = True
     """if toggled, use the local fusion of the image and map features"""
     vision_encoder: str = "plain_cnn"
     """the vision encoder to use for the agent"""

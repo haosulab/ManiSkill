@@ -43,6 +43,7 @@ class PickCubeEnv(BaseEnv):
         "panda",
         "fetch",
         "xarm6_robotiq",
+        "xarm6_robotiq_wristcam",
         "so100",
         "widowxai",
     ]
@@ -432,11 +433,11 @@ class DiscreteInitMixin:
 
 @register_env("PickCubeDiscreteInit-v1", max_episode_steps=50)
 class PickCubeDiscreteInit(DiscreteInitMixin, PickCubeEnv):
-    def __init__(self, *args, robot_uids="xarm6_robotiq", grid_dim: int = 10, **kwargs):
+    def __init__(self, *args, robot_uids="xarm6_robotiq_wristcam", grid_dim: int = 10, **kwargs):
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=0.0, grid_dim=grid_dim, **kwargs)
 
 
-PickCubeDiscreteInit.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="xarm6_robotiq")
+PickCubeDiscreteInit.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="xarm6_robotiq_wristcam")
 
 
 @register_env("PickCubeDRDiscreteInit-v1", max_episode_steps=50)
