@@ -89,7 +89,8 @@ class FeatureExtractor(nn.Module):
         kv_feat = self.map_feature_proj(kv_raw)  # (B,Lmax,embed_dim)
 
         depth = observations["depth"].permute(0, 3, 1, 2).float() / 1000.0
-        pose = observations["sensor_param"]["base_camera"]["extrinsic_cv"]
+        # pose = observations["sensor_param"]["base_camera"]["extrinsic_cv"]
+        pose = observations["sensor_param"]["hand_camera"]["extrinsic_cv"]
 
         Hf = Wf = 6
         depth_s = F.interpolate(depth, size=(Hf, Wf), mode="nearest-exact")

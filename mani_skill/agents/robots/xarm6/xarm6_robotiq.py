@@ -457,8 +457,8 @@ class XArm6RobotiqWristCamera(XArm6Robotiq):
             CameraConfig(
                 uid="hand_camera",
                 pose=sapien.Pose(p=[0, 0, -0.05], q=[0.70710678, 0, 0.70710678, 0]),
-                width=128,
-                height=128,
+                width=84,
+                height=84,
                 fov=np.pi / 2,
                 near=0.01,
                 far=100,
