@@ -169,9 +169,23 @@ class FeatureExtractor(nn.Module):
 class Agent(nn.Module):
     """Actor-Critic network (Gaussian continuous actions) built on NatureCNN features."""
 
-    def __init__(self, envs, sample_obs, decoder: Optional[nn.Module] = None):
+    def __init__(
+        self, 
+        envs, 
+        sample_obs, 
+        decoder: Optional[nn.Module] = None, 
+        use_map: bool = True, 
+        use_local_fusion: bool = False, 
+        vision_encoder: str = "plain_cnn"
+    ):
         super().__init__()
-        self.feature_net = FeatureExtractor(sample_obs=sample_obs, decoder=decoder)
+        self.feature_net = FeatureExtractor(
+            sample_obs=sample_obs, 
+            decoder=decoder, 
+            use_map=use_map, 
+            use_local_fusion=use_local_fusion, 
+            vision_encoder=vision_encoder
+        )
         latent_size = self.feature_net.output_dim
         
         # Critic

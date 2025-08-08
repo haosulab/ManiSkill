@@ -130,6 +130,10 @@ class Args:
     # Map-related arguments
     use_map: bool = True
     """if toggled, use the pre-trained environment map features as part of the observation"""
+    use_local_fusion: bool = False
+    """if toggled, use the local fusion of the image and map features"""
+    vision_encoder: str = "plain_cnn"
+    """the vision encoder to use for the agent"""
     map_dir: str = "mapping/multi_env_maps"
     """Directory where the trained environment maps are stored."""
     decoder_path: str = "mapping/multi_env_maps/shared_decoder.pt"
@@ -299,7 +303,13 @@ if __name__ == "__main__":
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
-    agent = Agent(envs, sample_obs=next_obs, decoder=decoder if args.use_map else None).to(device)
+    agent = Agent(
+        envs, 
+        sample_obs=next_obs, 
+        decoder=decoder if args.use_map else None, 
+        use_local_fusion=args.use_local_fusion, 
+        vision_encoder=args.vision_encoder
+    ).to(device)
     optimizer = optim.AdamW(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
