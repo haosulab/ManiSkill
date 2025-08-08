@@ -168,7 +168,6 @@ class FeatureExtractor(nn.Module):
 
 class Agent(nn.Module):
     """Actor-Critic network (Gaussian continuous actions) built on NatureCNN features."""
-
     def __init__(
         self, 
         envs, 
