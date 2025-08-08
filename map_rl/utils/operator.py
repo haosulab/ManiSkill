@@ -24,24 +24,6 @@ def get_visual_features(model, x):
     dense_features = dense_features.reshape(x.shape[0], -1, grid_size, grid_size)
     return dense_features
 
-
-def positional_encoding(x: torch.Tensor, L: int = 10) -> torch.Tensor:
-    """
-    Positional encoding for input x using frequencies 2^i for i in [0..L-1].
-    Args:
-        x: [N, 3] or [B*N, 3].
-        L: Number of frequency bands.
-    Returns:
-        Encoded tensor of shape [N, 2*L*3].
-    """
-    pe = []
-    for i in range(L):
-        freq = 2**i
-        pe.append(torch.sin(x * freq * torch.pi))
-        pe.append(torch.cos(x * freq * torch.pi))
-    return torch.cat(pe, dim=-1)
-
-
 def get_3d_coordinates(
     depth: torch.Tensor,
     camera_extrinsic: torch.Tensor,
@@ -206,30 +188,3 @@ def _rotary_pe_3d_impl(
     # Stack all blocks along num_block dim, then reshape back
     x_out = torch.stack(out_blocks, dim=2).view(B, S, D)
     return x_out
-
-
-# Basic image transform
-transform = transforms.Compose(
-    [
-        transforms.Normalize(
-            mean=(0.48145466, 0.4578275, 0.40821073),
-            std=(0.26862954, 0.26130258, 0.27577711),
-        ),
-    ]
-)
-
-def get_visual_features_dino(model, x):
-    """
-    x: (B, C, H, W)
-    return: (B, 1024, H//14, W//14)
-    """
-    B, C, H, W = x.size()
-
-    x = model.prepare_tokens_with_masks(x)
-
-    for idx, blk in enumerate(model.blocks):
-        x = blk(x)
-
-    x = x[:, 1:, :].permute(0, 2, 1).reshape(B, 384, H // 14, W // 14).contiguous()
-    
-    return x

@@ -1,6 +1,8 @@
-# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
-from collections import defaultdict
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from collections import defaultdict
 import random
 import time
 from dataclasses import dataclass
@@ -16,17 +18,26 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
 # ManiSkill specific imports
+import mani_skill
 import mani_skill.envs
 from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper, FlattenRGBDObservationWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
+from model.agent import Agent
+from utils.utils import DictArray, GridSampler, Logger, build_checkpoint
+
+# Mapping-related imports
+from mapping.mapping_lib.voxel_hash_table import VoxelHashTable
+from mapping.mapping_lib.implicit_decoder import ImplicitDecoder
+from mapping.mapping_lib.visualization import visualize_decoded_features_pca
+
 
 @dataclass
 class Args:
     exp_name: Optional[str] = None
     """the name of this experiment"""
-    seed: int = 1
+    seed: int = 0
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -52,7 +63,7 @@ class Args:
     """the environment rendering mode"""
 
     # Algorithm specific arguments
-    env_id: str = "PickCube-v1"
+    env_id: str = "PickCubeDiscreteInit-v1"
     """the id of the environment"""
     robot_uids: str = "panda"
     """the uid of the robot to use in the environment"""
@@ -62,9 +73,9 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 512
+    num_envs: int = 400
     """the number of parallel environments"""
-    num_eval_envs: int = 8
+    num_eval_envs: int = 20
     """the number of parallel evaluation environments"""
     partial_reset: bool = True
     """whether to let parallel environments reset upon termination instead of truncation"""
@@ -112,6 +123,18 @@ class Args:
     """frequency to save training videos in terms of iterations"""
     finite_horizon_gae: bool = False
 
+    # Environment discretisation
+    grid_dim: int = 10
+    """Number of cells per axis used for discrete initialisation (N×N grid)."""
+
+    # Map-related arguments
+    use_map: bool = True
+    """if toggled, use the pre-trained environment map features as part of the observation"""
+    map_dir: str = "mapping/multi_env_maps"
+    """Directory where the trained environment maps are stored."""
+    decoder_path: str = "mapping/multi_env_maps/shared_decoder.pt"
+    """Path to the trained shared decoder model."""
+
     # to be filled in runtime
     batch_size: int = 0
     """the batch size (computed in runtime)"""
@@ -119,189 +142,6 @@ class Args:
     """the mini-batch size (computed in runtime)"""
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
-
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
-
-
-def build_checkpoint(agent, args, envs):
-    """
-    Pack everything you might need at inference time into one dict.
-    """
-    ckpt = {
-        "model": agent.state_dict(),          
-        "obs_rms": getattr(envs, "obs_rms", None),
-        "cfg": vars(args),                    
-        "meta": {
-            "torch": torch.__version__,
-            "mani_skill": mani_skill.__version__,
-        },
-    }
-    return ckpt
-
-
-class DictArray(object):
-    def __init__(self, buffer_shape, element_space, data_dict=None, device=None):
-        self.buffer_shape = buffer_shape
-        if data_dict:
-            self.data = data_dict
-        else:
-            assert isinstance(element_space, gym.spaces.dict.Dict)
-            self.data = {}
-            for k, v in element_space.items():
-                if isinstance(v, gym.spaces.dict.Dict):
-                    self.data[k] = DictArray(buffer_shape, v, device=device)
-                else:
-                    dtype = (torch.float32 if v.dtype in (np.float32, np.float64) else
-                            torch.uint8 if v.dtype == np.uint8 else
-                            torch.int16 if v.dtype == np.int16 else
-                            torch.int32 if v.dtype == np.int32 else
-                            v.dtype)
-                    self.data[k] = torch.zeros(buffer_shape + v.shape, dtype=dtype, device=device)
-
-    def keys(self):
-        return self.data.keys()
-
-    def __getitem__(self, index):
-        if isinstance(index, str):
-            return self.data[index]
-        return {
-            k: v[index] for k, v in self.data.items()
-        }
-
-    def __setitem__(self, index, value):
-        if isinstance(index, str):
-            self.data[index] = value
-        for k, v in value.items():
-            self.data[k][index] = v
-
-    @property
-    def shape(self):
-        return self.buffer_shape
-
-    def reshape(self, shape):
-        t = len(self.buffer_shape)
-        new_dict = {}
-        for k,v in self.data.items():
-            if isinstance(v, DictArray):
-                new_dict[k] = v.reshape(shape)
-            else:
-                new_dict[k] = v.reshape(shape + v.shape[t:])
-        new_buffer_shape = next(iter(new_dict.values())).shape[:len(shape)]
-        return DictArray(new_buffer_shape, None, data_dict=new_dict)
-
-class NatureCNN(nn.Module):
-    def __init__(self, sample_obs):
-        super().__init__()
-
-        extractors = {}
-
-        self.out_features = 0
-        feature_size = 256
-        in_channels=sample_obs["rgb"].shape[-1]
-        image_size=(sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
-
-
-        # here we use a NatureCNN architecture to process images, but any architecture is permissble here
-        cnn = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=32,
-                kernel_size=8,
-                stride=4,
-                padding=0,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
-            ),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        # to easily figure out the dimensions after flattening, we pass a test tensor
-        with torch.no_grad():
-            n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
-            fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
-        extractors["rgb"] = nn.Sequential(cnn, fc)
-        self.out_features += feature_size
-
-        if "state" in sample_obs:
-            # for state data we simply pass it through a single linear layer
-            state_size = sample_obs["state"].shape[-1]
-            extractors["state"] = nn.Linear(state_size, 256)
-            self.out_features += 256
-
-        self.extractors = nn.ModuleDict(extractors)
-
-    def forward(self, observations) -> torch.Tensor:
-        encoded_tensor_list = []
-        # self.extractors contain nn.Modules that do all the processing.
-        for key, extractor in self.extractors.items():
-            obs = observations[key]
-            if key == "rgb":
-                obs = obs.float().permute(0,3,1,2)
-                obs = obs / 255
-            encoded_tensor_list.append(extractor(obs))
-        return torch.cat(encoded_tensor_list, dim=1)
-
-class Agent(nn.Module):
-    def __init__(self, envs, sample_obs):
-        super().__init__()
-        self.feature_net = NatureCNN(sample_obs=sample_obs)
-        # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
-        latent_size = self.feature_net.out_features
-        self.critic = nn.Sequential(
-            layer_init(nn.Linear(latent_size, 512)),
-            nn.ReLU(inplace=True),
-            layer_init(nn.Linear(512, 1)),
-        )
-        self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(latent_size, 512)),
-            nn.ReLU(inplace=True),
-            layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
-        )
-        self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
-    def get_features(self, x):
-        return self.feature_net(x)
-    def get_value(self, x):
-        x = self.feature_net(x)
-        return self.critic(x)
-    def get_action(self, x, deterministic=False):
-        x = self.feature_net(x)
-        action_mean = self.actor_mean(x)
-        if deterministic:
-            return action_mean
-        action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
-        return probs.sample()
-    def get_action_and_value(self, x, action=None):
-        x = self.feature_net(x)
-        action_mean = self.actor_mean(x)
-        action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
-
-class Logger:
-    def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
-        self.writer = tensorboard
-        self.log_wandb = log_wandb
-    def add_scalar(self, tag, scalar_value, step):
-        if self.log_wandb:
-            wandb.log({tag: scalar_value}, step=step)
-        self.writer.add_scalar(tag, scalar_value, step)
-    def close(self):
-        self.writer.close()
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -322,16 +162,76 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
+    # --- Load Maps and Decoder ---
+    grids, decoder = None, None
+    if args.use_map:
+        print("--- Loading maps and decoder for PPO training ---")
+        # 1. Load Decoder
+        try:
+            decoder = ImplicitDecoder(
+                voxel_feature_dim=64 * 2, # GRID_FEAT_DIM * GRID_LVLS from map_multi_table.py
+                hidden_dim=240,
+                output_dim=768,
+            ).to(device)
+            decoder.load_state_dict(torch.load(args.decoder_path, map_location=device))
+            decoder.eval()
+            for param in decoder.parameters():
+                param.requires_grad = False
+            print(f"Loaded shared decoder from {args.decoder_path}")
+        except FileNotFoundError:
+            print(f"[ERROR] Decoder file not found at {args.decoder_path}. Exiting.")
+            exit()
+
+        # 2. Load ALL grids (grid_dim²) and build sampling helper
+        total_envs = args.grid_dim ** 2
+        all_grids = []
+        if not os.path.exists(args.map_dir):
+            print(f"[ERROR] Map directory not found: {args.map_dir}. Exiting.")
+            exit()
+
+        print(f"Loading {total_envs} maps from {args.map_dir} ...")
+        for i in range(total_envs):
+            grid_path = os.path.join(args.map_dir, f"env_{i:03d}_grid.sparse.pt")
+            if not os.path.exists(grid_path):
+                print(f"[ERROR] Map file not found: {grid_path}. Exiting.")
+                exit()
+            all_grids.append(VoxelHashTable.load_sparse(grid_path, device=device))
+        print(f"--- Loaded {len(all_grids)} maps. ---")
+
+        # Freeze any grid parameters to avoid accidental training
+        for grid in all_grids:
+            for p in grid.parameters():
+                p.requires_grad = False
+
+        # Sampler for training
+        grid_sampler = GridSampler(all_grids, args.num_envs if not args.evaluate else 1)
+
+        # Helper for a fixed random subset for evaluation
+        def _random_sample_eval(n_envs: int):
+            idx = np.random.choice(total_envs, n_envs, replace=False)
+            return idx, [all_grids[i] for i in idx]
+
+        # Initial training/eval subsets
+        active_indices, grids = grid_sampler.sample()
+        eval_indices, eval_grids = _random_sample_eval(args.num_eval_envs)
+        
+        # debug: Visualize the first map
+        # if grids and decoder:
+        #     print("--- Visualizing map features for the first environment ---")
+        #     visualize_decoded_features_pca(grids[0], decoder, device=device)
+        #     print("--- Visualization done. Continuing with training/evaluation. ---")
+
     # env setup
-    env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb", render_mode=args.render_mode, sim_backend="physx_cuda")
+    # env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda")
+    env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth", render_mode=args.render_mode, sim_backend="physx_cuda", grid_dim=args.grid_dim)
     if args.control_mode is not None:
         env_kwargs["control_mode"] = args.control_mode
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs)
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
 
     # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
-    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=False, state=args.include_state)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=False, state=args.include_state)
+    envs = FlattenRGBDObservationWrapper(envs, rgb=True, depth=True, state=args.include_state, include_camera_params=True, include_segmentation=True)
+    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=True, depth=True, state=args.include_state, include_camera_params=True, include_segmentation=True)
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -388,15 +288,19 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset(seed=args.seed)
-    eval_obs, _ = eval_envs.reset(seed=args.seed)
+    next_obs, _ = envs.reset(seed=args.seed, options={'global_idx': active_indices.tolist()})
+    if args.use_map:
+        eval_obs, _ = eval_envs.reset(seed=args.seed, options={'global_idx': eval_indices.tolist()})
+    else:
+        eval_grids = None
+        eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
-    agent = Agent(envs, sample_obs=next_obs).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    agent = Agent(envs, sample_obs=next_obs, decoder=decoder if args.use_map else None).to(device)
+    optimizer = optim.AdamW(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
@@ -404,18 +308,30 @@ if __name__ == "__main__":
     cumulative_times = defaultdict(float)
 
     for iteration in range(1, args.num_iterations + 1):
+        # --------------------------------------------------------------
+        # Resample subset of environments for this epoch (train)
+        # --------------------------------------------------------------
+        if args.use_map:
+            # Resample next training subset using GridSampler
+            active_indices, grids = grid_sampler.sample()
+            next_obs, _ = envs.reset(options={'global_idx': active_indices.tolist()})
+            next_done = torch.zeros(args.num_envs, device=device)
         print(f"Epoch: {iteration}, global_step={global_step}")
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
             print("Evaluating")
             stime = time.perf_counter()
-            eval_obs, _ = eval_envs.reset()
+            # Use FIXED evaluation subset (eval_indices, eval_grids) sampled once at start
+            if args.use_map:
+                eval_obs, _ = eval_envs.reset(options={'global_idx': eval_indices.tolist()})
+            else:
+                eval_obs, _ = eval_envs.reset()
             eval_metrics = defaultdict(list)
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, map_features=eval_grids if args.use_map else None, deterministic=True))
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -451,7 +367,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs, map_features=grids if args.use_map else None)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -465,17 +381,30 @@ if __name__ == "__main__":
                 final_info = infos["final_info"]
                 done_mask = infos["_final_info"]
                 for k, v in final_info["episode"].items():
-                    logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
+                    if logger is not None:
+                        logger.add_scalar(f"train/{k}", v[done_mask].float().mean(), global_step)
 
-                for k in infos["final_observation"]:
-                    infos["final_observation"][k] = infos["final_observation"][k][done_mask]
+                # Slice final observations for environments that terminated
+                final_obs = infos["final_observation"]
+                def _slice(o):
+                    if isinstance(o, dict):
+                        return {kk: _slice(vv) for kk, vv in o.items()}
+                    elif torch.is_tensor(o):
+                        return o[done_mask]
+                    else:
+                        # assume numpy array or list convertible to tensor indexing
+                        return o[done_mask]
+                final_obs = _slice(final_obs)
                 with torch.no_grad():
-                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
+                    idx = torch.arange(args.num_envs, device=device)[done_mask]
+                    if len(idx) > 0:
+                        final_grids = [grid for i, grid in enumerate(grids) if done_mask[i]] if args.use_map else None
+                        final_values[step, idx] = agent.get_value(final_obs, map_features=final_grids).view(-1)
         rollout_time = time.perf_counter() - rollout_time
         cumulative_times["rollout_time"] += rollout_time
         # bootstrap value according to termination and truncation
         with torch.no_grad():
-            next_value = agent.get_value(next_obs).reshape(1, -1)
+            next_value = agent.get_value(next_obs, map_features=grids if args.use_map else None).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
@@ -535,7 +464,8 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                mb_grids = [grids[i % args.num_envs] for i in mb_inds] if args.use_map else None
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], map_features=mb_grids, action=b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 

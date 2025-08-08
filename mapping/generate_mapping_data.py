@@ -14,7 +14,7 @@ import glob
 parser = argparse.ArgumentParser(description="Scan an object and generate a point cloud.")
 parser.add_argument("-o", "--obs-mode", type=str, default="rgbd", help="Can be rgb or rgb+depth, rgb+normal, albedo+depth etc. Which ever image-like textures you want to visualize can be tacked on")
 parser.add_argument("-n", "--num-envs", type=int, default=100, help="Total number of environments to process (overridden if --grid-dim is given)")
-parser.add_argument("--grid-dim", type=int, default=20, help="If provided, total_envs will be grid_dim^2 and passed to the environment.")
+parser.add_argument("--grid-dim", type=int, default=10, help="If provided, total_envs will be grid_dim^2 and passed to the environment.")
 parser.add_argument("-s","--seed",type=int, default=0, help="Seed the random actions and environment. Default is no seed",)
 args = parser.parse_args()
 
