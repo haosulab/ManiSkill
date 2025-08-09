@@ -5,8 +5,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from collections import defaultdict
 import random
 import time
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, List
 
 import gymnasium as gym
 import numpy as np
@@ -51,6 +51,8 @@ class Args:
     """the entity (team) of wandb's project"""
     wandb_group: str = "PPO"
     """the group of the run for wandb"""
+    wandb_tags: List[str] = field(default_factory=list)
+    """additional tags for the wandb run"""
     capture_video: bool = True
     """whether to capture videos of the agent performances (check out `videos` folder)"""
     save_model: bool = True
@@ -145,9 +147,9 @@ class Args:
     """Number of cells per axis used for discrete initialisation (N×N grid)."""
 
     # Map-related arguments
-    use_map: bool = True
+    use_map: bool = False
     """if toggled, use the pre-trained environment map features as part of the observation"""
-    use_local_fusion: bool = True
+    use_local_fusion: bool = False
     """if toggled, use the local fusion of the image and map features"""
     vision_encoder: str = "dino" # "plain_cnn" or "dino"
     """the vision encoder to use for the agent"""
@@ -184,6 +186,13 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # --- Load Maps and Decoder ---
+    # Always define total number of discrete environments
+    total_envs = args.grid_dim ** 2
+    # Placeholders for map-related variables to avoid NameError when use_map is False
+    all_grids = None
+    grid_sampler = None
+    active_indices = None
+    eval_indices = None
     grids, decoder = None, None
     if args.use_map:
         print("--- Loading maps and decoder for PPO training ---")
@@ -223,24 +232,34 @@ if __name__ == "__main__":
         for grid in all_grids:
             for p in grid.parameters():
                 p.requires_grad = False
+        # (sampler is created below in a unified way)
 
-        # Sampler for training
-        grid_sampler = GridSampler(all_grids, args.num_envs if not args.evaluate else 1)
+    # Helper for a fixed random subset for evaluation (always available)
+    def _random_sample_eval(n_envs: int):
+        idx = np.random.choice(total_envs, n_envs, replace=False)
+        return idx
 
-        # Helper for a fixed random subset for evaluation
-        def _random_sample_eval(n_envs: int):
-            idx = np.random.choice(total_envs, n_envs, replace=False)
-            return idx, [all_grids[i] for i in idx]
+    # Create GridSampler once. When not using map, create dummy list of length total_envs
+    batch_train_envs = args.num_envs if not args.evaluate else 1
+    if args.use_map:
+        grid_sampler = GridSampler(all_grids, batch_train_envs)
+    else:
+        # Create a placeholder list to satisfy GridSampler API; we only need indices
+        dummy_list = list(range(total_envs))
+        grid_sampler = GridSampler(dummy_list, batch_train_envs)
 
-        # Initial training/eval subsets
-        active_indices, grids = grid_sampler.sample()
-        eval_indices, eval_grids = _random_sample_eval(args.num_eval_envs)
+    # Initial training/eval subsets
+    active_indices, grids = grid_sampler.sample()
+    if not args.use_map:
+        grids = None
+    eval_indices = _random_sample_eval(args.num_eval_envs)
+    
         
-        # debug: Visualize the first map
-        # if grids and decoder:
-        #     print("--- Visualizing map features for the first environment ---")
-        #     visualize_decoded_features_pca(grids[0], decoder, device=device)
-        #     print("--- Visualization done. Continuing with training/evaluation. ---")
+    # debug: Visualize the first map
+    # if grids and decoder:
+    #     print("--- Visualizing map features for the first environment ---")
+    #     visualize_decoded_features_pca(grids[0], decoder, device=device)
+    #     print("--- Visualization done. Continuing with training/evaluation. ---")
 
     # env setup
     # env_kwargs = dict(robot_uids=args.robot_uids, obs_mode="rgb+depth+segmentation", render_mode=args.render_mode, sim_backend="physx_cuda")
@@ -290,7 +309,7 @@ if __name__ == "__main__":
                 name=run_name,
                 save_code=True,
                 group=args.wandb_group,
-                tags=["ppo", "walltime_efficient"]
+                tags=list(args.wandb_tags)
             )
         writer = SummaryWriter(f"runs/{run_name}")
         writer.add_text(
@@ -314,10 +333,10 @@ if __name__ == "__main__":
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed, options={'global_idx': active_indices.tolist()})
     if args.use_map:
-        eval_obs, _ = eval_envs.reset(seed=args.seed, options={'global_idx': eval_indices.tolist()})
+        eval_grids = [all_grids[i] for i in eval_indices]
     else:
         eval_grids = None
-        eval_obs, _ = eval_envs.reset(seed=args.seed)
+    eval_obs, _ = eval_envs.reset(seed=args.seed, options={'global_idx': eval_indices.tolist()})
     next_done = torch.zeros(args.num_envs, device=device)
     print(f"####")
     print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
@@ -343,11 +362,12 @@ if __name__ == "__main__":
         # --------------------------------------------------------------
         # Resample subset of environments for this epoch (train)
         # --------------------------------------------------------------
-        if args.use_map:
-            # Resample next training subset using GridSampler
-            active_indices, grids = grid_sampler.sample()
-            next_obs, _ = envs.reset(options={'global_idx': active_indices.tolist()})
-            next_done = torch.zeros(args.num_envs, device=device)
+        # Resample next training subset using GridSampler
+        active_indices, grids = grid_sampler.sample()
+        if not args.use_map:
+            grids = None
+        next_obs, _ = envs.reset(options={'global_idx': active_indices.tolist()})
+        next_done = torch.zeros(args.num_envs, device=device)
         print(f"Epoch: {iteration}, global_step={global_step}")
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
@@ -355,10 +375,7 @@ if __name__ == "__main__":
             print("Evaluating")
             stime = time.perf_counter()
             # Use FIXED evaluation subset (eval_indices, eval_grids) sampled once at start
-            if args.use_map:
-                eval_obs, _ = eval_envs.reset(options={'global_idx': eval_indices.tolist()})
-            else:
-                eval_obs, _ = eval_envs.reset()
+            eval_obs, _ = eval_envs.reset(options={'global_idx': eval_indices.tolist()})
             eval_metrics = defaultdict(list)
             num_episodes = 0
             for _ in range(args.num_eval_steps):
