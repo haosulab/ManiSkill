@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>robotiq_2f_140_gripper_visualization</name>
+  <version>1.0.0</version>
+  <description>Robotiq ARG 2-Finger 140mm model C3 description package</description>
+  <license>BSD</license>
+  <url type="website">http://ros.org/wiki/robotiq</url>
+  <author email="ryan@rwsinnet.com">Ryan Sinnet</author>
+  <maintainer email="ros@robotiq.com">Jean-Philippe Roberge</maintainer>
+  <maintainer email="daniels.ordoez@gmail.com">Daniel Ordonez</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>urdf</exec_depend>
+
+</package>
