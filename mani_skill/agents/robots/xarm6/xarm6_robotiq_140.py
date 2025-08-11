@@ -12,7 +12,7 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
-
+# The test code and drive estimation code is in https://github.com/xwinks/maniskill_xarm_roobtiq_140 repo
 @register_agent(asset_download_ids=["xarm6_robotiq_140"])
 class XArm6Robotiq140(BaseAgent):
     uid = "xarm6_robotiq_140"
