@@ -233,7 +233,8 @@ class XArm6Robotiq140(BaseAgent):
 
         # Use a mimic controller config to define one action to control both fingers
         mimic_config = dict(
-            left_outer_knuckle_joint=dict(joint="right_outer_knuckle_joint", multiplier=-1.0, offset=0.0),
+            # left_outer_knuckle_joint=dict(joint="right_outer_knuckle_joint", multiplier=-1.0, offset=0.0),
+            right_outer_knuckle_joint=dict(joint="left_outer_knuckle_joint", multiplier=-1.0, offset=0.0)
         )
         finger_mimic_pd_joint_pos = PDJointPosMimicControllerConfig(
             finger_joint_names,
@@ -335,15 +336,15 @@ class XArm6Robotiq140(BaseAgent):
         # p_f_left = [-1.8080145e-08, 3.7600014e-02, 4.2999994e-02]
         # p_p_left = [-1.4041154e-08, -1.7901093e-02, 6.5159872e-03]
 
-        # p_f_right = [3.3650e-09,  1.0071e-01, -3.6361e-04]
-        # p_p_right = [-5.9159e-09,  5.8321e-03, -1.6028e-02]
-        # p_f_left = [-2.2454e-09,  1.0071e-01, -3.6360e-04]
-        # p_p_left = [-5.8532e-09,  5.8321e-03, -1.6028e-02]
+        p_f_right = [3.3650e-09,  1.0071e-01, -3.6361e-04]
+        p_p_right = [-5.9159e-09,  5.8321e-03, -1.6028e-02]
+        p_f_left = [-2.2454e-09,  1.0071e-01, -3.6360e-04]
+        p_p_left = [-5.8532e-09,  5.8321e-03, -1.6028e-02]
         
-        p_f_right = [1.0926e-08,  8.8919e-02, -4.8737e-03]
-        p_p_right = [ 3.5310e-09, -1.0431e-07, -2.7220e-02]
-        p_f_left = [5.5307e-09,  8.8919e-02, -4.8737e-03]
-        p_p_left = [2.3353e-09, -8.9407e-08, -2.7220e-02]
+        # p_f_right = [1.0926e-08,  8.8919e-02, -4.8737e-03]
+        # p_p_right = [ 3.5310e-09, -1.0431e-07, -2.7220e-02]
+        # p_f_left = [5.5307e-09,  8.8919e-02, -4.8737e-03]
+        # p_p_left = [2.3353e-09, -8.9407e-08, -2.7220e-02]
 
         right_drive = self.scene.create_drive(
             right_inner_knuckle, sapien.Pose(p_f_right), right_inner_finger, sapien.Pose(p_p_right)
