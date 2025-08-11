@@ -195,7 +195,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["xarm6_robotiq_140"] = DataSource(
         source_type="robot",
-        url="https://github.com/xwinks/maniskill_xarm_roobtiq_140/archive/refs/tags/v0.1.0.zip",
+        url="https://github.com/xwinks/maniskill_xarm_roobtiq_140/archive/refs/tags/v0.2.0.zip",
         target_path="robots/xarm6_robotiq_140",
     )
 

@@ -9,7 +9,7 @@ from mani_skill.examples.motionplanning.panda.utils import (
 
 def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
-
+    # print("the robot uid is: ", env.unwrapped.robot_uids)
     if env.unwrapped.robot_uids == "xarm6_robotiq":
         planner_cls = XArm6RobotiqMotionPlanningSolver
     elif env.unwrapped.robot_uids == "xarm6_robotiq_140":
@@ -49,20 +49,42 @@ def solve(env: PickCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Reach
     # -------------------------------------------------------------------------- #
-    reach_pose = grasp_pose * sapien.Pose([0, 0, -0.05])
-    planner.move_to_pose_with_RRTStar(reach_pose)
+    
+    if env.unwrapped.robot_uids != "xarm6_robotiq_140":
+        reach_pose = grasp_pose * sapien.Pose([0, 0, -0.05])
+        planner.move_to_pose_with_RRTStar(reach_pose)
 
-    # -------------------------------------------------------------------------- #
-    # Grasp
-    # -------------------------------------------------------------------------- #
-    planner.move_to_pose_with_screw(grasp_pose)
-    planner.close_gripper()
+        # -------------------------------------------------------------------------- #
+        # Grasp
+        # -------------------------------------------------------------------------- #
+        planner.move_to_pose_with_screw(grasp_pose)
+        planner.close_gripper()
 
-    # -------------------------------------------------------------------------- #
-    # Move to goal pose
-    # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(env.goal_site.pose.sp.p, grasp_pose.q)
-    res = planner.move_to_pose_with_screw(goal_pose)
+        # -------------------------------------------------------------------------- #
+        # Move to goal pose
+        # -------------------------------------------------------------------------- #
+        goal_pose = sapien.Pose(env.goal_site.pose.sp.p, grasp_pose.q)
+        res = planner.move_to_pose_with_screw(goal_pose)
 
-    planner.close()
-    return res
+        planner.close()
+        return res
+    else:
+        # Reach
+        # -------------------------------------------------------------------------- #
+        reach_pose = grasp_pose * sapien.Pose([0, 0, -0.15])
+        planner.move_to_pose_with_RRTStar(reach_pose)
+
+        # -------------------------------------------------------------------------- #
+        # Grasp
+        # -------------------------------------------------------------------------- #
+        true_grasp_pose = grasp_pose * sapien.Pose([0, 0, -0.07])
+        planner.move_to_pose_with_screw(true_grasp_pose)
+        planner.close_gripper()
+        # -------------------------------------------------------------------------- #
+        # Move to goal pose
+        # -------------------------------------------------------------------------- #
+        goal_pose = sapien.Pose(env.goal_site.pose.sp.p, grasp_pose.q)
+        true_goal_pose = goal_pose * sapien.Pose([0, 0, -0.06])
+        res = planner.move_to_pose_with_screw(true_goal_pose)
+        planner.close()
+        return res
