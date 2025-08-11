@@ -40,6 +40,7 @@ class PickCubeEnv(BaseEnv):
         "xarm6_robotiq",
         "so100",
         "widowxai",
+        "xarm6_robotiq_140",
     ]
     agent: Union[Panda, Fetch, XArm6Robotiq, SO100, WidowXAI]
     cube_half_size = 0.02
@@ -62,6 +63,7 @@ class PickCubeEnv(BaseEnv):
         self.sensor_cam_target_pos = cfg["sensor_cam_target_pos"]
         self.human_cam_eye_pos = cfg["human_cam_eye_pos"]
         self.human_cam_target_pos = cfg["human_cam_target_pos"]
+        self.robot_uids = robot_uids
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -79,7 +81,11 @@ class PickCubeEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
+        # because the xarm6_robotiq_140 has a longer gripper, we need to set the initial pose to a higher position
+        if self.robot_uids == "xarm6_robotiq_140":
+            super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0.1]))
+        else:
+            super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
