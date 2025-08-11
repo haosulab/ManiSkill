@@ -34,6 +34,8 @@ def solve(env: PlugChargerEnv, seed=None, debug=False, vis=False):
     ], env.unwrapped.control_mode
     if env.unwrapped.robot_uids == "xarm6_robotiq":
         planner_cls = XArm6RobotiqMotionPlanningSolver
+    elif env.unwrapped.robot_uids == "xarm6_robotiq_140":
+        planner_cls = XArm6RobotiqMotionPlanningSolver
     elif env.unwrapped.robot_uids == "xarm6_pandagripper":
         planner_cls = XArm6PandaGripperMotionPlanningSolver
     else:

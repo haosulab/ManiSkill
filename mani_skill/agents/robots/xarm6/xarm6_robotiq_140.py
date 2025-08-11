@@ -13,10 +13,10 @@ from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
 
-@register_agent(asset_download_ids=["xarm6"])
+@register_agent(asset_download_ids=["xarm6_robotiq_140"])
 class XArm6Robotiq140(BaseAgent):
     uid = "xarm6_robotiq_140"
-    urdf_path = f"assets/robots/xarm6_robotiq_140/xarm_robotiq_arg2f_140_model.urdf"
+    urdf_path = f"{ASSET_DIR}/robots/xarm6_robotiq_140/xarm6_robotiq_140/xarm_robotiq_arg2f_140_model.urdf"
 
     urdf_config = dict(
         _materials=dict(

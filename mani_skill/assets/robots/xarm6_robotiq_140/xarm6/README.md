@@ -1,1 +1,0 @@
-# ManiSkill-XArm6
