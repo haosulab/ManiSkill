@@ -13,7 +13,6 @@ from mani_skill.utils import common
 from mani_skill.utils.structs.types import Array
 
 try:
-    from cameras.camera import Camera
     from lerobot.motors.motors_bus import MotorNormMode
     from lerobot.robots.robot import Robot
     from lerobot.utils.robot_utils import busy_wait
@@ -58,8 +57,6 @@ class LeRobotRealAgent(BaseRealAgent):
         # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
         if self.real_robot.name == "so100_follower":
             qpos["elbow_flex.pos"] = qpos["elbow_flex.pos"] + 6.8
-        elif self.real_robot.name == "so101_follower":
-            pass
         self.real_robot.send_action(qpos)
 
     def reset(self, qpos: Array):

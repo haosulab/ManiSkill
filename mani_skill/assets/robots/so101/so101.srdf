@@ -1,8 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="so101">
 
-<!-- TODO: Check if this is correct -->
-
     <!-- for motion planner libs that read srdfs disable adjacent collisions -->
     <disable_collisions link1="base_link" link2="shoulder_link" reason="Adjacent"/>
     <disable_collisions link1="shoulder_link" link2="upper_arm_link" reason="Adjacent"/>
