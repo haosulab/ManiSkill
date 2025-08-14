@@ -174,7 +174,7 @@ class BaseController:
         )
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(dof={len(self.active_joint_indices)}, active_joints={len(self.joints)}, joints=({', '.join([x.name for x in self.joints])}))"
+        return f"{self.__class__.__name__}(dof={self.single_action_space.shape[0]}, active_joints={len(self.joints)}, joints=({', '.join([x.name for x in self.joints])}))"
 
 
 @dataclass
