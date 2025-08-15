@@ -13,10 +13,9 @@ from mani_skill.utils import common
 from mani_skill.utils.structs.types import Array
 
 try:
-    from lerobot.common.cameras.camera import Camera
-    from lerobot.common.motors.motors_bus import MotorNormMode
-    from lerobot.common.robots.robot import Robot
-    from lerobot.common.utils.robot_utils import busy_wait
+    from lerobot.motors.motors_bus import MotorNormMode
+    from lerobot.robots.robot import Robot
+    from lerobot.utils.robot_utils import busy_wait
 except ImportError:
     pass
 
@@ -41,7 +40,7 @@ class LeRobotRealAgent(BaseRealAgent):
         self._cached_qpos = None
         self._motor_keys: List[str] = None
 
-        if self.real_robot.name == "so100_follower":
+        if self.real_robot.name == "so100_follower" or self.real_robot.name == "so101_follower":
             self.real_robot.bus.motors["gripper"].norm_mode = MotorNormMode.DEGREES
 
     def start(self):
