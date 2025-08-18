@@ -42,7 +42,6 @@ class PickCubeEnv(BaseEnv):
         "widowxai",
     ]
     agent: Union[Panda, Fetch, XArm6Robotiq, SO100, WidowXAI]
-    cube_half_size = 0.02
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
