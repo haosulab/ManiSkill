@@ -208,18 +208,23 @@ class Kinematics:
                 if current_pose is None:
                     current_pose = self.pk_chain.forward_kinematics(q0).get_matrix()
                     current_pose = Pose.create_from_pq(current_pose[:, :3, 3], rotation_conversions.matrix_to_quaternion(current_pose[:, :3, :3]))
-
-                # the following assumes root_translation:root_aligned_body_rotation control frame
-                translation = pose.p - current_pose.p
-                quaternion = rotation_conversions.quaternion_multiply(pose.q, rotation_conversions.quaternion_invert(current_pose.q))
-                pose = Pose.create_from_pq(translation, quaternion)
+                if isinstance(pose, torch.Tensor):
+                    target_pos, target_rot = pose[:, 0:3], pose[:, 3:6]
+                    target_quat = rotation_conversions.matrix_to_quaternion(
+                        rotation_conversions.euler_angles_to_matrix(target_rot, "XYZ")
+                    )
+                    pose = Pose.create_from_pq(target_pos, target_quat)
+                if isinstance(pose, Pose):
+                    # the following assumes root_translation:root_aligned_body_rotation control frame
+                    translation = pose.p - current_pose.p
+                    quaternion = rotation_conversions.quaternion_multiply(pose.q, rotation_conversions.quaternion_invert(current_pose.q))
+                    pose = Pose.create_from_pq(translation, quaternion)
             if isinstance(pose, Pose):
                 delta_pose = torch.zeros((B, 6), device=self.device, dtype=torch.float32)
                 delta_pose[:, 0:3] = pose.p
                 delta_pose[:, 3:6] = rotation_conversions.matrix_to_euler_angles(rotation_conversions.quaternion_to_matrix(pose.q), "XYZ")
             else:
                 delta_pose = pose
-
             jacobian = self.pk_chain.jacobian(q0)[:, :, self.qmask]
             if solver_config["type"] == "levenberg_marquardt":
                 lambd = 0.0001 # Regularization parameter to ensure J^T * J is non-singular.

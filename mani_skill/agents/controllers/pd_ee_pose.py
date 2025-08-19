@@ -13,6 +13,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     matrix_to_quaternion,
     quaternion_apply,
     quaternion_multiply,
+    quaternion_to_matrix,
 )
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, DriveMode
@@ -113,7 +114,6 @@ class PDEEPosController(PDJointPosController):
         ik_via_target_pose = self.config.use_target or not self.scene.gpu_sim_enabled
         if ik_via_target_pose:
             self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
-
         pos_only = type(self.config) == PDEEPosControllerConfig
         if pos_only:
             action = torch.hstack([action, torch.zeros(action.shape[0], 3, device=self.device)])
@@ -121,7 +121,7 @@ class PDEEPosController(PDJointPosController):
         self._target_qpos = self.kinematics.compute_ik(
             pose=self._target_pose if ik_via_target_pose else action,
             q0=self.articulation.get_qpos(),
-            is_delta_pose=not ik_via_target_pose,
+            is_delta_pose=not ik_via_target_pose and self.config.use_delta,
             current_pose=self.ee_pose_at_base,
             solver_config=self.config.delta_solver_config,
         )
