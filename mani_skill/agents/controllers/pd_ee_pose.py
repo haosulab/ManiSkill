@@ -115,13 +115,15 @@ class PDEEPosController(PDJointPosController):
             self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
 
         pos_only = type(self.config) == PDEEPosControllerConfig
+        if pos_only:
+            action = torch.hstack([action, torch.zeros(action.shape[0], 3, device=self.device)])
+
         self._target_qpos = self.kinematics.compute_ik(
-            self._target_pose,
-            self.articulation.get_qpos(),
-            pos_only=pos_only,
-            action=action,
-            use_delta_ik_solver=not ik_via_target_pose,
-            delta_solver_config=self.config.delta_solver_config,
+            pose=self._target_pose if ik_via_target_pose else action,
+            q0=self.articulation.get_qpos(),
+            is_delta_pose=not ik_via_target_pose,
+            current_pose=self.ee_pose_at_base,
+            solver_config=self.config.delta_solver_config,
         )
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos
