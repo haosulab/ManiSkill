@@ -134,6 +134,7 @@ You can further change the properties of {py:class}`mani_skill.utils.structs.Act
 
 ```python
 import numpy as np
+from mani_skill.utils.structs import Actor, Link
 from sapien.physx import PhysxRigidBodyComponent
 from sapien.render import RenderBodyComponent
 
@@ -146,17 +147,19 @@ def _load_scene(self, options: dict):
     for i, obj in enumerate(actor._objs):
         # modify the i-th object which is in parallel environment i
         
-        # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
-        rigid_body_component: PhysxRigidBodyComponent = obj.entity.find_component_by_type(PhysxRigidBodyComponent)
+        if isinstance(actor, Link):
+            obj = obj.entity
+        rigid_body_component: PhysxRigidBodyComponent = obj.find_component_by_type(PhysxRigidBodyComponent)
         if rigid_body_component is not None:
+            # modifying physical properties e.g. randomizing mass from 0.1 to 1kg
             # note the use of _batched_episode_rng instead of torch.rand. _batched_episode_rng helps ensure reproducibility in parallel environments.
             rigid_body_component.mass = self._batched_episode_rng[i].uniform(low=0.1, high=1)
-        
-        # modifying per collision shape properties such as friction values
-        for shape in obj.collision_shapes:
-            shape.physical_material.dynamic_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
-            shape.physical_material.static_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
-            shape.physical_material.restitution = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+
+            # modifying per collision shape properties such as friction values
+            for shape in rigid_body_component.collision_shapes:
+                shape.physical_material.dynamic_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                shape.physical_material.static_friction = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
+                shape.physical_material.restitution = self._batched_episode_rng[i].uniform(low=0.1, high=0.3)
         
         render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
         for render_shape in render_body_component.render_shapes:
