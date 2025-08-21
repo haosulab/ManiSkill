@@ -281,7 +281,7 @@ class TableSceneBuilder(SceneBuilder):
             qpos = self.env.agent.keyframes["ready_to_grasp"].qpos
             self.env.agent.reset(qpos)
         elif self.env.robot_uids == "so100":
-            qpos = np.array([0, np.pi / 2, np.pi / 2, np.pi / 2, -np.pi / 2, 1.0])
+            qpos = np.array([0, 0, 0, np.pi / 2, np.pi / 2, 0])
             qpos = (
                 self.env._episode_rng.normal(
                     0, self.robot_init_qpos_noise, (b, len(qpos))
