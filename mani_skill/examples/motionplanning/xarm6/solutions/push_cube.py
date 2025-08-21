@@ -9,6 +9,8 @@ def solve(env: PushCubeEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
     if env.unwrapped.robot_uids == "xarm6_robotiq":
         planner_cls = XArm6RobotiqMotionPlanningSolver
+    elif env.unwrapped.robot_uids == "xarm6_robotiq_140":
+        planner_cls = XArm6RobotiqMotionPlanningSolver
     elif env.unwrapped.robot_uids == "xarm6_pandagripper":
         planner_cls = XArm6PandaGripperMotionPlanningSolver
     else:
