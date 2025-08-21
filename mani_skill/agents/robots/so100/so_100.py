@@ -102,48 +102,12 @@ class SO100(BaseAgent):
     def tcp_pose(self):
         return Pose.create_from_pq(self.tcp_pos, self.finger1_link.pose.q)
 
-    def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
-        """Check if the robot is grasping an object
-
-        Args:
-            object (Actor): The object to check if the robot is grasping
-            min_force (float, optional): Minimum force before the robot is considered to be grasping the object in Newtons. Defaults to 0.5.
-            max_angle (int, optional): Maximum angle of contact to consider grasping. Defaults to 85.
-        """
-        l_contact_forces = self.scene.get_pairwise_contact_forces(
-            self.finger1_link, object
-        )
-        r_contact_forces = self.scene.get_pairwise_contact_forces(
-            self.finger2_link, object
-        )
-        lforce = torch.linalg.norm(l_contact_forces, axis=1)
-        rforce = torch.linalg.norm(r_contact_forces, axis=1)
-
-        # direction to open the gripper
-        ldirection = self.finger1_link.pose.to_transformation_matrix()[..., :3, 1]
-        rdirection = -self.finger2_link.pose.to_transformation_matrix()[..., :3, 1]
-        langle = common.compute_angle_between(ldirection, l_contact_forces)
-        rangle = common.compute_angle_between(rdirection, r_contact_forces)
-        lflag = torch.logical_and(
-            lforce >= min_force, torch.rad2deg(langle) <= max_angle
-        )
-        rflag = torch.logical_and(
-            rforce >= min_force, torch.rad2deg(rangle) <= max_angle
-        )
-        return torch.logical_and(lflag, rflag)
-
     def _after_loading_articulation(self):
         super()._after_loading_articulation()
-        # self.set_colors()
         self.finger1_link = self.robot.links_map["Fixed_Jaw"]
         self.finger2_link = self.robot.links_map["Moving_Jaw"]
         self.finger1_tip = self.robot.links_map["Fixed_Jaw_tip"]
         self.finger2_tip = self.robot.links_map["Moving_Jaw_tip"]
-
-    @property
-    def tcp_pos(self):
-        # computes the tool center point as the mid point between the the fixed and moving jaw's tips
-        return (self.finger1_tip.pose.p + self.finger2_tip.pose.p) / 2
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object
@@ -178,3 +142,15 @@ class SO100(BaseAgent):
     def is_static(self, threshold=0.2):
         qvel = self.robot.get_qvel()[:, :-1]  # exclude the gripper joint
         return torch.max(torch.abs(qvel), 1)[0] <= threshold
+
+    @staticmethod
+    def build_grasp_pose(approaching, closing, center):
+        """Build a grasp pose (panda_hand_tcp)."""
+        assert np.abs(1 - np.linalg.norm(approaching)) < 1e-3
+        assert np.abs(1 - np.linalg.norm(closing)) < 1e-3
+        assert np.abs(approaching @ closing) <= 1e-3
+        ortho = np.cross(closing, approaching)
+        T = np.eye(4)
+        T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
+        T[:3, 3] = center
+        return sapien.Pose(T)
