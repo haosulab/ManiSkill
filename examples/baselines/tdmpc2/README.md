@@ -47,9 +47,9 @@ python evaluate.py model_size=5 seed=1 exp_name=default \
   save_video_local=true checkpoint=/absolute/path/to/checkpoint.pt
 ```
 
-* Make sure you specify the same control_mode the model was trained on if it's not default.
+* **Make sure you specify the same `num_eval_envs` and `control_mode` the model was trained on if it's not default.**
 * The video are saved under ```logs/{env_id}/{seed}/{exp_name}/videos```
-* The number of video saved is determined by ```num_envs * eval_episodes_per_env```
+* The number of video saved is determined by ```num_eval_envs * eval_episodes_per_env```
 
 ## Some Notes
 
