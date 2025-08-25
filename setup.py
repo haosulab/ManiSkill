@@ -30,7 +30,7 @@ def get_dependencies():
         "numpy>=1.22,<2.0.0",
         "scipy",
         "dacite",
-        "gymnasium==0.29.1",
+        "gymnasium>1.0",
         "h5py",
         "pyyaml",
         "tqdm",
