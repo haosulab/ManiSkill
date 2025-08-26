@@ -112,7 +112,7 @@ class SO100ArmMotionPlanningSolver:
         pose = to_sapien_pose(pose)
         if self.grasp_pose_visual is not None:
             self.grasp_pose_visual.set_pose(pose * self._so_100_visual_grasp_pose_transform)
-        pose = sapien.Pose(p=pose.p, q=pose.q)
+        pose = sapien.Pose(p=pose.p + self._so_100_grasp_pose_tcp_transform.p, q=pose.q)
         result = self.planner.plan_qpos_to_pose(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],
