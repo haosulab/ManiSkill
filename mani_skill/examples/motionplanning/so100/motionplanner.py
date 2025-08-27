@@ -13,7 +13,7 @@ from mani_skill.examples.motionplanning.base_motionplanner.gripper_pose_visual_b
 
 
 class SO100ArmMotionPlanningSolver (BaseMotionPlanningSolver):
-    OPEN = -0.2
+    OPEN = 0
     CLOSED = -0.8
     MOVE_GROUP_LINKS = 5
 
