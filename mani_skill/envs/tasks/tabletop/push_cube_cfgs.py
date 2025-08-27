@@ -28,7 +28,7 @@ PUSH_CUBE_CONFIGS = {
     },
     "so100": {
         "goal_radius": 0.05,
-        "goal_distance": 0.05,
+        "goal_distance": 0.025,
         "cube_half_size": 0.0125,
         "cube_spawn_half_size": 0.05,
         "cube_spawn_center": (-0.5, 0),
