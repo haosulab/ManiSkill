@@ -9,9 +9,10 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.so100.solutions import solvePickCube
+from mani_skill.examples.motionplanning.so100.solutions import solvePickCube, solvePushCube
 MP_SOLUTIONS = {
     "PickCubeSO100-v1": solvePickCube,
+    "PushCubeSO100-v1": solvePushCube,
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()

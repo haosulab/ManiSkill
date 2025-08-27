@@ -23,8 +23,9 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda
+from mani_skill.agents.robots import Fetch, Panda, SO100
 from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.envs.tasks.tabletop.push_cube_cfgs import PUSH_CUBE_CONFIGS
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors
@@ -50,18 +51,35 @@ class PushCubeEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PushCube-v1_rt.mp4"
 
-    SUPPORTED_ROBOTS = ["panda", "fetch"]
+    SUPPORTED_ROBOTS = [
+        "panda",
+        "fetch",
+        "so100",
+    ]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch]
+    agent: Union[Panda, Fetch, SO100]
 
     # set some commonly used values
     goal_radius = 0.1
     cube_half_size = 0.02
+    cube_spawn_center = (0, 0)
 
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
         # specifying robot_uids="panda" as the default means gym.make("PushCube-v1") will default to using the panda arm.
         self.robot_init_qpos_noise = robot_init_qpos_noise
+        if robot_uids in PUSH_CUBE_CONFIGS:
+            cfg = PUSH_CUBE_CONFIGS[robot_uids]
+        else:
+            cfg = PUSH_CUBE_CONFIGS["panda"]
+        self.goal_radius = cfg["goal_radius"]
+        self.cube_half_size = cfg["cube_half_size"]
+        self.cube_spawn_center = cfg["cube_spawn_center"]
+        self.cube_spawn_half_size = cfg["cube_spawn_half_size"]
+        self.sensor_cam_eye_pos = cfg["sensor_cam_eye_pos"]
+        self.sensor_cam_target_pos = cfg["sensor_cam_target_pos"]
+        self.human_cam_eye_pos = cfg["human_cam_eye_pos"]
+        self.human_cam_target_pos = cfg["human_cam_target_pos"]
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     # Specify default simulation/gpu memory configurations to override any default values
@@ -77,7 +95,7 @@ class PushCubeEnv(BaseEnv):
     def _default_sensor_configs(self):
         # registers one 128x128 camera looking at the robot, cube, and target
         # a smaller sized camera will be lower quality, but render faster
-        pose = sapien_utils.look_at(eye=[0.3, 0, 0.6], target=[-0.1, 0, 0.1])
+        pose = sapien_utils.look_at(eye=self.sensor_cam_eye_pos, target=self.sensor_cam_target_pos)
         return [
             CameraConfig(
                 "base_camera",
@@ -93,7 +111,7 @@ class PushCubeEnv(BaseEnv):
     @property
     def _default_human_render_camera_configs(self):
         # registers a more high-definition (512x512) camera used just for rendering when render_mode="rgb_array" or calling env.render_rgb_array()
-        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at(eye=self.human_cam_eye_pos, target=self.human_cam_target_pos)
         return CameraConfig(
             "render_camera", pose=pose, width=512, height=512, fov=1, near=0.01, far=100
         )
@@ -153,7 +171,9 @@ class PushCubeEnv(BaseEnv):
 
             # here we write some randomization code that randomizes the x, y position of the cube we are pushing in the range [-0.1, -0.1] to [0.1, 0.1]
             xyz = torch.zeros((b, 3))
-            xyz[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
+            xyz[..., :2] = torch.rand((b, 2)) * 2 * self.cube_spawn_half_size - self.cube_spawn_half_size
+            xyz[..., 0] += self.cube_spawn_center[0]
+            xyz[..., 1] += self.cube_spawn_center[1]
             xyz[..., 2] = self.cube_half_size
             q = [1, 0, 0, 0]
             # we can then create a pose object using Pose.create_from_pq to then set the cube pose with. Note that even though our quaternion
