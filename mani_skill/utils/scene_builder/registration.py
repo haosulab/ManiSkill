@@ -33,7 +33,7 @@ def register_scene_builder(uid: str, override=False):
                 logger.warn(
                     f"Scene Builder {uid} is already registered. Skip registration."
                 )
-            return scene_builder_cls
+                return scene_builder_cls
 
         REGISTERED_SCENE_BUILDERS[uid] = SceneBuilderSpec(
             scene_builder_cls=scene_builder_cls
