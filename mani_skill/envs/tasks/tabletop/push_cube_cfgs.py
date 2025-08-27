@@ -6,6 +6,7 @@ and the camera angles are reasonable.
 PUSH_CUBE_CONFIGS = {
     "panda": {
         "goal_radius": 0.1,
+        "goal_distance": 0.1,
         "cube_half_size": 0.02,
         "cube_spawn_half_size": 0.1,
         "cube_spawn_center": (0, 0),
@@ -16,6 +17,7 @@ PUSH_CUBE_CONFIGS = {
     },
     "fetch": {
         "goal_radius": 0.1,
+        "goal_distance": 0.1,
         "cube_half_size": 0.02,
         "cube_spawn_half_size": 0.1,
         "cube_spawn_center": (0, 0),
@@ -26,9 +28,10 @@ PUSH_CUBE_CONFIGS = {
     },
     "so100": {
         "goal_radius": 0.05,
+        "goal_distance": 0.05,
         "cube_half_size": 0.0125,
         "cube_spawn_half_size": 0.05,
-        "cube_spawn_center": (-0.46, 0),
+        "cube_spawn_center": (-0.5, 0),
         "sensor_cam_eye_pos": [-0.27, 0, 0.4],
         "sensor_cam_target_pos": [-0.56, 0, -0.25],
         "human_cam_eye_pos": [-0.1, 0.3, 0.4],

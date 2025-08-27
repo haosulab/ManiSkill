@@ -16,16 +16,16 @@ def solve(env: PushCubeEnv, seed=None, debug=False, vis=False):
         print_env_info=False,
     )
 
-    FINGER_LENGTH = 0.01
+    FINGER_LENGTH = 0.015
     env = env.unwrapped
     planner.close_gripper()
-    reach_pose = sapien.Pose(p=env.obj.pose.sp.p + np.array([-0.05, 0, 0]), q=env.agent.tcp_pose.sp.q)
+    reach_pose = sapien.Pose(p=env.obj.pose.sp.p + np.array([-0.05, 0, env.cube_half_size]), q=env.agent.tcp_pose.sp.q)
     planner.move_to_pose_with_screw(reach_pose)
 
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(p=env.goal_region.pose.sp.p + np.array([-0.12, 0, 0]),q=env.agent.tcp_pose.sp.q)
+    goal_pose = sapien.Pose(p=env.goal_region.pose.sp.p + np.array([-env.goal_radius, 0, env.cube_half_size]),q=env.agent.tcp_pose.sp.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.close()

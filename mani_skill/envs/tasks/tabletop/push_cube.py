@@ -73,6 +73,7 @@ class PushCubeEnv(BaseEnv):
         else:
             cfg = PUSH_CUBE_CONFIGS["panda"]
         self.goal_radius = cfg["goal_radius"]
+        self.goal_distance = cfg["goal_distance"]
         self.cube_half_size = cfg["cube_half_size"]
         self.cube_spawn_center = cfg["cube_spawn_center"]
         self.cube_spawn_half_size = cfg["cube_spawn_half_size"]
@@ -186,7 +187,7 @@ class PushCubeEnv(BaseEnv):
 
             # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
             # and we further rotate 90 degrees on the y-axis to make the target object face up
-            target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0])
+            target_region_xyz = xyz + torch.tensor([self.goal_distance + self.goal_radius, 0, 0])
             # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3
             self.goal_region.set_pose(
@@ -215,7 +216,7 @@ class PushCubeEnv(BaseEnv):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
         obs = dict(
-            tcp_pose=self.agent.tcp.pose.raw_pose,
+            tcp_pose=self.agent.tcp_pose.raw_pose,
         )
         if self.obs_mode_struct.use_state:
             # if the observation mode requests to use state, we provide ground truth information about where the cube is.
@@ -232,7 +233,7 @@ class PushCubeEnv(BaseEnv):
             p=self.obj.pose.p
             + torch.tensor([-self.cube_half_size - 0.005, 0, 0], device=self.device)
         )
-        tcp_to_push_pose = tcp_push_pose.p - self.agent.tcp.pose.p
+        tcp_to_push_pose = tcp_push_pose.p - self.agent.tcp_pose.p
         tcp_to_push_pose_dist = torch.linalg.norm(tcp_to_push_pose, axis=1)
         reaching_reward = 1 - torch.tanh(5 * tcp_to_push_pose_dist)
         reward = reaching_reward

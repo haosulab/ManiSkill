@@ -10,9 +10,10 @@ import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.examples.motionplanning.so100.solutions import solvePickCube, solvePushCube
+import traceback
 MP_SOLUTIONS = {
-    "PickCubeSO100-v1": solvePickCube,
-    "PushCubeSO100-v1": solvePushCube,
+    "PickCube-v1": solvePickCube,
+    "PushCube-v1": solvePushCube,
 }
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -38,6 +39,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 9) -> str:
         obs_mode=args.obs_mode,
         control_mode="pd_joint_pos",
         render_mode=args.render_mode,
+        robot_uids="so100",
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
@@ -138,6 +140,10 @@ def main(args):
 
 if __name__ == "__main__":
     # start = time.time()
-    mp.set_start_method("spawn")
-    main(parse_args())
+    try:
+        mp.set_start_method("spawn")
+        main(parse_args())
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
     # print(f"Total time taken: {time.time() - start}")
