@@ -23,7 +23,7 @@ import torch
 import torch.random
 from transforms3d.euler import euler2quat
 
-from mani_skill.agents.robots import Fetch, Panda, SO100
+from mani_skill.agents.robots import Fetch, Panda, SO100, XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.push_cube_cfgs import PUSH_CUBE_CONFIGS
 from mani_skill.sensors.camera import CameraConfig
@@ -55,10 +55,11 @@ class PushCubeEnv(BaseEnv):
         "panda",
         "fetch",
         "so100",
+        "xarm6_robotiq",
     ]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch, SO100]
+    agent: Union[Panda, Fetch, SO100, XArm6Robotiq]
 
     # set some commonly used values
     goal_radius = 0.1
