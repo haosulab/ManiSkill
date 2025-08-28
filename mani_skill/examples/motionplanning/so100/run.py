@@ -140,10 +140,6 @@ def main(args):
 
 if __name__ == "__main__":
     # start = time.time()
-    try:
-        mp.set_start_method("spawn")
-        main(parse_args())
-    except Exception as e:
-        print(e)
-        traceback.print_exc()
+    mp.set_start_method("spawn")
+    main(parse_args())
     # print(f"Total time taken: {time.time() - start}")
