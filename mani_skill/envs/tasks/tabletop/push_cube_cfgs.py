@@ -37,4 +37,15 @@ PUSH_CUBE_CONFIGS = {
         "human_cam_eye_pos": [-0.1, 0.3, 0.4],
         "human_cam_target_pos": [-0.46, 0.0, 0.1],
     },
+    "xarm6_robotiq": {
+        "goal_radius": 0.1,
+        "goal_distance": 0.075,
+        "cube_half_size": 0.02,
+        "cube_spawn_half_size": 0.075,
+        "cube_spawn_center": (-0.05, 0),
+        "sensor_cam_eye_pos": [0.3, 0, 0.6],
+        "sensor_cam_target_pos": [-0.1, 0, 0.1],
+        "human_cam_eye_pos": [0.6, 0.7, 0.6],
+        "human_cam_target_pos": [0.0, 0.0, 0.35],
+    },
 }

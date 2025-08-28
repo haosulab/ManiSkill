@@ -25,13 +25,13 @@ def solve(env: PushCubeEnv, seed=None, debug=False, vis=False):
     FINGER_LENGTH = 0.025
     env = env.unwrapped
     planner.close_gripper()
-    reach_pose = sapien.Pose(p=env.obj.pose.sp.p + np.array([-0.05, 0, 0]), q=env.agent.tcp.pose.sp.q)
+    reach_pose = sapien.Pose(p=env.obj.pose.sp.p + np.array([-0.075, 0, env.cube_half_size]), q=env.agent.tcp.pose.sp.q)
     planner.move_to_pose_with_RRTStar(reach_pose)
 
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    goal_pose = sapien.Pose(p=env.goal_region.pose.sp.p,q=env.agent.tcp.pose.sp.q)
+    goal_pose = sapien.Pose(p=env.goal_region.pose.sp.p + np.array([0, 0, env.cube_half_size]),q=env.agent.tcp.pose.sp.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.close()
