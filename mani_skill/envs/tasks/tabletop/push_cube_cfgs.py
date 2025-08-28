@@ -30,7 +30,7 @@ PUSH_CUBE_CONFIGS = {
         "goal_radius": 0.05,
         "goal_distance": 0.025,
         "cube_half_size": 0.0125,
-        "cube_spawn_half_size": 0.05,
+        "cube_spawn_half_size": 0.03,
         "cube_spawn_center": (-0.5, 0),
         "sensor_cam_eye_pos": [-0.27, 0, 0.4],
         "sensor_cam_target_pos": [-0.56, 0, -0.25],
