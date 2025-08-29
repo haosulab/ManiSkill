@@ -5,7 +5,7 @@ import sapien
 from mani_skill.envs.tasks import PegInsertionSideEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.panda.utils import (
+from mani_skill.examples.motionplanning.base_motionplanner.utils import (
     compute_grasp_info_by_obb, get_actor_obb)
 
 

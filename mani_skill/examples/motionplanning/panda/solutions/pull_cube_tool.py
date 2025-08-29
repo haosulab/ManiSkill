@@ -3,7 +3,7 @@ import sapien
 
 from mani_skill.envs.tasks import PullCubeToolEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.panda.utils import compute_grasp_info_by_obb, get_actor_obb
+from mani_skill.examples.motionplanning.base_motionplanner.utils import compute_grasp_info_by_obb, get_actor_obb
 
 def solve(env: PullCubeToolEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
