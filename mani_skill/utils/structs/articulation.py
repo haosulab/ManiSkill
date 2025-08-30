@@ -732,7 +732,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
-                7:10,
+                10:13,
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
@@ -750,7 +750,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
                 self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
-                10:13,
+                7:10,
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
