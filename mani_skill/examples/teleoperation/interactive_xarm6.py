@@ -145,9 +145,6 @@ def solve(env: BaseEnv, debug=False, vis=False):
             transform_window = plugin
     while True:
         transform_window.enabled = True
-        # transform_window.update_ghost_objects
-        # print(transform_window.ghost_objects, transform_window._gizmo_pose)
-        # planner.grasp_pose_visual.set_pose(transform_window._gizmo_pose)
 
         env.render_human()
         execute_current_pose = False

@@ -9,11 +9,11 @@ from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.structs.pose import to_sapien_pose
 import sapien.physx as physx
 from transforms3d import quaternions
+from mani_skill.envs.scene import ManiSkillScene
 
 
 class BaseMotionPlanningSolver:
-    OPEN = 1
-    CLOSED = -1
+    MOVE_GROUP_LINKS = None
 
     def __init__(
         self,
@@ -25,7 +25,6 @@ class BaseMotionPlanningSolver:
         print_env_info: bool = True,
         joint_vel_limits=0.9,
         joint_acc_limits=0.9,
-        num_links=7,
     ):
         self.env = env
         self.base_env: BaseEnv = env.unwrapped
@@ -36,7 +35,6 @@ class BaseMotionPlanningSolver:
 
         self.base_pose = to_sapien_pose(base_pose)
 
-        self.num_links = num_links
         self.planner = self.setup_planner()
         self.control_mode = self.base_env.control_mode
 
@@ -51,8 +49,6 @@ class BaseMotionPlanningSolver:
         self.use_point_cloud = False
         self.collision_pts_changed = False
         self.all_collision_pts = None
-
-        self.gripper_state = self.OPEN
 
     def render_wait(self):
         if not self.vis or not self.debug:
@@ -73,8 +69,8 @@ class BaseMotionPlanningSolver:
             user_link_names=link_names,
             user_joint_names=joint_names,
             move_group="eef",
-            joint_vel_limits=np.ones(self.num_links) * self.joint_vel_limits,
-            joint_acc_limits=np.ones(self.num_links) * self.joint_acc_limits,
+            joint_vel_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_vel_limits,
+            joint_acc_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_acc_limits,
         )
         planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
         return planner
@@ -85,9 +81,9 @@ class BaseMotionPlanningSolver:
             qpos = result["position"][min(i, n_step - 1)]
             if self.control_mode == "pd_joint_pos_vel":
                 qvel = result["velocity"][min(i, n_step - 1)]
-                action = np.hstack([qpos, qvel, self.gripper_state])
+                action = np.hstack([qpos, qvel])
             else:
-                action = np.hstack([qpos, self.gripper_state])
+                action = np.hstack([qpos])
             obs, reward, terminated, truncated, info = self.env.step(action)
             self.elapsed_steps += 1
             if self.print_env_info:
@@ -177,46 +173,6 @@ class BaseMotionPlanningSolver:
         if dry_run:
             return result
         return self.follow_path(result, refine_steps=refine_steps)
-
-    def open_gripper(self, t=6, gripper_state=None):
-        if gripper_state is None:
-            gripper_state = self.OPEN
-        self.gripper_state = gripper_state
-        qpos = self.robot.get_qpos()[0, : self.num_links].cpu().numpy()
-        for i in range(t):
-            if self.control_mode == "pd_joint_pos":
-                action = np.hstack([qpos, self.gripper_state])
-            else:
-                action = np.hstack([qpos, qpos * 0, self.gripper_state])
-            obs, reward, terminated, truncated, info = self.env.step(action)
-            self.elapsed_steps += 1
-            if self.print_env_info:
-                print(
-                    f"[{self.elapsed_steps:3}] Env Output: reward={reward} info={info}"
-                )
-            if self.vis:
-                self.base_env.render_human()
-        return obs, reward, terminated, truncated, info
-
-    def close_gripper(self, t=6, gripper_state=None):
-        if gripper_state is None:
-            gripper_state = self.CLOSED
-        self.gripper_state = gripper_state
-        qpos = self.robot.get_qpos()[0, : self.num_links].cpu().numpy()
-        for i in range(t):
-            if self.control_mode == "pd_joint_pos":
-                action = np.hstack([qpos, self.gripper_state])
-            else:
-                action = np.hstack([qpos, qpos * 0, self.gripper_state])
-            obs, reward, terminated, truncated, info = self.env.step(action)
-            self.elapsed_steps += 1
-            if self.print_env_info:
-                print(
-                    f"[{self.elapsed_steps:3}] Env Output: reward={reward} info={info}"
-                )
-            if self.vis:
-                self.base_env.render_human()
-        return obs, reward, terminated, truncated, info
 
     def add_box_collision(self, extents: np.ndarray, pose: sapien.Pose):
         self.use_point_cloud = True

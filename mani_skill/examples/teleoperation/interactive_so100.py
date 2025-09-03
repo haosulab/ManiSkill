@@ -138,16 +138,13 @@ def solve(env: BaseEnv, debug=False, vis=False):
     last_checkpoint_state = None
     gripper_open = True
     def select_so100_hand():
-        viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "Fixed_Jaw")._objs[0].entity) # Fixed_Jaw_tip does not move ghost object
+        viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "Fixed_Jaw")._objs[0].entity) 
     select_so100_hand()
     for plugin in viewer.plugins:
         if isinstance(plugin, sapien.utils.viewer.viewer.TransformWindow):
             transform_window = plugin
     while True:
         transform_window.enabled = True
-        # transform_window.update_ghost_objects
-        # print(transform_window.ghost_objects, transform_window._gizmo_pose)
-        # planner.grasp_pose_visual.set_pose(transform_window._gizmo_pose)
 
         env.render_human()
         execute_current_pose = False

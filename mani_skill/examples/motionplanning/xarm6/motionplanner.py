@@ -1,12 +1,10 @@
 import numpy as np
+import sapien
 import mplib
-from mani_skill.examples.motionplanning.base_motionplanner.motionplanner import BaseMotionPlanningSolver
+from mani_skill.examples.motionplanning.two_finger_gripper.motionplanner import TwoFingerGripperMotionPlanningSolver
 from mani_skill.envs.sapien_env import BaseEnv
-import sapien.core as sapien
-from mani_skill.examples.motionplanning.base_motionplanner.gripper_pose_visual_builders import build_robotiq_gripper_grasp_pose_visual, build_panda_gripper_grasp_pose_visual
 
-
-class XArm6RobotiqMotionPlanningSolver(BaseMotionPlanningSolver):
+class XArm6RobotiqMotionPlanningSolver(TwoFingerGripperMotionPlanningSolver):
     CLOSED = 0.81
     OPEN = 0
     MOVE_GROUP_LINKS = 6
@@ -22,20 +20,9 @@ class XArm6RobotiqMotionPlanningSolver(BaseMotionPlanningSolver):
         joint_vel_limits=0.9,
         joint_acc_limits=0.9,
     ):
-        super().__init__(env, debug, vis, base_pose, visualize_target_grasp_pose, print_env_info, joint_vel_limits, joint_acc_limits, num_links=self.MOVE_GROUP_LINKS)
-        if self.vis and self.visualize_target_grasp_pose:
-            if "grasp_pose_visual" not in self.base_env.scene.actors:
-                self.grasp_pose_visual = build_robotiq_gripper_grasp_pose_visual(
-                    self.base_env.scene
-                )
-            else:
-                self.grasp_pose_visual = self.base_env.scene.actors["grasp_pose_visual"]
-            self.grasp_pose_visual.set_pose(self.base_env.agent.tcp.pose)
+        super().__init__(env, debug, vis, base_pose, visualize_target_grasp_pose, print_env_info, joint_vel_limits, joint_acc_limits)
 
-
-
-
-class XArm6PandaGripperMotionPlanningSolver(BaseMotionPlanningSolver):
+class XArm6PandaGripperMotionPlanningSolver(TwoFingerGripperMotionPlanningSolver):
     MOVE_GROUP_LINKS = 6
     def __init__(
         self,
@@ -48,15 +35,7 @@ class XArm6PandaGripperMotionPlanningSolver(BaseMotionPlanningSolver):
         joint_vel_limits=0.9,
         joint_acc_limits=0.9,
     ):
-        super().__init__(env, debug, vis, base_pose, visualize_target_grasp_pose, print_env_info, joint_vel_limits, joint_acc_limits, num_links=self.MOVE_GROUP_LINKS)
-        if self.vis and self.visualize_target_grasp_pose:
-            if "grasp_pose_visual" not in self.base_env.scene.actors:
-                self.grasp_pose_visual = build_panda_gripper_grasp_pose_visual(
-                    self.base_env.scene
-                )
-            else:
-                self.grasp_pose_visual = self.base_env.scene.actors["grasp_pose_visual"]
-            self.grasp_pose_visual.set_pose(self.base_env.agent.tcp.pose)
+        super().__init__(env, debug, vis, base_pose, visualize_target_grasp_pose, print_env_info, joint_vel_limits, joint_acc_limits)
 
     def setup_planner(self):
         link_names = [link.get_name() for link in self.robot.get_links()]
@@ -67,8 +46,8 @@ class XArm6PandaGripperMotionPlanningSolver(BaseMotionPlanningSolver):
             user_link_names=link_names,
             user_joint_names=joint_names,
             move_group="panda_hand_tcp",
-            joint_vel_limits=np.ones(self.num_links) * self.joint_vel_limits,
-            joint_acc_limits=np.ones(self.num_links) * self.joint_acc_limits,
+            joint_vel_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_vel_limits,
+            joint_acc_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_acc_limits,
         )
         planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
         return planner
