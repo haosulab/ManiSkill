@@ -93,7 +93,7 @@ Table of all tasks/environments in this category. Task column is the environment
 <td><div style='display:flex;gap:4px;align-items:center'><img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PlaceSphere-v1_rt_thumb_first.png' alt='PlaceSphere-v1'> <img style='min-width:min(50%, 100px);max-width:100px;height:auto' src='../../_static/env_thumbnails/PlaceSphere-v1_rt_thumb_last.png' alt='PlaceSphere-v1'></div></td>
 <td><p>✅</p></td>
 <td><p>✅</p></td>
-<td><p>❌</p></td>
+<td><p>✅</p></td>
 <td><p>50</p></td>
 </tr>
 <tr class="row-odd">
