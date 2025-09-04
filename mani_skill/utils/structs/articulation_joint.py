@@ -317,7 +317,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def global_pose(self) -> Pose:
-        return self.pose_in_child * self.child_link.pose
+        return self.child_link.pose * self.pose_in_child
 
     @property
     def limits(self) -> torch.Tensor:
