@@ -43,7 +43,7 @@ class CachedResetWrapper(gym.Wrapper):
         # setup config
         self.num_envs = self.base_env.num_envs
         if isinstance(config, CachedResetsConfig):
-            config = config.asdict()
+            config = asdict(config)
         self.cached_resets_config = dacite.from_dict(
             data_class=CachedResetsConfig,
             data=config,
