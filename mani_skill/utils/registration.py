@@ -87,6 +87,13 @@ class EnvSpec:
             entry_point,
             max_episode_steps=self.max_episode_steps,
             kwargs=self.default_kwargs,
+            additional_wrappers=[
+                WrapperSpec(
+                    "MSTimeLimit",
+                    entry_point="mani_skill.utils.registration:TimeLimitWrapper",
+                    kwargs=dict(max_episode_steps=self.max_episode_steps),
+                )
+            ],
         )
 
 
@@ -246,6 +253,7 @@ def register_env(
             max_episode_steps=max_episode_steps,
             disable_env_checker=True,  # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),
+            # TODO (stao): why arent custom vec envs allowed to have this?
             additional_wrappers=[
                 WrapperSpec(
                     "MSTimeLimit",
