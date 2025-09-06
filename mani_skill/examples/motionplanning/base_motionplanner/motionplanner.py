@@ -68,6 +68,12 @@ class BaseMotionPlanningSolver:
         planner.joint_acc_limits = np.asarray(planner.joint_acc_limits) * self.joint_acc_limits
         return planner
 
+    def _update_grasp_visual(self, target: sapien.Pose) -> None:
+        return None
+
+    def _transform_pose_for_planning(self, target: sapien.Pose) -> sapien.Pose:
+        return target
+
     def follow_path(self, result, refine_steps: int = 0):
         n_step = result["position"].shape[0]
         for i in range(n_step + refine_steps):
@@ -92,9 +98,8 @@ class BaseMotionPlanningSolver:
         self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
     ):
         pose = to_sapien_pose(pose)
-        if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.set_pose(pose)
-        pose = sapien.Pose(p=pose.p, q=pose.q)
+        self._update_grasp_visual(pose)
+        pose = self._transform_pose_for_planning(pose)
         result = self.planner.plan_qpos_to_pose(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],
@@ -118,9 +123,8 @@ class BaseMotionPlanningSolver:
         self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
     ):
         pose = to_sapien_pose(pose)
-        if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.set_pose(pose)
-        pose = sapien.Pose(p=pose.p, q=pose.q)
+        self._update_grasp_visual(pose)
+        pose = self._transform_pose_for_planning(pose)
         result = self.planner.plan_qpos_to_pose(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],
@@ -142,9 +146,8 @@ class BaseMotionPlanningSolver:
     ):
         pose = to_sapien_pose(pose)
         # try screw two times before giving up
-        if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.set_pose(pose)
-        pose = sapien.Pose(p=pose.p , q=pose.q)
+        self._update_grasp_visual(pose)
+        pose = self._transform_pose_for_planning(pose)
         result = self.planner.plan_screw(
             np.concatenate([pose.p, pose.q]),
             self.robot.get_qpos().cpu().numpy()[0],

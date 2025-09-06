@@ -35,6 +35,10 @@ class TwoFingerGripperMotionPlanningSolver(BaseMotionPlanningSolver):
             else:
                 self.grasp_pose_visual = self.base_env.scene.actors["grasp_pose_visual"]
             self.grasp_pose_visual.set_pose(self.base_env.agent.tcp_pose)
+
+    def _update_grasp_visual(self, target: sapien.Pose) -> None:
+        if self.grasp_pose_visual is not None:
+            self.grasp_pose_visual.set_pose(target)
     
     def follow_path(self, result, refine_steps: int = 0):
         n_step = result["position"].shape[0]

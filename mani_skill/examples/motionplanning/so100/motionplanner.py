@@ -31,83 +31,10 @@ class SO100ArmMotionPlanningSolver (TwoFingerGripperMotionPlanningSolver):
     def _so_100_grasp_pose_tcp_transform(self):
         return self.base_env.agent.robot.links_map["Fixed_Jaw_tip"].pose.sp * self.base_env.agent.tcp_pose.sp.inv()
 
-    def move_to_pose_with_RRTConnect(
-        self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
-    ):
-        pose = to_sapien_pose(pose)
+    def _update_grasp_visual(self, target: sapien.Pose) -> None:
         if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.set_pose(pose * self._so_100_visual_grasp_pose_transform)
-        pose = sapien.Pose(p=pose.p + self._so_100_grasp_pose_tcp_transform.p, q=pose.q)
-        result = self.planner.plan_qpos_to_pose(
-            np.concatenate([pose.p, pose.q]),
-            self.robot.get_qpos().cpu().numpy()[0],
-            time_step=self.base_env.control_timestep,
-            use_point_cloud=self.use_point_cloud,
-            wrt_world=True,
-        )
-        if result["status"] != "Success":
-            print(result["status"])
-            self.render_wait()
-            return -1
-        self.render_wait()
-        if dry_run:
-            return result
-        return self.follow_path(result, refine_steps=refine_steps)
+            self.grasp_pose_visual.set_pose(target * self._so_100_visual_grasp_pose_transform)
 
-    def move_to_pose_with_screw(
-        self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
-    ):
-        pose = to_sapien_pose(pose)
-        # try screw two times before giving up
-        if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.set_pose(pose * self._so_100_visual_grasp_pose_transform)
-        pose = sapien.Pose(p=pose.p + self._so_100_grasp_pose_tcp_transform.p, q=pose.q)
-        result = self.planner.plan_screw(
-            np.concatenate([pose.p, pose.q]),
-            self.robot.get_qpos().cpu().numpy()[0],
-            time_step=self.base_env.control_timestep,
-            use_point_cloud=self.use_point_cloud,
-        )
-        if result["status"] != "Success":
-            result = self.planner.plan_screw(
-                np.concatenate([pose.p, pose.q]),
-                self.robot.get_qpos().cpu().numpy()[0],
-                qpos_step=0.1,
-                time_step=self.base_env.control_timestep,
-                use_point_cloud=self.use_point_cloud,
-            )
-            if result["status"] != "Success":
-                print(result["status"])
-                self.render_wait()
-                return -1
-        self.render_wait()
-        if dry_run:
-            return result
-        return self.follow_path(result, refine_steps=refine_steps)
-
-    def move_to_pose_with_RRTStar(
-        self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
-    ):
-        pose = to_sapien_pose(pose)
-        if self.grasp_pose_visual is not None:
-            self.grasp_pose_visual.set_pose(pose * self._so_100_visual_grasp_pose_transform)
-        pose = sapien.Pose(p=pose.p + self._so_100_grasp_pose_tcp_transform.p, q=pose.q)
-        result = self.planner.plan_qpos_to_pose(
-            np.concatenate([pose.p, pose.q]),
-            self.robot.get_qpos().cpu().numpy()[0],
-            time_step=self.base_env.control_timestep,
-            use_point_cloud=self.use_point_cloud,
-            rrt_range=0.0,
-            planning_time=1,
-            planner_name="RRTstar",
-            wrt_world=True,
-        )
-        if result["status"] != "Success":
-            print(result["status"])
-            self.render_wait()
-            return -1
-        self.render_wait()
-        if dry_run:
-            return result
-        return self.follow_path(result, refine_steps=refine_steps)
+    def _transform_pose_for_planning(self, target: sapien.Pose) -> sapien.Pose:
+        return sapien.Pose(p=target.p + self._so_100_grasp_pose_tcp_transform.p, q=target.q)
 
