@@ -23,8 +23,10 @@ class TwoFingerGripperMotionPlanningSolver(BaseMotionPlanningSolver):
         joint_vel_limits=0.9,
         joint_acc_limits=0.9,
     ):
-        super().__init__(env, debug, vis, base_pose, visualize_target_grasp_pose, print_env_info, joint_vel_limits, joint_acc_limits)
+        super().__init__(env, debug, vis, base_pose, print_env_info, joint_vel_limits, joint_acc_limits)
         self.gripper_state = self.OPEN
+        self.visualize_target_grasp_pose = visualize_target_grasp_pose
+        self.grasp_pose_visual = None
         if self.vis and self.visualize_target_grasp_pose:
             if "grasp_pose_visual" not in self.base_env.scene.actors:
                 self.grasp_pose_visual = build_two_finger_gripper_grasp_pose_visual(

@@ -16,7 +16,6 @@ class BaseMotionPlanningSolver:
         debug: bool = False,
         vis: bool = True,
         base_pose: sapien.Pose = None,  # TODO mplib doesn't support robot base being anywhere but 0
-        visualize_target_grasp_pose: bool = True,
         print_env_info: bool = True,
         joint_vel_limits=0.9,
         joint_acc_limits=0.9,
@@ -36,8 +35,6 @@ class BaseMotionPlanningSolver:
         self.debug = debug
         self.vis = vis
         self.print_env_info = print_env_info
-        self.visualize_target_grasp_pose = visualize_target_grasp_pose
-        self.grasp_pose_visual = None
         
         self.elapsed_steps = 0
 
