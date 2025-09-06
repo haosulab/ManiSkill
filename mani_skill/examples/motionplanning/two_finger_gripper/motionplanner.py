@@ -11,7 +11,6 @@ from transforms3d import quaternions
 class TwoFingerGripperMotionPlanningSolver(BaseMotionPlanningSolver):
     OPEN = 1
     CLOSED = -1
-    MOVE_GROUP_LINKS = None
 
     def __init__(
         self,
@@ -58,7 +57,7 @@ class TwoFingerGripperMotionPlanningSolver(BaseMotionPlanningSolver):
         if gripper_state is None:
             gripper_state = self.OPEN
         self.gripper_state = gripper_state
-        qpos = self.robot.get_qpos()[0, : self.MOVE_GROUP_LINKS].cpu().numpy()
+        qpos = self.robot.get_qpos()[0, : len(self.planner.joint_vel_limits)].cpu().numpy()
         for i in range(t):
             if self.control_mode == "pd_joint_pos":
                 action = np.hstack([qpos, self.gripper_state])
@@ -78,7 +77,7 @@ class TwoFingerGripperMotionPlanningSolver(BaseMotionPlanningSolver):
         if gripper_state is None:
             gripper_state = self.CLOSED
         self.gripper_state = gripper_state
-        qpos = self.robot.get_qpos()[0, : self.MOVE_GROUP_LINKS].cpu().numpy()
+        qpos = self.robot.get_qpos()[0, : len(self.planner.joint_vel_limits)].cpu().numpy()
         for i in range(t):
             if self.control_mode == "pd_joint_pos":
                 action = np.hstack([qpos, self.gripper_state])

@@ -7,7 +7,6 @@ from mani_skill.envs.sapien_env import BaseEnv
 class XArm6RobotiqMotionPlanningSolver(TwoFingerGripperMotionPlanningSolver):
     CLOSED = 0.81
     OPEN = 0
-    MOVE_GROUP_LINKS = 6
 
     def __init__(
         self,

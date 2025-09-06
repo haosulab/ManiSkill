@@ -9,7 +9,6 @@ from mani_skill.utils.structs.pose import to_sapien_pose
 
 
 class BaseMotionPlanningSolver:
-    MOVE_GROUP_LINKS = None
 
     def __init__(
         self,
@@ -57,6 +56,7 @@ class BaseMotionPlanningSolver:
             self.base_env.render_human()
 
     def setup_planner(self):
+        move_group = self.MOVE_GROUP if hasattr(self, "MOVE_GROUP") else "eef"
         link_names = [link.get_name() for link in self.robot.get_links()]
         joint_names = [joint.get_name() for joint in self.robot.get_active_joints()]
         planner = mplib.Planner(
@@ -64,11 +64,11 @@ class BaseMotionPlanningSolver:
             srdf=self.env_agent.urdf_path.replace(".urdf", ".srdf"),
             user_link_names=link_names,
             user_joint_names=joint_names,
-            move_group="eef",
-            joint_vel_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_vel_limits,
-            joint_acc_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_acc_limits,
+            move_group=move_group,
         )
         planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
+        planner.joint_vel_limits = np.asarray(planner.joint_vel_limits) * self.joint_vel_limits
+        planner.joint_acc_limits = np.asarray(planner.joint_acc_limits) * self.joint_acc_limits
         return planner
 
     def follow_path(self, result, refine_steps: int = 0):

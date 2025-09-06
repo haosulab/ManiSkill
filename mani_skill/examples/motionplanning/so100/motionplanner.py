@@ -11,7 +11,7 @@ from mani_skill.examples.motionplanning.two_finger_gripper.motionplanner import 
 class SO100ArmMotionPlanningSolver (TwoFingerGripperMotionPlanningSolver):
     OPEN = 0
     CLOSED = -0.8
-    MOVE_GROUP_LINKS = 5
+    MOVE_GROUP = "Fixed_Jaw_tip"
 
     def __init__(
         self,
@@ -30,22 +30,6 @@ class SO100ArmMotionPlanningSolver (TwoFingerGripperMotionPlanningSolver):
     @property
     def _so_100_grasp_pose_tcp_transform(self):
         return self.base_env.agent.robot.links_map["Fixed_Jaw_tip"].pose.sp * self.base_env.agent.tcp_pose.sp.inv()
-
-    def setup_planner(self):
-        link_names = [link.get_name() for link in self.robot.get_links()]
-        joint_names = [joint.get_name() for joint in self.robot.get_active_joints()]
-        planner = mplib.Planner(
-            urdf=self.env_agent.urdf_path,
-            srdf=self.env_agent.urdf_path.replace(".urdf", ".srdf"),
-            user_link_names=link_names,
-            user_joint_names=joint_names,
-            move_group="Fixed_Jaw_tip",
-            joint_vel_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_vel_limits,
-            joint_acc_limits=np.ones(self.MOVE_GROUP_LINKS) * self.joint_acc_limits,
-        )
-        planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
-        return planner
-
 
     def move_to_pose_with_RRTConnect(
         self, pose: sapien.Pose, dry_run: bool = False, refine_steps: int = 0
