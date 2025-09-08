@@ -10,13 +10,14 @@ import torch
 
 from mani_skill.agents.base_real_agent import BaseRealAgent
 from mani_skill.utils import common
+from mani_skill.utils.logging_utils import logging
 from mani_skill.utils.structs.types import Array
 
 try:
-    from lerobot.common.cameras.camera import Camera
-    from lerobot.common.motors.motors_bus import MotorNormMode
-    from lerobot.common.robots.robot import Robot
-    from lerobot.common.utils.robot_utils import busy_wait
+    from lerobot.cameras.camera import Camera
+    from lerobot.motors.motors_bus import MotorNormMode
+    from lerobot.robots.robot import Robot
+    from lerobot.utils.robot_utils import busy_wait
 except ImportError:
     pass
 
@@ -29,17 +30,38 @@ class LeRobotRealAgent(BaseRealAgent):
         robot (Robot): The Robot instance you create via LeRobot.
         use_cached_qpos (bool): Whether to cache the fetched qpos values. If True, the qpos will be
             read from the cache instead of the real robot when possible. This cache is only invalidated when
-            set_target_qpos or set_target_qvel is called. This can be useful if you want to easily have higher frequency (> 30Hz) control since qpos reading from the robot is
-            currently the slowest part of LeRobot for some of the supported motors.
+            set_target_qpos or set_target_qvel is called. This can be useful if you want to easily have higher frequency (> 30Hz) control since qpos reading from the robot is currently the slowest part of LeRobot for some of the supported motors.
+        calibration_offset (dict): A dictionary of motor names mapping to their calibration offsets in degrees. This is strongly recommended to be tuned since the zero joint position of the robot motors after calibration with LeRobot does not always align with simulation. An example for the SO100 robot arm is shown below. To tune these values you should move the robot to a rest position with joint angles equal to 0 or 90 degrees, and tune the values below until the real robot also matches the simulation rendered configuration (in which all adjacent parts are at right angles / parallel to each other).
+
+        .. code-block:: python
+        calibration_offset = {
+            "shoulder_pan": -3,
+            "shoulder_lift": -3,
+            "elbow_flex": 5,
+            "wrist_flex": 5,
+            "wrist_roll": 0,
+            "gripper": 0,
+        }
     """
 
-    def __init__(self, robot: Robot, use_cached_qpos: bool = True, **kwargs):
+    def __init__(
+        self,
+        robot: Robot,
+        use_cached_qpos: bool = True,
+        calibration_offset: dict = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self._captured_sensor_data = None
         self.real_robot = robot
         self.use_cached_qpos = use_cached_qpos
         self._cached_qpos = None
         self._motor_keys: List[str] = None
+        self._calibration_offset = calibration_offset
+        if self._calibration_offset is None:
+            logging.warning(
+                "The calibration offset for the robot is not tuned!! Unless you are absolutely sure you don't need it,you will most likely get poor results for sim2real/real2sim transfer."
+            )
 
         if self.real_robot.name == "so100_follower":
             self.real_robot.bus.motors["gripper"].norm_mode = MotorNormMode.DEGREES
@@ -55,9 +77,9 @@ class LeRobotRealAgent(BaseRealAgent):
         qpos = common.to_cpu_tensor(qpos).flatten()
         qpos = torch.rad2deg(qpos)
         qpos = {f"{self._motor_keys[i]}.pos": qpos[i] for i in range(len(qpos))}
-        # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
-        if self.real_robot.name == "so100_follower":
-            qpos["elbow_flex.pos"] = qpos["elbow_flex.pos"] + 6.8
+        if self._calibration_offset is not None:
+            for k in self._calibration_offset.keys():
+                qpos[k] = qpos[k] + self._calibration_offset[k]
         self.real_robot.send_action(qpos)
 
     def reset(self, qpos: Array):
@@ -111,8 +133,9 @@ class LeRobotRealAgent(BaseRealAgent):
         qpos_deg = self.real_robot.bus.sync_read("Present_Position")
 
         # NOTE (stao): It seems the calibration from LeRobot has some offsets in some joints. We fix reading them here to match the expected behavior
-        if self.real_robot.name == "so100_follower":
-            qpos_deg["elbow_flex"] = qpos_deg["elbow_flex"] - 6.8
+        if self._calibration_offset is not None:
+            for k in self._calibration_offset.keys():
+                qpos_deg[k] = qpos_deg[k] - self._calibration_offset[k]
         if self._motor_keys is None:
             self._motor_keys = list(qpos_deg.keys())
         qpos_deg = common.flatten_state_dict(qpos_deg)
