@@ -76,11 +76,15 @@ class LeRobotRealAgent(BaseRealAgent):
         self._cached_qpos = None
         qpos = common.to_cpu_tensor(qpos).flatten()
         qpos = torch.rad2deg(qpos)
-        qpos = {f"{self._motor_keys[i]}.pos": qpos[i] for i in range(len(qpos))}
-        if self._calibration_offset is not None:
-            for k in self._calibration_offset.keys():
-                qpos[k] = qpos[k] + self._calibration_offset[k]
-        self.real_robot.send_action(qpos)
+        action = dict()
+        for motor_key, qpos_val in zip(self._motor_keys, qpos):
+            action_key = motor_key + ".pos"
+            action[action_key] = qpos_val
+            if motor_key in self._calibration_offset:
+                action[action_key] = (
+                    action[action_key] + self._calibration_offset[motor_key]
+                )
+        self.real_robot.send_action(action)
 
     def reset(self, qpos: Array):
         qpos = common.to_cpu_tensor(qpos)
