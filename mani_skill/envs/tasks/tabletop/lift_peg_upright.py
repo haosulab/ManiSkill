@@ -20,7 +20,7 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
-    """
+    r"""
     **Task Description:**
     A simple task where the objective is to move a peg laying on the table to any upright position on the table
 

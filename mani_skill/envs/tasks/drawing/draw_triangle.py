@@ -21,7 +21,7 @@ from mani_skill.utils.structs.types import SceneConfig, SimConfig
 
 @register_env("DrawTriangle-v1", max_episode_steps=300)
 class DrawTriangleEnv(BaseEnv):
-    """
+    r"""
     **Task Description:**
     Instantiates a table with a white canvas on it and a goal triangle with an outline. A robot with a stick is to draw the triangle with a red line.
 
