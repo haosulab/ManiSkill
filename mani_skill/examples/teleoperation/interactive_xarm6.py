@@ -6,10 +6,8 @@ import numpy as np
 import sapien.core as sapien
 from mani_skill.envs.sapien_env import BaseEnv
 
-from mani_skill.examples.motionplanning.panda.motionplanner import \
-    PandaArmMotionPlanningSolver
-from mani_skill.examples.motionplanning.panda.motionplanner_stick import \
-    PandaStickMotionPlanningSolver
+from mani_skill.examples.motionplanning.xarm6.motionplanner import \
+    XArm6RobotiqMotionPlanningSolver
 import sapien.utils.viewer
 import h5py
 import json
@@ -23,8 +21,8 @@ from dataclasses import dataclass
 class Args:
     env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PickCube-v1"
     obs_mode: str = "none"
-    robot_uid: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "panda"
-    """The robot to use. Robot setups supported for teleop in this script are panda and panda_stick"""
+    robot_uid: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "xarm6_robotiq"
+    """The robot to use. Robot setups supported for teleop in this script is xarm6"""
     record_dir: str = "demos"
     """directory to record the demonstration data and optionally videos"""
     save_video: bool = False
@@ -45,15 +43,16 @@ def main(args: Args):
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
         reward_mode="none",
-        robot_uids=args.robot_uid,
+        robot_uids=args.robot_uid, 
         enable_shadow=True,
         viewer_camera_configs=dict(shader_pack=args.viewer_shader)
     )
+
     env = RecordEpisode(
         env,
         output_dir=output_dir,
         trajectory_name="trajectory",
-        save_video=False,
+        save_video=True,
         info_on_video=False,
         source_type="teleoperation",
         source_desc="teleoperation via the click+drag system"
@@ -91,7 +90,7 @@ def main(args: Args):
             control_mode="pd_joint_pos",
             render_mode="rgb_array",
             reward_mode="none",
-            robot_uids=args.robot_uid,
+            robot_uids=args.robot_uid, 
             human_render_camera_configs=dict(shader_pack=args.video_saving_shader),
         )
         env = RecordEpisode(
@@ -118,52 +117,34 @@ def main(args: Args):
         del env
 
 
-
 def solve(env: BaseEnv, debug=False, vis=False):
     assert env.unwrapped.control_mode in [
         "pd_joint_pos",
         "pd_joint_pos_vel",
     ], env.unwrapped.control_mode
-    robot_has_gripper = False
-    if env.unwrapped.robot_uids == "panda_stick":
-        planner = PandaStickMotionPlanningSolver(
-            env,
-            debug=debug,
-            vis=vis,
-            base_pose=env.unwrapped.agent.robot.pose,
-            visualize_target_grasp_pose=False,
-            print_env_info=False,
-            joint_acc_limits=0.5,
-            joint_vel_limits=0.5,
-        )
-    elif env.unwrapped.robot_uids == "panda" or env.unwrapped.robot_uids == "panda_wristcam":
-        robot_has_gripper = True
-        planner = PandaArmMotionPlanningSolver(
-            env,
-            debug=debug,
-            vis=vis,
-            base_pose=env.unwrapped.agent.robot.pose,
-            visualize_target_grasp_pose=False,
-            print_env_info=False,
-            joint_acc_limits=0.5,
-            joint_vel_limits=0.5,
-        )
+    robot_has_gripper = True
+    planner = XArm6RobotiqMotionPlanningSolver(
+        env,
+        debug=debug,
+        vis=vis,
+        base_pose=env.unwrapped.agent.robot.pose,
+        visualize_target_grasp_pose=False,
+        print_env_info=False,
+        joint_acc_limits=0.5,
+        joint_vel_limits=0.5,
+    )
     viewer = env.render_human()
-
+    
     last_checkpoint_state = None
     gripper_open = True
-    def select_panda_hand():
-        viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "panda_hand")._objs[0].entity)
-    select_panda_hand()
+    def select_xarm6_hand():
+        viewer.select_entity(sapien_utils.get_obj_by_name(env.agent.robot.links, "robotiq_arg2f_base_link")._objs[0].entity)
+    select_xarm6_hand()
     for plugin in viewer.plugins:
         if isinstance(plugin, sapien.utils.viewer.viewer.TransformWindow):
             transform_window = plugin
     while True:
-
         transform_window.enabled = True
-        # transform_window.update_ghost_objects
-        # print(transform_window.ghost_objects, transform_window._gizmo_pose)
-        # planner.grasp_pose_visual.set_pose(transform_window._gizmo_pose)
 
         env.render_human()
         execute_current_pose = False
@@ -171,33 +152,18 @@ def solve(env: BaseEnv, debug=False, vis=False):
             print("""Available commands:
             h: print this help menu
             g: toggle gripper to close/open (if there is a gripper)
-            u: move the panda hand up
-            j: move the panda hand down
-            arrow_keys: move the panda hand in the direction of the arrow keys
-            n: execute command via motion planning to make the robot move to the target pose indicated by the ghost panda arm
+            u: move the xarm6 hand up
+            j: move the xarm6 hand down
+            arrow_keys: move the xarm6 hand in the direction of the arrow keys
+            n: execute command via motion planning to make the robot move to the target pose indicated by the ghost xarm6 arm
             c: stop this episode and record the trajectory and move on to a new episode
             q: quit the script and stop collecting data. Save trajectories and optionally videos.
             """)
             pass
-        # elif viewer.window.key_press("k"):
-        #     print("Saving checkpoint")
-        #     last_checkpoint_state = env.get_state_dict()
-        # elif viewer.window.key_press("l"):
-        #     if last_checkpoint_state is not None:
-        #         print("Loading previous checkpoint")
-        #         env.set_state_dict(last_checkpoint_state)
-        #     else:
-        #         print("Could not find previous checkpoint")
         elif viewer.window.key_press("q"):
             return "quit"
         elif viewer.window.key_press("c"):
             return "continue"
-        # elif viewer.window.key_press("r"):
-        #     viewer.select_entity(None)
-        #     return "restart"
-        # elif viewer.window.key_press("t"):
-        #     # TODO (stao): change from position transform to rotation transform
-        #     pass
         elif viewer.window.key_press("n"):
             execute_current_pose = True
         elif viewer.window.key_press("g") and robot_has_gripper:
@@ -209,35 +175,34 @@ def solve(env: BaseEnv, debug=False, vis=False):
                 _, reward, _ ,_, info = planner.open_gripper()
             print(f"Reward: {reward}, Info: {info}")
         elif viewer.window.key_press("u"):
-            select_panda_hand()
+            select_xarm6_hand()
             transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, 0, -0.01])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("j"):
-            select_panda_hand()
+            select_xarm6_hand()
             transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, 0, +0.01])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("down"):
-            select_panda_hand()
+            select_xarm6_hand()
             transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[+0.01, 0, 0])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("up"):
-            select_panda_hand()
+            select_xarm6_hand()
             transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[-0.01, 0, 0])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("right"):
-            select_panda_hand()
+            select_xarm6_hand()
             transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, -0.01, 0])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         elif viewer.window.key_press("left"):
-            select_panda_hand()
+            select_xarm6_hand()
             transform_window.gizmo_matrix = (transform_window._gizmo_pose * sapien.Pose(p=[0, +0.01, 0])).to_transformation_matrix()
             transform_window.update_ghost_objects()
         if execute_current_pose:
-            # z-offset of end-effector gizmo to TCP position is hardcoded for the panda robot here
-            if env.unwrapped.robot_uids == "panda" or env.unwrapped.robot_uids == "panda_wristcam":
-                result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.1]), dry_run=True)
-            elif env.unwrapped.robot_uids == "panda_stick":
-                result = planner.move_to_pose_with_screw(transform_window._gizmo_pose * sapien.Pose([0, 0, 0.15]), dry_run=True)
+            # z-offset of end-effector gizmo to TCP position is hardcoded for the xarm6 robot here
+            target_pose = transform_window._gizmo_pose * sapien.Pose([0, 0, 0.15]) 
+            
+            result = planner.move_to_pose_with_RRTStar(target_pose, dry_run=True)
             if result != -1 and len(result["position"]) < 150:
                 _, reward, _ ,_, info = planner.follow_path(result)
                 print(f"Reward: {reward}, Info: {info}")
@@ -247,7 +212,5 @@ def solve(env: BaseEnv, debug=False, vis=False):
             execute_current_pose = False
 
 
-
-    return args
 if __name__ == "__main__":
     main(parse_args())
