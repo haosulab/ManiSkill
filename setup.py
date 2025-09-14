@@ -27,7 +27,7 @@ def get_python_version():
 
 def get_dependencies():
     install_requires = [
-        "numpy>=1.22,<2.0.0",
+        "numpy>=1.22",
         "scipy",
         "dacite",
         "gymnasium==0.29.1",
