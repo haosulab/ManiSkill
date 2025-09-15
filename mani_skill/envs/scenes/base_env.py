@@ -6,7 +6,7 @@ import sapien.physx as physx
 import torch
 from sapien import Pose
 
-from mani_skill.agents.robots import Fetch, Panda
+from mani_skill.agents.robots import Fetch, Panda, Xlerobot
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -37,8 +37,8 @@ class SceneManipulationEnv(BaseEnv):
         init_config_idxs (optional): which init configs (additional init options) to sample. Your scene_builder_cls may or may not require these.
     """
 
-    SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    SUPPORTED_ROBOTS = ["panda", "fetch", "xlerobot"]
+    agent: Union[Panda, Fetch, Xlerobot]
 
     def __init__(
         self,
@@ -160,6 +160,21 @@ class SceneManipulationEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
+        if self.robot_uids == "xlerobot_single" or self.robot_uids == "xlerobot":
+
+            robot_camera_pose = sapien_utils.look_at([1, 0, 0.6], [0, 0, 0.3])
+            robot_camera_config = CameraConfig(
+                "render_camera",  
+                robot_camera_pose,
+                640,
+                480,
+                1,
+                0.01,
+                100,
+                mount=self.agent.top_base_link,
+            )
+            return [robot_camera_config]
+            
         if self.robot_uids == "fetch":
             room_camera_pose = sapien_utils.look_at([2.5, -2.5, 3], [0.0, 0.0, 0])
             room_camera_config = CameraConfig(
