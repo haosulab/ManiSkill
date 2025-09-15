@@ -23,7 +23,7 @@ XLEROBOT_SINGLE_BASE_COLLISION_BIT = 31
 """Collision bit of the xlerobot base"""
 
 
-@register_agent()
+@register_agent(asset_download_ids=["xlerobot"])
 class XlerobotSingle(BaseAgent):
     uid = "xlerobot_single"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/xlerobot/xlerobot_single.urdf"
