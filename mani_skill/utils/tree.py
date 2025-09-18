@@ -22,3 +22,14 @@ def replace(x, i, y):
             replace(v, i, y[k])
     else:
         x[i] = y
+
+def shape(x, first_only=False):
+    """
+    Get the shape of leaf items in a tree. If first_only is True, return the shape of the first item only
+    """
+    if isinstance(x, dict):
+        if first_only:
+            return shape(next(iter(x.values())), first_only)
+        return {k: shape(v, first_only) for k, v in x.items()}
+    else:
+        return x.shape
