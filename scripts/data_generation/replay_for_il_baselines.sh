@@ -25,6 +25,11 @@ python -m mani_skill.trajectory.replay_trajectory \
   --save-traj --num-envs 10 -b physx_cpu
 
 python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/StackPyramid-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pose -o state \
+  --save-traj --num-envs 10 -b physx_cpu
+
+python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/PegInsertionSide-v1/motionplanning/trajectory.h5 \
   --use-first-env-state -c pd_ee_delta_pose -o state \
   --save-traj --num-envs 10 -b physx_cpu
@@ -59,6 +64,11 @@ python -m mani_skill.trajectory.replay_trajectory \
 python -m mani_skill.trajectory.replay_trajectory \
   --traj-path ~/.maniskill/demos/DrawTriangle-v1/motionplanning/trajectory.h5 \
   --use-first-env-state -c pd_ee_delta_pos -o rgb \
+  --save-traj --num-envs 10 -b physx_cpu
+
+python -m mani_skill.trajectory.replay_trajectory \
+  --traj-path ~/.maniskill/demos/StackPyramid-v1/motionplanning/trajectory.h5 \
+  --use-first-env-state -c pd_ee_delta_pose -o rgb \
   --save-traj --num-envs 10 -b physx_cpu
 
 python -m mani_skill.trajectory.replay_trajectory \

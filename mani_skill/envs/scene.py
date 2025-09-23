@@ -9,6 +9,7 @@ import sapien.render
 import torch
 from sapien.render import RenderCameraComponent
 
+import mani_skill.render.utils as render_utils
 from mani_skill.envs.utils.system.backend import BackendInfo
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
@@ -114,6 +115,10 @@ class ManiSkillScene:
             actors=dict(), articulations=dict()
         )
         """state dict registry that map actor/articulation names to Actor/Articulation struct references. Only these structs are used for the environment state"""
+
+    def can_render(self):
+        """Whether or not this Scene object permits rendering, depending on the rendering device selected"""
+        return render_utils.can_render(self.backend.render_device)
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene

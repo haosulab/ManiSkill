@@ -19,7 +19,7 @@ from transforms3d.euler import euler2quat
 
 @register_env("DrawSVG-v1", max_episode_steps=500)
 class DrawSVGEnv(BaseEnv):
-    """
+    r"""
     **Task Description:**
     Instantiates a table with a white canvas on it and a svg path specified with an outline. A robot with a stick is to draw the triangle with a red line.
     

@@ -41,8 +41,6 @@ def evaluate(cfg: dict):
 	"""
 	assert torch.cuda.is_available()
 	assert cfg.eval_episodes_per_env > 0, 'Must evaluate at least 1 episode.'
-	eval_episodes = cfg.eval_episodes_per_env * cfg.num_eval_envs
-	cfg.num_envs = 1 # to keep the code similar and logging video simpler
 	cfg = parse_cfg(cfg)
 	assert not cfg.multitask, colored('Warning: multi-task models is not currently supported for maniskill.', 'red', attrs=['bold'])
 	set_seed(cfg.seed)
@@ -51,7 +49,7 @@ def evaluate(cfg: dict):
 	print(colored(f'Checkpoint: {cfg.checkpoint}', 'blue', attrs=['bold']))
 
 	# Make environment
-	env = make_envs(cfg, cfg.num_envs, is_eval=True)
+	env = make_envs(cfg, cfg.num_eval_envs, is_eval=True)
 
 	# Load agent
 	agent = TDMPC2(cfg)
@@ -73,30 +71,34 @@ def evaluate(cfg: dict):
 			task_idx = None
 		has_success, has_fail = False, False # if task has success or/and fail (added for maniskill)
 		ep_rewards, ep_successes, ep_fails = [], [], []
-		for i in range(eval_episodes):
+		i = 0
+		for _ in range(cfg.eval_episodes_per_env):
 			obs, _ = env.reset()
-			done = False # ms3: done is truncated since the ms3 ignore_terminations.
-			ep_reward, t = 0, 0
+			done = torch.full((cfg.num_eval_envs, ), False, device=('cuda' if cfg.env_type=='gpu' else 'cpu')) # ms3: done is truncated since the ms3 ignore_terminations.
+			ep_reward, t = torch.zeros((cfg.num_eval_envs, ), device=('cuda' if cfg.env_type=='gpu' else 'cpu')), 0
 			if cfg.save_video_local:
-				frames = [env.render().squeeze()]
-			while not done: # done is truncated and should be the same
-				action = agent.act(obs, t0=t==0)
+				frames = [env.render().cpu()]
+			while not done[0]: # done is truncated and should be the same
+				action = agent.act(obs, t0=t==0, eval_mode=True)
 				obs, reward, terminated, truncated, info = env.step(action)
 				done = terminated | truncated
 				ep_reward += reward
 				t += 1
 				if cfg.save_video_local:
-					frames.append(env.render().squeeze())
+					frames.append(env.render().cpu())
 			ep_rewards.append(ep_reward.mean().item())
 			if 'success' in info: 
 				has_success = True
-				ep_successes.append(info['success'].float().mean().item())
+				ep_successes.append(info['final_info']['success'].float().mean().item())
 			if 'fail' in info:
 				has_fail = True
-				ep_fails.append(info['fail'].float().mean().item())
+				ep_fails.append(info['final_info']['fail'].float().mean().item())
 			if cfg.save_video_local:
-				imageio.mimsave(
-					os.path.join(video_dir, f'{task}-{i}.mp4'), frames, fps=15)
+				videos = np.array(frames).transpose([1,0,2,3,4])
+				for video in videos:
+					imageio.mimsave(
+						os.path.join(video_dir, f'{task}-{i}.mp4'), video, fps=15)
+					i += 1
 		ep_rewards = np.nanmean(ep_rewards)
 		ep_successes = np.nanmean(ep_successes)
 		ep_fails = np.nanmean(ep_fails)

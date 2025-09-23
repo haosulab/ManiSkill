@@ -1,17 +1,19 @@
-from dataclasses import dataclass
-from typing import Literal, Sequence, Union
+from dataclasses import dataclass, field
+from typing import Literal, Optional, Sequence, Union
 
 import numpy as np
 import torch
 from gymnasium import spaces
 
 from mani_skill.agents.controllers.utils.kinematics import Kinematics
-from mani_skill.utils import gym_utils
+from mani_skill.utils import gym_utils, sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
+    matrix_to_euler_angles,
     matrix_to_quaternion,
     quaternion_apply,
     quaternion_multiply,
+    quaternion_to_matrix,
 )
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, DriveMode
@@ -45,6 +47,13 @@ class PDEEPosController(PDJointPosController):
 
         self.ee_link = self.kinematics.end_link
 
+        if self.config.root_link_name is not None:
+            self.root_link = sapien_utils.get_obj_by_name(
+                self.articulation.get_links(), self.config.root_link_name
+            )
+        else:
+            self.root_link = self.articulation.root
+
     def _initialize_action_space(self):
         low = np.float32(np.broadcast_to(self.config.pos_lower, 3))
         high = np.float32(np.broadcast_to(self.config.pos_upper, 3))
@@ -60,18 +69,19 @@ class PDEEPosController(PDJointPosController):
 
     @property
     def ee_pose_at_base(self):
-        to_base = self.articulation.pose.inv()
+        to_base = self.root_link.pose.inv()
         return to_base * (self.ee_pose)
 
     def reset(self):
         super().reset()
-        if self._target_pose is None:
-            self._target_pose = self.ee_pose_at_base
-        else:
-            # TODO (stao): this is a strange way to mask setting individual batched pose parts
-            self._target_pose.raw_pose[
-                self.scene._reset_mask
-            ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
+        if self.config.use_target:
+            if self._target_pose is None:
+                self._target_pose = self.ee_pose_at_base
+            else:
+                # TODO (stao): this is a strange way to mask setting individual batched pose parts
+                self._target_pose.raw_pose[
+                    self.scene._reset_mask
+                ] = self.ee_pose_at_base.raw_pose[self.scene._reset_mask]
 
     def compute_target_pose(self, prev_ee_pose_at_base, action):
         # Keep the current rotation and change the position
@@ -98,14 +108,22 @@ class PDEEPosController(PDJointPosController):
         else:
             prev_ee_pose_at_base = self.ee_pose_at_base
 
-        self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
+        # we only need to use the target pose for CPU sim or if a virtual target is enabled
+        # if we have no virtual target and using the gpu sim we can directly use the given action without
+        # having to recompute the new target pose based on the action delta.
+        ik_via_target_pose = self.config.use_target or not self.scene.gpu_sim_enabled
+        if ik_via_target_pose:
+            self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
         pos_only = type(self.config) == PDEEPosControllerConfig
+        if pos_only:
+            action = torch.hstack([action, torch.zeros(action.shape[0], 3, device=self.device)])
+
         self._target_qpos = self.kinematics.compute_ik(
-            self._target_pose,
-            self.articulation.get_qpos(),
-            pos_only=pos_only,
-            action=action,
-            use_delta_ik_solver=self.config.use_delta and not self.config.use_target,
+            pose=self._target_pose if ik_via_target_pose else action,
+            q0=self.articulation.get_qpos(),
+            is_delta_pose=not ik_via_target_pose and self.config.use_delta,
+            current_pose=self.ee_pose_at_base,
+            solver_config=self.config.delta_solver_config,
         )
         if self._target_qpos is None:
             self._target_qpos = self._start_qpos
@@ -156,6 +174,8 @@ class PDEEPosControllerConfig(ControllerConfig):
     ] = "root_translation"
     """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
+    root_link_name: Optional[str] = None
+    """Optionally set different root link for root translation control (e.g. if root is different than base)"""
     use_delta: bool = True
     """Whether to use delta-action control. If true then actions indicate the delta/change in position via translation and orientation via
     rotation. If false, then actions indicate in the base frame (typically wherever the root link of the robot is) what pose the end effector
@@ -166,6 +186,10 @@ class PDEEPosControllerConfig(ControllerConfig):
     interpolate: bool = False
     normalize_action: bool = True
     """Whether to normalize each action dimension into a range of [-1, 1]. Normally for most machine learning workflows this is recommended to be kept true."""
+    delta_solver_config: dict = field(
+        default_factory=lambda: dict(type="levenberg_marquardt", alpha=1.0)
+    )
+    """Configuration for the delta IK solver. Default is `dict(type="levenberg_marquardt", alpha=1.0)`. type can be one of "levenberg_marquardt" or "pseudo_inverse". alpha is a scaling term applied to the delta joint positions generated by the solver. Generally levenberg_marquardt is faster and more accurate than pseudo_inverse and is the recommended option, see https://github.com/haosulab/ManiSkill/issues/955#issuecomment-2742253342 for some analysis on performance."""
     drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
     controller_cls = PDEEPosController
 
