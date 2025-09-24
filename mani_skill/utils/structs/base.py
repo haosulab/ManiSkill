@@ -209,7 +209,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
             return self._body_data[self._body_data_index, 10:13]
         else:
             return torch.tensor(
-                np.array([body.angular_velocity for body in self._bodies])
+                np.array([body.angular_velocity for body in self._bodies]),
+                device=self.device
             )
 
     @property
@@ -356,7 +357,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if self.scene.gpu_sim_enabled:
             return self._body_data[self._body_data_index, 10:13]
         else:
-            return torch.from_numpy(self._bodies[0].angular_velocity[None, :])
+            return torch.from_numpy(self._bodies[0].angular_velocity[None, :], device=self.device)
 
     @angular_velocity.setter
     def angular_velocity(self, arg1: Array):
