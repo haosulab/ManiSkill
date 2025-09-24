@@ -265,7 +265,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
             # for link entities, namely 7:10 was angular velocity and 10:13 was linear velocity. SAPIEN 3.0.0 and above fixes this
             return self._body_data[self._body_data_index, 7:10]
         else:
-            return torch.from_numpy(self._bodies[0].linear_velocity[None, :])
+            return torch.from_numpy(self._bodies[0].linear_velocity[None, :]).to(self.device)
 
     @property
     def mass(self) -> torch.Tensor:
@@ -426,7 +426,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.tensor(
-                np.array([body.linear_velocity for body in self._bodies])
+                np.array([body.linear_velocity for body in self._bodies]), device=self.device
             )
 
     @linear_velocity.setter
