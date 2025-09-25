@@ -58,7 +58,7 @@ class CachedResetWrapper(gym.Wrapper):
         if reset_to_env_states is not None:
             self._cached_resets_env_states = reset_to_env_states["env_states"]
             self._cached_resets_obs_buffer = reset_to_env_states.get("obs", None)
-            self._num_cached_resets = len(self._cached_resets_env_states)
+            self._num_cached_resets = tree.shape(self._cached_resets_env_states)
         else:
             if self.cached_resets_config.num_resets is None:
                 self.cached_resets_config.num_resets = self.num_envs
