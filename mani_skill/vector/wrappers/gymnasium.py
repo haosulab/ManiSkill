@@ -157,8 +157,8 @@ class ManiSkillVectorEnv(VectorEnv):
             # NOTE (stao): Unlike gymnasium, the code here does not add masks for every key in the info object.
         return obs, rew, terminations, truncations, infos
 
-    def close(self):
-        return self._env.close()
+    def close_extras(self, **kwargs):
+        self._env.close()
 
     def call(self, name: str, *args, **kwargs):
         function = getattr(self._env, name)
