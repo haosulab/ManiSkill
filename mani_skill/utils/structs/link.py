@@ -244,7 +244,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 raw_pose = new_pose
             return Pose.create(raw_pose)
         else:
-            return Pose.create([obj.entity_pose for obj in self._objs])
+            return Pose.create([obj.entity_pose for obj in self._objs], device=self.device)
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
