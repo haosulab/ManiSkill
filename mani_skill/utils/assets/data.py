@@ -193,6 +193,11 @@ def initialize_data_sources():
         url="https://github.com/TrossenRobotics/ManiSkill-WidowX_AI/archive/refs/tags/v0.1.0.zip",
         target_path="robots/widowxai",
     )
+    DATA_SOURCES["xlerobot"] = DataSource(
+        source_type="robot",
+        url="https://github.com/Vector-Wangel/ManiSkill-XLeRobot/archive/refs/tags/v0.3.0.zip",
+        target_path="robots/xlerobot",
+    )
 
 
 def expand_data_group_into_individual_data_source_ids(data_group_id: str):
