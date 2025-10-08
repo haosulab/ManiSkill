@@ -357,7 +357,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if self.scene.gpu_sim_enabled:
             return self._body_data[self._body_data_index, 10:13]
         else:
-            return torch.from_numpy(self._bodies[0].angular_velocity[None, :], device=self.device)
+            return torch.from_numpy(self._bodies[0].angular_velocity[None, :]).to(self.device)
 
     @angular_velocity.setter
     def angular_velocity(self, arg1: Array):
