@@ -23,13 +23,14 @@ def load_metadata(h5_file: Path) -> Dict:
     return {}
 
 
-def detect_rgb_camera(obs_group: h5py.Group) -> Optional[str]:
+def detect_rgb_cameras(obs_group: h5py.Group) -> List[str]:
+    cameras = []
     if 'sensor_data' in obs_group:
         sensor_data = obs_group['sensor_data']
         for camera_name in sensor_data.keys():
             if 'rgb' in sensor_data[camera_name]:
-                return camera_name
-    return None
+                cameras.append(camera_name)
+    return cameras
 
 
 def load_trajectory_from_h5(h5_file: Path) -> Tuple[List[Dict[str, np.ndarray]], Dict]:
@@ -46,7 +47,7 @@ def load_trajectory_from_h5(h5_file: Path) -> Tuple[List[Dict[str, np.ndarray]],
         actions = first_traj['actions'][:]
         action_dim = actions.shape[1]
         
-        rgb_camera = detect_rgb_camera(first_traj['obs']) if 'obs' in first_traj else None
+        rgb_cameras = detect_rgb_cameras(first_traj['obs']) if 'obs' in first_traj else []
         
         if 'obs' in first_traj and 'agent' in first_traj['obs'] and 'qpos' in first_traj['obs']['agent']:
             qpos = first_traj['obs']['agent']['qpos'][:]
@@ -54,16 +55,17 @@ def load_trajectory_from_h5(h5_file: Path) -> Tuple[List[Dict[str, np.ndarray]],
         else:
             state_dim = None
         
-        print(f"Detected: action_dim={action_dim}, state_dim={state_dim}, rgb_camera={rgb_camera}")
+        print(f"Detected: action_dim={action_dim}, state_dim={state_dim}, cameras={rgb_cameras}")
         
         for traj_key in traj_keys:
             traj = f[traj_key]
             actions = traj['actions'][:]
             episode_data = {'actions': actions}
             
-            if rgb_camera and 'obs' in traj:
-                rgb = traj['obs']['sensor_data'][rgb_camera]['rgb'][:]
-                episode_data['rgb'] = rgb[:len(actions)]
+            if rgb_cameras and 'obs' in traj:
+                for camera_name in rgb_cameras:
+                    rgb = traj['obs']['sensor_data'][camera_name]['rgb'][:]
+                    episode_data[f'rgb_{camera_name}'] = rgb[:len(actions)]
             
             if state_dim and 'obs' in traj:
                 qpos = traj['obs']['agent']['qpos'][:]
@@ -74,23 +76,23 @@ def load_trajectory_from_h5(h5_file: Path) -> Tuple[List[Dict[str, np.ndarray]],
     info = {
         'action_dim': action_dim,
         'state_dim': state_dim,
-        'has_rgb': rgb_camera is not None,
-        'rgb_camera': rgb_camera,
+        'rgb_cameras': rgb_cameras,
         'metadata': metadata
     }
     
     return episodes, info
 
 
-def create_directory_structure(output_dir: str, has_rgb: bool, num_episodes: int, chunks_size: int = 1000) -> Path:
+def create_directory_structure(output_dir: str, rgb_cameras: List[str], num_episodes: int, chunks_size: int = 1000) -> Path:
     base_path = Path(output_dir)
     
     num_chunks = (num_episodes + chunks_size - 1) // chunks_size
     
     for chunk_idx in range(num_chunks):
         (base_path / "data" / f"chunk-{chunk_idx:03d}").mkdir(parents=True, exist_ok=True)
-        if has_rgb:
-            (base_path / "videos" / f"chunk-{chunk_idx:03d}" / "observation.images.main").mkdir(parents=True, exist_ok=True)
+        
+        for camera_name in rgb_cameras:
+            (base_path / "videos" / f"chunk-{chunk_idx:03d}" / f"observation.images.{camera_name}").mkdir(parents=True, exist_ok=True)
     
     (base_path / "meta").mkdir(parents=True, exist_ok=True)
     return base_path
@@ -149,7 +151,6 @@ def calculate_image_statistics(all_rgb_data: List[np.ndarray]) -> Dict[str, Any]
 
 def process_episode(episode_data: Dict[str, np.ndarray], episode_idx: int, 
                    has_state: bool, fps: int, task_index: int = 0) -> pd.DataFrame:
-    """Convert episode to DataFrame."""
     actions = episode_data['actions']
     episode_length = actions.shape[0]
     timestamps = np.arange(episode_length, dtype=np.float32) / fps
@@ -169,8 +170,8 @@ def process_episode(episode_data: Dict[str, np.ndarray], episode_idx: int,
     return pd.DataFrame(df_data)
 
 
-def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data: List[np.ndarray], 
-                        has_state: bool, has_rgb: bool) -> Dict[str, Any]:
+def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data_by_camera: Dict[str, List[np.ndarray]], 
+                        has_state: bool) -> Dict[str, Any]:
     combined_df = pd.concat(all_dataframes, ignore_index=True)
     stats = {}
     
@@ -191,8 +192,9 @@ def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data: List[
             'min': states.min(axis=0).tolist()
         }
     
-    if has_rgb and all_rgb_data:
-        stats['observation.images.main'] = calculate_image_statistics(all_rgb_data)
+    for camera_name, rgb_data in all_rgb_data_by_camera.items():
+        if rgb_data:
+            stats[f'observation.images.{camera_name}'] = calculate_image_statistics(rgb_data)
     
     for field in ['timestamp', 'frame_index', 'episode_index', 'index', 'task_index']:
         values = combined_df[field].values
@@ -207,8 +209,8 @@ def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data: List[
 
 
 def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames: int,
-                     action_dim: int, state_dim: Optional[int], has_rgb: bool, 
-                     metadata: Dict, task_name: str, chunks_size: int):
+                     action_dim: int, state_dim: Optional[int], rgb_cameras: List[str], 
+                     metadata: Dict, task_name: str, chunks_size: int, fps: int):
     
     num_chunks = (len(episode_lengths) + chunks_size - 1) // chunks_size
     
@@ -243,13 +245,13 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
             "names": [f"joint_{i}" for i in range(state_dim)]
         }
     
-    if has_rgb:
-        features["observation.images.main"] = {
+    for camera_name in rgb_cameras:
+        features[f"observation.images.{camera_name}"] = {
             "dtype": "video",
             "shape": [224, 224, 3],
             "names": ["height", "width", "channels"],
             "info": {
-                "video.fps": 30.0,
+                "video.fps": float(fps),
                 "video.height": 224,
                 "video.width": 224,
                 "video.channels": 3,
@@ -271,16 +273,16 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
         "total_episodes": len(episode_lengths),
         "total_frames": total_frames,
         "total_tasks": 1,
-        "total_videos": len(episode_lengths) if has_rgb else 0,
+        "total_videos": len(episode_lengths) * len(rgb_cameras),
         "total_chunks": num_chunks,
         "chunks_size": chunks_size,
-        "fps": 30,
+        "fps": fps,
         "splits": {"train": f"0:{len(episode_lengths)}"},
         "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
         "features": features
     }
     
-    if has_rgb:
+    if rgb_cameras:
         info_data["video_path"] = "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4"
     
     with open(base_path / "meta" / "info.json", 'w') as f:
@@ -290,13 +292,7 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
 def main():
     parser = argparse.ArgumentParser(
         description='Convert HDF5 dataset to LeRobot format',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python %(prog)s trajectory.rgbd.pd_joint_pos.h5 ./output
-  python %(prog)s trajectory.h5 ./output --task-name "PickCube" --fps 60
-  python %(prog)s trajectory.h5 ./output --chunks-size 500
-        """
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
     parser.add_argument('input_file', help='Path to ManiSkill .h5 trajectory file')
@@ -325,22 +321,24 @@ Examples:
     
     task_name = args.task_name
     if not task_name and info['metadata'] and 'env_info' in info['metadata']:
-        task_name = info['metadata']['env_info'].get('env_id', 'Manipulation task')
+        task_name = info['metadata']['env_info'].get('env_id', 'Unknown task')
     if not task_name:
-        task_name = "Manipulation task"
+        task_name = "Unknown task"
     
-    base_path = create_directory_structure(args.output_dir, info['has_rgb'], len(episodes), args.chunks_size)
+    base_path = create_directory_structure(args.output_dir, info['rgb_cameras'], len(episodes), args.chunks_size)
     
     all_dataframes = []
-    all_rgb_data = []
+    all_rgb_data_by_camera = {camera: [] for camera in info['rgb_cameras']}
     episode_lengths = []
     global_index = 0
     
     for episode_idx, episode_data in enumerate(tqdm(episodes, desc="Processing episodes")):
         chunk_idx = episode_idx // args.chunks_size
         
-        if info['has_rgb'] and 'rgb' in episode_data:
-            all_rgb_data.append(episode_data['rgb'])
+        for camera_name in info['rgb_cameras']:
+            rgb_key = f'rgb_{camera_name}'
+            if rgb_key in episode_data:
+                all_rgb_data_by_camera[camera_name].append(episode_data[rgb_key])
         
         df = process_episode(episode_data, episode_idx, info['state_dim'] is not None, args.fps)
         episode_length = len(df)
@@ -350,23 +348,24 @@ Examples:
         parquet_path = base_path / "data" / f"chunk-{chunk_idx:03d}" / f"episode_{episode_idx:06d}.parquet"
         df.to_parquet(parquet_path, index=False)
         
-        if info['has_rgb'] and 'rgb' in episode_data:
-            video_path = base_path / "videos" / f"chunk-{chunk_idx:03d}" / "observation.images.main" / f"episode_{episode_idx:06d}.mp4"
-            create_video_from_frames(episode_data['rgb'], video_path, args.fps)
+        for camera_name in info['rgb_cameras']:
+            rgb_key = f'rgb_{camera_name}'
+            if rgb_key in episode_data:
+                video_path = base_path / "videos" / f"chunk-{chunk_idx:03d}" / f"observation.images.{camera_name}" / f"episode_{episode_idx:06d}.mp4"
+                create_video_from_frames(episode_data[rgb_key], video_path, args.fps)
         
         all_dataframes.append(df)
         episode_lengths.append(episode_length)
     
-    stats = calculate_statistics(all_dataframes, all_rgb_data, 
-                                 info['state_dim'] is not None, info['has_rgb'])
+    stats = calculate_statistics(all_dataframes, all_rgb_data_by_camera, info['state_dim'] is not None)
     with open(base_path / "meta" / "stats.json", 'w') as f:
         json.dump(stats, f, indent=2)
     
     total_frames = sum(episode_lengths)
     num_chunks = (len(episode_lengths) + args.chunks_size - 1) // args.chunks_size
     create_meta_files(base_path, episode_lengths, total_frames,
-                     info['action_dim'], info['state_dim'], info['has_rgb'],
-                     info['metadata'], task_name, args.chunks_size)
+                     info['action_dim'], info['state_dim'], info['rgb_cameras'],
+                     info['metadata'], task_name, args.chunks_size, args.fps)
     
     print(f"\nConversion completed!")
     print(f"Episodes: {len(episode_lengths)}, Frames: {total_frames}, Chunks: {num_chunks}")
