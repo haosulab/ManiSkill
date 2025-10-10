@@ -83,6 +83,21 @@ def load_trajectory_from_h5(h5_file: Path) -> Tuple[List[Dict[str, np.ndarray]],
     return episodes, info
 
 
+def parse_image_size(size_str: str) -> Tuple[int, int]:
+    if 'x' in size_str:
+        parts = size_str.split('x')
+        if len(parts) != 2:
+            raise ValueError("Image size must be NxM or N")
+        width, height = int(parts[0]), int(parts[1])
+    else:
+        width = height = int(size_str)
+    
+    if width <= 0 or height <= 0:
+        raise ValueError("Image dimensions must be positive")
+    
+    return width, height
+
+
 def create_directory_structure(output_dir: str, rgb_cameras: List[str], num_episodes: int, chunks_size: int = 1000) -> Path:
     base_path = Path(output_dir)
     
@@ -98,9 +113,9 @@ def create_directory_structure(output_dir: str, rgb_cameras: List[str], num_epis
     return base_path
 
 
-def resize_image_with_padding(image: np.ndarray, target_size: Tuple[int, int] = (224, 224)) -> np.ndarray:
+def resize_image_with_padding(image: np.ndarray, target_size: Tuple[int, int]) -> np.ndarray:
     h, w = image.shape[:2]
-    target_h, target_w = target_size
+    target_w, target_h = target_size
     scale = min(target_w / w, target_h / h)
     new_w, new_h = int(w * scale), int(h * scale)
     resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
@@ -110,16 +125,16 @@ def resize_image_with_padding(image: np.ndarray, target_size: Tuple[int, int] = 
     result[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
     return result
 
-
-def create_video_from_frames(frames: np.ndarray, output_path: str, fps: int = 30):
+def create_video_from_frames(frames: np.ndarray, output_path: str, fps: int, image_width: int, image_height: int):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    resized_frames = [resize_image_with_padding(frame, (224, 224)) for frame in frames]
-    h, w = 224, 224
+    target_size = (image_width, image_height)
+    resized_frames = [resize_image_with_padding(frame, target_size) for frame in frames]
+    
     
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(str(output_path), fourcc, fps, (w, h))
+    out = cv2.VideoWriter(str(output_path), fourcc, fps, (image_width, image_height))
     
     for frame in resized_frames:
         frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -156,7 +171,7 @@ def process_episode(episode_data: Dict[str, np.ndarray], episode_idx: int,
     timestamps = np.arange(episode_length, dtype=np.float32) / fps
     
     df_data = {
-        'action': list(actions),
+        'action': [row.tolist() for row in actions],
         'timestamp': timestamps,
         'frame_index': np.arange(episode_length, dtype=np.int64),
         'episode_index': np.full(episode_length, episode_idx, dtype=np.int64),
@@ -165,16 +180,20 @@ def process_episode(episode_data: Dict[str, np.ndarray], episode_idx: int,
     }
     
     if has_state and 'robot_state' in episode_data:
-        df_data['observation.state'] = list(episode_data['robot_state'])
+        df_data['observation.state'] = [row.tolist() for row in episode_data['robot_state']]
     
-    return pd.DataFrame(df_data)
+    column_order = ['action', 'observation.state', 'timestamp', 'frame_index', 
+                    'episode_index', 'index', 'task_index']
+    
+    df = pd.DataFrame(df_data)
+
+    return df[[col for col in column_order if col in df.columns]]
 
 
 def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data_by_camera: Dict[str, List[np.ndarray]], 
                         has_state: bool) -> Dict[str, Any]:
     combined_df = pd.concat(all_dataframes, ignore_index=True)
     stats = {}
-    
     actions = np.stack(combined_df['action'].values)
     stats['action'] = {
         'mean': actions.mean(axis=0).tolist(),
@@ -210,7 +229,7 @@ def calculate_statistics(all_dataframes: List[pd.DataFrame], all_rgb_data_by_cam
 
 def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames: int,
                      action_dim: int, state_dim: Optional[int], rgb_cameras: List[str], 
-                     metadata: Dict, task_name: str, chunks_size: int, fps: int):
+                     metadata: Dict, task_name: str, chunks_size: int, fps: int, image_width: int, image_height: int):
     
     num_chunks = (len(episode_lengths) + chunks_size - 1) // chunks_size
     
@@ -248,12 +267,12 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
     for camera_name in rgb_cameras:
         features[f"observation.images.{camera_name}"] = {
             "dtype": "video",
-            "shape": [224, 224, 3],
+            "shape": [image_height, image_width, 3],
             "names": ["height", "width", "channels"],
             "info": {
                 "video.fps": float(fps),
-                "video.height": 224,
-                "video.width": 224,
+                "video.height": image_height,
+                "video.width": image_width,
                 "video.channels": 3,
                 "video.codec": "mp4v",
                 "video.pix_fmt": "yuv420p",
@@ -278,7 +297,7 @@ def create_meta_files(base_path: Path, episode_lengths: List[int], total_frames:
         "chunks_size": chunks_size,
         "fps": fps,
         "splits": {"train": f"0:{len(episode_lengths)}"},
-        "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+        "data_path": "data/chunk-{episode_chunk:03d}/data-{episode_chunk:05d}-of-{total_chunks:05d}.parquet",
         "features": features
     }
     
@@ -303,6 +322,8 @@ def main():
                        help='Task description (default: auto-detected from metadata)')
     parser.add_argument('--chunks-size', type=int, default=1000, metavar='N',
                        help='Episodes per chunk (default: %(default)s)')
+    parser.add_argument('--image-size', type=str, default='640x480', metavar='WxH',
+                   help='Output image size as WIDTHxHEIGHT or single value for square (default: %(default)s)')
     
     args = parser.parse_args()
     
@@ -310,7 +331,7 @@ def main():
         raise ValueError("chunks-size must be positive")
     if args.fps <= 0:
         raise ValueError("fps must be positive")
-    
+
     input_path = Path(args.input_file)
     if not input_path.exists():
         raise FileNotFoundError(f"File not found: {input_path}")
@@ -326,7 +347,8 @@ def main():
         task_name = "Unknown task"
     
     base_path = create_directory_structure(args.output_dir, info['rgb_cameras'], len(episodes), args.chunks_size)
-    
+    image_width, image_height = parse_image_size(args.image_size)
+
     all_dataframes = []
     all_rgb_data_by_camera = {camera: [] for camera in info['rgb_cameras']}
     episode_lengths = []
@@ -344,20 +366,30 @@ def main():
         episode_length = len(df)
         df['index'] = range(global_index, global_index + episode_length)
         global_index += episode_length
-        
-        parquet_path = base_path / "data" / f"chunk-{chunk_idx:03d}" / f"episode_{episode_idx:06d}.parquet"
-        df.to_parquet(parquet_path, index=False)
-        
+                
         for camera_name in info['rgb_cameras']:
             rgb_key = f'rgb_{camera_name}'
             if rgb_key in episode_data:
                 video_path = base_path / "videos" / f"chunk-{chunk_idx:03d}" / f"observation.images.{camera_name}" / f"episode_{episode_idx:06d}.mp4"
-                create_video_from_frames(episode_data[rgb_key], video_path, args.fps)
-        
+                create_video_from_frames(episode_data[rgb_key], video_path, args.fps, image_width, image_height)
+
         all_dataframes.append(df)
         episode_lengths.append(episode_length)
     
+    combined_df = pd.concat(all_dataframes, ignore_index=True)
+    num_chunks = (len(episodes) + args.chunks_size - 1) // args.chunks_size
+
+    for chunk_idx in range(num_chunks):
+        start_episode = chunk_idx * args.chunks_size
+        end_episode = min((chunk_idx + 1) * args.chunks_size, len(episodes))
+
+        chunk_df = combined_df[combined_df['episode_index'].isin(range(start_episode, end_episode))]
+
+        parquet_path = base_path / "data" / f"chunk-{chunk_idx:03d}" / f"data-{chunk_idx:05d}-of-{num_chunks:05d}.parquet"
+        chunk_df.to_parquet(parquet_path, index=False, engine='pyarrow')
+
     stats = calculate_statistics(all_dataframes, all_rgb_data_by_camera, info['state_dim'] is not None)
+
     with open(base_path / "meta" / "stats.json", 'w') as f:
         json.dump(stats, f, indent=2)
     
@@ -365,7 +397,7 @@ def main():
     num_chunks = (len(episode_lengths) + args.chunks_size - 1) // args.chunks_size
     create_meta_files(base_path, episode_lengths, total_frames,
                      info['action_dim'], info['state_dim'], info['rgb_cameras'],
-                     info['metadata'], task_name, args.chunks_size, args.fps)
+                     info['metadata'], task_name, args.chunks_size, args.fps, image_width, image_height)
     
     print(f"\nConversion completed!")
     print(f"Episodes: {len(episode_lengths)}, Frames: {total_frames}, Chunks: {num_chunks}")
