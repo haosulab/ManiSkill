@@ -150,3 +150,32 @@ python -m mani_skill.trajectory.replay_trajectory \
   -c pd_joint_delta_pos -o state \
   --save-traj
 ```
+
+
+## Converting ManiSkill Trajectories to LeRobot Format
+
+This tool converts HDF5 trajectory files from ManiSkill to LeRobot dataset format. See more on https://huggingface.co/blog/lerobot-datasets-v3
+
+
+### Basic Usage
+
+Convert a basic trajectory file:
+```bash
+python -m mani_skill.trajectory.convert_to_lerobot \
+  path/to/trajectory.h5 \
+  path/to/converted_lerobot_dataset \
+  --task-name "Pick up the cube"
+```
+
+### Training with LeRobot
+
+```python
+lerobot-train \
+  --policy.path=lerobot/smolvla_base \
+  --dataset.repo_id=my_dataset \
+  --dataset.root=path/to/converted_lerobot_dataset \
+  --batch_size=32 \
+  --steps=20000 \
+  --output_dir=outputs/train/my_policy \
+  --policy.device=cuda
+```
