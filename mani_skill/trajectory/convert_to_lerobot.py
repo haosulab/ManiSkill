@@ -368,9 +368,11 @@ def create_meta_files(
     tasks_df.index.name = None
     tasks_df.to_parquet(base_path / "meta" / "tasks.parquet", index=True)
     
-    # Determine robot type from metadata
+    # Determine robot type: use override if provided, otherwise auto-detect
     robot_type = "unknown"
-    if metadata and 'env_info' in metadata:
+    if robot_type_override:
+        robot_type = robot_type_override
+    elif metadata and 'env_info' in metadata:
         env_id = metadata['env_info'].get('env_id', 'unknown')
         robot_type = env_id.split('-')[0].lower() if '-' in env_id else 'unknown'
     
