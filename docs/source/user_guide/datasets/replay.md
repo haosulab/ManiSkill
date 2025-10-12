@@ -150,3 +150,47 @@ python -m mani_skill.trajectory.replay_trajectory \
   -c pd_joint_delta_pos -o state \
   --save-traj
 ```
+
+
+## Converting ManiSkill Trajectories to LeRobot Format
+
+ManiSkill provides a tool to convert HDF5 trajectory files to [LeRobot v3.0 dataset format](https://huggingface.co/blog/lerobot-datasets-v3) for training robot learning policies. 
+
+To convert trajectories:
+
+```bash
+# Basic conversion
+python -m mani_skill.trajectory.convert_to_lerobot \
+  path/to/trajectory.h5 \
+  path/to/converted/dataset \
+
+# With custom settings
+python -m mani_skill.trajectory.convert_to_lerobot \
+  path/to/trajectory.h5 \
+  path/to/converted/dataset \
+  --task-name "Pick up the red cube" \
+  --fps 60 \
+  --image-size 1280x720 \
+  --chunks-size 500 \
+  --robot-type panda
+
+# See all options
+python -m mani_skill.trajectory.convert_to_lerobot -h
+```
+> **_NOTE:_**  The script requires ```trajectory.h5``` and ```trajectory.json``` to be both under the same directory.
+
+<details><summary>Click here to see the converter options</summary>
+
+    positional arguments:
+      input_file            Path to ManiSkill .h5 trajectory file
+      output_dir            Output directory for LeRobot dataset
+
+    options:
+      -h, --help            show this help message and exit
+      --fps N               Video FPS (default: 30)
+      --task-name NAME      Task description (default: auto-detected from metadata)
+      --chunks-size N       Episodes per chunk (default: 1000)
+      --image-size WxH      Output image size as WIDTHxHEIGHT or single value for square (default: 640x480)
+      --robot-type NAME     Robot type (default: auto-detected, e.g., "panda", "ur5")
+
+</details>
