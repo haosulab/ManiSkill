@@ -106,7 +106,7 @@ class DistractionSet:
     def camera_pose_enabled(self) -> bool:
         return len(self.camera_pose_cfg) > 0
 
-    def which_enabled_str(self) -> list[str]:
+    def which_enabled_str(self) -> tuple[list[str], list[str]]:
         enabled_strs = []
         disabled_strs = []
         for k in [attr for attr in dir(self) if not attr.startswith('_')]:
@@ -187,13 +187,13 @@ class DistractionSet:
 
         return cfgs
 
-    def set_color_or_texture(self, obj: Actor, color_cfg: dict, texture_cfg: dict, set_color: bool, set_texture: bool):
+    def set_color_or_texture(self, actor: Actor, color_cfg: dict, texture_cfg: dict, set_color: bool, set_texture: bool):
 
         if not set_color and not set_texture:
             return
 
         # The following code is borrowed from here: https://maniskill.readthedocs.io/en/latest/user_guide/tutorials/domain_randomization.html
-        for obj in obj._objs:
+        for obj in actor._objs:
             # modify the i-th object which is in parallel environment i
             render_body_component: RenderBodyComponent = obj.find_component_by_type(RenderBodyComponent)
             for render_shape in render_body_component.render_shapes:
