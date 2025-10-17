@@ -14,9 +14,9 @@ from mani_skill.utils.structs.pose import vectorize_pose
 
 
 @register_agent()
-class AllegroHandRight(BaseAgent):
-    uid = "allegro_hand_right"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/allegro/allegro_hand_right_glb.urdf"
+class AllegroHandRightFloating(BaseAgent):
+    uid = "allegro_hand_right_floating"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/allegro/allegro_hand_right_floating.urdf"
     urdf_config = dict(
         _materials=dict(
             tip=dict(static_friction=2.0, dynamic_friction=1.0, restitution=0.0)
@@ -48,6 +48,18 @@ class AllegroHandRight(BaseAgent):
     )
 
     def __init__(self, *args, **kwargs):
+        self.root_joint_names = [
+            "root_x_axis_joint",
+            "root_y_axis_joint",
+            "root_z_axis_joint",
+            "root_x_rot_joint",
+            "root_y_rot_joint",
+            "root_z_rot_joint",
+          ]
+        self.root_joint_stiffness = 5e3
+        self.root_joint_damping = 5e2 
+        self.root_joint_force_limit = 2e3 
+
         self.joint_names = [
             "joint_0.0",
             "joint_1.0",
@@ -67,8 +79,8 @@ class AllegroHandRight(BaseAgent):
             "joint_15.0",
         ]
 
-        self.joint_stiffness = 4e2
-        self.joint_damping = 1e1
+        self.joint_stiffness = 2e4
+        self.joint_damping = 300
         self.joint_force_limit = 5e1
 
         # Order: thumb finger, index finger, middle finger, ring finger
@@ -95,6 +107,30 @@ class AllegroHandRight(BaseAgent):
         # -------------------------------------------------------------------------- #
         # Arm
         # -------------------------------------------------------------------------- #
+        root_joint_pos = PDJointPosControllerConfig(
+            self.root_joint_names,
+            [-20, -20, -20, -6, -6, -6],
+            [20, 20, 20, 6, 6, 6],
+            self.root_joint_stiffness,
+            self.root_joint_damping,
+            self.root_joint_force_limit,
+            normalize_action=False,
+        )
+        root_joint_delta_pos = PDJointPosControllerConfig(
+            self.root_joint_names,
+            -0.1,
+            0.1,
+            self.root_joint_stiffness,
+            self.root_joint_damping,
+            self.root_joint_force_limit,
+            use_delta=True,
+        )
+        root_joint_target_delta_pos = deepcopy(root_joint_delta_pos)
+        root_joint_target_delta_pos.use_target = True
+
+        # -------------------------------------------------------------------------- #
+        # Finger
+        # -------------------------------------------------------------------------- #
         joint_pos = PDJointPosControllerConfig(
             self.joint_names,
             None,
@@ -117,9 +153,9 @@ class AllegroHandRight(BaseAgent):
         joint_target_delta_pos.use_target = True
 
         controller_configs = dict(
-            pd_joint_delta_pos=dict(hand=joint_delta_pos),
-            pd_joint_pos=dict(hand=joint_pos),
-            pd_joint_target_delta_pos=dict(hand=joint_target_delta_pos),
+            pd_joint_delta_pos=dict(root=root_joint_delta_pos, hand=joint_delta_pos),
+            pd_joint_pos=dict(root=root_joint_pos, hand=joint_pos),
+            pd_joint_target_delta_pos=dict(root=root_joint_target_delta_pos, hand=joint_target_delta_pos)
         )
 
         # Make a deepcopy in case users modify any config
@@ -158,6 +194,6 @@ class AllegroHandRight(BaseAgent):
 
 
 @register_agent()
-class AllegroHandLeft(AllegroHandRight):
-    uid = "allegro_hand_left"
+class AllegroHandLeftFloating(AllegroHandRightFloating):
+    uid = "allegro_hand_left_floating"
     urdf_path = f"{PACKAGE_ASSET_DIR}/robots/allegro/allegro_hand_left.urdf"

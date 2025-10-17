@@ -192,9 +192,9 @@ class RotateSingleObjectInHand(BaseEnv):
             self.cum_rotation_angle = torch.zeros((b,))
 
             # Controller parameters
-            stiffness = torch.tensor(self.agent.controller.config.stiffness)
-            damping = torch.tensor(self.agent.controller.config.damping)
-            force_limit = torch.tensor(self.agent.controller.config.force_limit)
+            stiffness = torch.tensor(self.agent.controller.configs["hand"].stiffness)
+            damping = torch.tensor(self.agent.controller.configs["hand"].damping)
+            force_limit = torch.tensor(self.agent.controller.configs["hand"].force_limit)
             self.controller_param = (
                 stiffness.expand(b, self.agent.robot.dof[0]),
                 damping.expand(b, self.agent.robot.dof[0]),
@@ -264,7 +264,7 @@ class RotateSingleObjectInHand(BaseEnv):
             success = self.cum_rotation_angle > self.success_threshold
 
             # 6. controller effort
-            qpos_target = self.agent.controller._target_qpos
+            qpos_target = self.agent.controller.controllers["hand"]._target_qpos
             qpos_error = qpos_target - self.agent.robot.qpos
             qvel = self.agent.robot.qvel
             qf = qpos_error * self.controller_param[0] - qvel * self.controller_param[1]
