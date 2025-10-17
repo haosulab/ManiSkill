@@ -19,7 +19,7 @@ from mani_skill.utils.structs.pose import Pose
 
 @register_env("PokeCube-v1", max_episode_steps=50)
 class PokeCubeEnv(BaseEnv):
-    """
+    r"""
     **Task Description:**
     A simple task where the objective is to poke a red cube with a peg and push it to a target goal position.
 

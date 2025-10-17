@@ -160,6 +160,7 @@ class ActorBuilder(SAPIENActorBuilder):
                 component.cmass_local_pose = self._cmass_local_pose
                 component.inertia = self._inertia
 
+        component.name = self.name
         return component
 
     def build_dynamic(self, name):

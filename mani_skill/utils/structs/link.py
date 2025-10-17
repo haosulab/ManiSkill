@@ -81,30 +81,23 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         merged_joint_indexes = []
         merged_active_joint_indexes = []
         articulation_objs = []
-        is_root = links[0].is_root
+        has_one_root_link = any(link.is_root.any() for link in links)
         merged_scene_idxs = []
-        num_objs_per_actor = links[0]._num_objs
         for link in links:
             objs += link._objs
-            assert (
-                link.is_root == is_root
-            ), "all links given to merge must all be root or all not be root links"
             merged_scene_idxs.append(link._scene_idxs)
-            # if link is not root, then there are joints we can merge automatically
-            if not is_root:
+            # if all links are not root links, then there are joints we can merge automatically
+            if not has_one_root_link:
                 joint_objs += link.joint._objs
                 articulation_objs += link.articulation._objs
 
                 merged_active_joint_indexes.append(link.joint.active_index)
                 merged_joint_indexes.append(link.joint.index)
-            assert (
-                link._num_objs == num_objs_per_actor
-            ), "Each given link must have the same number of managed objects"
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = Link.create(
             objs, scene=links[0].scene, scene_idxs=merged_scene_idxs
         )
-        if not is_root:
+        if not has_one_root_link:
             merged_active_joint_indexes = torch.concat(merged_active_joint_indexes)
             merged_joint_indexes = torch.concat(merged_joint_indexes)
             merged_joint = ArticulationJoint.create(
@@ -116,9 +109,10 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 active_joint_index=merged_active_joint_indexes,
             )
             merged_link.joint = merged_joint
+            if name is not None:
+                merged_joint.name = f"{name}_joints"
             merged_joint.child_link = merged_link
         # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
-        # TODO (stao): akin to the joint merging above, we can also make a view of the articulations of each link. Is it necessary?
         merged_link.articulation = None
         merged_link.name = name
         merged_link.merged = True
@@ -250,7 +244,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 raw_pose = new_pose
             return Pose.create(raw_pose)
         else:
-            return Pose.create([obj.entity_pose for obj in self._objs])
+            return Pose.create([obj.entity_pose for obj in self._objs], device=self.device)
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:

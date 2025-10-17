@@ -653,7 +653,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: put action logic here
             if not learning_has_started:
-                actions = torch.tensor(envs.action_space.sample(), dtype=torch.float32, device=device)
+                actions = 2 * torch.rand(size=envs.action_space.shape, dtype=torch.float32, device=device) - 1
             else:
                 actions, _, _, _ = actor.get_action(obs)
                 actions = actions.detach()
