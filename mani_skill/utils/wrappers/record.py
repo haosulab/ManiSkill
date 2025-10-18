@@ -358,18 +358,19 @@ class RecordEpisode(gym.Wrapper):
         *args,
         seed: Optional[Union[int, List[int]]] = None,
         options: Optional[dict] = None,
+        save=True,
         **kwargs,
     ):
         if self.save_on_reset:
             if self.save_video and self.num_envs == 1:
-                self.flush_video()
+                self.flush_video(save=save)
             # if doing a full reset then we flush all trajectories including incompleted ones
             if self._trajectory_buffer is not None:
                 if options is None or "env_idx" not in options:
-                    self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs))
+                    self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs), save=save)
                 else:
                     self.flush_trajectory(
-                        env_idxs_to_flush=common.to_numpy(options["env_idx"])
+                        env_idxs_to_flush=common.to_numpy(options["env_idx"], save=save)
                     )
 
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
