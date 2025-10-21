@@ -28,6 +28,8 @@ from .controllers.base_controller import (
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.utils.building.mjcf_loader import MJCFLoader
+    from mani_skill.utils.building.urdf_loader import URDFLoader
 DictControllerConfig = Dict[str, ControllerConfig]
 
 
@@ -60,7 +62,7 @@ class BaseAgent:
     """unique identifier string of this"""
     urdf_path: Union[str, None] = None
     """path to the .urdf file describe the agent's geometry and visuals. One of urdf_path or mjcf_path must be provided."""
-    urdf_config: Union[str, Dict] = None
+    urdf_config: Union[str, Dict, None] = None
     """Optional provide a urdf_config to further modify the created articulation"""
     mjcf_path: Union[str, None] = None
     """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else.
@@ -78,6 +80,9 @@ class BaseAgent:
     keyframes: Dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
 
+    robot: Articulation
+    """The robot object, which is an Articulation. Data like pose, qpos etc. can be accessed from this object."""
+
     def __init__(
         self,
         scene: ManiSkillScene,
@@ -92,8 +97,6 @@ class BaseAgent:
         self._agent_idx = agent_idx
         self.build_separate = build_separate
 
-        self.robot: Articulation = None
-        """The robot object, which is an Articulation. Data like pose, qpos etc. can be accessed from this object."""
         self.controllers: Dict[str, BaseController] = dict()
         """The controllers of the robot."""
         self.sensors: Dict[str, BaseSensor] = dict()
@@ -155,13 +158,16 @@ class BaseAgent:
         """
 
         def build_articulation(scene_idxs: Optional[List[int]] = None):
+            loader: Union[URDFLoader, MJCFLoader, None] = None
             if self.urdf_path is not None:
                 loader = self.scene.create_urdf_loader()
                 asset_path = format_path(str(self.urdf_path))
             elif self.mjcf_path is not None:
                 loader = self.scene.create_mjcf_loader()
                 asset_path = format_path(str(self.mjcf_path))
-
+            assert (
+                loader is not None
+            ), "No loader found. Provide either path in either urdf_path or mjcf_path"
             loader.name = self.uid
             if self._agent_idx is not None:
                 loader.name = f"{self.uid}-agent-{self._agent_idx}"
