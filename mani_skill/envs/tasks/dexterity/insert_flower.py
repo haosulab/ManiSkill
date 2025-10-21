@@ -1,26 +1,17 @@
-from pathlib import Path
-from typing import Any, Dict, List, Union
 
+from typing import Any, Dict, Union
 import numpy as np
-import sapien
 import sapien.physx as physx
 import torch
-import torch.nn.functional as F
 import os 
-import mani_skill.envs.utils.randomization as randomization
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots import FloatingInspireHandRight
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
-from mani_skill.utils.building import actors
-from mani_skill.utils.building.actors import build_cube
-from mani_skill.utils.geometry.rotation_conversions import quaternion_apply
-from mani_skill.utils.io_utils import load_json
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.utils.structs.actor import Actor
-from mani_skill.utils.structs.pose import Pose, vectorize_pose
+from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
@@ -161,7 +152,7 @@ class InsertFlowerEnv(BaseEnv):
         return {}
 
     def evaluate(self, **kwargs) -> dict:
-        object_pos = torch.tensor(self.flower.pose.p, device=self.device, dtype=torch.float32)
+        object_pos = self.flower.pose.p
 
         # Check if the object is within the specified bounds
         is_within = torch.logical_and(
