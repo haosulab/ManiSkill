@@ -142,8 +142,8 @@ class ManiSkillVectorEnv(VectorEnv):
             infos["episode"] = episode_info
 
         dones = torch.logical_or(
-            terminations, truncations
-        )  # pyright: ignore[reportArgumentType]
+            terminations, truncations  # pyright: ignore[reportArgumentType]
+        )
 
         if dones.any() and self.auto_reset:
             final_obs = torch_clone_dict(obs)
