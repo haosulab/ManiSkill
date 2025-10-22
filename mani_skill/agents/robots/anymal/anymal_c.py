@@ -7,8 +7,6 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.utils import sapien_utils
-from mani_skill.utils.structs.articulation import Articulation
 
 
 @register_agent(asset_download_ids=["anymal_c"])
@@ -99,7 +97,7 @@ class ANYmalC(BaseAgent):
     def is_standing(self, ground_height=0):
         """This quadruped is considered standing if it is face up and body is at least 0.35m off the ground"""
         target_q = torch.tensor([1, 0, 0, 0], device=self.device)
-        inner_prod = (self.robot.pose.q * target_q).sum(axis=1)
+        inner_prod = (self.robot.pose.q * target_q).sum(dim=1)
         # angle_diff = 1 - (inner_prod ** 2) # computes a distance from 0 to 1 between 2 quaternions
         angle_diff = torch.arccos(
             2 * (inner_prod**2) - 1
