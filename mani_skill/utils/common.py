@@ -166,8 +166,7 @@ def to_tensor(array: Union[Array, dict], device: Optional[Device] = None):
 
     Args:
         array: The data to map to a tensor
-        device: The device to put the tensor on. By default this is None and to_tensor will put the device on the GPU if physx is enabled
-            and CPU otherwise
+        device: The device to put the tensor on. By default this is None and the device is unchanged
 
     """
     if isinstance(array, (dict)):

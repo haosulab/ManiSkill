@@ -85,7 +85,7 @@ class BaseAgent:
         scene: ManiSkillScene,
         control_freq: int,
         control_mode: Optional[str] = None,
-        agent_idx: Optional[str] = None,
+        agent_idx: Optional[int] = None,
         initial_pose: Optional[Union[sapien.Pose, Pose]] = None,
         build_separate: bool = False,
     ):

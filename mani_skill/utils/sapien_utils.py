@@ -441,6 +441,9 @@ def is_state_dict_consistent(state_dict: dict):
 def create_viewer(viewer_camera_config: CameraConfig):
     """Creates a viewer with the given camera config"""
     if SAPIEN_RENDER_SYSTEM == "3.0":
+        import ipdb
+
+        ipdb.set_trace()
         sapien.render.set_viewer_shader_dir(
             viewer_camera_config.shader_config.shader_pack
         )

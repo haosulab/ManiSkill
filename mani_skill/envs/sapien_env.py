@@ -118,7 +118,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_ROBOTS: list[Union[str, Tuple[str]]] = None
+    SUPPORTED_ROBOTS: Optional[list[Union[str, Tuple[str]]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "any_textures", "pointcloud")
@@ -132,7 +132,7 @@ class BaseEnv(gym.Env):
 
     metadata = {"render_modes": SUPPORTED_RENDER_MODES}
 
-    scene: ManiSkillScene = None
+    scene: ManiSkillScene
     """the main scene, which manages all sub scenes. In CPU simulation there is only one sub-scene"""
 
     agent: BaseAgent
@@ -150,25 +150,24 @@ class BaseEnv(gym.Env):
     """all agent sensor configs parsed from agent._sensor_configs"""
     _human_render_cameras: dict[str, Camera]
     """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
-    _default_human_render_camera_configs: dict[str, CameraConfig]
-    """all camera configurations for cameras used for human render"""
     _human_render_camera_configs: dict[str, CameraConfig]
     """all camera configurations parsed from self._human_render_camera_configs"""
 
-    _hidden_objects: list[Union[Actor, Articulation]] = []
+    # TODO (stao): supporting hiding articulations as well
+    _hidden_objects: list[Actor] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
 
-    _main_rng: np.random.RandomState = None
+    _main_rng: np.random.RandomState
     """main rng generator that generates episode seed sequences. For internal use only"""
-    _batched_main_rng: BatchedRNG = None
+    _batched_main_rng: BatchedRNG
     """the batched main RNG that generates episode seed sequences. For internal use only"""
-    _main_seed: list[int] = None
+    _main_seed: Optional[list[int]]
     """main seed list for _main_rng and _batched_main_rng. _main_rng uses _main_seed[0]. For internal use only"""
-    _episode_rng: np.random.RandomState = None
+    _episode_rng: np.random.RandomState
     """the numpy RNG that you can use to generate random numpy data. It is not recommended to use this. Instead use the _batched_episode_rng which helps ensure GPU and CPU simulation generate the same data with the same seeds."""
-    _batched_episode_rng: BatchedRNG = None
+    _batched_episode_rng: BatchedRNG
     """the recommended batched episode RNG to generate random numpy data consistently between single and parallel environments"""
-    _episode_seed: np.ndarray = None
+    _episode_seed: np.ndarray
     """episode seed list for _episode_rng and _batched_episode_rng. _episode_rng uses _episode_seed[0]."""
     _batched_rng_backend = "numpy:random_state"
     """the backend to use for the batched RNG"""
@@ -178,10 +177,10 @@ class BaseEnv(gym.Env):
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
 
-    _sim_device: sapien.Device = None
+    _sim_device: sapien.Device
     """the sapien device object the simulation runs on"""
 
-    _render_device: sapien.Device = None
+    _render_device: Optional[sapien.Device]
     """the sapien device object the renderer runs on"""
 
     _viewer: Union[sapien.utils.Viewer, None] = None
@@ -198,10 +197,10 @@ class BaseEnv(gym.Env):
         render_mode: Optional[str] = None,
         shader_dir: Optional[str] = None,
         enable_shadow: bool = False,
-        sensor_configs: Optional[dict] = dict(),
-        human_render_camera_configs: Optional[dict] = dict(),
-        viewer_camera_configs: Optional[dict] = dict(),
-        robot_uids: Union[str, BaseAgent, list[Union[str, BaseAgent]]] = None,
+        sensor_configs: dict = dict(),
+        human_render_camera_configs: dict = dict(),
+        viewer_camera_configs: dict = dict(),
+        robot_uids: Optional[Union[str, BaseAgent, list[Union[str, BaseAgent]]]] = None,
         sim_config: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: Optional[int] = None,
         sim_backend: str = "auto",
@@ -215,7 +214,7 @@ class BaseEnv(gym.Env):
         self.reconfiguration_freq = reconfiguration_freq if reconfiguration_freq is not None else 0
         self._reconfig_counter = 0
         if shader_dir is not None:
-            logger.warn("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
+            logger.warning("shader_dir argument will be deprecated after ManiSkill v3.0.0 official release. Please use sensor_configs/human_render_camera_configs to set shaders.")
             sensor_configs |= dict(shader_pack=shader_dir)
             human_render_camera_configs |= dict(shader_pack=shader_dir)
             viewer_camera_configs |= dict(shader_pack=shader_dir)
@@ -228,7 +227,7 @@ class BaseEnv(gym.Env):
             self.robot_uids = robot_uids[0]
         if self.SUPPORTED_ROBOTS is not None:
             if self.robot_uids not in self.SUPPORTED_ROBOTS:
-                logger.warn(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
+                logger.warning(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
         if sim_backend == "auto":
             if num_envs > 1:
@@ -326,9 +325,9 @@ class BaseEnv(gym.Env):
         """the last observation returned by the environment"""
         obs, _ = self.reset(seed=[2022 + i for i in range(self.num_envs)], options=dict(reconfigure=True))
 
-        self._init_raw_obs = common.to_cpu_tensor(obs)
+        self._init_raw_obs = common.to_tensor(obs, device=torch.device("cpu"))
         """the raw observation returned by the env.reset (a cpu torch tensor/dict of tensors). Useful for future observation wrappers to use to auto generate observation spaces"""
-        self._init_raw_state = common.to_cpu_tensor(self.get_state_dict())
+        self._init_raw_state = common.to_tensor(self.get_state_dict(), device=torch.device("cpu"))
         """the initial raw state returned by env.get_state. Useful for reconstructing state dictionaries from flattened state vectors"""
 
         if self.agent is not None:
@@ -339,7 +338,7 @@ class BaseEnv(gym.Env):
             self._orig_single_action_space = copy.deepcopy(self.single_action_space)
             """the original unbatched action space of the environment"""
         else:
-            self.action_space = None
+            self.action_space = None  # pyright: ignore[reportAttributeAccessIssue]
         # initialize the cached properties
         self.single_observation_space
         self.observation_space
@@ -405,9 +404,11 @@ class BaseEnv(gym.Env):
         agents = []
         robot_uids = self.robot_uids
         if not isinstance(initial_agent_poses, list):
-            initial_agent_poses = [initial_agent_poses]
+            initial_agent_poses_list = [initial_agent_poses]
+        else:
+            initial_agent_poses_list = initial_agent_poses
         if robot_uids == "none" or robot_uids == ("none", ):
-            self.agent = None
+            self.agent = None  # pyright: ignore[reportAttributeAccessIssue]
             return
         if robot_uids is not None:
             if not isinstance(robot_uids, tuple):
@@ -416,6 +417,7 @@ class BaseEnv(gym.Env):
                 if isinstance(robot_uid, type(BaseAgent)):
                     agent_cls = robot_uid
                 else:
+                    assert isinstance(robot_uid, str), "robot_uid should be a string here"
                     if robot_uid not in REGISTERED_AGENTS:
                         raise RuntimeError(
                             f"Agent {robot_uid} not found in the dict of registered agents. If the id is not a typo then make sure to apply the @register_agent() decorator."
@@ -426,7 +428,7 @@ class BaseEnv(gym.Env):
                     self._control_freq,
                     self._control_mode,
                     agent_idx=i if len(robot_uids) > 1 else None,
-                    initial_pose=initial_agent_poses[i] if initial_agent_poses is not None else None,
+                    initial_pose=initial_agent_poses_list[i] if initial_agent_poses is not None else None,
                     build_separate=build_separate,
                 )
                 agents.append(agent)
@@ -620,7 +622,7 @@ class BaseEnv(gym.Env):
                     )
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
-        if self.backend.render_device.is_cuda():
+        if self.backend.render_device.is_cuda():  # pyright: ignore[reportOptionalMemberAccess]
             torch.cuda.synchronize()
         return sensor_obs
 
@@ -790,7 +792,7 @@ class BaseEnv(gym.Env):
 
         self._viewer_camera_config = parse_camera_configs(
             self._default_viewer_camera_configs
-        )
+        )["viewer"]
 
         # Override camera configurations with user supplied configurations
         if self._custom_sensor_configs is not None:
@@ -850,7 +852,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed: Union[None, int, list[int]] = None, options: Union[None, dict] = None):
+    def reset(self, seed: Union[None, int, list[int]] = None, options: Union[None, dict] = None) -> tuple[Any, dict]:
         """Reset the ManiSkill environment with given seed(s) and options. Typically seed is either None (for unseeded reset) or an int (seeded reset).
         For GPU parallelized environments you can also pass a list of seeds for each parallel environment to seed each one separately.
 
