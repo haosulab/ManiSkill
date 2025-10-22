@@ -260,6 +260,9 @@ class BaseEnv(gym.Env):
 
         if isinstance(sim_config, SimConfig):
             sim_config = sim_config.dict()
+        if isinstance(sim_config, dict):
+            if "scene_config" in sim_config and "gravity" in sim_config["scene_config"]:
+                sim_config["scene_config"]["gravity"] = np.array(sim_config["scene_config"]["gravity"])
         merged_gpu_sim_config = self._default_sim_config.dict()
         common.dict_merge(merged_gpu_sim_config, sim_config)
         self.sim_config = dacite.from_dict(data_class=SimConfig, data=merged_gpu_sim_config, config=dacite.Config(strict=True))
