@@ -6,6 +6,8 @@ from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
 from typing import Optional, Union, cast
 
+from pytorch_kinematics import Transform3d
+
 from mani_skill.utils.geometry import rotation_conversions
 
 try:
@@ -15,7 +17,7 @@ except ImportError:
         "pytorch_kinematics_ms not installed. Install with pip install pytorch_kinematics_ms"
     )
 import torch
-from lxml import etree as ET
+from lxml import etree as ET  # pyright: ignore[reportAttributeAccessIssue]
 from sapien.wrapper.pinocchio_model import PinocchioModel
 
 from mani_skill.utils import common
@@ -136,7 +138,7 @@ class Kinematics:
 
         # NOTE (arth): pmodel will use urdf_path, set values based on this xml
         self.end_link_idx = link_order.index(self.end_link.name)
-        self.qmask = torch.zeros(len(joint_order), dtype=bool, device=self.device)
+        self.qmask = torch.zeros(len(joint_order), dtype=torch.bool, device=self.device)
         self.qmask[self.pmodel_controlled_joint_indices] = 1
 
     def _setup_gpu(self):
@@ -169,16 +171,23 @@ class Kinematics:
 
         # initially self.active_joint_indices references active joints that are controlled.
         # we also make the assumption that the active index is the same across all parallel managed joints
-        self.active_ancestor_joint_idxs = [
-            (x.active_index[0]).cpu().item() for x in self.active_ancestor_joints
+        active_ancestor_joint_idxs = [
+            cast(int, (x.active_index[0]).cpu().item())
+            for x in self.active_ancestor_joints
         ]
-        self.controlled_joints_idx_in_qmask = [
-            self.active_ancestor_joint_idxs.index(idx)
+        controlled_joints_idx_in_qmask = [
+            active_ancestor_joint_idxs.index(cast(int, idx.item()))
             for idx in self.active_joint_indices
         ]
+        self.active_ancestor_joint_idxs = common.to_tensor(
+            active_ancestor_joint_idxs, device=self.device
+        )
+        self.controlled_joints_idx_in_qmask = common.to_tensor(
+            controlled_joints_idx_in_qmask, device=self.device
+        )
 
         self.qmask = torch.zeros(
-            len(self.active_ancestor_joints), dtype=bool, device=self.device
+            len(self.active_ancestor_joints), dtype=torch.bool, device=self.device
         )
         self.qmask[self.controlled_joints_idx_in_qmask] = 1
 
@@ -210,12 +219,12 @@ class Kinematics:
             q0 = q0[:, self.active_ancestor_joint_idxs]
             if not is_delta_pose:
                 if current_pose is None:
-                    current_pose = self.pk_chain.forward_kinematics(q0).get_matrix()
+                    mat = cast(
+                        Transform3d, self.pk_chain.forward_kinematics(q0)
+                    ).get_matrix()
                     current_pose = Pose.create_from_pq(
-                        current_pose[:, :3, 3],
-                        rotation_conversions.matrix_to_quaternion(
-                            current_pose[:, :3, :3]
-                        ),
+                        mat[:, :3, 3],
+                        rotation_conversions.matrix_to_quaternion(mat[:, :3, :3]),
                     )
                 if isinstance(pose, torch.Tensor):
                     target_pos, target_rot = pose[:, 0:3], pose[:, 3:6]
@@ -240,7 +249,7 @@ class Kinematics:
                 )
             else:
                 delta_pose = pose
-            jacobian = self.pk_chain.jacobian(q0)[:, :, self.qmask]
+            jacobian = cast(torch.Tensor, self.pk_chain.jacobian(q0))[:, :, self.qmask]
             if solver_config["type"] == "levenberg_marquardt":
                 lambd = 0.0001  # Regularization parameter to ensure J^T * J is non-singular.
                 J_T = jacobian.transpose(1, 2)
@@ -258,8 +267,9 @@ class Kinematics:
                 -1
             )
         else:
+            assert isinstance(pose, Pose), "pose must be a Pose when using CPU IK"
             q0 = q0[:, self.pmodel_active_joint_indices]
-            result, success, error = self.pmodel.compute_inverse_kinematics(
+            result, success, _ = self.pmodel.compute_inverse_kinematics(
                 self.end_link_idx,
                 pose.sp,
                 initial_qpos=q0.cpu().numpy()[0],
@@ -267,12 +277,9 @@ class Kinematics:
                 max_iterations=100,
             )
             if success:
-                return cast(
-                    torch.Tensor,
-                    common.to_tensor(
-                        [result[self.pmodel_controlled_joint_indices]],
-                        device=self.device,
-                    ),
+                return common.to_tensor(
+                    [result[self.pmodel_controlled_joint_indices]],
+                    device=self.device,
                 )
             else:
                 return None
