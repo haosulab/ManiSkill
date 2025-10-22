@@ -372,7 +372,7 @@ class RecordEpisode(gym.Wrapper):
                     )
                 else:
                     self.flush_trajectory(
-                        env_idxs_to_flush=common.to_numpy(options["env_idx"], save=save)
+                        env_idxs_to_flush=common.to_numpy(options["env_idx"]), save=save
                     )
 
         obs, info = super().reset(*args, seed=seed, options=options, **kwargs)
