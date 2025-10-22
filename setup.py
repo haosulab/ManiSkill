@@ -27,7 +27,7 @@ def get_python_version():
 
 def get_dependencies():
     install_requires = [
-        "numpy>=1.22,<2.0.0",
+        "numpy>=1.22",
         "scipy",
         "dacite",
         "gymnasium==0.29.1",
@@ -43,7 +43,7 @@ def get_dependencies():
         "mplib==0.1.1;platform_system=='Linux'",
         "fast_kinematics==0.2.2;platform_system=='Linux'",
         "IPython",
-        "pytorch_kinematics==0.7.5",
+        "pytorch_kinematics==0.7.6",
         "pynvml",  # gpu monitoring
         "tyro>=0.8.5",  # nice, typed, command line arg parser
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily

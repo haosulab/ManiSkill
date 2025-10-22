@@ -402,6 +402,7 @@ def _main(
     # Load associated json
     json_path = traj_path.replace(".h5", ".json")
     json_data = io_utils.load_json(json_path)
+    env_kwargs["sim_config"]["scene_config"]["gravity"] = np.array(env_kwargs["sim_config"]["scene_config"]["gravity"])
     env = gym.make(env_id, **env_kwargs)
     if isinstance(env.action_space, gym.spaces.Dict):
         logger.warning(
