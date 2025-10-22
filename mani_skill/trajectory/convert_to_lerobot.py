@@ -15,8 +15,9 @@ import pandas as pd
 import cv2
 import h5py
 from pathlib import Path
-from typing import Tuple, List, Dict, Any, Optional
-import argparse
+from typing import Tuple, List, Dict, Any, Optional, Annotated
+from dataclasses import dataclass
+import tyro
 from tqdm import tqdm
 
 logging.basicConfig(
@@ -28,6 +29,30 @@ logger = logging.getLogger(__name__)
 DEFAULT_FPS = 30
 DEFAULT_IMAGE_SIZE = "640x480"
 DEFAULT_CHUNKS_SIZE = 1000
+
+
+@dataclass
+class Args:
+    input_file: str
+    """Path to ManiSkill .h5 trajectory file"""
+    
+    output_dir: str
+    """Output directory for LeRobot dataset"""
+    
+    fps: int = DEFAULT_FPS
+    """Video FPS (default: 30)"""
+    
+    task_name: Optional[str] = None
+    """Task description (default: auto-detected from metadata)"""
+    
+    chunks_size: int = DEFAULT_CHUNKS_SIZE
+    """Episodes per chunk (default: 1000)"""
+    
+    image_size: str = DEFAULT_IMAGE_SIZE
+    """Output image size as WIDTHxHEIGHT or single value for square (default: 640x480)"""
+    
+    robot_type: Optional[str] = None
+    """Robot type (default: auto-detected, e.g., "panda", "ur5")"""
 
 
 def load_metadata(h5_file: Path) -> Dict[str, Any]:
@@ -442,52 +467,15 @@ def create_meta_files(
         json.dump(info_data, f, indent=2)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Convert ManiSkill HDF5 dataset to LeRobot v3.0 format',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Basic conversion
-  python convert_maniskill_to_lerobot.py trajectory.h5 ./output --task-name "Pick cube"
-  
-  # With all custom settings
-  python convert_maniskill_to_lerobot.py trajectory.h5 ./output \\
-    --task-name "Pick cube" \\
-    --robot-type "panda" \\
-    --fps 60 \\
-    --image-size 1280x720 \\
-    --chunks-size 500
-
-For more information: https://github.com/huggingface/lerobot
-        """
-    )
-    
-    parser.add_argument('input_file', type=str,
-                       help='Path to ManiSkill .h5 trajectory file')
-    parser.add_argument('output_dir', type=str,
-                       help='Output directory for LeRobot dataset')
-    parser.add_argument('--fps', type=int, default=DEFAULT_FPS, metavar='N',
-                       help=f'Video FPS (default: {DEFAULT_FPS})')
-    parser.add_argument('--task-name', type=str, metavar='NAME',
-                       help='Task description (default: auto-detected from metadata)')
-    parser.add_argument('--chunks-size', type=int, default=DEFAULT_CHUNKS_SIZE, metavar='N',
-                       help=f'Episodes per chunk (default: {DEFAULT_CHUNKS_SIZE})')
-    parser.add_argument('--image-size', type=str, default=DEFAULT_IMAGE_SIZE, metavar='WxH',
-                       help=f'Output image size as WIDTHxHEIGHT or single value for square (default: {DEFAULT_IMAGE_SIZE})')
-    parser.add_argument('--robot-type', type=str, metavar='NAME',
-                   help='Robot type (default: auto-detected, e.g., "panda", "ur5")')
-    
-    args = parser.parse_args()
-    
+def main(args: Args):
     if args.chunks_size <= 0:
-        parser.error("--chunks-size must be positive")
+        raise ValueError("--chunks-size must be positive")
     if args.fps <= 0:
-        parser.error("--fps must be positive")
+        raise ValueError("--fps must be positive")
 
     input_path = Path(args.input_file)
     if not input_path.exists():
-        parser.error(f"Input file not found: {input_path}")
+        raise FileNotFoundError(f"Input file not found: {input_path}")
     
     try:
         logger.info(f"Loading trajectories from {input_path}")
@@ -598,4 +586,5 @@ For more information: https://github.com/huggingface/lerobot
 
 if __name__ == "__main__":
     import sys
-    sys.exit(main())
+    parsed_args = tyro.cli(Args)
+    sys.exit(main(parsed_args))

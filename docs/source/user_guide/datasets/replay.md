@@ -156,6 +156,20 @@ python -m mani_skill.trajectory.replay_trajectory \
 
 ManiSkill provides a tool to convert HDF5 trajectory files to [LeRobot v3.0 dataset format](https://huggingface.co/blog/lerobot-datasets-v3) for training robot learning policies. 
 
+### Installation
+
+Before using the converter, install the required dependencies:
+
+```bash
+# Option 1: Install pyarrow for parquet support
+pip install pyarrow
+
+# Option 2: Install the full LeRobot library (includes pyarrow and other useful tools)
+pip install lerobot
+```
+
+### Usage
+
 To convert trajectories:
 
 ```bash
@@ -181,16 +195,18 @@ python -m mani_skill.trajectory.convert_to_lerobot -h
 
 <details><summary>Click here to see the converter options</summary>
 
-    positional arguments:
-      input_file            Path to ManiSkill .h5 trajectory file
-      output_dir            Output directory for LeRobot dataset
-
-    options:
-      -h, --help            show this help message and exit
-      --fps N               Video FPS (default: 30)
-      --task-name NAME      Task description (default: auto-detected from metadata)
-      --chunks-size N       Episodes per chunk (default: 1000)
-      --image-size WxH      Output image size as WIDTHxHEIGHT or single value for square (default: 640x480)
-      --robot-type NAME     Robot type (default: auto-detected, e.g., "panda", "ur5")
+```
+╭─ options ────────────────────────────────────────────────────────────────────────────╮
+│ -h, --help              show this help message and exit                              │
+│ --input-file STR        Path to ManiSkill .h5 trajectory file (required)             │
+│ --output-dir STR        Output directory for LeRobot dataset (required)              │
+│ --fps INT               Video FPS (default: 30)                                      │
+│ --task-name {None}|STR  Task description (default: auto-detected from metadata)      │
+│ --chunks-size INT       Episodes per chunk (default: 1000)                           │
+│ --image-size STR        Output image size as WIDTHxHEIGHT or single value for square │
+│                         (default: 640x480)                                            │
+│ --robot-type {None}|STR Robot type (default: auto-detected, e.g., "panda", "ur5")    │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
+```
 
 </details>
