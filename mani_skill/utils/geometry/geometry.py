@@ -1,5 +1,3 @@
-from typing import Dict
-
 import numpy as np
 import sapien
 import sapien.physx as physx
@@ -153,7 +151,7 @@ def invert_transform(H: np.ndarray):
 
 def get_oriented_bounding_box_for_2d_points(
     points_2d: np.ndarray, resolution=0.0
-) -> Dict:
+) -> dict:
     assert len(points_2d.shape) == 2 and points_2d.shape[1] == 2
     if resolution > 0.0:
         points_2d = np.round(points_2d / resolution) * resolution

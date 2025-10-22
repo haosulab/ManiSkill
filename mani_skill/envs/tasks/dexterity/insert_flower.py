@@ -1,9 +1,10 @@
+import os
+from typing import Any, Union
 
-from typing import Any, Dict, Union
 import numpy as np
 import sapien.physx as physx
 import torch
-import os 
+
 from mani_skill import ASSET_DIR
 from mani_skill.agents.robots import FloatingInspireHandRight
 from mani_skill.envs.sapien_env import BaseEnv
@@ -16,9 +17,7 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 @register_env(
-    "InsertFlower-v1",
-    max_episode_steps=300,
-    asset_download_ids=["oakink-v2"]
+    "InsertFlower-v1", max_episode_steps=300, asset_download_ids=["oakink-v2"]
 )
 class InsertFlowerEnv(BaseEnv):
     agent: Union[FloatingInspireHandRight]
@@ -63,7 +62,9 @@ class InsertFlowerEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = sapien_utils.look_at(eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height])
+        pose = sapien_utils.look_at(
+            eye=[0.15, 0, 0.45], target=[-0.1, 0, self.hand_init_height]
+        )
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
@@ -72,12 +73,16 @@ class InsertFlowerEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        self.table_scene = TableSceneBuilder(env=self, robot_init_qpos_noise=self.robot_init_qpos_noise)
+        self.table_scene = TableSceneBuilder(
+            env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
+        )
         self.table_scene.build()
 
         # === Load Vase (Static) ===
         vase_builder = self.scene.create_actor_builder()
-        vase_visual_mesh_file = os.path.join(self.asset_path, "O02@0080@00001/model.obj")
+        vase_visual_mesh_file = os.path.join(
+            self.asset_path, "O02@0080@00001/model.obj"
+        )
         vase_collision_mesh_file = os.path.join(
             self.asset_path, "O02@0080@00001/model.obj.coacd.ply"
         )
@@ -97,7 +102,9 @@ class InsertFlowerEnv(BaseEnv):
         )
         flower_builder.add_visual_from_file(flower_mesh_file)
 
-        flower_material = physx.PhysxMaterial(static_friction=1, dynamic_friction=1, restitution=1)
+        flower_material = physx.PhysxMaterial(
+            static_friction=1, dynamic_friction=1, restitution=1
+        )
         flower_builder.add_multiple_convex_collisions_from_file(
             flower_collision_file, density=200, material=flower_material
         )
@@ -109,7 +116,9 @@ class InsertFlowerEnv(BaseEnv):
         self.flower = flower_builder.build(name="flower")
         self.target_area_box = list(self.target_area.values())
         # Convert target_area into tensor for fast computation
-        self.target_area_box = torch.tensor(self.target_area_box, device=self.device, dtype=torch.float32).view(2, 3)
+        self.target_area_box = torch.tensor(
+            self.target_area_box, device=self.device, dtype=torch.float32
+        ).view(2, 3)
 
     def _after_reconfigure(self, options: dict):
         pass
@@ -125,7 +134,10 @@ class InsertFlowerEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
 
             flower_pose = self.init_flower_pose
-            flower_pose.p[:, :2] += torch.rand((b, 2)) * self.flower_spawn_half_size * 2 - self.flower_spawn_half_size
+            flower_pose.p[:, :2] += (
+                torch.rand((b, 2)) * self.flower_spawn_half_size * 2
+                - self.flower_spawn_half_size
+            )
             self.flower.set_pose(flower_pose)
 
     def _initialize_agent(self, env_idx: torch.Tensor):
@@ -139,16 +151,18 @@ class InsertFlowerEnv(BaseEnv):
             self.agent.robot.set_pose(
                 Pose.create_from_pq(
                     torch.tensor([0.0, 0, self.hand_init_height]),
-                    torch.tensor([
-                        0,
-                        0.707,
-                        0,
-                        -0.707,
-                    ]),
+                    torch.tensor(
+                        [
+                            0,
+                            0.707,
+                            0,
+                            -0.707,
+                        ]
+                    ),
                 )
             )
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         return {}
 
     def evaluate(self, **kwargs) -> dict:
@@ -162,17 +176,21 @@ class InsertFlowerEnv(BaseEnv):
 
         return {"success": is_within}
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict) -> float:
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict) -> float:
         object_pos = self.flower.pose.p
         dist_outside = torch.max(
-            torch.max(self.target_area_box[0] - object_pos, torch.zeros_like(object_pos)),  # lower bound
-            torch.max(object_pos - self.target_area_box[1], torch.zeros_like(object_pos)),  # upper bound
+            torch.max(
+                self.target_area_box[0] - object_pos, torch.zeros_like(object_pos)
+            ),  # lower bound
+            torch.max(
+                object_pos - self.target_area_box[1], torch.zeros_like(object_pos)
+            ),  # upper bound
         )
         reward = torch.exp(-5 * torch.norm(dist_outside)).reshape(-1)
 
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 4.0
 
 

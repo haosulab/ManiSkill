@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Union
 
 import numpy as np
 import sapien
@@ -271,7 +271,7 @@ class PlugChargerEnv(BaseEnv):
             success=success,
         )
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self.obs_mode_struct.use_state:
             obs.update(

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -200,7 +200,7 @@ class PlaceSphereEnv(BaseEnv):
             "success": success,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             is_grasped=info["is_obj_grasped"],
             tcp_pose=self.agent.tcp.pose.raw_pose,
@@ -213,7 +213,7 @@ class PlaceSphereEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         # reaching reward
         tcp_pose = self.agent.tcp.pose.p
         obj_pos = self.obj.pose.p
@@ -252,7 +252,7 @@ class PlaceSphereEnv(BaseEnv):
         reward[info["success"]] = 13
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 13.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

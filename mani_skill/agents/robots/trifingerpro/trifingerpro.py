@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import List
 
 import sapien
 import torch
@@ -77,7 +76,7 @@ class TriFingerPro(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: List[sapien.Entity] = get_objs_by_names(
+        self.tip_links: list[sapien.Entity] = get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
         self.root_joints = [

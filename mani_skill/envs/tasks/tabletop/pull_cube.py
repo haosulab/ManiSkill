@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -43,7 +43,7 @@ class PullCubeEnv(BaseEnv):
 
     @property
     def _default_sensor_configs(self):
-        pose = look_at(eye=[-0.5,0.0,0.25], target=[0.2,0.0,-0.5])
+        pose = look_at(eye=[-0.5, 0.0, 0.25], target=[0.2, 0.0, -0.5])
         return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
@@ -114,7 +114,7 @@ class PullCubeEnv(BaseEnv):
             "success": is_obj_placed,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_region.pose.p,
@@ -125,7 +125,7 @@ class PullCubeEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         # grippers should close and pull from behind the cube, not grip it
         # distance to backside of cube (+ 2*0.005) sufficiently encourages this
         tcp_pull_pos = self.obj.pose.p + torch.tensor(
@@ -146,6 +146,6 @@ class PullCubeEnv(BaseEnv):
         reward[info["success"]] = 3
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

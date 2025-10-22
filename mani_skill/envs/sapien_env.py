@@ -2,7 +2,7 @@ import copy
 import gc
 import os
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import dacite
 import gymnasium as gym
@@ -80,7 +80,7 @@ class BaseEnv(gym.Env):
 
         viewer_camera_configs (dict): configurations of the viewer camera in the GUI to override any environment defaults. Similar usage as @sensor_configs.
 
-        robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
+        robot_uids (Union[str, BaseAgent, list[Union[str, BaseAgent]]]): list of robots to instantiate and control in the environment.
 
         sim_config (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
             a dictionary, it can just override specific attributes e.g. ``sim_config=dict(scene_config=dict(solver_iterations=25))``. If
@@ -118,7 +118,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
+    SUPPORTED_ROBOTS: list[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "any_textures", "pointcloud")
@@ -142,27 +142,27 @@ class BaseEnv(gym.Env):
     single_action_space: gym.Space
     """the unbatched action space of the environment"""
 
-    _sensors: Dict[str, BaseSensor]
+    _sensors: dict[str, BaseSensor]
     """all sensors configured in this environment"""
-    _sensor_configs: Dict[str, BaseSensorConfig]
+    _sensor_configs: dict[str, BaseSensorConfig]
     """all sensor configurations parsed from self._sensor_configs and agent._sensor_configs"""
-    _agent_sensor_configs: Dict[str, BaseSensorConfig]
+    _agent_sensor_configs: dict[str, BaseSensorConfig]
     """all agent sensor configs parsed from agent._sensor_configs"""
-    _human_render_cameras: Dict[str, Camera]
+    _human_render_cameras: dict[str, Camera]
     """cameras used for rendering the current environment retrievable via `env.render_rgb_array()`. These are not used to generate observations"""
-    _default_human_render_camera_configs: Dict[str, CameraConfig]
+    _default_human_render_camera_configs: dict[str, CameraConfig]
     """all camera configurations for cameras used for human render"""
-    _human_render_camera_configs: Dict[str, CameraConfig]
+    _human_render_camera_configs: dict[str, CameraConfig]
     """all camera configurations parsed from self._human_render_camera_configs"""
 
-    _hidden_objects: List[Union[Actor, Articulation]] = []
+    _hidden_objects: list[Union[Actor, Articulation]] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
 
     _main_rng: np.random.RandomState = None
     """main rng generator that generates episode seed sequences. For internal use only"""
     _batched_main_rng: BatchedRNG = None
     """the batched main RNG that generates episode seed sequences. For internal use only"""
-    _main_seed: List[int] = None
+    _main_seed: list[int] = None
     """main seed list for _main_rng and _batched_main_rng. _main_rng uses _main_seed[0]. For internal use only"""
     _episode_rng: np.random.RandomState = None
     """the numpy RNG that you can use to generate random numpy data. It is not recommended to use this. Instead use the _batched_episode_rng which helps ensure GPU and CPU simulation generate the same data with the same seeds."""
@@ -201,7 +201,7 @@ class BaseEnv(gym.Env):
         sensor_configs: Optional[dict] = dict(),
         human_render_camera_configs: Optional[dict] = dict(),
         viewer_camera_configs: Optional[dict] = dict(),
-        robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
+        robot_uids: Union[str, BaseAgent, list[Union[str, BaseAgent]]] = None,
         sim_config: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: Optional[int] = None,
         sim_backend: str = "auto",
@@ -439,7 +439,7 @@ class BaseEnv(gym.Env):
     def _default_sensor_configs(
         self,
     ) -> Union[
-        BaseSensorConfig, Sequence[BaseSensorConfig], Dict[str, BaseSensorConfig]
+        BaseSensorConfig, Sequence[BaseSensorConfig], dict[str, BaseSensorConfig]
     ]:
         """Add default (non-agent) sensors to the environment by returning sensor configurations. These can be overriden by the user at
         env creation time"""
@@ -448,7 +448,7 @@ class BaseEnv(gym.Env):
     def _default_human_render_camera_configs(
         self,
     ) -> Union[
-        CameraConfig, Sequence[CameraConfig], Dict[str, CameraConfig]
+        CameraConfig, Sequence[CameraConfig], dict[str, CameraConfig]
     ]:
         """Add default cameras for rendering when using render_mode='rgb_array'. These can be overriden by the user at env creation time """
         return []
@@ -498,7 +498,7 @@ class BaseEnv(gym.Env):
         """The current observation mode. This affects the observation returned by env.get_obs()"""
         return self._obs_mode
 
-    def get_obs(self, info: Optional[Dict] = None, unflattened: bool = False):
+    def get_obs(self, info: Optional[dict] = None, unflattened: bool = False):
         """
         Return the current observation of the environment. User may call this directly to get the current observation
         as opposed to taking a step with actions in the environment.
@@ -509,7 +509,7 @@ class BaseEnv(gym.Env):
         data in the info object by overriding the `self.evaluate` function.
 
         Args:
-            info (Dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
+            info (dict): The info object of the environment. Generally should always be the result of `self.get_info()`.
                 If this is None (the default), this function will call `self.get_info()` itself
             unflattened (bool): Whether to return the observation without flattening even if the observation mode (`self.obs_mode`) asserts to return a flattened observation.
         """
@@ -543,7 +543,7 @@ class BaseEnv(gym.Env):
                 obs["state"] = common.flatten_state_dict(data, use_torch=True, device=self.device)
         return obs
 
-    def _get_obs_state_dict(self, info: Dict):
+    def _get_obs_state_dict(self, info: dict):
         """Get (ground-truth) state-based observations."""
         return dict(
             agent=self._get_obs_agent(),
@@ -555,7 +555,7 @@ class BaseEnv(gym.Env):
         Controller state is also included although most default controllers do not have any state."""
         return self.agent.get_proprioception()
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         """Get task-relevant extra observations. Usually defined on a task by task basis"""
         return dict()
 
@@ -564,11 +564,11 @@ class BaseEnv(gym.Env):
         for sensor in self._sensors.values():
             sensor.capture()
 
-    def get_sensor_images(self) -> Dict[str, Dict[str, torch.Tensor]]:
+    def get_sensor_images(self) -> dict[str, dict[str, torch.Tensor]]:
         """Get image (RGB) visualizations of what sensors currently sense. This function calls self._get_obs_sensor_data() internally which automatically hides objects and updates the render"""
         return self.scene.get_sensor_images(self._get_obs_sensor_data())
 
-    def get_sensor_params(self) -> Dict[str, Dict[str, torch.Tensor]]:
+    def get_sensor_params(self) -> dict[str, dict[str, torch.Tensor]]:
         """Get all sensor parameters."""
         params = dict()
         for name, sensor in self._sensors.items():
@@ -624,7 +624,7 @@ class BaseEnv(gym.Env):
             torch.cuda.synchronize()
         return sensor_obs
 
-    def _get_obs_with_sensor_data(self, info: Dict, apply_texture_transforms: bool = True) -> dict:
+    def _get_obs_with_sensor_data(self, info: dict, apply_texture_transforms: bool = True) -> dict:
         """Get the observation with sensor data"""
         return dict(
             agent=self._get_obs_agent(),
@@ -645,7 +645,7 @@ class BaseEnv(gym.Env):
     def reward_mode(self):
         return self._reward_mode
 
-    def get_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def get_reward(self, obs: Any, action: torch.Tensor, info: dict):
         """
         Compute the reward for environment at its current state. observation data, the most recent action, and the info dictionary (generated by the self.evaluate() function)
         are provided as inputs. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
@@ -653,7 +653,7 @@ class BaseEnv(gym.Env):
         Args:
             obs (Any): The observation data.
             action (torch.Tensor): The most recent action.
-            info (Dict): The info dictionary.
+            info (dict): The info dictionary.
         """
         if self._reward_mode == "sparse":
             reward = self.compute_sparse_reward(obs=obs, action=action, info=info)
@@ -669,7 +669,7 @@ class BaseEnv(gym.Env):
             raise NotImplementedError(self._reward_mode)
         return reward
 
-    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: dict):
         """
 
         Computes the sparse reward. By default this function tries to use the success/fail information in
@@ -678,7 +678,7 @@ class BaseEnv(gym.Env):
         Args:
             obs (Any): The observation data. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
             action (torch.Tensor): The most recent action.
-            info (Dict): The info dictionary.
+            info (dict): The info dictionary.
         """
         if "success" in info:
             if "fail" in info:
@@ -695,19 +695,19 @@ class BaseEnv(gym.Env):
                 reward = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
         return reward
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         """
         Compute the dense reward.
 
         Args:
             obs (Any): The observation data. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
             action (torch.Tensor): The most recent action.
-            info (Dict): The info dictionary.
+            info (dict): The info dictionary.
         """
         raise NotImplementedError()
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         """
         Compute the normalized dense reward.
@@ -715,7 +715,7 @@ class BaseEnv(gym.Env):
         Args:
             obs (Any): The observation data. By default the observation data will be in its most raw form, a dictionary (no flattening, wrappers etc.)
             action (torch.Tensor): The most recent action.
-            info (Dict): The info dictionary.
+            info (dict): The info dictionary.
         """
         raise NotImplementedError()
 
@@ -1035,7 +1035,7 @@ class BaseEnv(gym.Env):
     # Step
     # -------------------------------------------------------------------------- #
 
-    def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
+    def step(self, action: Union[None, np.ndarray, torch.Tensor, dict]):
         """
         Take a step through the environment with an action. Actions are automatically clipped to the action space.
 
@@ -1067,7 +1067,7 @@ class BaseEnv(gym.Env):
         )
 
     def _step_action(
-        self, action: Union[None, np.ndarray, torch.Tensor, Dict]
+        self, action: Union[None, np.ndarray, torch.Tensor, dict]
     ) -> Union[None, torch.Tensor]:
         set_action = False
         action_is_unbatched = False
@@ -1286,7 +1286,7 @@ class BaseEnv(gym.Env):
         """
         return common.flatten_state_dict(self.get_state_dict(), use_torch=True)
 
-    def set_state_dict(self, state: Dict, env_idx: torch.Tensor = None):
+    def set_state_dict(self, state: dict, env_idx: torch.Tensor = None):
         """
         Set environment state with a state dictionary. Override to include task information (e.g., goal)
 

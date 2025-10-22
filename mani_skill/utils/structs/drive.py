@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Sequence, Union
+from typing import TYPE_CHECKING, Sequence, Union
 
 import sapien
 import sapien.physx as physx
@@ -38,7 +38,7 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
         pose1: Union[sapien.Pose, Pose] = None,
         scene_idxs: torch.Tensor = None,
     ):
-        physx_drives: List[physx.PhysxDriveComponent] = []
+        physx_drives: list[physx.PhysxDriveComponent] = []
         assert bodies1 is not None
         if bodies0 is None:
             bodies0 = [None] * len(bodies1)

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List
 
 from mani_skill import logger
 from mani_skill.agents.base_agent import BaseAgent
@@ -9,13 +8,13 @@ from mani_skill.utils import assets
 @dataclass
 class AgentSpec:
     agent_cls: type[BaseAgent]
-    asset_download_ids: List[str]
+    asset_download_ids: list[str]
 
 
-REGISTERED_AGENTS: Dict[str, AgentSpec] = {}
+REGISTERED_AGENTS: dict[str, AgentSpec] = {}
 
 
-def register_agent(asset_download_ids: List[str] = [], override=False):
+def register_agent(asset_download_ids: list[str] = [], override=False):
     """A decorator to register agents into ManiSkill so they can be used easily by string uid.
 
     Args:

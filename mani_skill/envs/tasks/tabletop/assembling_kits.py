@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Union
+from typing import Union
 
 import numpy as np
 import sapien.core as sapien
@@ -278,7 +278,7 @@ class AssemblingKitsEnv(BaseEnv):
             "success": pos_correct & rot_correct & in_slot,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )

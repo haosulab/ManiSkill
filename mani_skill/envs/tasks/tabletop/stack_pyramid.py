@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Union
 
 import numpy as np
 import sapien
@@ -7,17 +7,18 @@ import torch
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
+from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.building import actors
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
-from mani_skill.utils.building import actors
+from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.utils.structs.pose import Pose  
-from mani_skill.utils.logging_utils import logger
+from mani_skill.utils.structs.pose import Pose
+
 
 @register_env("StackPyramid-v1", max_episode_steps=250)
 class StackPyramidEnv(BaseEnv):
@@ -40,7 +41,7 @@ class StackPyramidEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
     SUPPORTED_REWARD_MODES = ["none", "sparse"]
-    
+
     agent: Union[Panda, Fetch]
 
     def __init__(
@@ -59,7 +60,6 @@ class StackPyramidEnv(BaseEnv):
         pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
-
     def _load_scene(self, options: dict):
         self.cube_half_size = common.to_tensor([0.02] * 3)
         self.table_scene = TableSceneBuilder(
@@ -67,13 +67,25 @@ class StackPyramidEnv(BaseEnv):
         )
         self.table_scene.build()
         self.cubeA = actors.build_cube(
-            self.scene, half_size=0.02, color=[1, 0, 0, 1], name="cubeA", initial_pose=sapien.Pose(p=[0, 0, 0.2])
+            self.scene,
+            half_size=0.02,
+            color=[1, 0, 0, 1],
+            name="cubeA",
+            initial_pose=sapien.Pose(p=[0, 0, 0.2]),
         )
         self.cubeB = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 1, 0, 1], name="cubeB", initial_pose=sapien.Pose(p=[1, 0, 0.2])
+            self.scene,
+            half_size=0.02,
+            color=[0, 1, 0, 1],
+            name="cubeB",
+            initial_pose=sapien.Pose(p=[1, 0, 0.2]),
         )
         self.cubeC = actors.build_cube(
-            self.scene, half_size=0.02, color=[0, 0, 1, 1], name="cubeC", initial_pose=sapien.Pose(p=[-1, 0, 0.2])
+            self.scene,
+            half_size=0.02,
+            color=[0, 0, 1, 1],
+            name="cubeC",
+            initial_pose=sapien.Pose(p=[-1, 0, 0.2]),
         )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -85,7 +97,9 @@ class StackPyramidEnv(BaseEnv):
             xyz[:, 2] = 0.02
             xy = xyz[:, :2]
             region = [[-0.1, -0.2], [0.1, 0.2]]
-            sampler = randomization.UniformPlacementSampler(bounds=region, batch_size=b, device=self.device)
+            sampler = randomization.UniformPlacementSampler(
+                bounds=region, batch_size=b, device=self.device
+            )
             radius = torch.linalg.norm(torch.tensor([0.02, 0.02]))
             cubeA_xy = xy + sampler.sample(radius, 100)
             cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)
@@ -93,7 +107,7 @@ class StackPyramidEnv(BaseEnv):
 
             # Cube A
             xyz[:, :2] = cubeA_xy
-            
+
             qs = randomization.random_quaternions(
                 b,
                 lock_x=True,
@@ -112,7 +126,7 @@ class StackPyramidEnv(BaseEnv):
                 lock_z=False,
             )
             self.cubeB.set_pose(Pose.create_from_pq(p=xyz.clone(), q=qs))
-            
+
             # Cube C
             xyz[:, :2] = cubeC_xy
             qs = randomization.random_quaternions(
@@ -133,33 +147,39 @@ class StackPyramidEnv(BaseEnv):
         offset_AC = pos_A - pos_C
 
         def evaluate_cube_distance(offset, cube_a, cube_b, top_or_next):
-            xy_flag = (torch.linalg.norm(offset[..., :2], axis=1) 
-                       <= torch.linalg.norm(2*self.cube_half_size[:2]) 
-                       + 0.005
-                       )
+            xy_flag = (
+                torch.linalg.norm(offset[..., :2], axis=1)
+                <= torch.linalg.norm(2 * self.cube_half_size[:2]) + 0.005
+            )
             z_flag = torch.abs(offset[..., 2]) > 0.02
             if top_or_next == "top":
                 is_cubeA_on_cubeB = torch.logical_and(xy_flag, z_flag)
             elif top_or_next == "next_to":
                 is_cubeA_on_cubeB = xy_flag
             else:
-                return NotImplementedError(f"Expect top_or_next to be either 'top' or 'next_to', got {top_or_next}")
-            
+                return NotImplementedError(
+                    f"Expect top_or_next to be either 'top' or 'next_to', got {top_or_next}"
+                )
+
             is_cubeA_static = cube_a.is_static(lin_thresh=1e-2, ang_thresh=0.5)
             is_cubeA_grasped = self.agent.is_grasping(cube_a)
 
-            success = is_cubeA_on_cubeB & is_cubeA_static & (~is_cubeA_grasped)            
+            success = is_cubeA_on_cubeB & is_cubeA_static & (~is_cubeA_grasped)
             return success.bool()
 
-        success_A_B = evaluate_cube_distance(offset_AB, self.cubeA, self.cubeB, "next_to")
+        success_A_B = evaluate_cube_distance(
+            offset_AB, self.cubeA, self.cubeB, "next_to"
+        )
         success_C_B = evaluate_cube_distance(offset_BC, self.cubeC, self.cubeB, "top")
         success_C_A = evaluate_cube_distance(offset_AC, self.cubeC, self.cubeA, "top")
-        success = torch.logical_and(success_A_B, torch.logical_and(success_C_B, success_C_A))
+        success = torch.logical_and(
+            success_A_B, torch.logical_and(success_C_B, success_C_A)
+        )
         return {
             "success": success,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if "state" in self.obs_mode:
             obs.update(
@@ -174,4 +194,3 @@ class StackPyramidEnv(BaseEnv):
                 cubeA_to_cubeC_pos=self.cubeC.pose.p - self.cubeA.pose.p,
             )
         return obs
-    

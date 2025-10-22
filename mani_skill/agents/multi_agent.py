@@ -1,4 +1,4 @@
-from typing import Dict, Generic, List, TypeVar
+from typing import Generic, TypeVar
 
 import torch
 from gymnasium import spaces
@@ -11,9 +11,9 @@ T = TypeVar("T")
 class MultiAgent(BaseAgent, Generic[T]):
     agents: T
 
-    def __init__(self, agents: List[BaseAgent]):
+    def __init__(self, agents: list[BaseAgent]):
         self.agents = agents
-        self.agents_dict: Dict[str, BaseAgent] = dict()
+        self.agents_dict: dict[str, BaseAgent] = dict()
         self.scene = agents[0].scene
         self.sensor_configs = []
         for i, agent in enumerate(self.agents):
@@ -31,7 +31,7 @@ class MultiAgent(BaseAgent, Generic[T]):
         """Get the currently activated controller uid of each robot"""
         return {uid: agent.control_mode for uid, agent in self.agents_dict.items()}
 
-    def set_control_mode(self, control_mode: List[str] = None):
+    def set_control_mode(self, control_mode: list[str] = None):
         """Set the controller, drive properties, and reset for each agent. If given control mode is None, will set defaults"""
         if control_mode is None:
             for agent in self.agents:
@@ -78,7 +78,7 @@ class MultiAgent(BaseAgent, Generic[T]):
             uid: agent.get_controller_state() for uid, agent in self.agents_dict.items()
         }
 
-    def set_controller_state(self, state: Dict):
+    def set_controller_state(self, state: dict):
         for uid, agent in self.agents_dict.items():
             agent.set_controller_state(state[uid])
 

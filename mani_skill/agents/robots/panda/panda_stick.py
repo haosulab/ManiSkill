@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -169,7 +169,7 @@ class PandaStick(BaseAgent):
             self.robot.get_links(), self.ee_link_name
         )
 
-        self.queries: Dict[
+        self.queries: dict[
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
         ] = dict()
 

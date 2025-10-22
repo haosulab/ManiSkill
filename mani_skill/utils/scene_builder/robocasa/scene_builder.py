@@ -2,7 +2,7 @@
 
 import logging
 from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 import torch
@@ -154,7 +154,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
         self.scene_data = []  # maps scene_idx to {"fixtures", "fxtr_placements"}
         super().__init__(*args, **kwargs)
 
-    def build(self, build_config_idxs: Optional[List[int]] = None):
+    def build(self, build_config_idxs: Optional[list[int]] = None):
         if self.env.agent is not None:
             self.robot_poses = self.env.agent.robot.initial_pose
         else:
@@ -231,7 +231,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 arena.extend(group_fixtures)
 
             # maps each fixture name to its object class
-            fixtures: Dict[str, Fixture] = dict()
+            fixtures: dict[str, Fixture] = dict()
             # maps each fixture name to its configuration
             configs = dict()
             # names of composites, delete from fixtures before returning
@@ -398,7 +398,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     euler2quat(*robot_base_ori)
                 ).to(self.robot_poses.device)
 
-            actors: Dict[str, Actor] = {}
+            actors: dict[str, Actor] = {}
 
             ### collision handling and optimization ###
             # Generally we aim to ensure all articulations in a stack have the same collision bits so they can't collide with each other
@@ -560,7 +560,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             robot_base_ori = None
         return fxtr_placements, robot_base_pos, robot_base_ori
 
-    def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int] = None):
+    def initialize(self, env_idx: torch.Tensor, init_config_idxs: list[int] = None):
         with torch.device(self.env.device):
             if self.env.agent is not None:
                 if self.env.robot_uids == "fetch":

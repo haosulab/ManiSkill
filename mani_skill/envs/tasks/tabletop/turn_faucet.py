@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Union
 
 import numpy as np
 import sapien
@@ -85,7 +85,7 @@ class TurnFaucetEnv(BaseEnv):
         switch_link_ids = self._batched_episode_rng.randint(0, 2**31)
 
         self._faucets = []
-        self._target_switch_links: List[Link] = []
+        self._target_switch_links: list[Link] = []
         self.model_offsets = []
         for i, model_id in enumerate(model_ids):
             # partnet-mobility is a dataset source and the ids are the ones we sampled
@@ -188,7 +188,7 @@ class TurnFaucetEnv(BaseEnv):
         angle_dist = self.target_angle - self.current_angle
         return dict(success=angle_dist < 0, angle_dist=angle_dist)
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             target_angle_diff=self.target_angle_diff,
@@ -231,7 +231,7 @@ class TurnFaucetEnv(BaseEnv):
     #     return reward
 
     # def compute_normalized_dense_reward(
-    #     self, obs: Any, action: torch.Tensor, info: Dict
+    #     self, obs: Any, action: torch.Tensor, info: dict
     # ):
     #     max_reward = 10.0
     #     return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
