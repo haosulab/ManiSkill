@@ -164,10 +164,14 @@ class BaseController:
             self._original_single_action_space.low,
             self._original_single_action_space.high,
         )
-        self.action_space_low = common.to_tensor(low, device=self.device)
-        self.action_space_high = common.to_tensor(high, device=self.device)
+        self.action_space_low = cast(
+            torch.Tensor, common.to_tensor(low, device=self.device)
+        )
+        self.action_space_high = cast(
+            torch.Tensor, common.to_tensor(high, device=self.device)
+        )
 
-    def _clip_and_scale_action(self, action):
+    def _clip_and_scale_action(self, action: torch.Tensor):
         return gym_utils.clip_and_scale_action(
             action, self.action_space_low, self.action_space_high
         )
