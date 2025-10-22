@@ -71,6 +71,8 @@ class ManiSkillScene:
         self.sim_config = sim_config
         self._gpu_sim_initialized = False
         self.debug_mode = debug_mode
+        if isinstance(device, str):
+            device = torch.device(device)
         self.device = device
         self.backend = backend  # references the backend object stored in BaseEnv class
 
