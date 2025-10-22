@@ -209,7 +209,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
             return self._body_data[self._body_data_index, 10:13]
         else:
             return torch.tensor(
-                np.array([body.angular_velocity for body in self._bodies])
+                np.array([body.angular_velocity for body in self._bodies]), 
+                device=self.device
             )
 
     @property
@@ -425,7 +426,8 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.tensor(
-                np.array([body.linear_velocity for body in self._bodies])
+                np.array([body.linear_velocity for body in self._bodies]), 
+                device=self.device,
             )
 
     @linear_velocity.setter
