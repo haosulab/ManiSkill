@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union, overload
 
 import gymnasium as gym
 import numpy as np
@@ -142,8 +142,24 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
             return out
 
 
-# TODO (stao): this code can be simplified
-def to_tensor(array: Array, device: Optional[Device] = None):
+@overload
+def to_tensor(array: dict, device: Optional[Device] = None) -> dict:
+    ...
+
+
+@overload
+def to_tensor(
+    array: dict[str, Array], device: Optional[Device] = None
+) -> dict[str, torch.Tensor]:
+    ...
+
+
+@overload
+def to_tensor(array: Array, device: Optional[Device] = None) -> torch.Tensor:
+    ...
+
+
+def to_tensor(array: Union[Array, dict], device: Optional[Device] = None):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
     by the device argument
