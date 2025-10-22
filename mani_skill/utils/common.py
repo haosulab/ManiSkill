@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Optional, Sequence, Tuple, Union, overload
+from typing import Any, Optional, Sequence, Tuple, Union, cast, overload
 
 import gymnasium as gym
 import numpy as np
@@ -372,8 +372,10 @@ def unbatch(*args: Tuple[Union[Array, Sequence]]):
     return tuple(x)
 
 
-def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
-    if isinstance(array, (dict)):
+def _to_numpy(
+    array: Union[Array, bool, str, float, int, dict]
+) -> Union[np.ndarray, dict, bool, str, float, int]:
+    if isinstance(array, dict):
         return {k: _to_numpy(v) for k, v in array.items()}
     if isinstance(array, torch.Tensor):
         return array.cpu().numpy()
@@ -389,8 +391,23 @@ def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
         return np.array(array)
 
 
-def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
-    array = _to_numpy(array)
+@overload
+def to_numpy(array: dict, dtype=None) -> dict:
+    ...
+
+
+@overload
+def to_numpy(array: Array, dtype=None) -> np.ndarray[Any]:
+    ...
+
+
+@overload
+def to_numpy(array: dict[str, Array], dtype=None) -> dict[str, np.ndarray]:
+    ...
+
+
+def to_numpy(array: Union[Array, dict], dtype=None) -> Union[np.ndarray, dict]:
+    array = cast(np.ndarray, _to_numpy(array))
     if dtype is not None:
         return array.astype(dtype)
     return array

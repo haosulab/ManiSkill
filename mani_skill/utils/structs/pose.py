@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, cast, overload
 
-import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 
 from mani_skill.utils import common
@@ -21,7 +19,17 @@ def add_batch_dim(x):
     return x
 
 
-def to_batched_tensor(x: Union[list, Array], device: Optional[Device] = None):
+@overload
+def to_batched_tensor(x: None, device: Optional[Device] = None) -> None:
+    ...
+
+
+@overload
+def to_batched_tensor(x: Array, device: Optional[Device] = None) -> torch.Tensor:
+    ...
+
+
+def to_batched_tensor(x: Optional[Array], device: Optional[Device] = None):
     if x is None:
         return None
     return add_batch_dim(common.to_tensor(x, device=device))
@@ -87,8 +95,8 @@ class Pose:
     @classmethod
     def create_from_pq(
         cls,
-        p: Optional[torch.Tensor] = None,
-        q: Optional[torch.Tensor] = None,
+        p: Optional[Array] = None,
+        q: Optional[Array] = None,
         device: Optional[Device] = None,
     ):
         """Creates a Pose object from a given position ``p`` and/or quaternion ``q``"""
@@ -121,7 +129,7 @@ class Pose:
     @classmethod
     def create(
         cls,
-        pose: Union[torch.Tensor, sapien.Pose, list[sapien.Pose], "Pose"],
+        pose: Union[Array, sapien.Pose, list[sapien.Pose], "Pose"],
         device: Optional[Device] = None,
     ) -> "Pose":
         """Creates a Pose object from a given ``pose``, which can be a torch tensor, sapien.Pose, list of sapien.Pose, or Pose"""
@@ -146,8 +154,8 @@ class Pose:
             return cls(raw_pose=torch.hstack([ps, qs]))
 
         else:
+            pose = common.to_tensor(cast(Array, pose), device=device)
             assert len(pose.shape) <= 2 and len(pose.shape) > 0
-            pose = common.to_tensor(pose, device=device)
             pose = add_batch_dim(pose)
             if pose.shape[-1] == 3:
                 return cls.create_from_pq(p=pose, device=pose.device)
@@ -304,13 +312,12 @@ def to_sapien_pose(pose: Union[torch.Tensor, sapien.Pose, Pose]) -> sapien.Pose:
         ), "pose is batched. Note that sapien Poses are not batched. If you want to use a batched Pose object use from mani_skill.utils.structs.pose import Pose"
         if len(pose.shape) == 2:
             pose = pose[0]
-        pose = common.to_numpy(pose)
-        return sapien.Pose(pose[:3], pose[3:])
+        pose_np = common.to_numpy(pose)
     else:
         assert len(pose.shape) == 1 or (
             len(pose.shape) == 2 and pose.shape[0] == 1
         ), "pose is batched. Note that sapien Poses are not batched. If you want to use a batched Pose object use from mani_skill.utils.structs.pose import Pose"
         if len(pose.shape) == 2:
             pose = pose[0]
-        pose = common.to_numpy(pose)
-        return sapien.Pose(pose[:3], pose[3:])
+        pose_np = common.to_numpy(pose)
+    return sapien.Pose(pose_np[:3], pose_np[3:])  # pyright: ignore[reportArgumentType]

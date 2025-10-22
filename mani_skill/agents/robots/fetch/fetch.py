@@ -15,7 +15,6 @@ from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
-from mani_skill.utils.structs.types import Array
 
 FETCH_WHEELS_COLLISION_BIT = 30
 """Collision bit of the fetch robot wheel links"""
