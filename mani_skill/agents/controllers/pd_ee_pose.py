@@ -18,7 +18,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.types import Array, DriveMode
 
-from .base_controller import ControllerConfig
+from .base_controller import ControllerConfig, BaseController
 from .pd_joint_pos import PDJointPosController
 
 
@@ -287,3 +287,106 @@ class PDEEPoseControllerConfig(PDEEPosControllerConfig):
     with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
 
     controller_cls = PDEEPoseController
+
+
+
+class PDEEPoseFastController(BaseController):
+    """"""
+
+    def _check_gpu_sim_works(self):
+        assert (
+            self.config.frame == "root_translation"
+        ), "currently only translation in the root frame for EE control is supported in GPU sim"
+
+    def _initialize_joints(self):
+        self.initial_qpos = None
+        super()._initialize_joints()
+        if self.device.type == "cuda":
+            self._check_gpu_sim_works()
+        self.kinematics = Kinematics(
+            self.config.urdf_path,
+            self.config.ee_link,
+            self.articulation,
+            self.active_joint_indices,
+        )
+        self.ee_link = self.kinematics.end_link
+
+    def _initialize_action_space(self):
+        low = np.float32(np.broadcast_to(self.config.pos_lower, 3))
+        high = np.float32(np.broadcast_to(self.config.pos_upper, 3))
+        self.single_action_space = spaces.Box(low, high, dtype=np.float32)
+
+    @property
+    def ee_pos(self):
+        return self.ee_link.pose.p
+
+    @property
+    def ee_pose(self):
+        return self.ee_link.pose
+
+    @property
+    def ee_pose_at_base(self):
+        to_base = self.articulation.pose.inv()
+        return to_base * (self.ee_pose)
+
+
+    def calculate_delta_q(self, world__T__ee_target: Pose):
+
+        self.config: PDEEPoseFastControllerConfig
+        root__T__world = self.articulation.get_root().pose
+        world__T__ee = self.articulation.links_map[self.config.ee_link].pose
+        root__T__ee_target = root__T__world * world__T__ee_target
+        root__T__ee_current = root__T__world * world__T__ee
+        ee_pose_error = root__T__ee_target.inv() * root__T__ee_current
+
+        q_current = self.qpos
+        ndof = q_current.shape[0]
+        jacobian = self.kinematics.pk_chain.jacobian(q_current)
+
+        pose_errors = torch.zeros((6, 1), dtype=torch.float32)  # [6 1]
+
+        assert jacobian.shape == (6, ndof)
+        jacobian_T = jacobian.T  # [ndof 6]
+
+        lambd = 1e-6
+        lfs_A = jacobian_T @ jacobian + lambd * torch.eye(ndof, device=self.device)  # [ndof ndof] 
+        rhs_B = jacobian_T @ pose_errors  # [ndof 1]
+        delta_q = torch.linalg.solve(lfs_A, rhs_B)  # [ndof 1]
+
+        return delta_q
+
+
+
+    def set_action(self, action: Array):
+        target_pose = Pose.create(action)
+        target_qpos = self.calculate_delta_q(target_pose)
+        if target_qpos.norm() > self.config.max_delta_q_norm:
+            target_qpos = target_qpos * self.config.max_delta_q_norm / target_qpos.norm()
+        self.set_drive_targets(target_qpos)
+
+
+@dataclass
+class PDEEPoseFastControllerConfig(PDEEPosControllerConfig):
+
+    rot_lower: Union[float, Sequence[float]] = None
+    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    rot_upper: Union[float, Sequence[float]] = None
+    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    stiffness: Union[float, Sequence[float]] = None
+    damping: Union[float, Sequence[float]] = None
+    force_limit: Union[float, Sequence[float]] = 1e10
+    friction: Union[float, Sequence[float]] = 0.0
+    normalize_action: bool = False
+    max_delta_q_norm: float = 1.0
+
+    frame: Literal[
+        "body_translation:root_aligned_body_rotation",
+        "root_translation:root_aligned_body_rotation",
+        "body_translation:body_aligned_body_rotation",
+        "root_translation:body_aligned_body_rotation",
+    ] = "root_translation:root_aligned_body_rotation"
+    """Choice of frame to use for translational and rotational control of the end-effector. To learn how these work explicitly
+    with videos of each one's behavior see https://maniskill.readthedocs.io/en/latest/user_guide/concepts/controllers.html#pd-ee-end-effector-pose"""
+
+    controller_cls = PDEEPoseController
+

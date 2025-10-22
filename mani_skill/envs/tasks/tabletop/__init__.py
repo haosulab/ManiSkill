@@ -17,3 +17,20 @@ from .roll_ball import RollBallEnv
 from .push_t import PushTEnv
 from .pull_cube_tool import PullCubeToolEnv
 from .stack_pyramid import StackPyramidEnv
+
+# New environments
+from .open_drawer_v1 import OpenDrawerV1Env
+from .pick_cube_v2 import PickCubeV2Env
+from .pick_cube_v3 import PickCubeV3Env
+from .pick_cube_v4 import PickCubeV4Env
+from .pick_cube_v3_vsphere import PickCubeV3VisibleSphereEnv
+from .place_sphere_v2 import PlaceSphereV2Env
+from .place_sphere_v3 import PlaceSphereV3Env
+from .pick_cube_MP_v1 import PickCubeMPEnv
+from .plug_charger_v2 import PlugChargerV2Env             # new
+from .pull_cube_v2 import PullCubeV2Env                   # new
+from .push_cube_v2 import PushCubeV2Env                   # new
+from .stack_cube_v2 import StackCubeV2Env                 # new
+from .pull_cube_tool_v2 import PullCubeToolV2Env          # new
+from .peg_insertion_side_v2 import PegInsertionSideV2Env  # new
+from .lift_peg_upright_v2 import LiftPegUprightV2Env      # new

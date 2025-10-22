@@ -68,6 +68,12 @@ class OpenCabinetDrawerEnv(BaseEnv):
         num_envs=1,
         **kwargs,
     ):
+        # TEMP
+        self._camera_width = kwargs.pop("camera_width", None)
+        self._camera_height = kwargs.pop("camera_height", None)
+        self._distraction_set = kwargs.pop("distraction_set", None)
+        # END OF TEMP
+
         self.robot_init_qpos_noise = robot_init_qpos_noise
         train_data = load_json(self.TRAIN_JSON)
         self.all_model_ids = np.array(list(train_data.keys()))

@@ -138,7 +138,7 @@ def replay_parallelized_sim(
             [episode["episode_seed"] for episode in episode_batch],
             device=env.base_env.device,
         )
-        env.reset(seed=seeds)
+        env.reset(seed=seeds, options={"reconfigure": True})
 
         # generate batched env states and actions
         env_states_list = []
@@ -258,7 +258,7 @@ def replay_cpu_sim(
         reset_kwargs = episode["reset_kwargs"]
         ori_control_mode = episode["control_mode"]
         if pbar is not None:
-            pbar.set_description(f"Replaying {traj_id}")
+            pbar.set_description(f"Replaying {traj_id}, Number successful replays: {successful_replays}/{len(episodes)}")
         if traj_id not in trajectories:
             tqdm.write(f"{traj_id} does not exist in {args.traj_path}")
             continue
@@ -266,6 +266,9 @@ def replay_cpu_sim(
         for _ in range(args.max_retry + 1):
             # Each trial for each trajectory to replay, we reset the environment
             # and optionally set the first environment state
+            reset_kwargs["options"]["reconfigure"] = True
+            # Note(@jstmn): ^ You need this for some reason i can't remember now. I think without it, the texture always
+            # overwrites the color.
             env.reset(**reset_kwargs)
             if ori_env is not None:
                 ori_env.reset(**reset_kwargs)

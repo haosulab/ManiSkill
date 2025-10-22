@@ -73,6 +73,24 @@ class Panda(BaseAgent):
     gripper_damping = 1e2
     gripper_force_limit = 100
 
+
+    def get_proprioception(self):
+        """
+        Get the proprioceptive state of the agent, default is the qpos and qvel of the robot and any controller state.
+        """
+        obs = super().get_proprioception()
+
+        # == Added by @jstmn
+        # "link pose data is always in world frame" - StoneT2000 
+        #  -> see https://github.com/haosulab/ManiSkill/discussions/923#discussioncomment-12466511
+        world__T__ee = self.robot.links_map[self.ee_link_name].pose
+        obs["world__T__ee"] = world__T__ee.to_transformation_matrix()
+        obs["world__T__root"] = self.robot.root.pose.to_transformation_matrix()
+        # == End of added by @jstmn
+
+        return obs
+
+
     @property
     def _controller_configs(self):
         # -------------------------------------------------------------------------- #
@@ -100,6 +118,7 @@ class Panda(BaseAgent):
         arm_pd_joint_target_delta_pos.use_target = True
 
         # PD ee position
+        # POSITION ONLY
         arm_pd_ee_delta_pos = PDEEPosControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=-0.1,
@@ -110,18 +129,22 @@ class Panda(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+
+        # DELTA POSE
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=-0.1,
             pos_upper=0.1,
             rot_lower=-0.1,
             rot_upper=0.1,
-            stiffness=self.arm_stiffness,
+            # stiffness=self.arm_stiffness,
+            stiffness=3.0*self.arm_stiffness, # increased stiffness results in more precise tracking
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+        # ABSOLUTE POSE
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=None,
@@ -262,7 +285,7 @@ class Panda(BaseAgent):
         rflag = torch.logical_and(
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
-        return torch.logical_and(lflag, rflag)
+        return torch.logical_and(lflag, rflag).to(self.device)
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()[..., :-2]

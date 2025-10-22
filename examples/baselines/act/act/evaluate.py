@@ -3,6 +3,7 @@ import gymnasium
 import numpy as np
 import torch
 
+import tqdm
 from mani_skill.utils import common
 
 def evaluate(n: int, agent, eval_envs, eval_kwargs):
@@ -32,6 +33,9 @@ def evaluate(n: int, agent, eval_envs, eval_kwargs):
         eval_metrics = defaultdict(list)
         obs, info = eval_envs.reset()
         ts, eps_count = 0, 0
+
+        counter = tqdm.tqdm(desc=f'Evaluating model accross {eval_envs.num_envs} environments for {n} episodes', total=n)
+
         while eps_count < n:
             # pre-process obs
             if use_visual_obs:
@@ -89,6 +93,7 @@ def evaluate(n: int, agent, eval_envs, eval_kwargs):
                             eval_metrics[k].append(v)
                 # new episodes begin
                 eps_count += num_envs
+                counter.update(num_envs)
                 ts = 0
                 all_time_actions = torch.zeros([num_envs, max_timesteps, max_timesteps+num_queries, action_dim], device=device)
 

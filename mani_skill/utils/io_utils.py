@@ -5,6 +5,7 @@ from typing import Sequence, Union
 
 import numpy as np
 
+from mani_skill.envs.distraction_set import DistractionSet
 
 class CustomJsonEncoder(json.JSONEncoder):
     """Custom json encoder to support more types, like numpy and Path."""
@@ -20,6 +21,8 @@ class CustomJsonEncoder(json.JSONEncoder):
             return obj.tolist()
         if isinstance(obj, Path):
             return str(obj)
+        if isinstance(obj, DistractionSet):
+            return obj.to_dict()
         return json.JSONEncoder.default(self, obj)
 
 

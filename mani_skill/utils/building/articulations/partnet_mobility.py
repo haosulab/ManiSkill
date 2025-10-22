@@ -53,7 +53,34 @@ def get_partnet_mobility_builder(
     loader.fix_root_link = fix_root_link
     loader.scale = metadata["scale"]
     loader.load_multiple_collisions_from_file = True
-    urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
+    try:
+        urdf_path = PARTNET_MOBILITY["model_urdf_paths"][id]
+    except:
+        # =============== DEBUG ===============
+        print(f"\nPARTNET_MOBILITY:")
+        for k, v in PARTNET_MOBILITY.items():
+            print(f"  {k}: {type(v)}")
+
+        print(f"\nPARTNET_MOBILITY['model_data']:")
+        for k, v in PARTNET_MOBILITY["model_data"].items():
+            if isinstance(v, dict):
+                print(f"  {k}:")
+                for k2, v2 in v.items():
+                    print(f"    {k2}: {v2}")
+            else:
+                print(f"  {k}: {type(v)}")
+        
+        print(f"\nPARTNET_MOBILITY['model_urdf_paths']:")
+        for k, v in PARTNET_MOBILITY["model_urdf_paths"].items():
+            print(f"  {k}: {v}")
+        
+        print(f"\nmetadata[id={id}]:")
+        for k, v in metadata.items():
+            print(f"  {k}: {v}")
+        print()
+        # =============== END OF: DEBUG ===============
+        raise KeyError(f"ID '{id}' not found in PARTNET_MOBILITY['model_urdf_paths']")
+
     applied_urdf_config = sapien_utils.parse_urdf_config(
         dict(
             material=dict(static_friction=1, dynamic_friction=1, restitution=0),

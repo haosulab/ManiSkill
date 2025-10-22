@@ -1,5 +1,6 @@
 ALGO_NAME = 'BC_ACT_rgbd'
 
+from collections import defaultdict
 import argparse
 import os
 import random
@@ -19,8 +20,7 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils
 from mani_skill.utils.registration import REGISTERED_ENVS
 
-from collections import defaultdict
-
+import tqdm
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
@@ -33,9 +33,22 @@ from act.detr.detr_vae import build_encoder, DETRVAE
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 import tyro
+from mani_skill.envs.distraction_set import DISTRACTION_SETS
+
+# Note(@jstmn): 'world__T__ee', 'world__T__root' were added to the observation space of the Panda agent as a 
+# convenience feature. We remove it here because it isn't included in the default ACT method. Additionally, it 
+# causes at torch shape mismatch error, because the configuration space is [batch x ndof], but these values are
+# [batch x 4 x 4]
+OBS_KEYS_TO_REMOVE = {"world__T__ee", "world__T__root"}
+
 
 @dataclass
 class Args:
+
+    camera_width: int
+    camera_height: int
+    distraction_set: str
+
     exp_name: Optional[str] = None
     """the name of this experiment"""
     seed: int = 1
@@ -144,6 +157,12 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
     def observation(self, observation: Dict):
         sensor_data = observation.pop("sensor_data")
         del observation["sensor_param"]
+        for key in OBS_KEYS_TO_REMOVE:
+            try:
+                del observation["agent"][key]
+            except KeyError:
+                pass
+
         images_rgb = []
         images_depth = []
         for cam_data in sensor_data.values():
@@ -198,14 +217,14 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
 
         # Pre-process the observations, make them align with the obs returned by the FlattenRGBDObservationWrapper
         obs_traj_dict_list = []
-        for obs_traj_dict in trajectories['observations']:
+        for obs_traj_dict in tqdm.tqdm(trajectories['observations'], desc='Pre-processing observations'):
             obs_traj_dict = self.process_obs(obs_traj_dict)
             obs_traj_dict_list.append(obs_traj_dict)
         trajectories['observations'] = obs_traj_dict_list
         self.obs_keys = list(obs_traj_dict.keys())
 
         # Pre-process the actions
-        for i in range(len(trajectories['actions'])):
+        for i in tqdm.tqdm(range(len(trajectories['actions'])), desc='Pre-processing actions'):
             trajectories['actions'][i] = torch.Tensor(trajectories['actions'][i])
         print('Obs/action pre-processing is done.')
 
@@ -219,7 +238,7 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
 
         self.slices = []
         self.num_traj = len(trajectories['actions'])
-        for traj_idx in range(self.num_traj):
+        for traj_idx in tqdm.tqdm(range(self.num_traj), desc='Pre-processing trajectories'):
             episode_len = trajectories['actions'][traj_idx].shape[0]
             self.slices += [
                 (traj_idx, ts) for ts in range(episode_len)
@@ -275,6 +294,13 @@ class SmallDemoDataset_ACTPolicy(Dataset): # Load everything into memory
         return len(self.slices)
 
     def process_obs(self, obs_dict):
+        # remove keys that shouldn't be included in the observation space
+        for key in OBS_KEYS_TO_REMOVE:
+            try:
+                del obs_dict["agent"][key]
+            except KeyError:
+                pass
+
         # get rgbd data
         sensor_data = obs_dict.pop("sensor_data")
         del obs_dict["sensor_param"]
@@ -466,7 +492,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    env_kwargs = dict(control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd" if args.include_depth else "rgb", render_mode="rgb_array")
+    env_kwargs = dict(
+        control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd" if args.include_depth else "rgb", render_mode="rgb_array",
+        camera_width=args.camera_width,
+        camera_height=args.camera_height,
+        distraction_set=DISTRACTION_SETS[args.distraction_set.upper()],
+    )
     if args.max_episode_steps is not None:
         env_kwargs["max_episode_steps"] = args.max_episode_steps
     other_kwargs = None
@@ -550,7 +581,7 @@ if __name__ == "__main__":
     best_eval_metrics = defaultdict(float)
     timings = defaultdict(float)
 
-    for cur_iter, data_batch in enumerate(train_dataloader):
+    for cur_iter, data_batch in tqdm.tqdm(enumerate(train_dataloader), desc='Training', total=args.total_iters):
         last_tick = time.time()
         # copy data from cpu to gpu
         obs_batch_dict = data_batch['observations']
