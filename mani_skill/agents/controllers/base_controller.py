@@ -250,7 +250,7 @@ class DictController(BaseController):
         for controller in self.controllers.values():
             self.joints.extend(controller.joints)
             active_joint_indices.extend(controller.active_joint_indices)
-        self.active_joint_indices = torch.cat(active_joint_indices)
+        self.active_joint_indices = torch.stack(active_joint_indices)
 
     def set_drive_property(self):
         for controller in self.controllers.values():

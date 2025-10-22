@@ -4,7 +4,7 @@ Code for kinematics utilities on CPU/GPU
 
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from os import devnull
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 from mani_skill.utils.geometry import rotation_conversions
 
@@ -267,8 +267,12 @@ class Kinematics:
                 max_iterations=100,
             )
             if success:
-                return common.to_tensor(
-                    [result[self.pmodel_controlled_joint_indices]], device=self.device
+                return cast(
+                    torch.Tensor,
+                    common.to_tensor(
+                        [result[self.pmodel_controlled_joint_indices]],
+                        device=self.device,
+                    ),
                 )
             else:
                 return None

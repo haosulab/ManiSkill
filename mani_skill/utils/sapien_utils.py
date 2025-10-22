@@ -10,21 +10,18 @@ import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
-import sapien.wrapper.urdf_loader
 import torch
 from sapien.utils import Viewer
 
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
-from mani_skill.utils.building.mjcf_loader import MJCFLoader
-from mani_skill.utils.building.urdf_loader import URDFLoader
 from mani_skill.utils.geometry.rotation_conversions import matrix_to_quaternion
 from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
-    from mani_skill.utils.structs.actor import Actor
     from mani_skill.sensors.camera import CameraConfig
-
-from mani_skill.utils.structs.types import Array, Device
+    from mani_skill.utils.building.mjcf_loader import MJCFLoader
+    from mani_skill.utils.building.urdf_loader import URDFLoader
+    from mani_skill.utils.structs.actor import Actor
 
 T = TypeVar("T")
 

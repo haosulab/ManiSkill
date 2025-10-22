@@ -124,7 +124,7 @@ class PDEEPosController(PDJointPosController):
                 [action, torch.zeros(action.shape[0], 3, device=self.device)]
             )
 
-        self._target_qpos = self.kinematics.compute_ik(
+        _target_qpos = self.kinematics.compute_ik(
             pose=self._target_pose
             if ik_via_target_pose
             else action,  # pyright: ignore[reportArgumentType]
@@ -133,8 +133,10 @@ class PDEEPosController(PDJointPosController):
             current_pose=self.ee_pose_at_base,
             solver_config=self.config.delta_solver_config,
         )
-        if self._target_qpos is None:
+        if _target_qpos is None:
             self._target_qpos = self._start_qpos
+        else:
+            self._target_qpos = _target_qpos
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:
@@ -278,14 +280,10 @@ class PDEEPoseController(PDEEPosController):
 @dataclass
 class PDEEPoseControllerConfig(PDEEPosControllerConfig):
 
-    rot_lower: Union[float, Sequence[float]] = []
+    rot_lower: Union[float, Sequence[float]] = -0.1
     """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    rot_upper: Union[float, Sequence[float]] = []
+    rot_upper: Union[float, Sequence[float]] = 0.1
     """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    stiffness: Union[float, Sequence[float]] = []
-    damping: Union[float, Sequence[float]] = []
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
 
     frame: Literal[
         "body_translation:root_aligned_body_rotation",
