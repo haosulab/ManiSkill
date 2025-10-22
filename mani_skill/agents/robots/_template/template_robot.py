@@ -1,3 +1,7 @@
+# pyright: reportUnusedImport=false
+
+import sapien
+
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
@@ -15,18 +19,21 @@ class TemplateRobot(BaseAgent):
 
     # you will need to implement your controllers to control the robot here. If not implemented, ManiSkill will create two default controllers.
     # One does PD joint position control, and the other is PD joint delta position control
-    # @property
-    # def _controller_configs(self):
-    #     raise NotImplementedError()
+    @property
+    def _controller_configs(self):
+        raise NotImplementedError()
 
     @property
     def _sensor_configs(self):
         # Add custom cameras mounted to a link on the robot, or remove this if there aren't any you wish to simulate
+        # Specify the position of camera with sapien.Pose or the ManiSkill Pose class.
         return [
             CameraConfig(
                 uid="your_custom_camera_on_this_robot",
-                p=[0.0464982, -0.0200011, 0.0360011],
-                q=[0, 0.70710678, 0, 0.70710678],
+                pose=sapien.Pose(
+                    p=[0.0464982, -0.0200011, 0.0360011],
+                    q=[0, 0.70710678, 0, 0.70710678],
+                ),
                 width=128,
                 height=128,
                 fov=1.57,
