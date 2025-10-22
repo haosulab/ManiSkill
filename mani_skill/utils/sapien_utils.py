@@ -4,7 +4,7 @@ Utilities that work with the simulation / SAPIEN
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Tuple, TypeVar
+from typing import TYPE_CHECKING, Tuple, TypeVar, Union
 
 import numpy as np
 import sapien
@@ -15,6 +15,8 @@ import torch
 from sapien.utils import Viewer
 
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
+from mani_skill.utils.building.mjcf_loader import MJCFLoader
+from mani_skill.utils.building.urdf_loader import URDFLoader
 from mani_skill.utils.geometry.rotation_conversions import matrix_to_quaternion
 from mani_skill.utils.structs.pose import Pose
 
@@ -144,7 +146,7 @@ def parse_urdf_config(config_dict: dict) -> dict:
     return urdf_config
 
 
-def apply_urdf_config(loader: sapien.wrapper.urdf_loader.URDFLoader, urdf_config: dict):
+def apply_urdf_config(loader: Union[URDFLoader, MJCFLoader], urdf_config: dict):
     if "link" in urdf_config:
         for name, link_config in urdf_config["link"].items():
             if "material" in link_config:

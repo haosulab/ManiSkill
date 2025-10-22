@@ -62,7 +62,7 @@ class BaseAgent:
     """unique identifier string of this"""
     urdf_path: Union[str, None] = None
     """path to the .urdf file describe the agent's geometry and visuals. One of urdf_path or mjcf_path must be provided."""
-    urdf_config: Union[str, dict, None] = None
+    urdf_config: Union[dict, None] = None
     """Optional provide a urdf_config to further modify the created articulation"""
     mjcf_path: Union[str, None] = None
     """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else.
@@ -246,7 +246,7 @@ class BaseAgent:
         """Get the currently activated controller uid."""
         return self._control_mode
 
-    def set_control_mode(self, control_mode: str = None):
+    def set_control_mode(self, control_mode: Optional[str] = None):
         """Sets the controller to an pre-existing controller of this agent.
         This does not reset the controller. If given control mode is None, will set to the default control mode."""
         if control_mode is None:
@@ -352,7 +352,7 @@ class BaseAgent:
         """
         return self.controller.get_state()
 
-    def set_controller_state(self, state: Array):
+    def set_controller_state(self, state: dict):
         """
         Set the state of the controller.
         """
@@ -387,15 +387,15 @@ class BaseAgent:
 
         if not ignore_controller and "controller" in state:
             self.set_controller_state(state["controller"])
-        if self.device.type == "cuda":
+        if self.scene.gpu_sim_enabled:
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
             self.scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #
-    def reset(self, init_qpos: torch.Tensor = None):
+    def reset(self, init_qpos: Optional[torch.Tensor] = None):
         """
         Reset the robot to a clean state with zero velocity and forces.
 
