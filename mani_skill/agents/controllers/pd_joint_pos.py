@@ -117,14 +117,14 @@ class PDJointPosController(BaseController):
 
 @dataclass
 class PDJointPosControllerConfig(ControllerConfig):
-    lower: Union[None, float, Sequence[float]]
+    lower: Union[None, float, Sequence[float], np.ndarray]
     """The lower bound for the joint position. If none, the lower bound defaults to the lower joint limit."""
-    upper: Union[None, float, Sequence[float]]
+    upper: Union[None, float, Sequence[float], np.ndarray]
     """The upper bound for the joint position. If none, the upper bound defaults to the upper joint limit."""
-    stiffness: Union[float, Sequence[float]]
-    damping: Union[float, Sequence[float]]
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    stiffness: Union[float, Sequence[float], np.ndarray]
+    damping: Union[float, Sequence[float], np.ndarray]
+    force_limit: Union[float, Sequence[float], np.ndarray] = 1e10
+    friction: Union[float, Sequence[float], np.ndarray] = 0.0
     use_delta: bool = False
     use_target: bool = False
     interpolate: bool = False

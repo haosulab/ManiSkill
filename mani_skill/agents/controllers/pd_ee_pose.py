@@ -162,23 +162,23 @@ class PDEEPosController(PDJointPosController):
 # TODO (stao): This config should really inherit the pd joint pos controller config
 @dataclass
 class PDEEPosControllerConfig(ControllerConfig):
-    pos_lower: Union[float, Sequence[float]]
+    pos_lower: Union[float, Sequence[float], np.ndarray]
     """Lower bound for position control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    pos_upper: Union[float, Sequence[float]]
+    pos_upper: Union[float, Sequence[float], np.ndarray]
     """Upper bound for position control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
 
     # TODO (stao): note stiffness, damping, force limit and friction are properties used by PDJointPos controller, which the PDEEPosController controller inherits from
     # this should be changed as its difficult to figure out how this code is used
-    stiffness: Union[float, Sequence[float]]
-    damping: Union[float, Sequence[float]]
+    stiffness: Union[float, Sequence[float], np.ndarray]
+    damping: Union[float, Sequence[float], np.ndarray]
 
     ee_link: str
     """The name of the end-effector link to control. Note that it does not have to be a end-effector necessarily and could just be any link."""
     urdf_path: str
     """Path to the URDF file defining the robot to control."""
 
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    force_limit: Union[float, Sequence[float], np.ndarray] = 1e10
+    friction: Union[float, Sequence[float], np.ndarray] = 0.0
 
     frame: Literal[
         "body_translation",
@@ -280,9 +280,9 @@ class PDEEPoseController(PDEEPosController):
 @dataclass
 class PDEEPoseControllerConfig(PDEEPosControllerConfig):
 
-    rot_lower: Union[float, Sequence[float]] = -np.inf
+    rot_lower: Union[float, Sequence[float], np.ndarray] = -np.inf
     """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds. By default this is -np.inf"""
-    rot_upper: Union[float, Sequence[float]] = np.inf
+    rot_upper: Union[float, Sequence[float], np.ndarray] = np.inf
     """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds. By default this is np.inf"""
 
     frame: Literal[
