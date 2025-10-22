@@ -4,7 +4,7 @@ Utilities that work with the simulation / SAPIEN
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Dict, List, Tuple, TypeVar
+from typing import TYPE_CHECKING, List, Tuple, TypeVar
 
 import numpy as np
 import sapien
@@ -112,14 +112,14 @@ def check_urdf_config(urdf_config: dict):
                 )
 
 
-def parse_urdf_config(config_dict: dict) -> Dict:
+def parse_urdf_config(config_dict: dict) -> dict:
     """Parse config from dict for SAPIEN URDF loader.
 
     Args:
         config_dict (dict): a dict containing link physical properties.
 
     Returns:
-        Dict: urdf config passed to `sapien.URDFLoader.load`.
+        dict: urdf config passed to `sapien.URDFLoader.load`.
     """
     # urdf_config = deepcopy(config_dict)
     urdf_config = dict()
@@ -232,7 +232,7 @@ def get_multiple_pairwise_contacts(
     contacts: List[physx.PhysxContact],
     actor0: sapien.Entity,
     actor1_list: List[sapien.Entity],
-) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
+) -> dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
     """
     Given a list of contacts, return the dict of contacts involving the one actor and actors
     This function is used to avoid double for-loop when using `get_pairwise_contacts` with multiple actors
@@ -283,7 +283,7 @@ def get_cpu_actor_contacts(
 
 def get_cpu_actors_contacts(
     contacts: List[physx.PhysxContact], actors: List[sapien.Entity]
-) -> Dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
+) -> dict[sapien.Entity, List[Tuple[physx.PhysxContact, bool]]]:
     """
     This function is used to avoid double for-loop when using `get_actor_contacts` with multiple actors
     """

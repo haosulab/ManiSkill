@@ -2,7 +2,7 @@
 
 import logging
 from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -231,7 +231,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                 arena.extend(group_fixtures)
 
             # maps each fixture name to its object class
-            fixtures: Dict[str, Fixture] = dict()
+            fixtures: dict[str, Fixture] = dict()
             # maps each fixture name to its configuration
             configs = dict()
             # names of composites, delete from fixtures before returning
@@ -398,7 +398,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                     euler2quat(*robot_base_ori)
                 ).to(self.robot_poses.device)
 
-            actors: Dict[str, Actor] = {}
+            actors: dict[str, Actor] = {}
 
             ### collision handling and optimization ###
             # Generally we aim to ensure all articulations in a stack have the same collision bits so they can't collide with each other

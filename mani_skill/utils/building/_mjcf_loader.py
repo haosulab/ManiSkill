@@ -44,7 +44,7 @@ from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
-from typing import Any, Dict, List, Literal, Tuple, Union
+from typing import Any, List, Literal, Tuple, Union
 from xml.etree.ElementTree import Element
 
 import numpy as np
@@ -199,14 +199,14 @@ class MJCFLoader:
         # self._link_min_patch_radius = dict()
         # self._link_density = dict()
 
-        self._defaults: Dict[str, Element] = dict()
+        self._defaults: dict[str, Element] = dict()
         self._assets = dict()
         self._materials = dict()
-        self._textures: Dict[str, MJCFTexture] = dict()
-        self._meshes: Dict[str, Element] = dict()
+        self._textures: dict[str, MJCFTexture] = dict()
+        self._meshes: dict[str, Element] = dict()
 
-        self._link2builder: Dict[str, LinkBuilder] = dict()
-        self._link2parent_joint: Dict[str, Any] = dict()
+        self._link2builder: dict[str, LinkBuilder] = dict()
+        self._link2parent_joint: dict[str, Any] = dict()
         self._group_count = 0
 
     def set_scene(self, scene):

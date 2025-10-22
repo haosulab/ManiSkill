@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 import sapien
 import torch
@@ -35,11 +35,11 @@ class SceneBuilder:
     init_configs: Optional[List[Any]] = None
     """List of scene configuration information that can be used to **init** scenes during reconfiguration (i.e. `env.reset()`). Can be a dictionary, a path to a json file, or some other data. If a scene needs to load init config data, it will index/sample such init configs from this list."""
 
-    scene_objects: Optional[Dict[str, Actor]] = None
+    scene_objects: Optional[dict[str, Actor]] = None
     """Scene objects are any dynamic, kinematic, or static Actor built by the scene builder. Useful for accessing objects in the scene directly."""
-    movable_objects: Optional[Dict[str, Actor]] = None
+    movable_objects: Optional[dict[str, Actor]] = None
     """Movable objects are any **dynamic** Actor built by the scene builder. movable_objects is a subset of scene_objects. Can be used to query dynamic objects for e.g. task initialization."""
-    articulations: Optional[Dict[str, Articulation]] = None
+    articulations: Optional[dict[str, Articulation]] = None
     """Articulations are any articulation loaded in by the scene builder."""
 
     navigable_positions: Optional[List[Union[Array, spaces.Box]]] = None
@@ -78,11 +78,11 @@ class SceneBuilder:
         ).tolist()
 
     @cached_property
-    def build_config_names_to_idxs(self) -> Dict[str, int]:
+    def build_config_names_to_idxs(self) -> dict[str, int]:
         return dict((v, i) for i, v in enumerate(self.build_configs))
 
     @cached_property
-    def init_config_names_to_idxs(self) -> Dict[str, int]:
+    def init_config_names_to_idxs(self) -> dict[str, int]:
         return dict((v, i) for i, v in enumerate(self.init_configs))
 
     @property

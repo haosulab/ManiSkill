@@ -9,7 +9,7 @@ import os.path as osp
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import sapien
@@ -74,9 +74,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         # Keep track of movable and static objects, build_config_idxs for envs, and poses
         self.build_config_idxs = build_config_idxs
-        self.scene_objects: Dict[str, Actor] = dict()
-        self.movable_objects: Dict[str, Actor] = dict()
-        self.articulations: Dict[str, Articulation] = dict()
+        self.scene_objects: dict[str, Actor] = dict()
+        self.movable_objects: dict[str, Actor] = dict()
+        self.articulations: dict[str, Articulation] = dict()
         self._default_object_poses: List[Tuple[Actor, sapien.Pose]] = []
 
         # keep track of background objects separately as we need to disable mobile robot collisions
@@ -235,12 +235,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # for now classify articulated objects as "movable" object
                 for env_num in env_idx:
-                    self.articulations[f"env-{env_num}_{articulation_name}"] = (
-                        articulation
-                    )
-                    self.scene_objects[f"env-{env_num}_{articulation_name}"] = (
-                        articulation
-                    )
+                    self.articulations[
+                        f"env-{env_num}_{articulation_name}"
+                    ] = articulation
+                    self.scene_objects[
+                        f"env-{env_num}_{articulation_name}"
+                    ] = articulation
 
                 for link in articulation.links:
                     link.set_collision_group_bit(

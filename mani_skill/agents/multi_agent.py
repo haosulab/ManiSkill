@@ -1,4 +1,4 @@
-from typing import Dict, Generic, List, TypeVar
+from typing import Generic, List, TypeVar
 
 import torch
 from gymnasium import spaces
@@ -13,7 +13,7 @@ class MultiAgent(BaseAgent, Generic[T]):
 
     def __init__(self, agents: List[BaseAgent]):
         self.agents = agents
-        self.agents_dict: Dict[str, BaseAgent] = dict()
+        self.agents_dict: dict[str, BaseAgent] = dict()
         self.scene = agents[0].scene
         self.sensor_configs = []
         for i, agent in enumerate(self.agents):
@@ -78,7 +78,7 @@ class MultiAgent(BaseAgent, Generic[T]):
             uid: agent.get_controller_state() for uid, agent in self.agents_dict.items()
         }
 
-    def set_controller_state(self, state: Dict):
+    def set_controller_state(self, state: dict):
         for uid, agent in self.agents_dict.items():
             agent.set_controller_state(state[uid])
 

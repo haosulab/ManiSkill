@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import sapien
@@ -320,7 +320,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             "open_enough": open_enough,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
@@ -333,7 +333,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         tcp_to_handle_dist = torch.linalg.norm(
             self.agent.tcp.pose.p - info["handle_link_pos"], axis=1
         )
@@ -352,7 +352,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         max_reward = 5.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

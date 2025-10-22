@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, List
 
 import numpy as np
 import sapien
@@ -110,7 +110,7 @@ class QuadrupedReachEnv(BaseEnv):
             "is_fallen": is_fallen,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
@@ -130,7 +130,7 @@ class QuadrupedReachEnv(BaseEnv):
         contact_exists = torch.norm(forces, dim=-1).max(-1).values > threshold
         return contact_exists
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         robot_to_goal_dist = info["robot_to_goal_dist"]
         reaching_reward = 1 - torch.tanh(1 * robot_to_goal_dist)
 
@@ -151,7 +151,7 @@ class QuadrupedReachEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

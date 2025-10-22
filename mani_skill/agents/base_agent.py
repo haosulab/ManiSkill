@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 import sapien
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
     from mani_skill.utils.building.mjcf_loader import MJCFLoader
     from mani_skill.utils.building.urdf_loader import URDFLoader
-DictControllerConfig = Dict[str, ControllerConfig]
+DictControllerConfig = dict[str, ControllerConfig]
 
 
 @dataclass
@@ -62,7 +62,7 @@ class BaseAgent:
     """unique identifier string of this"""
     urdf_path: Union[str, None] = None
     """path to the .urdf file describe the agent's geometry and visuals. One of urdf_path or mjcf_path must be provided."""
-    urdf_config: Union[str, Dict, None] = None
+    urdf_config: Union[str, dict, None] = None
     """Optional provide a urdf_config to further modify the created articulation"""
     mjcf_path: Union[str, None] = None
     """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else.
@@ -77,7 +77,7 @@ class BaseAgent:
     However for some robots/tasks it may be easier to disable all self collisions between links in the robot to increase simulation speed
     """
 
-    keyframes: Dict[str, Keyframe] = dict()
+    keyframes: dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
 
     robot: Articulation
@@ -97,9 +97,9 @@ class BaseAgent:
         self._agent_idx = agent_idx
         self.build_separate = build_separate
 
-        self.controllers: Dict[str, BaseController] = dict()
+        self.controllers: dict[str, BaseController] = dict()
         """The controllers of the robot."""
-        self.sensors: Dict[str, BaseSensor] = dict()
+        self.sensors: dict[str, BaseSensor] = dict()
         """The sensors that come with the robot."""
 
         self._load_articulation(initial_pose)
@@ -124,7 +124,7 @@ class BaseAgent:
     @property
     def _controller_configs(
         self,
-    ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
+    ) -> dict[str, Union[ControllerConfig, DictControllerConfig]]:
         """Returns a dict of controller configs for this agent. By default this is a PDJointPos (delta and non delta) controller for all active joints."""
         return dict(
             pd_joint_pos=PDJointPosControllerConfig(
@@ -358,7 +358,7 @@ class BaseAgent:
         """
         self.controller.set_state(state)
 
-    def get_state(self) -> Dict:
+    def get_state(self) -> dict:
         """Get current state, including robot state and controller state"""
         state = dict()
 
@@ -375,7 +375,7 @@ class BaseAgent:
 
         return state
 
-    def set_state(self, state: Dict, ignore_controller=False):
+    def set_state(self, state: dict, ignore_controller=False):
         """Set the state of the agent, including the robot state and controller state.
         If ignore_controller is True, the controller state will not be updated."""
         # robot state

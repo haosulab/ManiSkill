@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, List, Union
 
 import numpy as np
 import sapien
@@ -212,7 +212,7 @@ class PickSingleYCBEnv(BaseEnv):
             success=torch.logical_and(is_obj_placed, is_robot_static),
         )
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
             goal_pos=self.goal_site.pose.p,
@@ -227,7 +227,7 @@ class PickSingleYCBEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         tcp_to_obj_dist = torch.linalg.norm(
             self.obj.pose.p - self.agent.tcp.pose.p, axis=1
         )
@@ -254,6 +254,6 @@ class PickSingleYCBEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 6

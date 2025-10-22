@@ -6,7 +6,7 @@ SceneBuilder for the AI2Thor scenes, using configurations and assets stored in h
 import json
 import os.path as osp
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import sapien
@@ -121,9 +121,9 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
 
         # save scene and movable objects when building scene
         self.build_config_idxs = build_config_idxs
-        self.scene_objects: Dict[str, Actor] = dict()
-        self.movable_objects: Dict[str, Actor] = dict()
-        self.articulations: Dict[str, Articulation] = dict()
+        self.scene_objects: dict[str, Actor] = dict()
+        self.movable_objects: dict[str, Actor] = dict()
+        self.articulations: dict[str, Articulation] = dict()
         self._default_object_poses: List[Tuple[Actor, sapien.Pose]] = []
 
         # keep track of background objects separately as we need to disable mobile robot collisions

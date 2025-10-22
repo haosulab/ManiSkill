@@ -4,7 +4,7 @@ import json
 import sys
 from copy import deepcopy
 from functools import partial
-from typing import TYPE_CHECKING, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, List, Optional, Type
 
 import gymnasium as gym
 import torch
@@ -90,7 +90,7 @@ class EnvSpec:
         )
 
 
-REGISTERED_ENVS: Dict[str, EnvSpec] = {}
+REGISTERED_ENVS: dict[str, EnvSpec] = {}
 
 
 def register(

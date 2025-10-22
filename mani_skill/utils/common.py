@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -84,7 +84,7 @@ def dict_merge(dct: dict, merge_dct: dict):
 
 
 # TODO (stao): Consolidate this function with the one above..
-def merge_dicts(ds: Sequence[Dict], asarray=False):
+def merge_dicts(ds: Sequence[dict], asarray=False):
     """Merge multiple dicts with the same keys to a single one."""
     # NOTE(jigu): To be compatible with generator, we only iterate once.
     ret = defaultdict(list)

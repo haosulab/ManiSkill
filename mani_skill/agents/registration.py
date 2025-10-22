@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import List
 
 from mani_skill import logger
 from mani_skill.agents.base_agent import BaseAgent
@@ -12,7 +12,7 @@ class AgentSpec:
     asset_download_ids: List[str]
 
 
-REGISTERED_AGENTS: Dict[str, AgentSpec] = {}
+REGISTERED_AGENTS: dict[str, AgentSpec] = {}
 
 
 def register_agent(asset_download_ids: List[str] = [], override=False):

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import numpy as np
 
@@ -15,10 +15,10 @@ class BaseRealAgent:
     to the real world.
 
     Args:
-        sensor_configs (Dict[str, BaseSensorConfig]): the sensor configs to create the agent with.
+        sensor_configs (dict[str, BaseSensorConfig]): the sensor configs to create the agent with.
     """
 
-    def __init__(self, sensor_configs: Dict[str, BaseSensorConfig] = dict()):
+    def __init__(self, sensor_configs: dict[str, BaseSensorConfig] = dict()):
         self.sensor_configs = sensor_configs
 
         self._sim_agent: BaseAgent = None

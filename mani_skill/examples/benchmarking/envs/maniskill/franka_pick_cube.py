@@ -79,7 +79,7 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
             qpos = self.agent.keyframes["rest"].qpos
             self.agent.robot.set_qpos(qpos)
             self.cube.set_pose(sapien.Pose(p=[0.6, 0, 0.02]))
-    def _load_lighting(self, options: Dict):
+    def _load_lighting(self, options: dict):
         # self.scene.set_ambient_light(np.array([1,1,1])*0.05)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
@@ -89,5 +89,5 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
     def evaluate(self):
         return {}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         return dict()

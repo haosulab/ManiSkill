@@ -1,5 +1,4 @@
-from copy import deepcopy
-from typing import Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -15,7 +14,9 @@ from mani_skill.utils import sapien_utils
 @register_agent()
 class FloatingAbilityHandRight(BaseAgent):
     uid = "floating_ability_hand_right"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/ability_hand/ability_hand_right_floating.urdf"
+    urdf_path = (
+        f"{PACKAGE_ASSET_DIR}/robots/ability_hand/ability_hand_right_floating.urdf"
+    )
     urdf_config = dict(
         _materials=dict(
             front_finger=dict(
@@ -87,7 +88,6 @@ class FloatingAbilityHandRight(BaseAgent):
             "middle_q2",
             "ring_q2",
             "pinky_q2",
-
             # "thumb_q1",
             # "index_q1",
             # "middle_q1",
@@ -99,10 +99,7 @@ class FloatingAbilityHandRight(BaseAgent):
             # "ring_q2",
             # "pinky_q2",
         ]
-        self.thumb_joint_names = [
-            "thumb_q1",
-            "thumb_q2"
-        ]
+        self.thumb_joint_names = ["thumb_q1", "thumb_q2"]
         self.hand_stiffness = 1e3
         self.hand_damping = 1e2
         self.hand_force_limit = 50
@@ -131,8 +128,8 @@ class FloatingAbilityHandRight(BaseAgent):
         # -------------------------------------------------------------------------- #
         hand_joint_pos = PDJointPosMimicControllerConfig(
             self.hand_joint_names,
-            None,# [0, 0, 0, 0, 0, 0, 0, 0, -2.0943951, 0],
-            None, # [2.0943951, 2.0943951, 2.0943951, 2.0943951, 2.65860, 2.65860, 2.65860, 2.65860, 0, 2.0943951],
+            None,  # [0, 0, 0, 0, 0, 0, 0, 0, -2.0943951, 0],
+            None,  # [2.0943951, 2.0943951, 2.0943951, 2.0943951, 2.65860, 2.65860, 2.65860, 2.65860, 0, 2.0943951],
             self.hand_stiffness,
             self.hand_damping,
             self.hand_force_limit,
@@ -162,8 +159,8 @@ class FloatingAbilityHandRight(BaseAgent):
         )
         thumb_joint_pos = PDJointPosControllerConfig(
             self.thumb_joint_names,
-            None, # [0, 0, 0, 0, 0, 0, 0, 0, -2.0943951, 0],
-            None, # [2.0943951, 2.0943951, 2.0943951, 2.0943951, 2.65860, 2.65860, 2.65860, 2.65860, 0, 2.0943951],
+            None,  # [0, 0, 0, 0, 0, 0, 0, 0, -2.0943951, 0],
+            None,  # [2.0943951, 2.0943951, 2.0943951, 2.0943951, 2.65860, 2.65860, 2.65860, 2.65860, 0, 2.0943951],
             self.hand_stiffness,
             self.hand_damping,
             self.hand_force_limit,
@@ -214,4 +211,4 @@ class FloatingAbilityHandRight(BaseAgent):
             self.robot.get_links(), self.ee_link_name
         )
 
-        self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
+        self.queries: dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()

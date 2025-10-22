@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, List, Union
 
 import numpy as np
 import torch
@@ -183,7 +183,7 @@ class RotateValveEnv(BaseEnv):
                 )
             )
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         with torch.device(self.device):
             valve_qpos = self.valve.qpos
             valve_qvel = self.valve.qvel
@@ -205,7 +205,7 @@ class RotateValveEnv(BaseEnv):
         success = valve_rotation * self.rotate_direction > self.success_threshold
         return dict(success=success, valve_rotation=valve_rotation)
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         rotation = info["valve_rotation"]
         qvel = self.valve.qvel
 
@@ -226,7 +226,7 @@ class RotateValveEnv(BaseEnv):
 
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         # this should be equal to compute_dense_reward / max possible reward
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 6.0
 

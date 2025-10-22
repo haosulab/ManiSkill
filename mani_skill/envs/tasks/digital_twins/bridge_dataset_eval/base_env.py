@@ -2,7 +2,7 @@
 Base environment for Bridge dataset environments
 """
 import os
-from typing import Dict, List, Literal
+from typing import List, Literal
 
 import numpy as np
 import sapien
@@ -171,7 +171,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         quat_configs: torch.Tensor,
         **kwargs,
     ):
-        self.objs: Dict[str, Actor] = dict()
+        self.objs: dict[str, Actor] = dict()
         self.obj_names = obj_names
         self.source_obj_name = obj_names[0]
         self.target_obj_name = obj_names[1]
@@ -192,13 +192,13 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             }
             robot_cls = WidowX250SBridgeDatasetSink
 
-        self.model_db: Dict[str, Dict] = io_utils.load_json(
+        self.model_db: dict[str, dict] = io_utils.load_json(
             BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
-        
+
         self.consecutive_grasp = None
         self.episode_stats = None
-        
+
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
@@ -459,13 +459,23 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             """target object bbox size (3, )"""
 
             if self.consecutive_grasp is None:
-                self.consecutive_grasp = torch.zeros(self.num_envs, dtype=torch.int32).to(self.device)
+                self.consecutive_grasp = torch.zeros(
+                    self.num_envs, dtype=torch.int32
+                ).to(self.device)
             if self.episode_stats is None:
                 self.episode_stats = dict(
-                    moved_correct_obj=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
-                    moved_wrong_obj=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
-                    is_src_obj_grasped=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
-                    consecutive_grasp=torch.zeros((self.num_envs,), dtype=torch.bool).to(self.device),
+                    moved_correct_obj=torch.zeros(
+                        (self.num_envs,), dtype=torch.bool
+                    ).to(self.device),
+                    moved_wrong_obj=torch.zeros((self.num_envs,), dtype=torch.bool).to(
+                        self.device
+                    ),
+                    is_src_obj_grasped=torch.zeros(
+                        (self.num_envs,), dtype=torch.bool
+                    ).to(self.device),
+                    consecutive_grasp=torch.zeros(
+                        (self.num_envs,), dtype=torch.bool
+                    ).to(self.device),
                 )
             # stats to track
             self.consecutive_grasp[env_idx] = 0

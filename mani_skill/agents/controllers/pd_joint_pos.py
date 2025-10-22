@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Sequence, Union
+from typing import Sequence, Union
 
 import numpy as np
 import torch
@@ -255,5 +255,5 @@ class PDJointPosMimicControllerConfig(PDJointPosControllerConfig):
     """
 
     controller_cls = PDJointPosMimicController
-    mimic: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    mimic: dict[str, dict[str, float]] = field(default_factory=dict)
     """the mimic targets. Maps the actual mimic joint name to a dictionary of the format dict(joint: str, multiplier: float, offset: float)"""

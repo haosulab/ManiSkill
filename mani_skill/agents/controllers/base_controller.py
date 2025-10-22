@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 import sapien
@@ -193,7 +193,7 @@ class ControllerConfig:
 class DictController(BaseController):
     def __init__(
         self,
-        configs: Dict[str, ControllerConfig],
+        configs: dict[str, ControllerConfig],
         articulation: Articulation,
         control_freq: int,
         sim_freq: int = None,
@@ -204,7 +204,7 @@ class DictController(BaseController):
         self.articulation = articulation
         self._control_freq = control_freq
 
-        self.controllers: Dict[str, BaseController] = dict()
+        self.controllers: dict[str, BaseController] = dict()
         for uid, config in configs.items():
             self.controllers[uid] = config.controller_cls(
                 config, articulation, control_freq, sim_freq=sim_freq, scene=scene
@@ -252,7 +252,7 @@ class DictController(BaseController):
         for controller in self.controllers.values():
             controller.reset()
 
-    def set_action(self, action: Dict[str, np.ndarray]):
+    def set_action(self, action: dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
             controller.set_action(action[uid])
 

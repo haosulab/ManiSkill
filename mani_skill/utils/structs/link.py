@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Callable, Dict, List, Union
+from typing import TYPE_CHECKING, Callable, List, Union
 
 import sapien
 import sapien.physx as physx
@@ -38,7 +38,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     joint: ArticulationJoint = None
     """the joint of which this link is a child of. If this is a view/merged link then this joint is also a view/merged joint"""
 
-    meshes: Dict[str, List[trimesh.Trimesh]] = field(default_factory=dict)
+    meshes: dict[str, List[trimesh.Trimesh]] = field(default_factory=dict)
     """
     map from user-defined mesh groups (e.g. "handle" meshes for cabinets) to a list of trimesh.Trimesh objects corresponding to each physx link object managed here
     """
@@ -244,7 +244,9 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 raw_pose = new_pose
             return Pose.create(raw_pose)
         else:
-            return Pose.create([obj.entity_pose for obj in self._objs], device=self.device)
+            return Pose.create(
+                [obj.entity_pose for obj in self._objs], device=self.device
+            )
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:

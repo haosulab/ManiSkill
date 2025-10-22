@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Union
+from typing import List, Union
 
 import numpy as np
 import sapien
@@ -51,7 +51,7 @@ class PickClutterEnv(BaseEnv):
                 "To download default json:"
                 "`python -m mani_skill.utils.download_asset pick_clutter_ycb`."
             )
-        self._episodes: List[Dict] = load_json(episode_json)
+        self._episodes: List[dict] = load_json(episode_json)
         if reconfiguration_freq is None:
             if num_envs == 1:
                 reconfiguration_freq = 1
@@ -182,7 +182,7 @@ class PickClutterEnv(BaseEnv):
             "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
 
         return dict()
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
@@ -109,10 +109,10 @@ class ManiSkillVectorEnv(VectorEnv):
         return obs, info
 
     def step(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self, actions: Union[Array, Dict]
-    ) -> Tuple[Array, Array, Array, Array, Dict]:
+        self, actions: Union[Array, dict]
+    ) -> Tuple[Array, Array, Array, Array, dict]:
         obs, rew, terminations, truncations, infos = self._env.step(actions)
-        episode_info: Optional[Dict] = None
+        episode_info: Optional[dict] = None
         if self.record_metrics:
             episode_info = dict()
             self.returns += rew

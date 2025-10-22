@@ -6,7 +6,7 @@ import os.path as osp
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import sapien
@@ -28,7 +28,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
     task_names: List[str] = ["set_table:train"]
 
     # init configs for Rearrange stasks are default_object_poses for each object type
-    init_configs: List[List[Dict[str, List[sapien.Pose]]]] = None
+    init_configs: List[List[dict[str, List[sapien.Pose]]]] = None
 
     def __init__(self, env):
         # the Habitat Rearrange tasks build on the base ReplicaCAD scenes by creating episode configs
@@ -120,12 +120,12 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         # self.rcad_to_rearrange_configs: which rearrange episode configs use each rcad config
         # default_object_poses: default poses for ycb objects from each rearrange episode config
-        self.rcad_to_rearrange_configs: Dict[str, List[str]] = dict()
-        default_object_poses: Dict[str, Dict[str, List[sapien.Pose]]] = dict()
+        self.rcad_to_rearrange_configs: dict[str, List[str]] = dict()
+        default_object_poses: dict[str, dict[str, List[sapien.Pose]]] = dict()
         if init_config_names is None:
             init_config_names = self._rearrange_configs
         for rc in init_config_names:
-            objects: Dict[str, List[sapien.Pose]] = defaultdict(list)
+            objects: dict[str, List[sapien.Pose]] = defaultdict(list)
 
             with open(
                 osp.join(
@@ -150,7 +150,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             default_object_poses[rc] = objects
 
         # create init config
-        self.init_configs: List[List[Dict[str, List[sapien.Pose]]]] = [
+        self.init_configs: List[List[dict[str, List[sapien.Pose]]]] = [
             [
                 default_object_poses[rc]
                 for rc in self.rcad_to_rearrange_configs[self.build_configs[bci]]
@@ -163,7 +163,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
         # build multiple instances of each YCB object for each RCAD scene
         # when initializing, we set poses according to the sampled init configs,
         # and we hide any unused instances of YCB objects
-        rcad_config_to_num_ycb_objs_to_build: Dict[str, Dict[str, int]] = dict()
+        rcad_config_to_num_ycb_objs_to_build: dict[str, dict[str, int]] = dict()
         for rcad_config in self.rcad_to_rearrange_configs.keys():
             obj_ids = set()
             for rearrange_config in self.rcad_to_rearrange_configs[rcad_config]:
@@ -195,7 +195,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             (env_num, copy.deepcopy(DEFAULT_HIDDEN_POS))
             for env_num in range(len(build_config_idxs))
         )
-        self._default_hidden_poses: Dict[Actor, sapien.Pose] = dict()
+        self._default_hidden_poses: dict[Actor, sapien.Pose] = dict()
         for env_num, bci in enumerate(build_config_idxs):
             rcad_config = self.build_configs[bci]
             num_ycb_objs_to_build = rcad_config_to_num_ycb_objs_to_build[rcad_config]
@@ -220,7 +220,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     self.movable_objects[obj_instance_name] = actor
             self.ycb_objs_per_env.append(ycb_objs)
 
-        self.rcad_config_to_rearrange_ao_states: Dict[
+        self.rcad_config_to_rearrange_ao_states: dict[
             str, List[List[Tuple[Articulation, torch.Tensor]]]
         ] = defaultdict(list)
         for env_num, bci in enumerate(build_config_idxs):
@@ -236,7 +236,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                     "rb",
                 ) as f:
                     episode_json = json.load(f)
-                episode_ao_states: Dict[str, Dict[str, int]] = episode_json["ao_states"]
+                episode_ao_states: dict[str, dict[str, int]] = episode_json["ao_states"]
                 articulation_qpos_pairs: List[Tuple[Articulation, torch.Tensor]] = []
                 for base_articulation_id, qpos_dict in episode_ao_states.items():
                     aid, anum = base_articulation_id.split(":")

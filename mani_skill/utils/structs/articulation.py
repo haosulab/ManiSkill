@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import numpy as np
 import sapien
@@ -32,17 +32,17 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     links: List[Link]
     """List of Link objects"""
-    links_map: Dict[str, Link]
+    links_map: dict[str, Link]
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
     joints: List[ArticulationJoint]
     """List of Joint objects"""
-    joints_map: Dict[str, ArticulationJoint]
+    joints_map: dict[str, ArticulationJoint]
     """Maps joint name to the Joint object"""
     active_joints: List[ArticulationJoint]
     """List of active Joint objects, referencing elements in self.joints"""
-    active_joints_map: Dict[str, ArticulationJoint]
+    active_joints_map: dict[str, ArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
@@ -60,10 +60,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     longer make "sense"
     """
 
-    _cached_joint_target_indices: Dict[int, torch.Tensor] = field(default_factory=dict)
+    _cached_joint_target_indices: dict[int, torch.Tensor] = field(default_factory=dict)
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets in GPU sims."""
 
-    _net_contact_force_queries: Dict[
+    _net_contact_force_queries: dict[
         Tuple, physx.PhysxGpuContactBodyImpulseQuery
     ] = field(default_factory=dict)
     """Maps a tuple of link names to pre-saved net contact force queries"""
@@ -119,7 +119,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             [] for _ in range(num_joints)
         ]
 
-        links_map: Dict[str, Link] = dict()
+        links_map: dict[str, Link] = dict()
         for articulation in physx_articulations:
             if _process_links:
                 assert num_links == len(articulation.links) and num_joints == len(
@@ -888,7 +888,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             else:
                 gx, gy = self.get_joint_target_indices(joint_indices)
             self.px.cuda_articulation_target_qpos.torch()[
-                gx[self.scene._reset_mask[self._scene_idxs]], gy[self.scene._reset_mask[self._scene_idxs]]
+                gx[self.scene._reset_mask[self._scene_idxs]],
+                gy[self.scene._reset_mask[self._scene_idxs]],
             ] = targets
         else:
             for i, joint in enumerate(joints):
@@ -912,7 +913,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             else:
                 gx, gy = self.get_joint_target_indices(joint_indices)
             self.px.cuda_articulation_target_qvel.torch()[
-                gx[self.scene._reset_mask[self._scene_idxs]], gy[self.scene._reset_mask[self._scene_idxs]]
+                gx[self.scene._reset_mask[self._scene_idxs]],
+                gy[self.scene._reset_mask[self._scene_idxs]],
             ] = targets
         else:
             for i, joint in enumerate(joints):

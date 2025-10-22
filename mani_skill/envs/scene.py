@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import sapien
@@ -33,8 +33,8 @@ if SAPIEN_RENDER_SYSTEM == "3.1":
 
 @dataclass
 class StateDictRegistry:
-    actors: Dict[str, Actor]
-    articulations: Dict[str, Articulation]
+    actors: dict[str, Actor]
+    articulations: dict[str, Articulation]
 
 
 class ManiSkillScene:
@@ -48,7 +48,7 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: Optional[List[sapien.Scene]] = None,
+        sub_scenes: Optional[list[sapien.Scene]] = None,
         sim_config: SimConfig = SimConfig(),
         debug_mode: bool = True,
         device: Device = None,
@@ -75,18 +75,18 @@ class ManiSkillScene:
         self.backend = backend  # references the backend object stored in BaseEnv class
 
         self.render_system_group: sapien.render.RenderSystemGroup = None
-        self.camera_groups: Dict[str, sapien.render.RenderCameraGroup] = dict()
+        self.camera_groups: dict[str, sapien.render.RenderCameraGroup] = dict()
 
-        self.actors: Dict[str, Actor] = dict()
-        self.articulations: Dict[str, Articulation] = dict()
+        self.actors: dict[str, Actor] = dict()
+        self.articulations: dict[str, Articulation] = dict()
 
-        self.actor_views: Dict[str, Actor] = dict()
+        self.actor_views: dict[str, Actor] = dict()
         """views of actors in any sub-scenes created by using Actor.merge and queryable as if it were a single Actor"""
-        self.articulation_views: Dict[str, Articulation] = dict()
+        self.articulation_views: dict[str, Articulation] = dict()
         """views of articulations in any sub-scenes created by using Articulation.merge and queryable as if it were a single Articulation"""
 
-        self.sensors: Dict[str, BaseSensor] = dict()
-        self.human_render_cameras: Dict[str, Camera] = dict()
+        self.sensors: dict[str, BaseSensor] = dict()
+        self.human_render_cameras: dict[str, Camera] = dict()
         self._sensors_initialized = False
         self._human_render_cameras_initialized = False
 
@@ -97,12 +97,12 @@ class ManiSkillScene:
         self._needs_fetch = False
         """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
 
-        self.pairwise_contact_queries: Dict[
+        self.pairwise_contact_queries: dict[
             str, physx.PhysxGpuContactPairImpulseQuery
         ] = dict()
         """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU simulation only to cache queries as
         query creation will pause any GPU sim computation"""
-        self._pairwise_contact_query_unique_hashes: Dict[str, int] = dict()
+        self._pairwise_contact_query_unique_hashes: dict[str, int] = dict()
         """maps keys in self.pairwise_contact_queries to unique hashes dependent on the actual objects involved in the query.
         This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
         non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
@@ -583,7 +583,7 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs: Optional[List[int]] = None,
+        scene_idxs: Optional[list[int]] = None,
     ):
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
@@ -619,7 +619,7 @@ class ManiSkillScene:
         shadow_near=-10.0,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs: Optional[List[int]] = None,
+        scene_idxs: Optional[list[int]] = None,
     ):
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
@@ -664,7 +664,7 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs: Optional[List[int]] = None,
+        scene_idxs: Optional[list[int]] = None,
     ):
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
@@ -873,7 +873,7 @@ class ManiSkillScene:
             del state_dict["articulations"]
         return state_dict
 
-    def set_sim_state(self, state: Dict, env_idx: torch.Tensor = None):
+    def set_sim_state(self, state: dict, env_idx: torch.Tensor = None):
         if env_idx is not None:
             prev_reset_mask = self._reset_mask.clone()
             # safe guard against setting the wrong states
@@ -1078,13 +1078,13 @@ class ManiSkillScene:
 
         self.render_system_group = sync_manager
 
-    def _gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
+    def _gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
         if SAPIEN_RENDER_SYSTEM == "3.1":
             self._sapien_31_gpu_setup_sensors(sensors)
         else:
             self._sapien_gpu_setup_sensors(sensors)
 
-    def _sapien_gpu_setup_sensors(self, sensors: Dict[str, BaseSensor]):
+    def _sapien_gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 try:
@@ -1126,8 +1126,8 @@ class ManiSkillScene:
                 )
 
     def get_sensor_images(
-        self, obs: Dict[str, Any]
-    ) -> Dict[str, Dict[str, torch.Tensor]]:
+        self, obs: dict[str, Any]
+    ) -> dict[str, dict[str, torch.Tensor]]:
         """Get raw sensor data as images for visualization purposes."""
         sensor_data = dict()
         for name, sensor in self.sensors.items():
@@ -1136,7 +1136,7 @@ class ManiSkillScene:
 
     def get_human_render_camera_images(
         self, camera_name: str = None
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         image_data = dict()
         if self.gpu_sim_enabled:
             if self.parallel_in_single_scene:

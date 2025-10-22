@@ -1,4 +1,4 @@
-from typing import Dict, Literal
+from typing import Literal
 
 import gymnasium as gym
 import torch
@@ -38,7 +38,7 @@ class VisualEncoderWrapper(gym.ObservationWrapper):
         super().__init__(env)
 
     @torch.no_grad()
-    def observation(self, obs: Dict):
+    def observation(self, obs: dict):
         vec_img_embeddings_list = []
         image_obs = obs.pop("sensor_data")
         del obs["sensor_param"]

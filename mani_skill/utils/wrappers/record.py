@@ -119,21 +119,21 @@ class RecordEpisode(gym.Wrapper):
 
     Each JSON file contains:
 
-    - `env_info` (Dict): task (also known as environment) information, which can be used to initialize the task
+    - `env_info` (dict): task (also known as environment) information, which can be used to initialize the task
     - `env_id` (str): task id
     - `max_episode_steps` (int)
-    - `env_kwargs` (Dict): keyword arguments to initialize the task. **Essential to recreate the environment.**
-    - `episodes` (List[Dict]): episode information
+    - `env_kwargs` (dict): keyword arguments to initialize the task. **Essential to recreate the environment.**
+    - `episodes` (List[dict]): episode information
     - `source_type` (Optional[str]): a simple category string describing what process generated the trajectory data. ManiSkill official datasets will usually write one of "human", "motionplanning", or "rl" at the moment.
     - `source_desc` (Optional[str]): a longer explanation of how the data was generated.
 
     The episode information (the element of `episodes`) includes:
 
     - `episode_id` (int): a unique id to index the episode
-    - `reset_kwargs` (Dict): keyword arguments to reset the task. **Essential to reproduce the trajectory.**
+    - `reset_kwargs` (dict): keyword arguments to reset the task. **Essential to reproduce the trajectory.**
     - `control_mode` (str): control mode used for the episode.
     - `elapsed_steps` (int): trajectory length
-    - `info` (Dict): information at the end of the episode.
+    - `info` (dict): information at the end of the episode.
 
     With just the meta data, you can reproduce the task the same way it was created when the trajectories were collected as so:
 
@@ -367,7 +367,9 @@ class RecordEpisode(gym.Wrapper):
             # if doing a full reset then we flush all trajectories including incompleted ones
             if self._trajectory_buffer is not None:
                 if options is None or "env_idx" not in options:
-                    self.flush_trajectory(env_idxs_to_flush=np.arange(self.num_envs), save=save)
+                    self.flush_trajectory(
+                        env_idxs_to_flush=np.arange(self.num_envs), save=save
+                    )
                 else:
                     self.flush_trajectory(
                         env_idxs_to_flush=common.to_numpy(options["env_idx"], save=save)

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -201,4 +201,4 @@ class XArm7Ability(BaseAgent):
             self.robot.get_links(), self.ee_link_name
         )
 
-        self.queries: Dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
+        self.queries: dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()

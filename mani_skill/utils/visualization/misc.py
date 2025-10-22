@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import imageio
 import numpy as np
@@ -139,7 +139,7 @@ def put_text_on_image(image: np.ndarray, lines: List[str]):
     return np.array(image)
 
 
-def put_info_on_image(image, info: Dict[str, float], extras=None, overlay=True):
+def put_info_on_image(image, info: dict[str, float], extras=None, overlay=True):
     lines = [
         f"{k}: {v:.3f}" if isinstance(v, float) else f"{k}: {v}"
         for k, v in info.items()
