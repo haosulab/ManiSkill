@@ -118,7 +118,9 @@ class PDJointPosController(BaseController):
 @dataclass
 class PDJointPosControllerConfig(ControllerConfig):
     lower: Union[None, float, Sequence[float]]
+    """The lower bound for the joint position. If none, the lower bound defaults to the lower joint limit."""
     upper: Union[None, float, Sequence[float]]
+    """The upper bound for the joint position. If none, the upper bound defaults to the upper joint limit."""
     stiffness: Union[float, Sequence[float]]
     damping: Union[float, Sequence[float]]
     force_limit: Union[float, Sequence[float]] = 1e10

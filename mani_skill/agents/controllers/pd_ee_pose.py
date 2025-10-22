@@ -280,10 +280,10 @@ class PDEEPoseController(PDEEPosController):
 @dataclass
 class PDEEPoseControllerConfig(PDEEPosControllerConfig):
 
-    rot_lower: Union[float, Sequence[float]] = -0.1
-    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    rot_upper: Union[float, Sequence[float]] = 0.1
-    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
+    rot_lower: Union[float, Sequence[float]] = -np.inf
+    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds. By default this is -np.inf"""
+    rot_upper: Union[float, Sequence[float]] = np.inf
+    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds. By default this is np.inf"""
 
     frame: Literal[
         "body_translation:root_aligned_body_rotation",
