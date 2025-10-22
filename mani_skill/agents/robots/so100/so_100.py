@@ -2,7 +2,6 @@ import copy
 
 import numpy as np
 import sapien
-import sapien.render
 import torch
 from transforms3d.euler import euler2quat
 
@@ -101,13 +100,6 @@ class SO100(BaseAgent):
     @property
     def tcp_pose(self):
         return Pose.create_from_pq(self.tcp_pos, self.finger1_link.pose.q)
-
-    def _after_loading_articulation(self):
-        super()._after_loading_articulation()
-        self.finger1_link = self.robot.links_map["Fixed_Jaw"]
-        self.finger2_link = self.robot.links_map["Moving_Jaw"]
-        self.finger1_tip = self.robot.links_map["Fixed_Jaw_tip"]
-        self.finger2_tip = self.robot.links_map["Moving_Jaw_tip"]
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=110):
         """Check if the robot is grasping an object
