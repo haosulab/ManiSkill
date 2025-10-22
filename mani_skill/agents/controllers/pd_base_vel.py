@@ -1,8 +1,6 @@
 import numpy as np
 import torch
-
 from gymnasium import spaces
-from mani_skill.utils.structs.types import Array
 
 from .pd_joint_vel import PDJointVelController, PDJointVelControllerConfig
 
@@ -15,7 +13,7 @@ class PDBaseVelController(PDJointVelController):
         assert len(self.joints) >= 3, len(self.joints)
         super()._initialize_action_space()
 
-    def set_action(self, action: Array):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         # Convert to ego-centric action
         # Assume the 3rd DoF stands for orientation
@@ -45,7 +43,7 @@ class PDBaseForwardVelController(PDJointVelController):
         high = np.float32(np.broadcast_to(self.config.upper, 2))
         self.single_action_space = spaces.Box(low, high, dtype=np.float32)
 
-    def set_action(self, action: Array):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         # action[:, 0] should correspond to forward vel
         # action[:, 1] should correspond to rotation vel
