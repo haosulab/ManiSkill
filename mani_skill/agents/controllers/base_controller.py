@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 import numpy as np
-import sapien
-import sapien.physx as physx
 import torch
 from gymnasium import spaces
 from gymnasium.vector.utils import batch_space
@@ -32,11 +30,13 @@ class BaseController:
     """active joints controlled"""
     active_joint_indices: torch.Tensor
     """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
-    action_space: spaces.Space
+
+    # NOTE (stao): We currently only support box action spaces. Eventually we may support others
+    action_space: spaces.Box
     """the action space of the controller, which by default has a batch dimension. This is typically already normalized as well."""
-    single_action_space: spaces.Space
+    single_action_space: spaces.Box
     """The unbatched version of the action space which is also typically already normalized by this class"""
-    _original_single_action_space: spaces.Space
+    _original_single_action_space: spaces.Box
     """The unbatched, original action space without any additional processing like normalization"""
 
     sets_target_qpos: bool
@@ -48,9 +48,9 @@ class BaseController:
         self,
         config: "ControllerConfig",
         articulation: Articulation,
+        scene: ManiSkillScene,
         control_freq: int,
         sim_freq: Optional[int] = None,
-        scene: ManiSkillScene = None,
     ):
         self.config = config
         self.articulation = articulation
@@ -72,8 +72,8 @@ class BaseController:
             self._clip_and_scale_action_space()
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
-            self.action_space = batch_space(
-                self.single_action_space, n=self.scene.num_envs
+            self.action_space = cast(
+                spaces.Box, batch_space(self.single_action_space, n=self.scene.num_envs)
             )
 
     @property
@@ -122,8 +122,7 @@ class BaseController:
     def reset(self):
         """Resets the controller to an initial state. This is called upon environment creation and each environment reset"""
 
-    def _preprocess_action(self, action: Array):
-        # TODO(jigu): support discrete action
+    def _preprocess_action(self, action: torch.Tensor):
         if self.scene.num_envs > 1:
             action_dim = self.action_space.shape[1]
         else:
@@ -191,13 +190,16 @@ class ControllerConfig:
 # Composite controllers
 # -------------------------------------------------------------------------- #
 class DictController(BaseController):
+    single_action_space: spaces.Dict
+    action_space: spaces.Dict
+
     def __init__(
         self,
         configs: dict[str, ControllerConfig],
         articulation: Articulation,
+        scene: ManiSkillScene,
         control_freq: int,
-        sim_freq: int = None,
-        scene: ManiSkillScene = None,
+        sim_freq: Optional[int] = None,
     ):
         self.scene = scene
         self.configs = configs
@@ -207,15 +209,20 @@ class DictController(BaseController):
         self.controllers: dict[str, BaseController] = dict()
         for uid, config in configs.items():
             self.controllers[uid] = config.controller_cls(
-                config, articulation, control_freq, sim_freq=sim_freq, scene=scene
+                config=config,
+                articulation=articulation,
+                scene=scene,
+                control_freq=control_freq,
+                sim_freq=sim_freq,
             )
         self._initialize_action_space()
         self._initialize_joints()
 
         self.action_space = self.single_action_space
         if self.scene.num_envs > 1:
-            self.action_space = batch_space(
-                self.single_action_space, n=self.scene.num_envs
+            self.action_space = cast(
+                spaces.Dict,
+                batch_space(self.single_action_space, n=self.scene.num_envs),
             )
 
         self.sets_target_qpos = False
@@ -239,10 +246,11 @@ class DictController(BaseController):
 
     def _initialize_joints(self):
         self.joints = []
-        self.active_joint_indices = []
+        active_joint_indices = []
         for controller in self.controllers.values():
             self.joints.extend(controller.joints)
-            self.active_joint_indices.extend(controller.active_joint_indices)
+            active_joint_indices.extend(controller.active_joint_indices)
+        self.active_joint_indices = torch.cat(active_joint_indices)
 
     def set_drive_property(self):
         for controller in self.controllers.values():
@@ -266,14 +274,16 @@ class DictController(BaseController):
 
     def set_state(self, state: dict):
         for uid, controller in self.controllers.items():
-            controller.set_state(state.get(uid))
+            controller.set_state(state.get(uid, {}))
 
-    def from_qpos(self, qpos: Array):
+    def from_qpos(self, qpos: Array):  # pyright: ignore[reportRedeclaration]
         """Tries to generate the corresponding action given a full robot qpos.
         This can be useful for joint position control when setting a desired qposition even
         if some controllers merge some joints together like the mimic controller
         """
-        qpos = common.to_tensor(qpos, device=self.device)
+        qpos: torch.Tensor = common.to_tensor(
+            qpos, device=self.device
+        )  # pyright: ignore[reportAssignmentType]
         if len(qpos.shape) > 1:
             assert qpos.shape[1] == len(self.joints)
         else:
@@ -306,13 +316,15 @@ class DictController(BaseController):
 
 
 class CombinedController(DictController):
-
     """A flat/combined view of multiple controllers."""
+
+    single_action_space: spaces.Box
+    action_space: spaces.Box
 
     def _initialize_action_space(self):
         super()._initialize_action_space()
         self.single_action_space, self.action_mapping = flatten_action_spaces(
-            self.single_action_space.spaces
+            cast(spaces.Dict, self.single_action_space).spaces
         )
 
     def set_action(self, action: np.ndarray):
@@ -337,7 +349,7 @@ class CombinedController(DictController):
         assert action.shape == (action_dim,), (action.shape, action_dim)
 
         action_dict = {}
-        for uid, controller in self.controllers.items():
+        for uid in self.controllers.keys():
             start, end = self.action_mapping[uid]
             action_dict[uid] = action[start:end]
         return action_dict

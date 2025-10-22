@@ -262,14 +262,17 @@ class BaseAgent:
                 if "balance_passive_force" in config:
                     balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
-                    config,
-                    self.robot,
-                    self._control_freq,
+                    configs=config,
+                    articulation=self.robot,
                     scene=self.scene,
+                    control_freq=self._control_freq,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(
-                    config, self.robot, self._control_freq, scene=self.scene
+                    config=config,
+                    articulation=self.robot,
+                    scene=self.scene,
+                    control_freq=self._control_freq,
                 )
             self.controllers[control_mode].set_drive_property()
             if balance_passive_force:
