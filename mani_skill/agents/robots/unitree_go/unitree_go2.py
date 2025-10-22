@@ -6,7 +6,6 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.sensors.camera import CameraConfig
 
 
 @register_agent(asset_download_ids=["unitree_go2"])
