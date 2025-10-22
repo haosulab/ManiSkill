@@ -4,7 +4,7 @@ Asset sources and tooling for managing the assets
 
 import os
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.utils import io_utils
@@ -29,7 +29,7 @@ class DataSource:
 
 DATA_SOURCES: dict[str, DataSource] = {}
 """Data sources map data source IDs to their respective DataSource objects which contain info on what the data is and where to download it"""
-DATA_GROUPS: dict[str, List[str]] = {}
+DATA_GROUPS: dict[str, list[str]] = {}
 """Data groups map group ids (typically environment IDs) to a list of data source/group IDs for easy group management. data groups can be done hierarchicaly"""
 
 

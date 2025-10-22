@@ -2,7 +2,7 @@ import copy
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import gymnasium as gym
 import h5py
@@ -123,7 +123,7 @@ class RecordEpisode(gym.Wrapper):
     - `env_id` (str): task id
     - `max_episode_steps` (int)
     - `env_kwargs` (dict): keyword arguments to initialize the task. **Essential to recreate the environment.**
-    - `episodes` (List[dict]): episode information
+    - `episodes` (list[dict]): episode information
     - `source_type` (Optional[str]): a simple category string describing what process generated the trajectory data. ManiSkill official datasets will usually write one of "human", "motionplanning", or "rl" at the moment.
     - `source_desc` (Optional[str]): a longer explanation of how the data was generated.
 
@@ -356,7 +356,7 @@ class RecordEpisode(gym.Wrapper):
     def reset(
         self,
         *args,
-        seed: Optional[Union[int, List[int]]] = None,
+        seed: Optional[Union[int, list[int]]] = None,
         options: Optional[dict] = None,
         save=True,
         **kwargs,

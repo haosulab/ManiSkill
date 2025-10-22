@@ -1,6 +1,5 @@
 import os.path as osp
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import sapien
@@ -63,7 +62,7 @@ class TableSceneBuilder(SceneBuilder):
             self.scene, floor_width=floor_width, altitude=-self.table_height
         )
         self.table = table
-        self.scene_objects: List[sapien.Entity] = [self.table, self.ground]
+        self.scene_objects: list[sapien.Entity] = [self.table, self.ground]
 
     def initialize(self, env_idx: torch.Tensor):
         # table_height = 0.9196429

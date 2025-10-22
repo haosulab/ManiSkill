@@ -1,5 +1,5 @@
 import itertools
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import sapien
@@ -54,7 +54,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def _after_init(self):
         super()._after_init()
-        self.fsr_links: List[Actor] = sapien_utils.get_objs_by_names(
+        self.fsr_links: list[Actor] = sapien_utils.get_objs_by_names(
             self.robot.get_links(),
             self.palm_fsr_link_names + self.finger_fsr_link_names,
         )

@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import Any, Union
 
 import numpy as np
 import torch
@@ -107,7 +107,7 @@ class RotateValveEnv(BaseEnv):
                 f"Difficulty level must be a int within 0-4, but get {self.difficulty_level}"
             )
 
-        valves: List[Articulation] = []
+        valves: list[Articulation] = []
         capsule_lens = []
         valve_links = []
         for i, valve_angles in enumerate(valve_angles_list):

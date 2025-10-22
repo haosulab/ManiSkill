@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import numpy as np
 import sapien
@@ -57,7 +57,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     @classmethod
     def create_from_entities(
         cls,
-        entities: List[sapien.Entity],
+        entities: list[sapien.Entity],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
         shared_name: Optional[str] = None,
@@ -97,7 +97,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         )
 
     @classmethod
-    def merge(cls, actors: List["Actor"], name: str = None):
+    def merge(cls, actors: list["Actor"], name: str = None):
         """
         Merge actors together under one view so that they can all be managed by one python dataclass object.
         This can be useful for e.g. randomizing the asset loaded into a task and being able to do object.pose to fetch the pose of all randomized assets
@@ -106,7 +106,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         For example usage of this method, see mani_skill/envs/tasks/pick_single_ycb.py
 
         Args:
-            actors (List[Actor]): The actors to merge into one actor object to manage
+            actors (list[Actor]): The actors to merge into one actor object to manage
             name (str): A new name to give the merged actors. If none, the name will default to the first actor's name
         """
         objs = []
@@ -259,7 +259,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> Union[List[trimesh.Trimesh], trimesh.Trimesh]:
+    ) -> Union[list[trimesh.Trimesh], trimesh.Trimesh]:
         """
         Returns the collision mesh of each managed actor object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often. Some actors have no collision meshes, in which case this function returns an empty list.
@@ -274,7 +274,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             not self.merged
         ), "Currently you cannot fetch collision meshes of merged actors"
 
-        meshes: List[trimesh.Trimesh] = []
+        meshes: list[trimesh.Trimesh] = []
 
         for i, actor in enumerate(self._objs):
             actor_meshes = []

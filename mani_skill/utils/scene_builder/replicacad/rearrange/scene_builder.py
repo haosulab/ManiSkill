@@ -6,7 +6,7 @@ import os.path as osp
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import sapien
@@ -25,10 +25,10 @@ DEFAULT_HIDDEN_POS = [-10_000] * 3
 
 class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
-    task_names: List[str] = ["set_table:train"]
+    task_names: list[str] = ["set_table:train"]
 
     # init configs for Rearrange stasks are default_object_poses for each object type
-    init_configs: List[List[dict[str, List[sapien.Pose]]]] = None
+    init_configs: list[list[dict[str, list[sapien.Pose]]]] = None
 
     def __init__(self, env):
         # the Habitat Rearrange tasks build on the base ReplicaCAD scenes by creating episode configs
@@ -87,7 +87,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             )
 
     def build(
-        self, build_config_idxs: List[int], init_config_names: Optional[list] = None
+        self, build_config_idxs: list[int], init_config_names: Optional[list] = None
     ):
         if isinstance(build_config_idxs, int):
             build_config_idxs = [build_config_idxs] * self.env.num_envs
@@ -120,12 +120,12 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         # self.rcad_to_rearrange_configs: which rearrange episode configs use each rcad config
         # default_object_poses: default poses for ycb objects from each rearrange episode config
-        self.rcad_to_rearrange_configs: dict[str, List[str]] = dict()
-        default_object_poses: dict[str, dict[str, List[sapien.Pose]]] = dict()
+        self.rcad_to_rearrange_configs: dict[str, list[str]] = dict()
+        default_object_poses: dict[str, dict[str, list[sapien.Pose]]] = dict()
         if init_config_names is None:
             init_config_names = self._rearrange_configs
         for rc in init_config_names:
-            objects: dict[str, List[sapien.Pose]] = defaultdict(list)
+            objects: dict[str, list[sapien.Pose]] = defaultdict(list)
 
             with open(
                 osp.join(
@@ -150,7 +150,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             default_object_poses[rc] = objects
 
         # create init config
-        self.init_configs: List[List[dict[str, List[sapien.Pose]]]] = [
+        self.init_configs: list[list[dict[str, list[sapien.Pose]]]] = [
             [
                 default_object_poses[rc]
                 for rc in self.rcad_to_rearrange_configs[self.build_configs[bci]]
@@ -221,11 +221,11 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             self.ycb_objs_per_env.append(ycb_objs)
 
         self.rcad_config_to_rearrange_ao_states: dict[
-            str, List[List[Tuple[Articulation, torch.Tensor]]]
+            str, list[list[Tuple[Articulation, torch.Tensor]]]
         ] = defaultdict(list)
         for env_num, bci in enumerate(build_config_idxs):
             rcad_config = self.build_configs[bci]
-            rearrange_ao_states: List[List[Tuple[Articulation, torch.Tensor]]] = []
+            rearrange_ao_states: list[list[Tuple[Articulation, torch.Tensor]]] = []
             for rearrange_config in self.rcad_to_rearrange_configs[rcad_config]:
                 with open(
                     osp.join(
@@ -237,7 +237,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
                 ) as f:
                     episode_json = json.load(f)
                 episode_ao_states: dict[str, dict[str, int]] = episode_json["ao_states"]
-                articulation_qpos_pairs: List[Tuple[Articulation, torch.Tensor]] = []
+                articulation_qpos_pairs: list[Tuple[Articulation, torch.Tensor]] = []
                 for base_articulation_id, qpos_dict in episode_ao_states.items():
                     aid, anum = base_articulation_id.split(":")
                     articulation = self.articulations[
@@ -256,7 +256,7 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
             self.rcad_config_to_rearrange_ao_states[rcad_config] = rearrange_ao_states
 
     # TODO (arth): fix this to work with partial resets
-    def initialize(self, env_idx: torch.Tensor, init_config_idxs: List[int]):
+    def initialize(self, env_idx: torch.Tensor, init_config_idxs: list[int]):
         assert all(
             [isinstance(ici, int) for ici in init_config_idxs]
         ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"

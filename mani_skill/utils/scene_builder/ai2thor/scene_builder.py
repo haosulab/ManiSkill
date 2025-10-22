@@ -6,7 +6,7 @@ SceneBuilder for the AI2Thor scenes, using configurations and assets stored in h
 import json
 import os.path as osp
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import Tuple, Union
 
 import numpy as np
 import sapien
@@ -79,7 +79,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             SEMANTIC_ID_OBJECT_MAPPING,
             MOVEABLE_OBJECT_IDS,
         ) = load_ai2thor_metadata()
-        self.build_configs: List[AI2BuildConfig] = []
+        self.build_configs: list[AI2BuildConfig] = []
         if self.scene_dataset not in ALL_SCENE_CONFIGS:
             dataset_path = SCENE_SOURCE_TO_DATASET[self.scene_dataset].metadata_path
             with open(osp.join(DATASET_CONFIG_DIR, dataset_path)) as f:
@@ -93,7 +93,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             self.build_configs = ALL_SCENE_CONFIGS[self.scene_dataset]
 
         self._navigable_positions = [None] * len(self.build_configs)
-        self.build_config_idxs: List[int] = None
+        self.build_config_idxs: list[int] = None
 
     def _should_be_static(self, template_name: str):
         object_config_json = (
@@ -110,7 +110,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
     # TODO (arth): figure out coacd building issues (currenlty fails on > 80% objs)
     def build(
         self,
-        build_config_idxs: Union[int, List[int]],
+        build_config_idxs: Union[int, list[int]],
         convex_decomposition="none",
     ):
         # build_config_idxs is a list of integers, where the ith value is the scene idx for the ith parallel env
@@ -124,7 +124,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         self.scene_objects: dict[str, Actor] = dict()
         self.movable_objects: dict[str, Actor] = dict()
         self.articulations: dict[str, Articulation] = dict()
-        self._default_object_poses: List[Tuple[Actor, sapien.Pose]] = []
+        self._default_object_poses: list[Tuple[Actor, sapien.Pose]] = []
 
         # keep track of background objects separately as we need to disable mobile robot collisions
         # note that we will create a merged actor using these objects to represent the bg
@@ -292,5 +292,5 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
             )
 
     @property
-    def navigable_positions(self) -> List[np.ndarray]:
+    def navigable_positions(self) -> list[np.ndarray]:
         return [self._navigable_positions[bci] for bci in self.build_config_idxs]

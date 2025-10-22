@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -106,7 +106,7 @@ class RotateSingleObjectInHand(BaseEnv):
             obj_heights.append(0.03)
         elif self.difficulty_level == 1:
             half_sizes = (self._batched_episode_rng.randn() * 0.1 + 1) * 0.04
-            self._objs: List[Actor] = []
+            self._objs: list[Actor] = []
             for i, half_size in enumerate(half_sizes):
                 builder = self.scene.create_actor_builder()
                 builder.add_box_collision(
@@ -131,7 +131,7 @@ class RotateSingleObjectInHand(BaseEnv):
                 )
             )
             model_ids = self._batched_episode_rng.choice(all_model_ids)
-            self._objs: List[Actor] = []
+            self._objs: list[Actor] = []
             for i, model_id in enumerate(model_ids):
                 builder = actors.get_actor_builder(self.scene, id=f"ycb:{model_id}")
                 builder.set_scene_idxs([i])

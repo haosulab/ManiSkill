@@ -1,5 +1,5 @@
 import time
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -122,7 +122,7 @@ class Sim2RealEnv(gym.Env):
                 return self
 
         cur_env = self.sim_env
-        wrappers: List[gym.Wrapper] = []
+        wrappers: list[gym.Wrapper] = []
         while isinstance(cur_env, gym.Wrapper):
             wrappers.append(cur_env)
             cur_env = cur_env.env
@@ -347,7 +347,7 @@ class Sim2RealEnv(gym.Env):
         self.agent.stop()
 
     def preprocess_sensor_data(
-        self, sensor_data: dict, sensor_names: Optional[List[str]] = None
+        self, sensor_data: dict, sensor_names: Optional[list[str]] = None
     ):
         import cv2
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import sapien
@@ -28,7 +28,7 @@ class BaseController:
     The controller is an interface for the robot to interact with the environment.
     """
 
-    joints: List[ArticulationJoint]
+    joints: list[ArticulationJoint]
     """active joints controlled"""
     active_joint_indices: torch.Tensor
     """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
@@ -179,7 +179,7 @@ class BaseController:
 
 @dataclass
 class ControllerConfig:
-    joint_names: List[str]
+    joint_names: list[str]
     """the names of the joints to control. Note that some controller configurations might not actually let you directly control all the given joints
     and will instead have some other implicit control (e.g. Passive controllers or mimic controllers)."""
     # NOTE(jigu): It is a class variable in this base class,

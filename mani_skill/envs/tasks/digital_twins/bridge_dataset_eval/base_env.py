@@ -2,7 +2,7 @@
 Base environment for Bridge dataset environments
 """
 import os
-from typing import List, Literal
+from typing import Literal
 
 import numpy as np
 import sapien
@@ -158,7 +158,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
-    objects_excluded_from_greenscreening: List[str] = []
+    objects_excluded_from_greenscreening: list[str] = []
     """object ids that should not be greenscreened"""
 
     obj_static_friction = 0.5
@@ -166,7 +166,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
     def __init__(
         self,
-        obj_names: List[str],
+        obj_names: list[str],
         xyz_configs: torch.Tensor,
         quat_configs: torch.Tensor,
         **kwargs,

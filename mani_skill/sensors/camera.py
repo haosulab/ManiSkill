@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import sapien
@@ -265,7 +265,7 @@ def normalize_depth(depth, min_depth=0, max_depth=None):
 
 def camera_observations_to_images(
     observations: dict[str, torch.Tensor], max_depth=None
-) -> List[Array]:
+) -> list[Array]:
     """Parse images from camera observations."""
     images = dict()
     for key in observations:

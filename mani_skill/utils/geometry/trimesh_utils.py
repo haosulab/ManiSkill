@@ -1,5 +1,3 @@
-from typing import List
-
 ## TODO clean up the code here, too many functions that are plurals of one or the other and confusing naming
 import numpy as np
 import sapien
@@ -92,7 +90,7 @@ def get_actor_visual_meshes(actor: sapien.Entity):
     return meshes
 
 
-def merge_meshes(meshes: List[trimesh.Trimesh]):
+def merge_meshes(meshes: list[trimesh.Trimesh]):
     n, vs, fs = 0, [], []
     for mesh in meshes:
         v, f = mesh.vertices, mesh.faces

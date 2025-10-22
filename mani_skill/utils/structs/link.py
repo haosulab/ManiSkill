@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Callable, List, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import sapien
 import sapien.physx as physx
@@ -38,7 +38,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     joint: ArticulationJoint = None
     """the joint of which this link is a child of. If this is a view/merged link then this joint is also a view/merged joint"""
 
-    meshes: dict[str, List[trimesh.Trimesh]] = field(default_factory=dict)
+    meshes: dict[str, list[trimesh.Trimesh]] = field(default_factory=dict)
     """
     map from user-defined mesh groups (e.g. "handle" meshes for cabinets) to a list of trimesh.Trimesh objects corresponding to each physx link object managed here
     """
@@ -58,7 +58,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     @classmethod
     def create(
         cls,
-        physx_links: List[physx.PhysxArticulationLinkComponent],
+        physx_links: list[physx.PhysxArticulationLinkComponent],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
     ):
@@ -75,7 +75,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         )
 
     @classmethod
-    def merge(cls, links: List["Link"], name: str = None):
+    def merge(cls, links: list["Link"], name: str = None):
         objs = []
         joint_objs = []
         merged_joint_indexes = []
@@ -126,7 +126,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         """
         Returns each managed link objects render shape list (a list of lists)
         """
-        all_render_shapes: List[List[sapien.render.RenderShape]] = []
+        all_render_shapes: list[list[sapien.render.RenderShape]] = []
         for obj in self._objs:
             rb_comp = obj.entity.find_component_by_type(
                 sapien.render.RenderBodyComponent
@@ -137,7 +137,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
 
     def get_visual_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> List[trimesh.Trimesh]:
+    ) -> list[trimesh.Trimesh]:
         """
         Returns the visual mesh of each managed link object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -183,7 +183,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         filter: Callable[
             [physx.PhysxArticulationLinkComponent, sapien.render.RenderShape], bool
         ],
-    ) -> List[trimesh.primitives.Box]:
+    ) -> list[trimesh.primitives.Box]:
         # First we need to pre-compute the bounding box of the link at 0. This will be slow the first time
         bboxes = []
         for link, link_render_shapes in zip(self._objs, self.render_shapes):

@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -134,7 +134,7 @@ class PickSingleYCBEnv(BaseEnv):
                 or set reconfiguration_freq to be >= 1."""
             )
 
-        self._objs: List[Actor] = []
+        self._objs: list[Actor] = []
         self.obj_heights = []
         for i, model_id in enumerate(model_ids):
             # TODO: before official release we will finalize a metadata dataclass that these build functions should return.

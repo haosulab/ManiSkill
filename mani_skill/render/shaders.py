@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 import sapien
 import torch
@@ -26,7 +26,7 @@ class ShaderConfig:
     """
 
     shader_pack: str
-    texture_names: dict[str, List[str]] = field(default_factory=dict)
+    texture_names: dict[str, list[str]] = field(default_factory=dict)
     """dictionary mapping shader texture names to the image modalities that are rendered. e.g. Color, Depth, Segmentation, etc."""
     shader_pack_config: dict[str, Any] = field(default_factory=dict)
     """configs for the shader pack. for e.g. the ray tracing shader you can configure the denoiser, samples per pixel, etc."""

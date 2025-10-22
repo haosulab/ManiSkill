@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 import numpy as np
 import sapien
@@ -21,7 +21,7 @@ class QuadrupedReachEnv(BaseEnv):
     agent: ANYmalC
     default_qpos: torch.Tensor
 
-    _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
+    _UNDESIRED_CONTACT_LINK_NAMES: list[str] = None
 
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

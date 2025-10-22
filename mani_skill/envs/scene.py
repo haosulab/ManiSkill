@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 import sapien
@@ -203,7 +203,7 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: Union[float, List, None] = None,
+        fovy: Union[float, list, None] = None,
         intrinsic: Union[Array, None] = None,
         mount: Union[Actor, Link, None] = None,
     ) -> RenderCamera:
@@ -225,7 +225,7 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: Union[float, List, None] = None,
+        fovy: Union[float, list, None] = None,
         intrinsic: Union[Array, None] = None,
         mount: Union[Actor, Link, None] = None,
     ) -> RenderCamera:
@@ -304,7 +304,7 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: Union[float, List, None] = None,
+        fovy: Union[float, list, None] = None,
         intrinsic: Union[Array, None] = None,
         mount: Union[Actor, Link, None] = None,
     ) -> RenderCamera:
@@ -908,7 +908,7 @@ class ManiSkillScene:
                 for scene in self.sub_scenes:
                     scene.update_render()
             self.px.gpu_init()
-        self.non_static_actors: List[Actor] = []
+        self.non_static_actors: list[Actor] = []
         # find non static actors, and set data indices that are now available after gpu_init was called
         for actor in self.actors.values():
             if actor.px_body_type == "static":
@@ -990,7 +990,7 @@ class ManiSkillScene:
     # ---------------------------------------------------------------------------- #
     def _get_all_render_bodies(
         self,
-    ) -> List[Tuple[sapien.render.RenderBodyComponent, int]]:
+    ) -> list[Tuple[sapien.render.RenderBodyComponent, int]]:
         all_render_bodies = []
         for actor in self.actors.values():
             if actor.px_body_type == "static":

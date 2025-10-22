@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import sapien
@@ -117,7 +117,7 @@ class BaseAgent:
         self._after_init()
 
     @property
-    def _sensor_configs(self) -> List[BaseSensorConfig]:
+    def _sensor_configs(self) -> list[BaseSensorConfig]:
         """Returns a list of sensor configs for this agent. By default this is empty."""
         return []
 
@@ -157,7 +157,7 @@ class BaseAgent:
         Loads the robot articulation
         """
 
-        def build_articulation(scene_idxs: Optional[List[int]] = None):
+        def build_articulation(scene_idxs: Optional[list[int]] = None):
             loader: Union[URDFLoader, MJCFLoader, None] = None
             if self.urdf_path is not None:
                 loader = self.scene.create_urdf_loader()

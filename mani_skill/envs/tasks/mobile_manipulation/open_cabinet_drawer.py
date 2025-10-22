@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import sapien
@@ -125,15 +125,15 @@ class OpenCabinetDrawerEnv(BaseEnv):
             group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
         )
 
-    def _load_cabinets(self, joint_types: List[str]):
+    def _load_cabinets(self, joint_types: list[str]):
         # we sample random cabinet model_ids with numpy as numpy is always deterministic based on seed, regardless of
         # GPU/CPU simulation backends. This is useful for replaying demonstrations.
         model_ids = self._batched_episode_rng.choice(self.all_model_ids)
         link_ids = self._batched_episode_rng.randint(0, 2**31)
 
-        self._cabinets: List[Articulation] = []
-        handle_links: List[List[Link]] = []
-        handle_links_meshes: List[List[trimesh.Trimesh]] = []
+        self._cabinets: list[Articulation] = []
+        handle_links: list[list[Link]] = []
+        handle_links_meshes: list[list[trimesh.Trimesh]] = []
         for i, model_id in enumerate(model_ids):
             # partnet-mobility is a dataset source and the ids are the ones we sampled
             # we provide tools to easily create the articulation builder like so by querying

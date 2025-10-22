@@ -3,7 +3,7 @@ Code based on https://github.com/huggingface/lerobot for supporting real robot c
 """
 
 import time
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import torch
@@ -39,7 +39,7 @@ class LeRobotRealAgent(BaseRealAgent):
         self.real_robot = robot
         self.use_cached_qpos = use_cached_qpos
         self._cached_qpos = None
-        self._motor_keys: List[str] = None
+        self._motor_keys: list[str] = None
 
         if self.real_robot.name == "so100_follower":
             self.real_robot.bus.motors["gripper"].norm_mode = MotorNormMode.DEGREES

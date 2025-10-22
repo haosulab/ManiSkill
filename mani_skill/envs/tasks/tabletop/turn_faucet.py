@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 import sapien
@@ -85,7 +85,7 @@ class TurnFaucetEnv(BaseEnv):
         switch_link_ids = self._batched_episode_rng.randint(0, 2**31)
 
         self._faucets = []
-        self._target_switch_links: List[Link] = []
+        self._target_switch_links: list[Link] = []
         self.model_offsets = []
         for i, model_id in enumerate(model_ids):
             # partnet-mobility is a dataset source and the ids are the ones we sampled

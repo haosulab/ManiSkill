@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import numpy as np
 import sapien
@@ -30,18 +30,18 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     Wrapper around physx.PhysxArticulation objects
     """
 
-    links: List[Link]
-    """List of Link objects"""
+    links: list[Link]
+    """list of Link objects"""
     links_map: dict[str, Link]
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
-    joints: List[ArticulationJoint]
-    """List of Joint objects"""
+    joints: list[ArticulationJoint]
+    """list of Joint objects"""
     joints_map: dict[str, ArticulationJoint]
     """Maps joint name to the Joint object"""
-    active_joints: List[ArticulationJoint]
-    """List of active Joint objects, referencing elements in self.joints"""
+    active_joints: list[ArticulationJoint]
+    """list of active Joint objects, referencing elements in self.joints"""
     active_joints_map: dict[str, ArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
@@ -80,7 +80,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @classmethod
     def create_from_physx_articulations(
         cls,
-        physx_articulations: List[physx.PhysxArticulation],
+        physx_articulations: list[physx.PhysxArticulation],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
         _merged: bool = False,
@@ -111,11 +111,11 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         )
         # create link and joint structs
         num_links = max([len(x.links) for x in physx_articulations])
-        all_links_objs: List[List[physx.PhysxArticulationLinkComponent]] = [
+        all_links_objs: list[list[physx.PhysxArticulationLinkComponent]] = [
             [] for _ in range(num_links)
         ]
         num_joints = max([len(x.joints) for x in physx_articulations])
-        all_joint_objs: List[List[physx.PhysxArticulationJoint]] = [
+        all_joint_objs: list[list[physx.PhysxArticulationJoint]] = [
             [] for _ in range(num_joints)
         ]
 
@@ -130,7 +130,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 all_links_objs[i].append(link)
             for i, joint in enumerate(articulation.joints):
                 all_joint_objs[i].append(joint)
-        wrapped_links: List[Link] = []
+        wrapped_links: list[Link] = []
 
         root = None
         for links in all_links_objs:
@@ -164,7 +164,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             ]
 
             joints_map = dict()
-            wrapped_joints: List[ArticulationJoint] = []
+            wrapped_joints: list[ArticulationJoint] = []
             for joint_index, joints in enumerate(all_joint_objs):
                 try:
                     active_joint_index = all_active_joint_names.index(
@@ -223,7 +223,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     @classmethod
     def merge(
         cls,
-        articulations: List["Articulation"],
+        articulations: list["Articulation"],
         name: str = None,
         merge_links: bool = False,
     ):
@@ -343,7 +343,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> Union[List[trimesh.Trimesh], trimesh.Trimesh]:
+    ) -> Union[list[trimesh.Trimesh], trimesh.Trimesh]:
         """
         Returns the collision mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -365,7 +365,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         else:
             self._objs[0].pose = self._objs[0].pose
         # TODO (stao): Can we have a batched version of trimesh?
-        meshes: List[trimesh.Trimesh] = []
+        meshes: list[trimesh.Trimesh] = []
 
         for i, art in enumerate(self._objs):
             art_meshes = []
@@ -396,7 +396,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def get_visual_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> List[trimesh.Trimesh]:
+    ) -> list[trimesh.Trimesh]:
         """
         Returns the visual mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -411,7 +411,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 initialization, and link poses are needed to get the correct visual mesh of an entire articulation"
         else:
             self._objs[0].pose = self._objs[0].pose
-        meshes: List[trimesh.Trimesh] = []
+        meshes: list[trimesh.Trimesh] = []
         for i, art in enumerate(self._objs):
             art_meshes = []
             for link in art.links:
@@ -438,7 +438,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return meshes[0]
         return meshes
 
-    def get_net_contact_impulses(self, link_names: Union[List[str], Tuple[str]]):
+    def get_net_contact_impulses(self, link_names: Union[list[str], Tuple[str]]):
         """Get net contact impulses for several links together. This should be faster compared to using
         link.get_net_contact_impulses on each link.
 
@@ -487,7 +487,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                     net_impulse[i] = common.to_tensor(total_impulse)
             return net_impulse[None, :]
 
-    def get_net_contact_forces(self, link_names: Union[List[str], Tuple[str]]):
+    def get_net_contact_forces(self, link_names: Union[list[str], Tuple[str]]):
         """Get net contact forces for several links together. This should be faster compared to using
         link.get_net_contact_forces on each link.
 
@@ -497,7 +497,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self.get_net_contact_impulses(link_names) / self.scene.timestep
 
     def get_joint_target_indices(
-        self, joint_indices: Union[Array, List[int], List[ArticulationJoint]]
+        self, joint_indices: Union[Array, list[int], list[ArticulationJoint]]
     ):
         """
         Gets the meshgrid indexes for indexing px.cuda_articulation_target_* values given a 1D list of joint indexes or a 1D list of ArticulationJoint objects.
@@ -873,7 +873,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_targets(
         self,
         targets: Array,
-        joints: Optional[List[ArticulationJoint]] = None,
+        joints: Optional[list[ArticulationJoint]] = None,
         joint_indices: Optional[torch.Tensor] = None,
     ):
         """
@@ -898,7 +898,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_velocity_targets(
         self,
         targets: Array,
-        joints: Optional[List[ArticulationJoint]] = None,
+        joints: Optional[list[ArticulationJoint]] = None,
         joint_indices: Optional[torch.Tensor] = None,
     ):
         """

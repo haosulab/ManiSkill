@@ -1,4 +1,4 @@
-from typing import Generic, List, TypeVar
+from typing import Generic, TypeVar
 
 import torch
 from gymnasium import spaces
@@ -11,7 +11,7 @@ T = TypeVar("T")
 class MultiAgent(BaseAgent, Generic[T]):
     agents: T
 
-    def __init__(self, agents: List[BaseAgent]):
+    def __init__(self, agents: list[BaseAgent]):
         self.agents = agents
         self.agents_dict: dict[str, BaseAgent] = dict()
         self.scene = agents[0].scene
@@ -31,7 +31,7 @@ class MultiAgent(BaseAgent, Generic[T]):
         """Get the currently activated controller uid of each robot"""
         return {uid: agent.control_mode for uid, agent in self.agents_dict.items()}
 
-    def set_control_mode(self, control_mode: List[str] = None):
+    def set_control_mode(self, control_mode: list[str] = None):
         """Set the controller, drive properties, and reset for each agent. If given control mode is None, will set defaults"""
         if control_mode is None:
             for agent in self.agents:

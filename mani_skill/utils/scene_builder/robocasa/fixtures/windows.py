@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 import sapien
 import sapien.physx as physx
@@ -53,7 +51,7 @@ class Window:
     ):
         self.scene = scene
         self.name = name
-        self.objects: List[ActorBuilder] = []
+        self.objects: list[ActorBuilder] = []
         self.euler = [0, 0, 0]
 
         self.size = size
@@ -137,7 +135,7 @@ class Window:
             self.rng = np.random.default_rng()
         # change to create objects then create positions
 
-    def build(self, scene_idxs: List[int]):
+    def build(self, scene_idxs: list[int]):
         self.actor_builder.set_scene_idxs(scene_idxs)
         self.actor_builder.initial_pose = sapien.Pose(
             p=np.array(self.pos), q=euler2quat(*self.euler)

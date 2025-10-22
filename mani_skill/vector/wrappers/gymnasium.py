@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import gymnasium as gym
 import torch
@@ -87,7 +87,7 @@ class ManiSkillVectorEnv(VectorEnv):
     def reset(
         self,
         *,
-        seed: Optional[Union[int, List[int]]] = None,
+        seed: Optional[Union[int, list[int]]] = None,
         options: Optional[dict] = None,
     ):
         obs, info = self._env.reset(seed=seed, options=options)  # type: ignore

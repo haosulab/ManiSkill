@@ -2,7 +2,7 @@ import copy
 import gc
 import os
 from functools import cached_property
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import dacite
 import gymnasium as gym
@@ -80,7 +80,7 @@ class BaseEnv(gym.Env):
 
         viewer_camera_configs (dict): configurations of the viewer camera in the GUI to override any environment defaults. Similar usage as @sensor_configs.
 
-        robot_uids (Union[str, BaseAgent, List[Union[str, BaseAgent]]]): List of robots to instantiate and control in the environment.
+        robot_uids (Union[str, BaseAgent, list[Union[str, BaseAgent]]]): list of robots to instantiate and control in the environment.
 
         sim_config (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
             a dictionary, it can just override specific attributes e.g. ``sim_config=dict(scene_config=dict(solver_iterations=25))``. If
@@ -118,7 +118,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_ROBOTS: List[Union[str, Tuple[str]]] = None
+    SUPPORTED_ROBOTS: list[Union[str, Tuple[str]]] = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "any_textures", "pointcloud")
@@ -155,14 +155,14 @@ class BaseEnv(gym.Env):
     _human_render_camera_configs: dict[str, CameraConfig]
     """all camera configurations parsed from self._human_render_camera_configs"""
 
-    _hidden_objects: List[Union[Actor, Articulation]] = []
+    _hidden_objects: list[Union[Actor, Articulation]] = []
     """list of objects that are hidden during rendering when generating visual observations / running render_cameras()"""
 
     _main_rng: np.random.RandomState = None
     """main rng generator that generates episode seed sequences. For internal use only"""
     _batched_main_rng: BatchedRNG = None
     """the batched main RNG that generates episode seed sequences. For internal use only"""
-    _main_seed: List[int] = None
+    _main_seed: list[int] = None
     """main seed list for _main_rng and _batched_main_rng. _main_rng uses _main_seed[0]. For internal use only"""
     _episode_rng: np.random.RandomState = None
     """the numpy RNG that you can use to generate random numpy data. It is not recommended to use this. Instead use the _batched_episode_rng which helps ensure GPU and CPU simulation generate the same data with the same seeds."""
@@ -201,7 +201,7 @@ class BaseEnv(gym.Env):
         sensor_configs: Optional[dict] = dict(),
         human_render_camera_configs: Optional[dict] = dict(),
         viewer_camera_configs: Optional[dict] = dict(),
-        robot_uids: Union[str, BaseAgent, List[Union[str, BaseAgent]]] = None,
+        robot_uids: Union[str, BaseAgent, list[Union[str, BaseAgent]]] = None,
         sim_config: Union[SimConfig, dict] = dict(),
         reconfiguration_freq: Optional[int] = None,
         sim_backend: str = "auto",
