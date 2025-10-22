@@ -10,10 +10,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import format_path
-from mani_skill.agents.controllers.pd_joint_pos import (
-    PDJointPosController,
-    PDJointPosControllerConfig,
-)
+from mani_skill.agents.controllers.pd_joint_pos import PDJointPosControllerConfig
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import assets, download_asset, sapien_utils
 from mani_skill.utils.logging_utils import logger

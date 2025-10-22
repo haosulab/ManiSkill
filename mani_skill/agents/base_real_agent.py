@@ -1,10 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-import numpy as np
-
 from mani_skill.agents.base_agent import BaseAgent
-from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.base_sensor import BaseSensorConfig
 from mani_skill.utils.structs.types import Array
 
@@ -18,10 +15,10 @@ class BaseRealAgent:
         sensor_configs (dict[str, BaseSensorConfig]): the sensor configs to create the agent with.
     """
 
+    _sim_agent: BaseAgent
+
     def __init__(self, sensor_configs: dict[str, BaseSensorConfig] = dict()):
         self.sensor_configs = sensor_configs
-
-        self._sim_agent: BaseAgent = None
 
         @dataclass
         class RealRobot:
@@ -126,7 +123,7 @@ class BaseRealAgent:
         """
         raise NotImplementedError
 
-    def get_sensor_params(self, sensor_names: list[str] = None):
+    def get_sensor_params(self, sensor_names: Optional[list[str]] = None):
         """
         Get the parameters of the desired sensors based on the given sensor names. If sensor_names is None then all sensor parameters should be returned. The expected format for cameras is in line with the simulation's
         format is:
