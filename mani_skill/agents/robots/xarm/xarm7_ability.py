@@ -1,15 +1,15 @@
 from copy import deepcopy
-from typing import Tuple
+from typing import cast
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import sapien_utils
+from mani_skill.utils.structs.link import Link
 
 
 @register_agent()
@@ -130,15 +130,16 @@ class XArm7Ability(BaseAgent):
 
         # PD ee position
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
-            self.arm_joint_names,
-            -0.1,
-            0.1,
-            0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
+            joint_names=self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            rot_lower=-0.1,
+            rot_upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
 
         arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
@@ -193,12 +194,11 @@ class XArm7Ability(BaseAgent):
             "ring_tip",
             "pinky_tip",
         ]
-        self.finger_tip_links = sapien_utils.get_objs_by_names(
-            self.robot.get_links(), finger_tip_link_names
+        self.finger_tip_links = cast(
+            list[Link],
+            sapien_utils.get_objs_by_names(
+                self.robot.get_links(), finger_tip_link_names
+            ),
         )
 
-        self.tcp = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
-
-        self.queries: dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()
+        self.tcp = self.robot.links_map[self.ee_link_name]

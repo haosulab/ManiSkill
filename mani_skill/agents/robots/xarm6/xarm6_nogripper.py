@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import cast
 
 import numpy as np
 import sapien.core as sapien
@@ -9,7 +10,6 @@ from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import sapien_utils
 
 
 @register_agent(asset_download_ids=["xarm6"])
@@ -81,9 +81,7 @@ class XArm6NoGripper(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tcp = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
+        self.tcp = self.robot.links_map[self.ee_link_name]
 
     def is_static(self, threshold: float = 0.2):
         qvel = self.robot.get_qvel()
@@ -95,7 +93,7 @@ class XArm6NoGripper(BaseAgent):
         # Arm
         # -------------------------------------------------------------------------- #
         pd_joint_pos = PDJointPosControllerConfig(
-            self.arm_joint_names,
+            joint_names=self.arm_joint_names,
             lower=None,
             upper=None,
             stiffness=self.arm_stiffness,
@@ -105,7 +103,7 @@ class XArm6NoGripper(BaseAgent):
             normalize_action=False,
         )
         pd_joint_delta_pos = PDJointPosControllerConfig(
-            self.arm_joint_names,
+            joint_names=self.arm_joint_names,
             lower=-0.1,
             upper=0.1,
             stiffness=self.arm_stiffness,
@@ -127,7 +125,7 @@ class XArm6NoGripper(BaseAgent):
             force_limit=self.arm_force_limit,
             friction=self.arm_friction,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
@@ -140,18 +138,18 @@ class XArm6NoGripper(BaseAgent):
             force_limit=self.arm_force_limit,
             friction=self.arm_friction,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
-            pos_lower=None,
-            pos_upper=None,
+            pos_lower=-np.inf,
+            pos_upper=np.inf,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             friction=self.arm_friction,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
             use_delta=False,
             normalize_action=False,
         )
