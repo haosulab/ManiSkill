@@ -220,8 +220,6 @@ class Panda(BaseAgent):
     def _after_init(self):
         self.finger1_link = self.robot.links_map["panda_leftfinger"]
         self.finger2_link = self.robot.links_map["panda_rightfinger"]
-        self.finger1pad_link = self.robot.links_map["panda_leftfinger_pad"]
-        self.finger2pad_link = self.robot.links_map["panda_rightfinger_pad"]
         self.tcp = self.robot.links_map[self.ee_link_name]
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
