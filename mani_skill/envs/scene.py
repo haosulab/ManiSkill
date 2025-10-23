@@ -851,7 +851,7 @@ class ManiSkillScene:
         else:
             raise ValueError(f"Expected Actor or Articulation, got {object}")
 
-    def get_sim_state(self) -> torch.Tensor:
+    def get_sim_state(self) -> dict[str, dict[str, torch.Tensor]]:
         """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
         In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
         environments and D dimensions of padded state per environment.
@@ -875,7 +875,7 @@ class ManiSkillScene:
             del state_dict["articulations"]
         return state_dict
 
-    def set_sim_state(self, state: dict, env_idx: torch.Tensor = None):
+    def set_sim_state(self, state: dict, env_idx: Optional[torch.Tensor] = None):
         if env_idx is not None:
             prev_reset_mask = self._reset_mask.clone()
             # safe guard against setting the wrong states
@@ -1137,7 +1137,7 @@ class ManiSkillScene:
         return sensor_data
 
     def get_human_render_camera_images(
-        self, camera_name: str = None
+        self, camera_name: Optional[str] = None
     ) -> dict[str, torch.Tensor]:
         image_data = dict()
         if self.gpu_sim_enabled:

@@ -35,7 +35,7 @@ class GPUMemoryConfig:
 
 @dataclass
 class SceneConfig:
-    gravity: Union[np.ndarray, list[float]] = field(
+    gravity: Union[np.ndarray[Any], list[float]] = field(
         default_factory=lambda: np.array([0, 0, -9.81])
     )
     bounce_threshold: float = 2.0

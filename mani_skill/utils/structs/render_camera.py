@@ -310,7 +310,7 @@ class RenderCamera:
         return self._render_cameras[0].fy
 
     @property
-    def global_pose(self) -> sapien.Pose:
+    def global_pose(self) -> Pose:
         if self.scene.gpu_sim_enabled:
             if self.mount is not None:
                 return self.mount.pose * self.get_local_pose()
