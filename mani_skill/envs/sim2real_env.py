@@ -112,10 +112,10 @@ class Sim2RealEnv(gym.Env):
                 return self.render()
 
             def reset(
-                dummy_self,
+                dummy_self,  # pyright: ignore[reportSelfClsParameterName]
                 seed=None,
-                options=None,  # pyright: ignore[reportSelfClsParameterName]
-            ):
+                options=None,
+            ) -> tuple[Any, dict]:
                 # TODO: reset controller/agent
                 return self.get_obs(), {"reconfigure": False}
 
