@@ -30,6 +30,10 @@ class ArticulationBuilder(SapienArticulationBuilder):
         self.scene_idxs = None
         self.initial_pose = None
 
+    def set_scene(self, scene: ManiSkillScene):
+        self.scene = scene
+        return self
+
     def set_name(self, name: str):
         self.name = name
         return self

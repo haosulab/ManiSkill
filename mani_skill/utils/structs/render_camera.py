@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 
@@ -49,7 +49,7 @@ class RenderCamera:
         cls,
         render_cameras: list[sapien.render.RenderCameraComponent],
         scene: Any,
-        mount: Union[Actor, Link] = None,
+        mount: Optional[Union[Actor, Link]] = None,
     ):
         w, h = (
             render_cameras[0].width,

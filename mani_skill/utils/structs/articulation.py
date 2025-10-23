@@ -288,7 +288,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         qvel = self.get_qvel()
         return torch.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
 
-    def set_state(self, state: Array, env_idx: torch.Tensor = None):
+    def set_state(self, state: Array, env_idx: Optional[torch.Tensor] = None):
         if self.scene.gpu_sim_enabled:
             if env_idx is not None:
                 prev_reset_mask = self.scene._reset_mask.clone()
@@ -624,7 +624,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def get_name(self) -> str:
         return self.name
 
-    def get_pose(self) -> sapien.Pose:
+    def get_pose(self) -> Pose:
         return self.pose
 
     # def get_qacc(self) -> numpy.ndarray[numpy.float32, _Shape[m, 1]]: ...
@@ -660,7 +660,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self.root_pose
 
     # def set_name(self, arg0: str) -> None: ...
-    def set_pose(self, arg0: sapien.Pose) -> None:
+    def set_pose(self, arg0: Union[Pose, sapien.Pose]) -> None:
         self.pose = arg0
 
     # def set_qacc(self, qacc: numpy.ndarray[numpy.float32, _Shape[m, 1]]) -> None: ...

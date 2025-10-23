@@ -139,7 +139,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             ang_vel = self.get_angular_velocity()  # [N, 3]
         return torch.hstack([pose.p, pose.q, vel, ang_vel])
 
-    def set_state(self, state: Array, env_idx: torch.Tensor = None):
+    def set_state(self, state: Array, env_idx: Optional[torch.Tensor] = None):
         if self.scene.gpu_sim_enabled:
             if env_idx is not None:
                 prev_reset_mask = self.scene._reset_mask.clone()
