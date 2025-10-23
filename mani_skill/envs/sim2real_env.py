@@ -1,5 +1,5 @@
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import gymnasium as gym
 import numpy as np
@@ -37,7 +37,7 @@ class Sim2RealEnv(gym.Env):
                     self.agent.reset(qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten())
                     input("Press enter if the environment is reset")
 
-        sensor_data_preprocessing_function (Optional[Callable[[dict], dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function.
+        sensor_data_preprocessing_function (Optional[Callable[[dict, Optional[list[str]]], dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function. The two arguments are a dictionary mapping sensor names to its data, then a optional list of sensor names to process.
             By default this is None and we use a default processing function which does the following for each sensor type:
             - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
 
@@ -56,7 +56,9 @@ class Sim2RealEnv(gym.Env):
         real_reset_function: Optional[
             Callable[["Sim2RealEnv", Optional[int], Optional[dict]], None]
         ] = None,
-        sensor_data_preprocessing_function: Optional[Callable[[dict], dict]] = None,
+        sensor_data_preprocessing_function: Optional[
+            Callable[[dict, Optional[list[str]]], dict]
+        ] = None,
         render_mode: Optional[str] = "sensors",
         skip_data_checks: bool = False,
         control_freq: Optional[int] = None,
@@ -64,20 +66,17 @@ class Sim2RealEnv(gym.Env):
         self.sim_env = sim_env
         self.num_envs = 1
         assert (
-            self.sim_env.unwrapped.backend.sim_backend == "physx_cpu"
+            self.base_sim_env.backend.sim_backend == "physx_cpu"
         ), "For the Sim2RealEnv we expect the simulation to be using the physx_cpu simulation backend currently in order to correctly align the robot"
 
         # copy over some sim parameters/settings
-        self.device = self.sim_env.unwrapped.backend.device
-        self.sim_freq = self.sim_env.unwrapped.sim_freq
-        self.control_freq = control_freq or self.sim_env.unwrapped.control_freq
+        self.device = self.base_sim_env.backend.device
+        self.sim_freq = self.base_sim_env.sim_freq
+        self.control_freq = control_freq or self.base_sim_env.control_freq
 
         # control timing
         self.control_dt = 1 / self.control_freq
         self.last_control_time: Optional[float] = None
-
-        self.base_sim_env: BaseEnv = sim_env.unwrapped
-        """the unwrapped simulation environment"""
 
         obs_mode = self.base_sim_env.obs_mode
         reward_mode = self.base_sim_env.reward_mode
@@ -105,14 +104,18 @@ class Sim2RealEnv(gym.Env):
         self.real_reset_function = real_reset_function or default_real_reset_function
 
         class RealEnvStepReset(gym.Env):
-            def step(dummy_self, action):
-                ret = self.base_sim_env.__class__.step(self, action)
+            def step(dummy_self, action):  # pyright: ignore[reportSelfClsParameterName]
+                ret = self.base_sim_env.__class__.step(cast(BaseEnv, self), action)
                 return ret
 
-            def render(dummy_self):
+            def render(dummy_self):  # pyright: ignore[reportSelfClsParameterName]
                 return self.render()
 
-            def reset(dummy_self, seed=None, options=None):
+            def reset(
+                dummy_self,
+                seed=None,
+                options=None,  # pyright: ignore[reportSelfClsParameterName]
+            ):
                 # TODO: reset controller/agent
                 return self.get_obs(), {"reconfigure": False}
 
@@ -145,7 +148,9 @@ class Sim2RealEnv(gym.Env):
         self.agent._sim_agent.controller.qpos
 
         if sensor_data_preprocessing_function is not None:
-            self.preprocess_sensor_data = sensor_data_preprocessing_function
+            self.preprocess_sensor_data = lambda sensor_data, sensor_names=None: sensor_data_preprocessing_function(
+                sensor_data, sensor_names
+            )
 
         if not skip_data_checks:
             sample_sim_obs, _ = self.sim_env.reset()
@@ -153,6 +158,10 @@ class Sim2RealEnv(gym.Env):
 
             # perform checks to avoid errors in observation space alignment
             self._check_observations(sample_sim_obs, sample_real_obs)
+
+    @property
+    def base_sim_env(self) -> BaseEnv:
+        return cast(BaseEnv, self.sim_env.unwrapped)
 
     @property
     def elapsed_steps(self):
@@ -223,19 +232,21 @@ class Sim2RealEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     def get_obs(self, info=None, unflattened=False):
         # uses the original environment's get_obs function. Override this only if you want complete control over the returned observations before any wrappers are applied.
-        return self.base_sim_env.__class__.get_obs(self, info, unflattened)
+        return self.base_sim_env.__class__.get_obs(
+            cast(BaseEnv, self), info, unflattened
+        )
 
     def _flatten_raw_obs(self, obs: Any):
-        return self.base_sim_env.__class__._flatten_raw_obs(self, obs)
+        return self.base_sim_env.__class__._flatten_raw_obs(cast(BaseEnv, self), obs)
 
     def _get_obs_agent(self):
         # using the original user implemented sim env's _get_obs_agent function in case they modify it e.g. to remove qvel values as they might be too noisy
-        return self.base_sim_env.__class__._get_obs_agent(self)
+        return self.base_sim_env.__class__._get_obs_agent(cast(BaseEnv, self))
 
     def _get_obs_extra(self, info: dict):
         # using the original user implemented sim env's _get_obs_extra function in case they modify it e.g. to include engineered features like the tcp_pose of the robot
         try:
-            return self.base_sim_env.__class__._get_obs_extra(self, info)
+            return self.base_sim_env.__class__._get_obs_extra(cast(BaseEnv, self), info)
         except:
             # Print the original error
             import traceback
@@ -263,7 +274,7 @@ class Sim2RealEnv(gym.Env):
     ) -> dict:
         """Get the observation with sensor data"""
         return self.base_sim_env.__class__._get_obs_with_sensor_data(
-            self, info, apply_texture_transforms
+            cast(BaseEnv, self), info, apply_texture_transforms
         )
 
     def get_sensor_params(self):
@@ -277,10 +288,10 @@ class Sim2RealEnv(gym.Env):
     # reimplementations of simulation BaseEnv render related functions.
     # -------------------------------------------------------------------------- #
     def render(self):
-        return self.base_sim_env.__class__.render(self)
+        return self.base_sim_env.__class__.render(cast(BaseEnv, self))
 
     def render_sensors(self):
-        return self.base_sim_env.__class__.render_sensors(self)
+        return self.base_sim_env.__class__.render_sensors(cast(BaseEnv, self))
 
     def get_sensor_images(self):
         # used by render_sensors
@@ -296,14 +307,16 @@ class Sim2RealEnv(gym.Env):
     # support computing rewards in the real world you can override these functions.
     # -------------------------------------------------------------------------- #
     def get_reward(self, obs, action, info):
-        return self.base_sim_env.__class__.get_reward(self, obs, action, info)
+        return self.base_sim_env.__class__.get_reward(
+            cast(BaseEnv, self), obs, action, info
+        )
 
     def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: dict):
         """
         Computes the sparse reward. By default this function tries to use the success/fail information in
         returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise"""
         return self.base_sim_env.__class__.compute_sparse_reward(
-            self, obs, action, info
+            cast(BaseEnv, self), obs, action, info
         )
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
