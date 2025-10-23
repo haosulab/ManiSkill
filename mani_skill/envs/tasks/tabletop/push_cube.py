@@ -15,7 +15,7 @@ in addition to initializing any task relevant data like a goal
 See comments for how to make your own environment and what each required function should do
 """
 
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -191,7 +191,7 @@ class PushCubeEnv(BaseEnv):
             "success": is_obj_placed,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         # some useful observation info for solving the task includes the pose of the tcp (tool center point) which is the point between the
         # grippers of the robot
         obs = dict(
@@ -206,7 +206,7 @@ class PushCubeEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         # We also create a pose marking where the robot should push the cube from that is easiest (pushing from behind the cube)
         tcp_push_pose = Pose.create_from_pq(
             p=self.obj.pose.p
@@ -226,13 +226,13 @@ class PushCubeEnv(BaseEnv):
         )
         place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
         reward += place_reward * reached
-        
+
         # Compute a z reward to encourage the robot to keep the cube on the table
         desired_obj_z = self.cube_half_size
         current_obj_z = self.obj.pose.p[..., 2]
         z_deviation = torch.abs(current_obj_z - desired_obj_z)
         z_reward = 1 - torch.tanh(5 * z_deviation)
-        # We multiply the z reward by the place_reward and reached mask so that 
+        # We multiply the z reward by the place_reward and reached mask so that
         #   we only add the z reward if the robot has reached the desired push pose
         #   and the z reward becomes more important as the robot gets closer to the goal.
         reward += place_reward * z_reward * reached
@@ -241,7 +241,7 @@ class PushCubeEnv(BaseEnv):
         reward[info["success"]] = 4
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 4.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

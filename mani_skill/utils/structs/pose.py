@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import sapien
@@ -21,7 +21,7 @@ def add_batch_dim(x):
     return x
 
 
-def to_batched_tensor(x: Union[List, Array], device: Optional[Device] = None):
+def to_batched_tensor(x: Union[list, Array], device: Optional[Device] = None):
     if x is None:
         return None
     return add_batch_dim(common.to_tensor(x, device=device))
@@ -121,7 +121,7 @@ class Pose:
     @classmethod
     def create(
         cls,
-        pose: Union[torch.Tensor, sapien.Pose, List[sapien.Pose], "Pose"],
+        pose: Union[torch.Tensor, sapien.Pose, list[sapien.Pose], "Pose"],
         device: Optional[Device] = None,
     ) -> "Pose":
         """Creates a Pose object from a given ``pose``, which can be a torch tensor, sapien.Pose, list of sapien.Pose, or Pose"""

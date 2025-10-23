@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import sapien.physx as physx
@@ -39,7 +39,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     parent_link: Optional[Link] = None
     name: str = None
 
-    _physx_articulations: List[physx.PhysxArticulation] = None
+    _physx_articulations: list[physx.PhysxArticulation] = None
 
     def __str__(self):
         return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
@@ -53,8 +53,8 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @classmethod
     def create(
         cls,
-        physx_joints: List[physx.PhysxArticulationJoint],
-        physx_articulations: List[physx.PhysxArticulation],
+        physx_joints: list[physx.PhysxArticulationJoint],
+        physx_articulations: list[physx.PhysxArticulation],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
         joint_index: torch.Tensor,
@@ -232,7 +232,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         return torch.tensor([obj.dof for obj in self._objs])
 
     @property
-    def drive_mode(self) -> List[typing.Literal["force", "acceleration"]]:
+    def drive_mode(self) -> list[typing.Literal["force", "acceleration"]]:
         """
         :type: typing.Literal['force', 'acceleration']
         """
@@ -375,7 +375,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @property
     def type(
         self,
-    ) -> List[
+    ) -> list[
         typing.Literal["fixed", "revolute", "revolute_unwrapped", "prismatic", "free"]
     ]:
         return [obj.type for obj in self._objs]

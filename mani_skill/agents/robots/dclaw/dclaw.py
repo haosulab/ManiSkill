@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import List
 
 import numpy as np
 import sapien
@@ -58,10 +57,10 @@ class DClaw(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: List[Link] = sapien_utils.get_objs_by_names(
+        self.tip_links: list[Link] = sapien_utils.get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
-        self.root_joints: List[ArticulationJoint] = [
+        self.root_joints: list[ArticulationJoint] = [
             self.robot.find_joint_by_name(n) for n in self.root_joint_names
         ]
         self.root_joint_indices = get_active_joint_indices(

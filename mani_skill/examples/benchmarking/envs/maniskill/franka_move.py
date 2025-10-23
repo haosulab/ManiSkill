@@ -65,7 +65,7 @@ class FrankaMoveBenchmarkEnv(BaseEnv):
             qpos = self.agent.keyframes["rest"].qpos
             qpos[0] = 0.5
             self.agent.robot.set_qpos(qpos)
-    def _load_lighting(self, options: Dict):
+    def _load_lighting(self, options: dict):
         self.scene.set_ambient_light(np.array([1,1,1])*0.1)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
@@ -75,5 +75,5 @@ class FrankaMoveBenchmarkEnv(BaseEnv):
     def evaluate(self):
         return {}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         return dict()

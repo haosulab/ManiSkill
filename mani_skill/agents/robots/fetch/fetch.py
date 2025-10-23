@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -367,7 +367,7 @@ class Fetch(BaseAgent):
             self.robot.get_links(), "head_camera_link"
         )
 
-        self.queries: Dict[
+        self.queries: dict[
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
         ] = dict()
 

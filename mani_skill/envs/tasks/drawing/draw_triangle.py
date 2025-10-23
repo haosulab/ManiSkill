@@ -1,5 +1,4 @@
 import math
-from typing import Dict
 
 import numpy as np
 import sapien
@@ -309,7 +308,7 @@ class DrawTriangleEnv(BaseEnv):
         out = self.success_check()
         return {"success": out}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )

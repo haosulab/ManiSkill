@@ -1,5 +1,4 @@
 import copy
-from typing import Dict
 
 import gymnasium as gym
 import gymnasium.spaces.utils
@@ -42,7 +41,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         new_obs = self.observation(self.base_env._init_raw_obs)
         self.base_env.update_obs_space(new_obs)
 
-    def observation(self, observation: Dict):
+    def observation(self, observation: dict):
         sensor_data = observation.pop("sensor_data")
         del observation["sensor_param"]
         rgb_images = []

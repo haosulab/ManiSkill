@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -140,7 +140,7 @@ class PokeCubeEnv(BaseEnv):
             goal_region_pose = Pose.create_from_pq(p=goal_region_xyz, q=goal_region_q)
             self.goal_region.set_pose(goal_region_pose)
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
@@ -190,7 +190,7 @@ class PokeCubeEnv(BaseEnv):
             "head_to_cube_dist": head_to_cube_dist,
         }
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         # reach peg
         tcp_pos = self.agent.tcp.pose.p
         tgt_tcp_pose = self.peg.pose
@@ -224,7 +224,7 @@ class PokeCubeEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         max_reward = 10.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

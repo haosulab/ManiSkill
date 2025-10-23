@@ -1,7 +1,7 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
 
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import sapien
@@ -132,7 +132,7 @@ class CartpoleEnv(BaseEnv):
     def evaluate(self):
         return dict()
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             velocity=self.agent.robot.links_map["pole_1"].linear_velocity,
             angular_velocity=self.agent.robot.links_map["pole_1"].angular_velocity,
@@ -143,7 +143,7 @@ class CartpoleEnv(BaseEnv):
     def pole_angle_cosine(self):
         return torch.cos(self.agent.robot.joints_map["hinge_1"].qpos)
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         cart_pos = self.agent.robot.links_map["cart"].pose.p[
             :, 0
         ]  # (B, ), we only care about x position
@@ -169,7 +169,7 @@ class CartpoleEnv(BaseEnv):
         reward = upright * centered * small_control * small_velocity
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import Optional
 
 import imageio
 import numpy as np
@@ -11,7 +11,7 @@ from mani_skill.utils.structs.types import Array
 
 
 def images_to_video(
-    images: List[Array],
+    images: list[Array],
     output_dir: str,
     video_name: str,
     fps: int = 10,
@@ -51,7 +51,7 @@ def images_to_video(
     writer.close()
 
 
-def tile_images(images: List[Array], nrows=1) -> Array:
+def tile_images(images: list[Array], nrows=1) -> Array:
     """
     Tile multiple images to a single image comprised of nrows and an appropriate number of columns to fit all the images.
     The images can also be batched (e.g. of shape (B, H, W, C)), but give images must all have the same batch size.
@@ -118,7 +118,7 @@ def tile_images(images: List[Array], nrows=1) -> Array:
 TEXT_FONT = None
 
 
-def put_text_on_image(image: np.ndarray, lines: List[str]):
+def put_text_on_image(image: np.ndarray, lines: list[str]):
     global TEXT_FONT
     assert image.dtype == np.uint8, image.dtype
     image = image.copy()
@@ -139,7 +139,7 @@ def put_text_on_image(image: np.ndarray, lines: List[str]):
     return np.array(image)
 
 
-def put_info_on_image(image, info: Dict[str, float], extras=None, overlay=True):
+def put_info_on_image(image, info: dict[str, float], extras=None, overlay=True):
     lines = [
         f"{k}: {v:.3f}" if isinstance(v, float) else f"{k}: {v}"
         for k, v in info.items()

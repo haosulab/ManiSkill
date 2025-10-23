@@ -1,7 +1,7 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/hopper.py"""
 
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import sapien
@@ -163,7 +163,7 @@ class HopperEnv(BaseEnv):
         self.planar_scene = PlanarSceneBuilder(env=self)
         self.planar_scene.build()
 
-    def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             # qpos sampled same as dm_control, but ensure no self intersection explicitly here
@@ -206,7 +206,7 @@ class HopperEnv(BaseEnv):
         return torch.log1p(force_mag)
 
     # dm_control also includes foot pressures as state obs space
-    def _get_obs_state_dict(self, info: Dict):
+    def _get_obs_state_dict(self, info: dict):
         return dict(
             agent=self._get_obs_agent(),
             toe_touch=self.touch("foot_toe"),
@@ -231,11 +231,11 @@ class HopperStandEnv(HopperEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         standing = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
         return standing.view(-1)
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         # this should be equal to compute_dense_reward / max possible reward
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
@@ -258,7 +258,7 @@ class HopperHopEnv(HopperEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         standing = rewards.tolerance(self.height, lower=_STAND_HEIGHT, upper=2.0)
         hopping = rewards.tolerance(
             self.subtreelinvelx,
@@ -271,6 +271,6 @@ class HopperHopEnv(HopperEnv):
 
         return standing.view(-1) * hopping.view(-1)
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         max_reward = 1.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

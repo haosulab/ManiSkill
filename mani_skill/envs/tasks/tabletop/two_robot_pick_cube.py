@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import sapien
@@ -139,7 +139,7 @@ class TwoRobotPickCube(BaseEnv):
             "is_right_arm_static": is_right_arm_static,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             left_arm_tcp=self.left_agent.tcp.pose.raw_pose,
             right_arm_tcp=self.right_agent.tcp.pose.raw_pose,
@@ -154,7 +154,7 @@ class TwoRobotPickCube(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         # Stage 1: Reach and push cube to be near other robot
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.left_agent.tcp.pose.p, axis=1
@@ -257,6 +257,6 @@ class TwoRobotPickCube(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 21
