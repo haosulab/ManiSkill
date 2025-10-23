@@ -989,8 +989,10 @@ class BaseEnv(gym.Env):
             if self._main_seed is not None:
                 return
             seed_list = np.random.RandomState().randint(2**31, size=(self.num_envs,))
-        if not np.iterable(seed) or isinstance(seed, list):
+        if not np.iterable(seed):
             seed_list = np.array([seed])
+        elif isinstance(seed, list):
+            seed_list = np.array(seed)
         assert isinstance(seed_list, np.ndarray)
         self._main_seed = seed_list
         self._main_rng = np.random.RandomState(self._main_seed[0])
@@ -1077,7 +1079,7 @@ class BaseEnv(gym.Env):
     ) -> Union[None, torch.Tensor, dict[str, torch.Tensor]]:
         set_action = False
         action_is_unbatched = False
-        action_tensor: Union[torch.Tensor, dict[str, torch.Tensor]]
+        action_tensor: Union[torch.Tensor, dict[str, torch.Tensor]] = None  # pyright: ignore[reportAssignmentType]
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):

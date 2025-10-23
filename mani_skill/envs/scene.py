@@ -48,8 +48,6 @@ class ManiSkillScene:
     This wrapper also helps manage GPU states if GPU simulation is used
     """
 
-    render_system_group: sapien.render.RenderSystemGroup
-
     def __init__(
         self,
         sub_scenes: Optional[list[sapien.Scene]] = None,
@@ -79,6 +77,9 @@ class ManiSkillScene:
         self.backend = backend  # references the backend object stored in BaseEnv class
 
         self.camera_groups: dict[str, sapien.render.RenderCameraGroup] = dict()
+        self.render_system_group: sapien.render.RenderSystemGroup = (
+            None  # pyright: ignore[reportAttributeAccessIssue]
+        )
 
         self.actors: dict[str, Actor] = dict()
         self.articulations: dict[str, Articulation] = dict()
