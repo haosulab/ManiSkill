@@ -31,10 +31,10 @@ from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sensors.camera import (
     Camera,
     CameraConfig,
-    parse_camera_configs,
-    update_camera_configs_from_dict,
+    parse_sensor_configs,
+    update_sensor_configs_from_dict,
 )
-from mani_skill.sensors.depth_camera import StereoDepthCamera, StereoDepthCameraConfig
+from mani_skill.sensors.depth_camera import StereoDepthCameraConfig
 from mani_skill.utils import common, gym_utils, sapien_utils, tree
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.pose import Pose
@@ -161,7 +161,7 @@ class BaseEnv(gym.Env):
     """main rng generator that generates episode seed sequences. For internal use only"""
     _batched_main_rng: BatchedRNG
     """the batched main RNG that generates episode seed sequences. For internal use only"""
-    _main_seed: Optional[list[int]]
+    _main_seed: np.ndarray[Any]
     """main seed list for _main_rng and _batched_main_rng. _main_rng uses _main_seed[0]. For internal use only"""
     _episode_rng: np.random.RandomState
     """the numpy RNG that you can use to generate random numpy data. It is not recommended to use this. Instead use the _batched_episode_rng which helps ensure GPU and CPU simulation generate the same data with the same seeds."""
@@ -316,7 +316,6 @@ class BaseEnv(gym.Env):
         self.enable_shadow = enable_shadow
 
         # Use a fixed (main) seed to enhance determinism
-        self._main_seed = None
         self._set_main_rng([2022 + i for i in range(self.num_envs)])
         self._elapsed_steps = (
             torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
@@ -777,39 +776,39 @@ class BaseEnv(gym.Env):
         self._sensor_configs = dict()
 
         # Add task/external sensors
-        self._sensor_configs.update(parse_camera_configs(self._default_sensor_configs))
+        self._sensor_configs.update(parse_sensor_configs(self._default_sensor_configs))
 
         # Add agent sensors
         self._agent_sensor_configs = dict()
         if self.agent is not None:
-            self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
+            self._agent_sensor_configs = parse_sensor_configs(self.agent._sensor_configs)
             self._sensor_configs.update(self._agent_sensor_configs)
 
         # Add human render camera configs
-        self._human_render_camera_configs = parse_camera_configs(
+        self._human_render_camera_configs = parse_sensor_configs(
             self._default_human_render_camera_configs
         )
 
-        self._viewer_camera_config = parse_camera_configs(
+        _viewer_camera_config_dict = parse_sensor_configs(
             self._default_viewer_camera_configs
-        )["viewer"]
+        )
 
         # Override camera configurations with user supplied configurations
         if self._custom_sensor_configs is not None:
-            update_camera_configs_from_dict(
+            update_sensor_configs_from_dict(
                 self._sensor_configs, self._custom_sensor_configs
             )
         if self._custom_human_render_camera_configs is not None:
-            update_camera_configs_from_dict(
+            update_sensor_configs_from_dict(
                 self._human_render_camera_configs,
                 self._custom_human_render_camera_configs,
             )
         if self._custom_viewer_camera_configs is not None:
-            update_camera_configs_from_dict(
-                self._viewer_camera_config,
+            update_sensor_configs_from_dict(
+                _viewer_camera_config_dict,
                 self._custom_viewer_camera_configs,
             )
-        self._viewer_camera_config = self._viewer_camera_config["viewer"]
+        self._viewer_camera_config = _viewer_camera_config_dict["viewer"]
 
         # Now we instantiate the actual sensor objects
         self._sensors = dict()
@@ -820,14 +819,17 @@ class BaseEnv(gym.Env):
             else:
                 articulation = None
             if isinstance(sensor_config, StereoDepthCameraConfig):
-                sensor_cls = StereoDepthCamera
+                raise NotImplementedError("StereoDepthCamera is not implemented in this version at the moment.")
             elif isinstance(sensor_config, CameraConfig):
                 sensor_cls = Camera
-            self._sensors[uid] = sensor_cls(
-                sensor_config,
-                self.scene,
-                articulation=articulation,
-            )
+                self._sensors[uid] = sensor_cls(
+                    sensor_config,
+                    self.scene,
+                    articulation=articulation,
+                )
+            else:
+                raise ValueError(f"Unknown sensor config type: {type(sensor_config)}")
+
 
         # Cameras for rendering only
         self._human_render_cameras = dict()
@@ -949,12 +951,12 @@ class BaseEnv(gym.Env):
                 self._initialize_episode(env_idx, options)
         # reset the reset mask back to all ones so any internal code in maniskill can continue to manipulate all scenes at once as usual
         self.scene._reset_mask = torch.ones(
-            self.num_envs, dtype=bool, device=self.device
+            self.num_envs, dtype=torch.bool, device=self.device
         )
         if self.gpu_sim_enabled:
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
             self.scene._gpu_fetch_all()
 
         # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
@@ -975,31 +977,33 @@ class BaseEnv(gym.Env):
         self._last_obs = obs
         return obs, info
 
-    def _set_main_rng(self, seed):
+    def _set_main_rng(self, seed: Optional[Union[int, list[int], np.ndarray]]):
         """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.
 
         Note that while _set_main_rng and _set_episode_rng are setting a seed and numpy random state, when using GPU sim
         parallelization it is highly recommended to use torch random functions as they will make things run faster. The use
         of torch random functions when building tasks in ManiSkill are automatically seeded via `torch.random.fork`
         """
+        seed_list = seed
         if seed is None:
             if self._main_seed is not None:
                 return
-            seed = np.random.RandomState().randint(2**31, size=(self.num_envs,))
-        if not np.iterable(seed):
-            seed = [seed]
-        self._main_seed = seed
+            seed_list = np.random.RandomState().randint(2**31, size=(self.num_envs,))
+        if not np.iterable(seed) or isinstance(seed, list):
+            seed_list = np.array([seed])
+        assert isinstance(seed_list, np.ndarray)
+        self._main_seed = seed_list
         self._main_rng = np.random.RandomState(self._main_seed[0])
         if len(self._main_seed) == 1 and self.num_envs > 1:
             self._main_seed = self._main_seed + np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
         self._batched_main_rng = BatchedRNG.from_seeds(self._main_seed, backend=self._batched_rng_backend)
 
-    def _set_episode_rng(self, seed: Union[None, list[int]], env_idx: torch.Tensor):
+    def _set_episode_rng(self, seed: Union[None, list[int], np.ndarray[Any], int], env_idx: torch.Tensor):
         """Set the random generator for current episode."""
         if seed is not None or self._enhanced_determinism:
-            env_idx = common.to_numpy(env_idx)
+            env_idx_np = common.to_numpy(env_idx)
             if seed is None:
-                self._episode_seed[env_idx] = self._batched_main_rng[env_idx].randint(2**31)
+                self._episode_seed[env_idx_np] = self._batched_main_rng[env_idx_np].randint(2**31)
             else:
                 if not np.iterable(seed):
                     seed = [seed]
@@ -1010,7 +1014,7 @@ class BaseEnv(gym.Env):
             if seed is not None or self._batched_episode_rng is None:
                 self._batched_episode_rng = BatchedRNG.from_seeds(self._episode_seed, backend=self._batched_rng_backend)
             else:
-                self._batched_episode_rng[env_idx] = BatchedRNG.from_seeds(self._episode_seed[env_idx], backend=self._batched_rng_backend)
+                self._batched_episode_rng[env_idx_np] = BatchedRNG.from_seeds(self._episode_seed[env_idx_np], backend=self._batched_rng_backend)
             self._episode_rng = self._batched_episode_rng[0]
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):

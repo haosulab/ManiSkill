@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Sequence, TypeVar, Union, cast
 
 import sapien
 import torch
@@ -59,60 +59,72 @@ class CameraConfig(BaseSensorConfig):
         return self.__class__.__name__ + "(" + str(self.__dict__) + ")"
 
 
-def update_camera_configs_from_dict(
-    camera_configs: dict[str, CameraConfig], config_dict: dict[str, dict]
+T = TypeVar("T", bound=BaseSensorConfig)
+
+
+def update_sensor_configs_from_dict(
+    sensor_configs: dict[str, T], config_dict: dict[str, dict]
 ):
     # Update CameraConfig to StereoDepthCameraConfig
     if config_dict.pop("use_stereo_depth", False):
         from .depth_camera import StereoDepthCameraConfig  # fmt: skip
-        for name, config in camera_configs.items():
-            camera_configs[name] = StereoDepthCameraConfig.fromCameraConfig(config)
+        for name, config in sensor_configs.items():
+            sensor_configs[name] = StereoDepthCameraConfig.fromCameraConfig(config)
 
     # First, apply global configuration
     for k, v in config_dict.items():
-        if k in camera_configs:
+        if k in sensor_configs:
             continue
-        for config in camera_configs.values():
-            if not hasattr(config, k):
-                raise AttributeError(f"{k} is not a valid attribute of CameraConfig")
-            else:
-                if k == "shader_pack":
-                    config.shader_config = None
-                setattr(config, k, v)
+        for config in sensor_configs.values():
+            if isinstance(config, CameraConfig):
+                if not hasattr(config, k):
+                    raise AttributeError(
+                        f"{k} is not a valid attribute of CameraConfig"
+                    )
+                else:
+                    if k == "shader_pack":
+                        config.shader_config = None
+                    setattr(config, k, v)
     # Then, apply camera-specific configuration
     for name, v in config_dict.items():
-        if name not in camera_configs:
+        if name not in sensor_configs:
             continue
 
         # Update CameraConfig to StereoDepthCameraConfig
         if v.pop("use_stereo_depth", False):
             from .depth_camera import StereoDepthCameraConfig  # fmt: skip
-            config = camera_configs[name]
-            camera_configs[name] = StereoDepthCameraConfig.fromCameraConfig(config)
+            config = sensor_configs[name]
+            sensor_configs[name] = StereoDepthCameraConfig.fromCameraConfig(config)
 
-        config = camera_configs[name]
-        for kk in v:
-            if kk == "shader_pack":
-                config.shader_config = None
-            assert hasattr(config, kk), f"{kk} is not a valid attribute of CameraConfig"
-        v = copy.deepcopy(v)
-        # for json serailizable gym.make args, user has to pass a list, not a Pose object.
-        if "pose" in v and isinstance(v["pose"], list):
-            v["pose"] = sapien.Pose(v["pose"][:3], v["pose"][3:])
-        config.__dict__.update(v)
-    for config in camera_configs.values():
-        config.__post_init__()
+        config = sensor_configs[name]
+        if isinstance(config, CameraConfig):
+            for kk in v:
+                if kk == "shader_pack":
+                    config.shader_config = None
+                assert hasattr(
+                    config, kk
+                ), f"{kk} is not a valid attribute of CameraConfig"
+            v = copy.deepcopy(v)
+            # for json serailizable gym.make args, user has to pass a list, not a Pose object.
+            if "pose" in v and isinstance(v["pose"], list):
+                v["pose"] = sapien.Pose(v["pose"][:3], v["pose"][3:])
+            config.__dict__.update(v)
+    for config in sensor_configs.values():
+        if isinstance(config, CameraConfig):
+            config.__post_init__()
 
 
-def parse_camera_configs(camera_configs):
-    if isinstance(camera_configs, (tuple, list)):
-        return dict([(config.uid, config) for config in camera_configs])
-    elif isinstance(camera_configs, dict):
-        return dict(camera_configs)
-    elif isinstance(camera_configs, CameraConfig):
-        return dict([(camera_configs.uid, camera_configs)])
+def parse_sensor_configs(
+    sensor_configs: Union[Sequence[T], dict[str, T], T]
+) -> dict[str, T]:
+    if isinstance(sensor_configs, (tuple, list)):
+        return dict([(config.uid, config) for config in sensor_configs])
+    elif isinstance(sensor_configs, dict):
+        return dict(sensor_configs)
+    elif isinstance(sensor_configs, BaseSensorConfig):
+        return dict([(sensor_configs.uid, sensor_configs)])
     else:
-        raise TypeError(type(camera_configs))
+        raise TypeError(type(sensor_configs))
 
 
 class Camera(BaseSensor):
