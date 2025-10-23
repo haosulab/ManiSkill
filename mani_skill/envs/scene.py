@@ -25,8 +25,8 @@ from mani_skill.utils.structs.types import Array, Device, SimConfig
 
 # try and determine which render system is used by the installed sapien package
 if SAPIEN_RENDER_SYSTEM == "3.1":
-    from sapien.wrapper.scene import (  # pyright: ignore[reportAttributeAccessIssue]
-        get_camera_shader_pack,
+    from sapien.wrapper.scene import (
+        get_camera_shader_pack,  # pyright: ignore[reportAttributeAccessIssue]
     )
 
     GlobalShaderPack = None
@@ -454,9 +454,9 @@ class ManiSkillScene:
                 self._gpu_setup_sensors(self.human_render_cameras)
                 self._human_render_cameras_initialized = True
 
-            manager: sapien.render.GpuSyncManager = (
+            manager: sapien.render.GpuSyncManager = (  # pyright: ignore[reportAttributeAccessIssue]
                 self.render_system_group
-            )  # pyright: ignore[reportAttributeAccessIssue]
+            )
             manager.sync()
         else:
             self.sub_scenes[0].update_render()
@@ -661,8 +661,8 @@ class ManiSkillScene:
             light.pose = sapien.Pose(
                 light_position,
                 sapien.math.shortest_rotation(
-                    [1, 0, 0], direction
-                ),  # pyright: ignore[reportArgumentType]
+                    [1, 0, 0], direction  # pyright: ignore[reportArgumentType]
+                ),
             )
             scene.add_entity(entity)
             if self.parallel_in_single_scene:
@@ -710,8 +710,8 @@ class ManiSkillScene:
             light.pose = sapien.Pose(
                 light_position,
                 sapien.math.shortest_rotation(
-                    [1, 0, 0], direction
-                ),  # pyright: ignore[reportArgumentType]
+                    [1, 0, 0], direction  # pyright: ignore[reportArgumentType]
+                ),
             )
             scene.add_entity(entity)
         return
@@ -1108,8 +1108,8 @@ class ManiSkillScene:
                     continue
                 for s in body.render_shapes:
                     shape_pose_indices.append(
-                        b.gpu_pose_index
-                    )  # pyright: ignore[reportAttributeAccessIssue]
+                        b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
+                    )
                     shapes.append(s)
 
         cam_pose_indices = []
@@ -1123,13 +1123,13 @@ class ManiSkillScene:
                 if b is None:
                     continue
                 cam_pose_indices.append(
-                    b.gpu_pose_index
-                )  # pyright: ignore[reportAttributeAccessIssue]
+                    b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
+                )
                 cams.append(c)
 
         sync_manager = (
-            sapien.render.GpuSyncManager()
-        )  # pyright: ignore[reportAttributeAccessIssue]
+            sapien.render.GpuSyncManager()  # pyright: ignore[reportAttributeAccessIssue]
+        )
         sync_manager.set_cuda_poses(px.cuda_rigid_body_data)
         sync_manager.set_render_shapes(shape_pose_indices, shapes)
         sync_manager.set_cameras(cam_pose_indices, cams)
@@ -1149,8 +1149,8 @@ class ManiSkillScene:
                     camera_group = self.render_system_group.create_camera_group(
                         sensor.camera._render_cameras,
                         list(
-                            sensor.config.shader_config.texture_names.keys()
-                        ),  # pyright: ignore[reportOptionalMemberAccess]
+                            sensor.config.shader_config.texture_names.keys()  # pyright: ignore[reportOptionalMemberAccess]
+                        ),
                     )
                 except RuntimeError as e:
                     raise RuntimeError(
@@ -1211,8 +1211,8 @@ class ManiSkillScene:
                     if camera_name is not None and name != camera_name:
                         continue
                     assert (
-                        camera.config.shader_config.shader_pack
-                        not in [  # pyright: ignore[reportOptionalMemberAccess]
+                        camera.config.shader_config.shader_pack  # pyright: ignore[reportOptionalMemberAccess]
+                        not in [
                             "rt",
                             "rt-fast",
                             "rt-med",
