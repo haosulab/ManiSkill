@@ -109,10 +109,15 @@ class InsertFlowerEnv(BaseEnv):
             flower_collision_file, density=200, material=flower_material
         )
 
-        self.init_flower_pose = Pose.create_from_pq(
+        flower_builder.initial_pose = Pose.create_from_pq(
             [-0.242, 0.0, 0.015 + 0.001], [-0.352413, -0.258145, -0.635074, 0.637062]
         )
-        flower_builder.initial_pose = self.init_flower_pose
+        self.initial_flower_pos = torch.tensor(
+            [-0.242, 0.0, 0.015 + 0.001], device=self.device
+        )
+        self.initial_flower_quat = torch.tensor(
+            [-0.352413, -0.258145, -0.635074, 0.637062], device=self.device
+        )
         self.flower = flower_builder.build(name="flower")
         self.target_area_box = list(self.target_area.values())
         # Convert target_area into tensor for fast computation
@@ -133,11 +138,12 @@ class InsertFlowerEnv(BaseEnv):
 
             self.table_scene.initialize(env_idx)
 
-            flower_pose = self.init_flower_pose
-            flower_pose.p[:, :2] += (
-                torch.rand((b, 2)) * self.flower_spawn_half_size * 2
+            flower_pos = (
+                torch.rand((b, 3)) * self.flower_spawn_half_size * 2
                 - self.flower_spawn_half_size
+                + self.initial_flower_pos
             )
+            flower_pose = Pose.create_from_pq(flower_pos, self.initial_flower_quat)
             self.flower.set_pose(flower_pose)
 
     def _initialize_agent(self, env_idx: torch.Tensor):
