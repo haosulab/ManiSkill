@@ -347,7 +347,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                 return self.initial_pose
             else:
                 if self.hidden:
-                    return Pose.create(self.before_hide_pose)
+                    return Pose.create(self.before_hide_pose, device=self.device)
                 else:
                     raw_pose = self.px.cuda_rigid_body_data.torch()[
                         self._body_data_index, :7
@@ -360,7 +360,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                         new_pose[:, 3:] = raw_pose[:, 3:]
                         new_pose[:, :3] = new_xyzs
                         raw_pose = new_pose
-                    return Pose.create(raw_pose)
+                    return Pose.create(raw_pose, device=self.device)
         else:
             return Pose.create([obj.pose for obj in self._objs], device=self.device)
 

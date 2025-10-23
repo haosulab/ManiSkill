@@ -6,7 +6,7 @@ import sapien.physx as physx
 import torch
 
 from mani_skill import ASSET_DIR
-from mani_skill.agents.robots import FloatingInspireHandRight
+from mani_skill.agents.robots import FloatingAbilityHandRight
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
@@ -20,7 +20,7 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
     "InsertFlower-v1", max_episode_steps=300, asset_download_ids=["oakink-v2"]
 )
 class InsertFlowerEnv(BaseEnv):
-    agent: Union[FloatingInspireHandRight]
+    agent: Union[FloatingAbilityHandRight]
     _clearance = 0.003
     hand_init_height = 0.25
     flower_spawn_half_size = 0.05
@@ -29,7 +29,7 @@ class InsertFlowerEnv(BaseEnv):
     def __init__(
         self,
         *args,
-        robot_uids="allegro_hand_right_floating",
+        robot_uids="floating_ability_hand_right",
         robot_init_qpos_noise=0.02,
         num_envs=1,
         reconfiguration_freq=None,
