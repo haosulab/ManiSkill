@@ -1,23 +1,34 @@
 from dataclasses import dataclass, field
-from typing import Sequence, Union
+from typing import Sequence, TypedDict, Union
 
 import numpy as np
 import torch
 from gymnasium import spaces
+from typing_extensions import NotRequired
 
-from mani_skill.utils import common
 from mani_skill.utils.logging_utils import logger
-from mani_skill.utils.structs.types import Array, DriveMode
+from mani_skill.utils.structs.types import DriveMode
 
 from .base_controller import BaseController, ControllerConfig
 
 
 class PDJointPosController(BaseController):
     config: "PDJointPosControllerConfig"
-    _start_qpos = None
-    _target_qpos = None
+    _start_qpos: torch.Tensor
+    _target_qpos: torch.Tensor
     sets_target_qpos = True
     sets_target_qvel = False
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._start_qpos = torch.zeros(
+            (self.scene.num_envs, self.active_joint_indices.shape[0]),
+            device=self.device,
+        )
+        self._target_qpos = torch.zeros(
+            (self.scene.num_envs, self.active_joint_indices.shape[0]),
+            device=self.device,
+        )
 
     def _get_joint_limits(self):
         qlimits = (
@@ -54,26 +65,20 @@ class PDJointPosController(BaseController):
     def reset(self):
         super().reset()
         self._step = 0  # counter of simulation steps after action is set
-        if self._start_qpos is None:
-            self._start_qpos = self.qpos.clone()
-        else:
+        self._start_qpos[self.scene._reset_mask] = self.qpos[
+            self.scene._reset_mask
+        ].clone()
 
-            self._start_qpos[self.scene._reset_mask] = self.qpos[
-                self.scene._reset_mask
-            ].clone()
-        if self._target_qpos is None:
-            self._target_qpos = self.qpos.clone()
-        else:
-            self._target_qpos[self.scene._reset_mask] = self.qpos[
-                self.scene._reset_mask
-            ].clone()
+        self._target_qpos[self.scene._reset_mask] = self.qpos[
+            self.scene._reset_mask
+        ].clone()
 
     def set_drive_targets(self, targets):
         self.articulation.set_joint_drive_targets(
             targets, self.joints, self.active_joint_indices
         )
 
-    def set_action(self, action: Array):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         self._step = 0
         self._start_qpos = self.qpos
@@ -112,12 +117,14 @@ class PDJointPosController(BaseController):
 
 @dataclass
 class PDJointPosControllerConfig(ControllerConfig):
-    lower: Union[None, float, Sequence[float]]
-    upper: Union[None, float, Sequence[float]]
-    stiffness: Union[float, Sequence[float]]
-    damping: Union[float, Sequence[float]]
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    lower: Union[None, float, Sequence[float], np.ndarray]
+    """The lower bound for the joint position. If none, the lower bound defaults to the lower joint limit."""
+    upper: Union[None, float, Sequence[float], np.ndarray]
+    """The upper bound for the joint position. If none, the upper bound defaults to the upper joint limit."""
+    stiffness: Union[float, Sequence[float], np.ndarray]
+    damping: Union[float, Sequence[float], np.ndarray]
+    force_limit: Union[float, Sequence[float], np.ndarray] = 1e10
+    friction: Union[float, Sequence[float], np.ndarray] = 0.0
     use_delta: bool = False
     use_target: bool = False
     interpolate: bool = False
@@ -204,7 +211,7 @@ class PDJointPosMimicController(PDJointPosController):
             joint_limits = joint_limits[None, :]
         return joint_limits
 
-    def set_action(self, action: Array):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         self._step = 0
         self._start_qpos = self.qpos
@@ -237,6 +244,12 @@ class PDJointPosMimicController(PDJointPosController):
         return f"PDJointPosMimicController(dof={self.single_action_space.shape[0]}, active_joints={len(self.joints)}, mimic_to_control_joint_map={main_str})"
 
 
+class MimicConfig(TypedDict):
+    joint: str
+    multiplier: NotRequired[float]
+    offset: NotRequired[float]
+
+
 @dataclass
 class PDJointPosMimicControllerConfig(PDJointPosControllerConfig):
     """
@@ -255,5 +268,5 @@ class PDJointPosMimicControllerConfig(PDJointPosControllerConfig):
     """
 
     controller_cls = PDJointPosMimicController
-    mimic: dict[str, dict[str, float]] = field(default_factory=dict)
+    mimic: dict[str, MimicConfig] = field(default_factory=dict)
     """the mimic targets. Maps the actual mimic joint name to a dictionary of the format dict(joint: str, multiplier: float, offset: float)"""

@@ -1,12 +1,11 @@
 from dataclasses import asdict, dataclass, field
-from typing import Literal, Sequence, Union
+from typing import Any, Literal, Sequence, TypeAlias, Union
 
 import numpy as np
-import sapien.physx as physx
 import torch
 
-Array = Union[torch.Tensor, np.ndarray, Sequence]
-Device = Union[str, torch.device]
+Array: TypeAlias = Union[torch.Tensor, np.ndarray[Any], Sequence]
+Device: TypeAlias = Union[str, torch.device]
 
 
 @dataclass

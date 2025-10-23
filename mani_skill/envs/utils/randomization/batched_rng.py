@@ -16,7 +16,9 @@ class BatchedRNG(np.random.RandomState):
         self.batch_size = len(rngs)
 
     @classmethod
-    def from_seeds(cls, seeds: list[int], backend: str = "numpy:random_state"):
+    def from_seeds(
+        cls, seeds: Union[list[int], np.ndarray], backend: str = "numpy:random_state"
+    ):
         if backend == "numpy:random_state":
             return cls(rngs=[np.random.RandomState(seed) for seed in seeds])
         raise ValueError(f"Unknown batched RNG backend: {backend}")

@@ -1,22 +1,22 @@
-from typing import Generic, TypeVar
+from typing import Generic, Optional, Sequence, TypeVar
 
 import torch
 from gymnasium import spaces
 
 from mani_skill.agents.base_agent import BaseAgent
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Sequence[BaseAgent])
 
 
 class MultiAgent(BaseAgent, Generic[T]):
     agents: T
 
-    def __init__(self, agents: list[BaseAgent]):
+    def __init__(self, agents: T):
         self.agents = agents
         self.agents_dict: dict[str, BaseAgent] = dict()
         self.scene = agents[0].scene
         self.sensor_configs = []
-        for i, agent in enumerate(self.agents):
+        for i, agent in enumerate(agents):
             self.sensor_configs += agent._sensor_configs
             self.agents_dict[f"{agent.uid}-{i}"] = agent
 
@@ -31,7 +31,7 @@ class MultiAgent(BaseAgent, Generic[T]):
         """Get the currently activated controller uid of each robot"""
         return {uid: agent.control_mode for uid, agent in self.agents_dict.items()}
 
-    def set_control_mode(self, control_mode: list[str] = None):
+    def set_control_mode(self, control_mode: Optional[list[str]] = None):
         """Set the controller, drive properties, and reset for each agent. If given control mode is None, will set defaults"""
         if control_mode is None:
             for agent in self.agents:
@@ -85,12 +85,12 @@ class MultiAgent(BaseAgent, Generic[T]):
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #
-    def reset(self, init_qpos=None):
+    def reset(self, init_qpos: Optional[dict[str, torch.Tensor]] = None):
         """
         Reset the robot to a rest position or a given q-position
         """
         for uid, agent in self.agents_dict.items():
             if init_qpos is not None and uid in init_qpos:
-                agent.reset(init_qpos=[uid])
+                agent.reset(init_qpos=init_qpos[uid])
             else:
                 agent.reset()

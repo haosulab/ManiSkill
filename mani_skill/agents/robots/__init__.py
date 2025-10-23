@@ -1,3 +1,4 @@
+# pyright: reportUnusedImport=false
 from .allegro_hand import *
 from .anymal import ANYmalC
 from .dclaw import DClaw
@@ -16,7 +17,6 @@ from .inspire_hand import (
 from .koch import *
 from .panda import *
 from .so100 import *
-from .stompy import Stompy
 from .trifingerpro import TriFingerPro
 from .unitree_g1 import *
 from .unitree_go import *

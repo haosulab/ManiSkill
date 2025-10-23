@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import sapien
 import torch
@@ -141,7 +143,7 @@ class UnitreeG1UpperBody(BaseAgent):
             "right_six_joint",
         ]
         self.right_finger_joint_indexes = [
-            self.robot.active_joints_map[joint].active_index[0].item()
+            cast(int, self.robot.active_joints_map[joint].active_index[0].item())
             for joint in self.right_finger_joints
         ]
 
@@ -159,7 +161,7 @@ class UnitreeG1UpperBody(BaseAgent):
             "left_six_joint",
         ]
         self.left_finger_joint_indexes = [
-            self.robot.active_joints_map[joint].active_index[0].item()
+            cast(int, self.robot.active_joints_map[joint].active_index[0].item())
             for joint in self.left_finger_joints
         ]
 
