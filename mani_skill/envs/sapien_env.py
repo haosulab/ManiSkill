@@ -51,7 +51,7 @@ class BaseEnv(gym.Env):
             GPU simulations. For example, environments with many moving objects are better simulated by parallelizing across CPUs.
 
         obs_mode: observation mode to be used. Must be one of ("state", "state_dict", "none", "sensor_data", "rgb", "depth", "segmentation", "rgbd", "rgb+depth", "rgb+depth+segmentation", "rgb+segmentation", "depth+segmentation", "pointcloud")
-            The obs_mode is mostly for convenience to automatically optimize/setup all sensors/cameras for the given observation mode to render the correct data and try to ignore unecesary rendering.
+            The obs_mode is mostly for convenience to automatically optimize/setup all sensors/cameras for the given observation mode to render the correct data and try to ignore unnecessary rendering.
             For the most advanced use cases (e.g. you have 1 RGB only camera and 1 depth only camera)
 
         reward_mode: reward mode to use. Must be one of ("normalized_dense", "dense", "sparse", "none"). With "none" the reward returned is always 0
