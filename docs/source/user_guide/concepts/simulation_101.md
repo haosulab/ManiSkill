@@ -4,7 +4,7 @@ This document covers some general concepts on simulation/robotics that can enabl
 
 ## General Terms / Conventions
 
-- Pose: A combination of position and orientation which defines where a object is in 3D space. In ManiSkill/SAPIEN, Pose is composed of 3D position and 4D quaternion.
+- Pose: A combination of position and orientation which defines where an object is in 3D space. In ManiSkill/SAPIEN, Pose is composed of 3D position and 4D quaternion.
 - [Quaternion](https://en.wikipedia.org/wiki/Quaternion): A type of representation of rotation/orientation that is commonly used in simulation defined by 4 values. ManiSkill/SAPIEN uses the wxyz format for Quaternions. To learn more about rotation representation in simulation, you can check out this [blog post](https://simulately.wiki/blog/rotation)
 - Z-axis is "up": ManiSkill/SAPIEN treat the Z-dimension as the canonical "up" direction. So an object like a tall bottle that is positioned up-right will have its long-side along the Z-axis.
 
