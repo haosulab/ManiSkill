@@ -252,7 +252,7 @@ class HopperHopEnv(HopperEnv):
     - Hopper qpos are uniformly sampled within their allowed ranges
 
     **Success Conditions:**
-    - No specific success conditions. The task is considered successful if the pole is upright for the whole episode.
+    - No specific success conditions. The task is considered successful if the hopper hops for the whole episode.
     """
 
     def __init__(self, *args, **kwargs):
