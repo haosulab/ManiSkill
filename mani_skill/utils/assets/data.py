@@ -195,7 +195,7 @@ def initialize_data_sources():
     )
     DATA_SOURCES["xlerobot"] = DataSource(
         source_type="robot",
-        url="https://github.com/Vector-Wangel/ManiSkill-XLeRobot/archive/refs/tags/v0.2.0.zip",
+        url="https://github.com/Vector-Wangel/ManiSkill-XLeRobot/archive/refs/tags/v0.2.1.zip",
         target_path="robots/xlerobot",
     )
 
