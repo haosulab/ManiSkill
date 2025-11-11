@@ -215,7 +215,7 @@ class DistractionSet:
                             part.material.set_base_color_texture(texture)
 
 
-    def load_scene_hook(self, scene: ManiSkillScene, manipulation_object: Optional[Actor], table: Optional[Actor], receiving_object: Optional[Actor]):
+    def load_scene_hook(self, scene: ManiSkillScene, manipulation_object: Optional[Actor], table: Optional[Actor], receiving_object: Actor | None = None):
         """
         This function is called when the scene is loaded.
         Args:
@@ -256,7 +256,7 @@ class DistractionSet:
             self.set_color_or_texture(receiving_object, self.RO_color_cfg, self.RO_texture_cfg, self.RO_color_enabled(), self.RO_texture_enabled())
 
 
-    def initialize_episode_hook(self, n_envs: int, mo_pose: torch.Tensor, ro_pose: torch.Tensor):
+    def initialize_episode_hook(self, n_envs: int, mo_pose: torch.Tensor, ro_pose: torch.Tensor | None = None):
         assert mo_pose.shape[0] == n_envs
         assert mo_pose.shape[1] >= 2, f"mo_pose must have at least 2 dimensions, got {mo_pose.shape[1]}"
         if ro_pose is not None:

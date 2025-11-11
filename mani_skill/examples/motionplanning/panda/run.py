@@ -28,37 +28,35 @@ MP_SOLUTIONS = {
     "PullCube-v1": solvePullCube,
     "DrawSVG-v1" : solveDrawSVG,
     # 
-
     # New tasks:
     "RaiseCube-v1": solveRaiseCube,
-    "LiftPegUpright-v2": solveLiftPegUpright,
     "OpenDrawer-v1": solveOpenDrawer,               # new
-    "PlaceSphere-v2": solvePlaceSphere,             # new  
-    "PickCube-v2": solvePickCube,                   # new
-    "PickCube-v3": solvePickCube,                   # new
-    "PickCube-v4": solvePickCube,                   # new
-    "PickCube-v3-VisibleSphere": solvePickCube,     # new
-    "StackCube-v2": solveStackCube,                 # new
-    # "PlugCharger-v2": solvePlugCharger,             # new
     "PushCube-v2": solvePushCube,                   # new
-    "PullCube-v2": solvePullCube,                   # new
-    # "PullCubeTool-v2": solvePullCubeTool,           # new
-    "PegInsertionSide-v2": solvePegInsertionSide,   # new
+    "StackCube-v2": solveStackCube,                 # new
 }
 
 """
+# New Colosseum V2 Tasks
+ENV_ID=OpenDrawer-v1
+ENV_ID=PushCube-v2
+ENV_ID=StackCube-v2
 ENV_ID=RaiseCube-v1
+
+DISTRACTION_SET=all
+# ^ Must be one of: none, all, distractor_object_cfg, MO_color_cfg, MO_texture_cfg, RO_color_cfg, RO_texture_cfg, table_color_cfg, table_texture_cfg, camera_pose_cfg
 
 python mani_skill/examples/motionplanning/panda/run.py \
     --camera-width 640 --camera-height 480 \
     --env-id ${ENV_ID} \
     --num-traj 10 \
-    --distraction-set "none" \
+    --distraction-set ${DISTRACTION_SET} \
     --num-procs 1 \
     --reward-mode "none" \
     --random-seed \
     --vis
 
+
+# Or, simply spawn the environment and send random actions:
 python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 """
 

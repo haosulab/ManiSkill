@@ -1,7 +1,7 @@
 import numpy as np
 import sapien
 
-from mani_skill.envs.tasks.coloseum_v2 import RaiseCubeEnv
+from mani_skill.envs.tasks.tabletop.colosseum_v2_versions.raise_cube import RaiseCubeEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
 from mani_skill.examples.motionplanning.base_motionplanner.utils import compute_grasp_info_by_obb, get_actor_obb
 
@@ -50,7 +50,7 @@ def solve(env: RaiseCubeEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
-    target_pose = reach_pose * sapien.Pose([0, 0, -0.2])
+    target_pose = reach_pose * sapien.Pose([0, 0, -env.GOAL_HEIGHT - 0.025])
     goal_pose = sapien.Pose(target_pose.p, grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
 

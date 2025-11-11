@@ -19,7 +19,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_human_render_camera_config, REALSENSE_DEPTH_FOV_VERTICAL_RAD, SHADER
+from mani_skill.envs.tasks.tabletop.colosseum_v2_versions.colosseum_v2_env_utils import get_human_render_camera_config, REALSENSE_DEPTH_FOV_VERTICAL_RAD, SHADER
 from mani_skill.envs.distraction_set import DistractionSet
 
 CABINET_COLLISION_BIT = 29
@@ -75,6 +75,7 @@ class OpenDrawerV1Env(BaseEnv):
     ):
         assert "camera_width" in kwargs and "camera_height" in kwargs, "camera_width and camera_height must be provided"
         assert "distraction_set" in kwargs, "distraction_set must be provided"
+        self._human_render_shader = kwargs.pop("human_render_shader", None)
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
         self._distraction_set = kwargs.pop("distraction_set")
@@ -96,7 +97,6 @@ class OpenDrawerV1Env(BaseEnv):
             robot_uids=robot_uids,
             **kwargs,
         )
-        self._human_render_shader = kwargs.pop("human_render_shader", None)
 
     @property
     def _default_human_render_camera_configs(self):
@@ -155,6 +155,7 @@ class OpenDrawerV1Env(BaseEnv):
         sapien.set_log_level("off")
         self._load_cabinets(self.handle_types)
         sapien.set_log_level("warn")
+        self._hidden_objects.append(self.handle_link_goal)
 
 
     def _load_cabinets(self, joint_types: List[str]):

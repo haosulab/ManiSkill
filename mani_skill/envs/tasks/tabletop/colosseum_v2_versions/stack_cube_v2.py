@@ -14,7 +14,7 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.envs.distraction_set import DistractionSet
 
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
+from mani_skill.envs.tasks.tabletop.colosseum_v2_versions.colosseum_v2_env_utils import get_camera_configs, get_human_render_camera_config
 
 @register_env("StackCube-v2", max_episode_steps=50)
 class StackCubeV2Env(StackCubeEnv):

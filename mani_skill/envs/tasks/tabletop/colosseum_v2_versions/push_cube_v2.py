@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import sapien
@@ -15,32 +15,37 @@ from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.building import actors
 from mani_skill.envs.distraction_set import DistractionSet
+from mani_skill.envs.tasks.tabletop.push_cube import PushCubeEnv
+from mani_skill.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
+from mani_skill.utils.registration import register_env
+from mani_skill.envs.tasks.tabletop.colosseum_v2_versions.colosseum_v2_env_utils import get_camera_configs, get_human_render_camera_config
 
-from mani_skill.envs.tasks.tabletop.get_camera_config import get_camera_configs, get_human_render_camera_config
-
-@register_env("PullCube-v2", max_episode_steps=50)
-class PullCubeV2Env(PullCubeEnv):
+@register_env("PushCube-v2", max_episode_steps=50)
+class PushCubeV2Env(PushCubeEnv):
     """
     **Task Description:**
-    Nearly exacty copy of PullCubeEnv, but with 3 cameras instead of 1.
+    Nearly exacty copy of PushCubeEnv, but with 3 cameras instead of 1.
 
+    
     Notes:
      - Cube spawns in x: [-0.1, 0.1], y: [-0.1, 0.1]
-     - Goal region is cube-position - [0.1 + goal_radius (=0.1), 0, 0]
+     - Goal region is cube-position + [0.1 + goal_radius (=0.1), 0, 0]
 
-     -> min workspace size should be x: [-0.3, 0.1], y: [-0.1, 0.1]
-     -> x-mid = -0.1, y-mid = 0.0
+     -> min workspace size should be x: [-0.1, 0.3], y: [-0.1, 0.1]
+     -> x-mid = 0.1, y-mid = 0.0
+
     """
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
+        assert "camera_width" in kwargs, "camera_width must be provided"
+        assert "camera_height" in kwargs, "camera_height must be provided"
         self._camera_width = kwargs.pop("camera_width")
         self._camera_height = kwargs.pop("camera_height")
-        self._distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
-        # In this situation, the DistractionSet has serialized as a dict so we now need to deserialize it.
-        if isinstance(self._distraction_set, dict):
-            self._distraction_set = DistractionSet(**self._distraction_set)
+        distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
+        self._distraction_set: DistractionSet = DistractionSet(**distraction_set) if isinstance(distraction_set, dict) else distraction_set
         self._human_render_shader = kwargs.pop("human_render_shader", None)
-
         super().__init__(*args, robot_uids=robot_uids, robot_init_qpos_noise=robot_init_qpos_noise, **kwargs)
+
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -50,7 +55,6 @@ class PullCubeV2Env(PullCubeEnv):
             for ts in self._table_scenes:
                 ts.initialize(env_idx)
 
-            # self.table_scene.initialize(env_idx)
             xyz = torch.zeros((b, 3))
             xyz[..., :2] = torch.rand((b, 2)) * 0.2 - 0.1
             xyz[..., 2] = self.cube_half_size
@@ -59,7 +63,11 @@ class PullCubeV2Env(PullCubeEnv):
             obj_pose = Pose.create_from_pq(p=xyz, q=q)
             self.obj.set_pose(obj_pose)
 
-            target_region_xyz = xyz - torch.tensor([0.1 + self.goal_radius, 0, 0])
+            # Goal region
+            # here we set the location of that red/white target (the goal region). In particular here, we set the position to be in front of the cube
+            # and we further rotate 90 degrees on the y-axis to make the target object face up
+            target_region_xyz = xyz + torch.tensor([0.1 + self.goal_radius, 0, 0])
+            # set a little bit above 0 so the target is sitting on the table
             target_region_xyz[..., 2] = 1e-3
             self.goal_region.set_pose(
                 Pose.create_from_pq(
@@ -67,6 +75,8 @@ class PullCubeV2Env(PullCubeEnv):
                     q=euler2quat(0, np.pi / 2, 0),
                 )
             )
+
+            # 
             self._distraction_set.initialize_episode_hook(b, mo_pose=xyz)
 
 
@@ -109,10 +119,10 @@ class PullCubeV2Env(PullCubeEnv):
             name="goal_region",
             add_collision=False,
             body_type="kinematic",
-            initial_pose=sapien.Pose()
+            initial_pose=sapien.Pose(p=[0, 0, 1e-3]),
         )
-        self._distraction_set.load_scene_hook(self.scene, manipulation_object=self.obj, table=self.table_scene)
-
+        # load_scene_hook(self, scene: ManiSkillScene, manipulation_object: Optional[Actor], table: Optional[Actor], receiving_object: Optional[Actor])
+        self._distraction_set.load_scene_hook(scene=self.scene, manipulation_object=self.obj, table=self.table_scene)
 
 
     @property
@@ -123,7 +133,7 @@ class PullCubeV2Env(PullCubeEnv):
     @property
     def _default_sensor_configs(self):
         SHADER = "default"
-        target=[-0.1, 0, -0.1]
+        target=(0.1, 0, -0.1)
         eye_xy = 0.35
         eye_z = 0.45
         cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)

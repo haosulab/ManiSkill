@@ -9,4 +9,3 @@ from .mobile_manipulation import *
 from .quadruped import *
 from .rotate_cube import RotateCubeEnv
 from .tabletop import *
-from .coloseum_v2 import *
