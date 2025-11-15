@@ -197,6 +197,7 @@ def initialize_data_sources():
         source_type="robot",
         url="https://github.com/Vector-Wangel/ManiSkill-XLeRobot/archive/refs/tags/v0.2.1.zip",
         target_path="robots/xlerobot",
+    )
     DATA_SOURCES["oakink-v2"] = DataSource(
         source_type="task_assets",
         url="https://huggingface.co/datasets/haosulab/OakInk-v2/resolve/main/object_repair.zip",
