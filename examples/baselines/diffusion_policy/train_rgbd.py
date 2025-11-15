@@ -221,14 +221,15 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
                 pad_obs_seq = torch.stack([obs_seq[k][0]] * abs(start), dim=0)
                 obs_seq[k] = torch.cat((pad_obs_seq, obs_seq[k]), dim=0)
             # don't need to pad obs after the trajectory, see the above char drawing
-
-        act_seq = self.trajectories["actions"][traj_idx][max(0, start) : end]
-        if start < 0:  # pad before the trajectory
-            act_seq = torch.cat([act_seq[0].repeat(-start, 1), act_seq], dim=0)
-        if end > L:  # pad after the trajectory
-            gripper_action = act_seq[-1, -1]  # assume gripper is with pos controller
+        start_act = start + self.obs_horizon - 1 # start first action with the last obs
+        end_act   = start_act + self.pred_horizon
+        act_seq = self.trajectories['actions'][traj_idx][max(0, start_act):min(end_act, L)]
+        if start_act < 0:
+            act_seq = torch.cat([act_seq[0].repeat(-start_act, 1), act_seq], dim=0)
+        if end_act > L: # pad after the trajectory
+            gripper_action = act_seq[-1, -1]
             pad_action = torch.cat((self.pad_action_arm, gripper_action[None]), dim=0)
-            act_seq = torch.cat([act_seq, pad_action.repeat(end - L, 1)], dim=0)
+            act_seq = torch.cat([act_seq, pad_action.repeat(end_act-L, 1)], dim=0)
             # making the robot (arm and gripper) stay still
         assert (
             obs_seq["state"].shape[0] == self.obs_horizon
