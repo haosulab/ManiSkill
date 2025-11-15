@@ -26,3 +26,4 @@ from .widowx import *
 from .widowxai import *
 from .xarm import XArm7Ability
 from .xarm6 import *
+from .xlerobot import *
