@@ -2,7 +2,6 @@ import json
 import os.path as osp
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
 
 from mani_skill import ASSET_DIR
 
@@ -143,7 +142,7 @@ def load_ai2thor_metadata():
 
 
 # This maps a scene set e.g. ProcTHOR to an adapter, metadata, and where the scenes are saved to. The adapter is a class that can load the scene set
-SCENE_SOURCE_TO_DATASET: Dict[str, SceneDataset] = {
+SCENE_SOURCE_TO_DATASET: dict[str, SceneDataset] = {
     "ProcTHOR": SceneDataset(
         metadata_path="ProcTHOR.json",
         dataset_path=osp.join(

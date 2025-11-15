@@ -9,7 +9,7 @@ import os.path as osp
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Tuple, Union
 
 import numpy as np
 import sapien
@@ -42,7 +42,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
     builds_lighting = True  # we set this true because the ReplicaCAD dataset defines some lighting for us so we don't need the default option from ManiSkill
 
     # build configs for RCAD are string file names
-    build_configs: List[str] = None
+    build_configs: list[str] = None
 
     def __init__(self, env, robot_init_qpos_noise=0.02, include_staging_scenes=False):
         super().__init__(env, robot_init_qpos_noise=robot_init_qpos_noise)
@@ -60,9 +60,9 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         # cache navigable positions from files
         # assumes navigable position files saved
         self._navigable_positions = [None] * len(self.build_configs)
-        self.build_config_idxs: List[int] = None
+        self.build_config_idxs: list[int] = None
 
-    def build(self, build_config_idxs: Union[int, List[int]]):
+    def build(self, build_config_idxs: Union[int, list[int]]):
         # build_config_idxs is a list of integers, where the ith value is the scene idx for the ith parallel env
         if isinstance(build_config_idxs, int):
             build_config_idxs = [build_config_idxs] * self.env.num_envs
@@ -74,10 +74,10 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         # Keep track of movable and static objects, build_config_idxs for envs, and poses
         self.build_config_idxs = build_config_idxs
-        self.scene_objects: Dict[str, Actor] = dict()
-        self.movable_objects: Dict[str, Actor] = dict()
-        self.articulations: Dict[str, Articulation] = dict()
-        self._default_object_poses: List[Tuple[Actor, sapien.Pose]] = []
+        self.scene_objects: dict[str, Actor] = dict()
+        self.movable_objects: dict[str, Actor] = dict()
+        self.articulations: dict[str, Articulation] = dict()
+        self._default_object_poses: list[Tuple[Actor, sapien.Pose]] = []
 
         # keep track of background objects separately as we need to disable mobile robot collisions
         # note that we will create a merged actor using these objects to represent the bg
@@ -235,12 +235,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # for now classify articulated objects as "movable" object
                 for env_num in env_idx:
-                    self.articulations[f"env-{env_num}_{articulation_name}"] = (
-                        articulation
-                    )
-                    self.scene_objects[f"env-{env_num}_{articulation_name}"] = (
-                        articulation
-                    )
+                    self.articulations[
+                        f"env-{env_num}_{articulation_name}"
+                    ] = articulation
+                    self.scene_objects[
+                        f"env-{env_num}_{articulation_name}"
+                    ] = articulation
 
                 for link in articulation.links:
                     link.set_collision_group_bit(
@@ -335,7 +335,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             )
 
     @property
-    def navigable_positions(self) -> List[trimesh.Trimesh]:
+    def navigable_positions(self) -> list[trimesh.Trimesh]:
         return [self._navigable_positions[bci] for bci in self.build_config_idxs]
 
     @cached_property

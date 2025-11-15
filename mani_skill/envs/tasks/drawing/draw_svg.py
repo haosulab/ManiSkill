@@ -1,9 +1,9 @@
-from typing import Dict
-
-import mani_skill.envs.utils.randomization as randomization
 import numpy as np
 import sapien
 import torch
+from transforms3d.euler import euler2quat
+
+import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
@@ -14,7 +14,6 @@ from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from transforms3d.euler import euler2quat
 
 
 @register_env("DrawSVG-v1", max_episode_steps=500)
@@ -22,17 +21,16 @@ class DrawSVGEnv(BaseEnv):
     r"""
     **Task Description:**
     Instantiates a table with a white canvas on it and a svg path specified with an outline. A robot with a stick is to draw the triangle with a red line.
-    
+
     **Randomizations:**
     - the goal svg's position on the xy-plane is randomized
     - the goal svg's z-rotation is randomized in range [0, 2 $\pi$]
-    
+
     **Success Conditions:**
     - the drawn points by the robot are within a euclidean distance of 0.05m with points on the goal svg
     """
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/DrawSVG-v1_rt.mp4"
-
 
     MAX_DOTS = 1000
     """
@@ -340,7 +338,7 @@ class DrawSVGEnv(BaseEnv):
         out = self.success_check()
         return {"success": out}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )

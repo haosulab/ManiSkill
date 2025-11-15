@@ -4,7 +4,7 @@ Asset sources and tooling for managing the assets
 
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Optional
 
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.utils import io_utils
@@ -27,9 +27,9 @@ class DataSource:
     output_dir: str = ASSET_DIR
 
 
-DATA_SOURCES: Dict[str, DataSource] = {}
+DATA_SOURCES: dict[str, DataSource] = {}
 """Data sources map data source IDs to their respective DataSource objects which contain info on what the data is and where to download it"""
-DATA_GROUPS: Dict[str, List[str]] = {}
+DATA_GROUPS: dict[str, list[str]] = {}
 """Data groups map group ids (typically environment IDs) to a list of data source/group IDs for easy group management. data groups can be done hierarchicaly"""
 
 
@@ -197,6 +197,10 @@ def initialize_data_sources():
         source_type="robot",
         url="https://github.com/Vector-Wangel/ManiSkill-XLeRobot/archive/refs/tags/v0.2.1.zip",
         target_path="robots/xlerobot",
+    DATA_SOURCES["oakink-v2"] = DataSource(
+        source_type="task_assets",
+        url="https://huggingface.co/datasets/haosulab/OakInk-v2/resolve/main/object_repair.zip",
+        target_path="tasks/oakink-v2",
     )
 
 

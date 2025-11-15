@@ -1,6 +1,6 @@
 import copy
 import os
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import sapien
@@ -65,7 +65,7 @@ class HumanoidPickPlaceEnv(BaseEnv):
             "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         return dict()
 
 
@@ -100,7 +100,7 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
             100,
         )
 
-    def _load_scene(self, options: Dict):
+    def _load_scene(self, options: dict):
         super()._load_scene(options)
         scale = self.kitchen_scene_scale
         builder = self.scene.create_actor_builder()
@@ -149,7 +149,7 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
             "is_grasped": is_grasped,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
         obs = dict(
             is_grasped=info["is_grasped"],
@@ -168,7 +168,7 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
         """a dense reward that rewards the agent for opening their hand"""
         return 1 - torch.tanh(self.agent.right_hand_dist_to_open_grasp())
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         tcp_to_obj_dist = torch.linalg.norm(
             self.apple.pose.p - self.agent.right_tcp.pose.p, axis=1
         )
@@ -201,7 +201,7 @@ class HumanoidPlaceAppleInBowl(HumanoidPickPlaceEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 10
 
@@ -254,7 +254,7 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
             scene_config=SceneConfig(contact_offset=0.01),
         )
 
-    def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         super()._initialize_episode(env_idx, options)
         with torch.device(self.device):
             b = len(env_idx)

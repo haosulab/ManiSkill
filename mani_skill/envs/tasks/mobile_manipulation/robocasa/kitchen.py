@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Dict
 
 import numpy as np
 import sapien
@@ -55,7 +54,7 @@ class RoboCasaKitchenEnv(BaseEnv):
             overrides the default gripper. Should either be single str if same gripper type is to be used for all
             robots or else it should be a list of the same length as "robots" param
 
-        initialization_noise (dict or list of dict): Dict containing the initialization noise parameters.
+        initialization_noise (dict or list of dict): dict containing the initialization noise parameters.
             The expected keys and corresponding value types are specified below:
 
             :`'magnitude'`: The scale factor of uni-variate random noise applied to each of a robot's given initial
@@ -456,7 +455,7 @@ class RoboCasaKitchenEnv(BaseEnv):
     def evaluate(self):
         return {}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         return dict()
 
     """

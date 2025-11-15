@@ -1,5 +1,5 @@
 import time
-from typing import Any, List, Optional, Type, Union
+from typing import Any, Optional, Type, Union
 
 import gymnasium as gym
 import numpy as np
@@ -52,7 +52,7 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
     def base_env(self) -> BaseEnv:
         return self._env.unwrapped
 
-    def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
+    def seed(self, seed: Optional[int] = None) -> list[Union[None, int]]:
         self._last_seed = seed
 
     def reset(self) -> VecEnvObs:
@@ -113,7 +113,7 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
     def close(self) -> None:
         return self._env.close()
 
-    def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> List[Any]:
+    def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> list[Any]:
         return self._env.get_attr(attr_name, indices)
 
     def set_attr(
@@ -127,12 +127,12 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
         *method_args,
         indices: VecEnvIndices = None,
         **method_kwargs
-    ) -> List[Any]:
+    ) -> list[Any]:
         return self._env.env_method(
             method_name, *method_args, indices=indices, **method_kwargs
         )
 
     def env_is_wrapped(
         self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None
-    ) -> List[bool]:
+    ) -> list[bool]:
         return [False] * self.num_envs

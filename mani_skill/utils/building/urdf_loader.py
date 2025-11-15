@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from sapien.render import RenderCameraComponent
 from sapien.wrapper.urdf_loader import URDFLoader as SapienURDFLoader
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
 
 class ParsedURDFData(TypedDict):
-    articulation_builders: List[ArticulationBuilder]
-    actor_builders: List[ActorBuilder]
-    cameras: List[Any]
+    articulation_builders: list[ArticulationBuilder]
+    actor_builders: list[ActorBuilder]
+    cameras: list[Any]
 
 
 class URDFLoader(SapienURDFLoader):
@@ -83,13 +83,13 @@ class URDFLoader(SapienURDFLoader):
                 "URDF contains multiple objects, call load_multiple instead"
             )
 
-        articulations: List[Articulation] = []
+        articulations: list[Articulation] = []
         for b in articulation_builders:
             b.set_scene_idxs(scene_idxs)
             b.disable_self_collisions = self.disable_self_collisions
             articulations.append(b.build())
 
-        actors: List[Actor] = []
+        actors: list[Actor] = []
         for b in actor_builders:
             actors.append(b.build())
 

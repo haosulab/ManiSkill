@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Union
+from typing import Union
 
 import cv2
 import torch
@@ -39,15 +39,15 @@ class BaseDigitalTwinEnv(BaseEnv):
     Use `self.remove_object_from_greenscreen(object: Actor | Link | Articulation)` to exclude those objects from the greenscreen process.
     """
 
-    rgb_overlay_paths: Dict[str, str] = None
+    rgb_overlay_paths: dict[str, str] = None
     """dict mapping camera name to the file path of the greenscreening image"""
-    _rgb_overlay_images: Dict[str, torch.Tensor] = dict()
+    _rgb_overlay_images: dict[str, torch.Tensor] = dict()
     """dict mapping camera name to the image torch tensor"""
     rgb_overlay_mode: str = "background"
     """which RGB overlay mode to use during the greenscreen process. The default is 'background' which enables greenscreening like normal. The other option is 'debug' mode which
     will make the opacity of the original render and greenscreen overlay both 50%. The third option is "none" which will not perform any greenscreening."""
 
-    _objects_to_remove_from_greenscreen: List[Union[Actor, Link]] = []
+    _objects_to_remove_from_greenscreen: list[Union[Actor, Link]] = []
     """list of articulations/actors/links that should be removed from the greenscreen process"""
     _segmentation_ids_to_keep: torch.Tensor = None
     """torch tensor of segmentation ids that reference the objects that should not be greenscreened"""

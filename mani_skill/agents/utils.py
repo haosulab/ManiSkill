@@ -1,6 +1,6 @@
 # TODO(jigu): Move to sapien_utils.py
 
-from typing import Dict, Sequence
+from typing import Sequence
 
 import numpy as np
 import sapien
@@ -25,7 +25,7 @@ def get_joints_by_names(articulation: Articulation, joint_names: Sequence[str]):
     return [joints[idx] for idx in joint_indices]
 
 
-def flatten_action_spaces(action_spaces: Dict[str, spaces.Space]):
+def flatten_action_spaces(action_spaces: dict[str, spaces.Space]):
     """Flat multiple Box action spaces into a single Box space."""
     action_dims = []
     low = []

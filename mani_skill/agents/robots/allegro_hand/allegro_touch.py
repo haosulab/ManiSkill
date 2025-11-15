@@ -1,5 +1,5 @@
 import itertools
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import sapien
@@ -45,7 +45,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
         super().__init__(*args, **kwargs)
 
-        self.pair_query: Dict[
+        self.pair_query: dict[
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int, int, int]]
         ] = dict()
         self.body_query: Optional[
@@ -54,7 +54,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def _after_init(self):
         super()._after_init()
-        self.fsr_links: List[Actor] = sapien_utils.get_objs_by_names(
+        self.fsr_links: list[Actor] = sapien_utils.get_objs_by_names(
             self.robot.get_links(),
             self.palm_fsr_link_names + self.finger_fsr_link_names,
         )

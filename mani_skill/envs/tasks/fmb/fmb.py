@@ -1,5 +1,4 @@
 import os.path as osp
-from typing import Dict
 
 import numpy as np
 import sapien
@@ -178,7 +177,7 @@ class FMBAssembly1Env(BaseEnv):
         )
         return {"success": bridge_placed}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self.obs_mode_struct.use_state:
             obs.update(

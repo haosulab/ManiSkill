@@ -1,5 +1,3 @@
-from typing import Dict
-
 import numpy as np
 import sapien
 import torch
@@ -47,5 +45,5 @@ class EmptyEnv(BaseEnv):
     def evaluate(self):
         return {}
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         return dict()

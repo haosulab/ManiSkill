@@ -1,5 +1,5 @@
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -37,7 +37,7 @@ class Sim2RealEnv(gym.Env):
                     self.agent.reset(qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten())
                     input("Press enter if the environment is reset")
 
-        sensor_data_preprocessing_function (Optional[Callable[[Dict], Dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function.
+        sensor_data_preprocessing_function (Optional[Callable[[dict], dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function.
             By default this is None and we use a default processing function which does the following for each sensor type:
             - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
 
@@ -56,7 +56,7 @@ class Sim2RealEnv(gym.Env):
         real_reset_function: Optional[
             Callable[["Sim2RealEnv", Optional[int], Optional[dict]], None]
         ] = None,
-        sensor_data_preprocessing_function: Optional[Callable[[Dict], Dict]] = None,
+        sensor_data_preprocessing_function: Optional[Callable[[dict], dict]] = None,
         render_mode: Optional[str] = "sensors",
         skip_data_checks: bool = False,
         control_freq: Optional[int] = None,
@@ -122,7 +122,7 @@ class Sim2RealEnv(gym.Env):
                 return self
 
         cur_env = self.sim_env
-        wrappers: List[gym.Wrapper] = []
+        wrappers: list[gym.Wrapper] = []
         while isinstance(cur_env, gym.Wrapper):
             wrappers.append(cur_env)
             cur_env = cur_env.env
@@ -232,7 +232,7 @@ class Sim2RealEnv(gym.Env):
         # using the original user implemented sim env's _get_obs_agent function in case they modify it e.g. to remove qvel values as they might be too noisy
         return self.base_sim_env.__class__._get_obs_agent(self)
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         # using the original user implemented sim env's _get_obs_extra function in case they modify it e.g. to include engineered features like the tcp_pose of the robot
         try:
             return self.base_sim_env.__class__._get_obs_extra(self, info)
@@ -259,7 +259,7 @@ class Sim2RealEnv(gym.Env):
         return data
 
     def _get_obs_with_sensor_data(
-        self, info: Dict, apply_texture_transforms: bool = True
+        self, info: dict, apply_texture_transforms: bool = True
     ) -> dict:
         """Get the observation with sensor data"""
         return self.base_sim_env.__class__._get_obs_with_sensor_data(
@@ -298,7 +298,7 @@ class Sim2RealEnv(gym.Env):
     def get_reward(self, obs, action, info):
         return self.base_sim_env.__class__.get_reward(self, obs, action, info)
 
-    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_sparse_reward(self, obs: Any, action: torch.Tensor, info: dict):
         """
         Computes the sparse reward. By default this function tries to use the success/fail information in
         returned by the evaluate function and gives +1 if success, -1 if fail, 0 otherwise"""
@@ -306,11 +306,11 @@ class Sim2RealEnv(gym.Env):
             self, obs, action, info
         )
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         raise NotImplementedError()
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         raise NotImplementedError()
 
@@ -347,7 +347,7 @@ class Sim2RealEnv(gym.Env):
         self.agent.stop()
 
     def preprocess_sensor_data(
-        self, sensor_data: Dict, sensor_names: Optional[List[str]] = None
+        self, sensor_data: dict, sensor_names: Optional[list[str]] = None
     ):
         import cv2
 

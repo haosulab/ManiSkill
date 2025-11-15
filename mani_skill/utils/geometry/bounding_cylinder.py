@@ -6,13 +6,13 @@ https://www.nayuki.io/page/smallest-enclosing-circle
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
 
 def _compute_smallest_circle(
-    points: List[Tuple[float, float]]
+    points: list[Tuple[float, float]]
 ) -> Optional[Tuple[float, float, float]]:
     points = [(float(x), float(y)) for x, y in points]
     np.random.shuffle(points)
@@ -25,7 +25,7 @@ def _compute_smallest_circle(
 
 
 def _compute_circle_with_point(
-    points: List[Tuple[float, float]], p: Tuple[float, float]
+    points: list[Tuple[float, float]], p: Tuple[float, float]
 ) -> Tuple[float, float, float]:
     circle = (p[0], p[1], 0.0)
     for i, q in enumerate(points):
@@ -38,7 +38,7 @@ def _compute_circle_with_point(
 
 
 def _compute_circle_with_two_points(
-    points: List[Tuple[float, float]], p: Tuple[float, float], q: Tuple[float, float]
+    points: list[Tuple[float, float]], p: Tuple[float, float], q: Tuple[float, float]
 ) -> Tuple[float, float, float]:
     circle = _get_circle_from_diameter(p, q)
     left = right = None

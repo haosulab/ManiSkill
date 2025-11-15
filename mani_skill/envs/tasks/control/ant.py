@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import sapien
@@ -152,7 +152,7 @@ class AntEnv(BaseEnv):
             link.name for link in self.active_links if "foot" in link.name
         ]
 
-    def _initialize_episode(self, env_idx: torch.Tensor, options: Dict):
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
             # set agent root pose - torso now centered at dummy root at (0,0,0)
@@ -235,7 +235,7 @@ class AntEnv(BaseEnv):
         )
 
     # cache re-used computation
-    def evaluate(self) -> Dict:
+    def evaluate(self) -> dict:
         link_angvels, link_linvels, cmass_linvel = self.get_vels
         return dict(
             link_angvels=link_angvels,
@@ -243,7 +243,7 @@ class AntEnv(BaseEnv):
             cmass_linvel=cmass_linvel,
         )
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = super()._get_obs_extra(info)
         if self.obs_mode_struct.use_state:
             obs.update(
@@ -282,14 +282,14 @@ class AntEnv(BaseEnv):
             .view(-1)
         )
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         small_control = (4 + self.control_rew(action)) / 5
         return (
             small_control * self.move_x_rew(info, self.move_speed) * self.standing_rew()
         )
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         return self.compute_dense_reward(obs, action, info)
 

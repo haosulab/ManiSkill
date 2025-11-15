@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import dacite
 import gymnasium as gym
@@ -66,7 +66,9 @@ class CachedResetWrapper(gym.Wrapper):
             self._cached_resets_obs_buffer = []
             while self._num_cached_resets < self.cached_resets_config.num_resets:
                 obs, _ = self.env.reset(
-                    seed=self.cached_resets_config.seed if self._num_cached_resets == 0 else None,
+                    seed=self.cached_resets_config.seed
+                    if self._num_cached_resets == 0
+                    else None,
                     options=dict(
                         env_idx=torch.arange(
                             0,
@@ -125,7 +127,7 @@ class CachedResetWrapper(gym.Wrapper):
     def reset(
         self,
         *args,
-        seed: Optional[Union[int, List[int]]] = None,
+        seed: Optional[Union[int, list[int]]] = None,
         options: Optional[dict] = None,
         **kwargs
     ):

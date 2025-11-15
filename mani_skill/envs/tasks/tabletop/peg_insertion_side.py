@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -286,7 +286,7 @@ class PegInsertionSideEnv(BaseEnv):
         success, peg_head_pos_at_hole = self.has_peg_inserted()
         return dict(success=success, peg_head_pos_at_hole=peg_head_pos_at_hole)
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if self.obs_mode_struct.use_state:
             obs.update(
@@ -297,7 +297,7 @@ class PegInsertionSideEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         # Stage 1: Encourage gripper to be rotated to be lined up with the peg
 
         # Stage 2: Encourage gripper to move close to peg tail and grasp it
@@ -355,6 +355,6 @@ class PegInsertionSideEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         return self.compute_dense_reward(obs, action, info) / 10
