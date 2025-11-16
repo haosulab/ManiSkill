@@ -1,16 +1,19 @@
 from copy import deepcopy
+from typing import cast
 
 import numpy as np
 import sapien.core as sapien
 import torch
 
-from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
+from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
+from mani_skill.agents.controllers.pd_joint_pos import MimicConfig
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils.structs.link import Link
 
 
 @register_agent(asset_download_ids=["xarm6"])
@@ -143,7 +146,7 @@ class XArm6Robotiq(BaseAgent):
             force_limit=self.arm_force_limit,
             friction=self.arm_friction,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
@@ -156,18 +159,18 @@ class XArm6Robotiq(BaseAgent):
             force_limit=self.arm_force_limit,
             friction=self.arm_friction,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
-            pos_lower=None,
-            pos_upper=None,
+            pos_lower=-np.inf,
+            pos_upper=np.inf,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             friction=self.arm_friction,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
             use_delta=False,
             normalize_action=False,
         )
@@ -232,7 +235,9 @@ class XArm6Robotiq(BaseAgent):
 
         # Use a mimic controller config to define one action to control both fingers
         mimic_config = dict(
-            left_outer_knuckle_joint=dict(joint="right_outer_knuckle_joint", multiplier=1.0, offset=0.0),
+            left_outer_knuckle_joint=MimicConfig(
+                joint="right_outer_knuckle_joint", multiplier=1.0, offset=0.0
+            ),
         )
         finger_mimic_pd_joint_pos = PDJointPosMimicControllerConfig(
             finger_joint_names,
@@ -324,8 +329,8 @@ class XArm6Robotiq(BaseAgent):
     def _after_loading_articulation(self):
         outer_finger = self.robot.active_joints_map["right_inner_finger_joint"]
         inner_knuckle = self.robot.active_joints_map["right_inner_knuckle_joint"]
-        pad = outer_finger.get_child_link()
-        lif = inner_knuckle.get_child_link()
+        pad = cast(Link, outer_finger.get_child_link())
+        lif = cast(Link, inner_knuckle.get_child_link())
 
         # the next 4 magic arrays come from https://github.com/haosulab/cvpr-tutorial-2022/blob/master/debug/robotiq.py which was
         # used to precompute these poses for drive creation
@@ -343,8 +348,8 @@ class XArm6Robotiq(BaseAgent):
 
         outer_finger = self.robot.active_joints_map["left_inner_finger_joint"]
         inner_knuckle = self.robot.active_joints_map["left_inner_knuckle_joint"]
-        pad = outer_finger.get_child_link()
-        lif = inner_knuckle.get_child_link()
+        pad = cast(Link, outer_finger.get_child_link())
+        lif = cast(Link, inner_knuckle.get_child_link())
 
         left_drive = self.scene.create_drive(
             lif, sapien.Pose(p_f_left), pad, sapien.Pose(p_p_left)
@@ -376,15 +381,9 @@ class XArm6Robotiq(BaseAgent):
             link.set_collision_group_bit(group=2, bit_idx=31, bit=1)
 
     def _after_init(self):
-        self.finger1_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "left_inner_finger_pad"
-        )
-        self.finger2_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "right_inner_finger_pad"
-        )
-        self.tcp = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
+        self.finger1_link = self.robot.links_map["left_inner_finger_pad"]
+        self.finger2_link = self.robot.links_map["right_inner_finger_pad"]
+        self.tcp = self.robot.links_map[self.ee_link_name]
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         l_contact_forces = self.scene.get_pairwise_contact_forces(

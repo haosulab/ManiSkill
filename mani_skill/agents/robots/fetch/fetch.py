@@ -1,9 +1,7 @@
 from copy import deepcopy
-from typing import Tuple
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
@@ -11,11 +9,10 @@ from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
-from mani_skill.utils.structs.types import Array
 
 FETCH_WHEELS_COLLISION_BIT = 30
 """Collision bit of the fetch robot wheel links"""
@@ -172,10 +169,6 @@ class Fetch(BaseAgent):
         arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
         arm_pd_ee_target_delta_pose.use_target = True
 
-        # PD ee position (for human-interaction/teleoperation)
-        arm_pd_ee_delta_pose_align = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_delta_pose_align.frame = "ee_align"
-
         # PD joint velocity
         arm_pd_joint_vel = PDJointVelControllerConfig(
             self.arm_joint_names,
@@ -280,12 +273,6 @@ class Fetch(BaseAgent):
                 body=body_pd_joint_delta_pos,
                 base=base_pd_joint_vel,
             ),
-            pd_ee_delta_pose_align=dict(
-                arm=arm_pd_ee_delta_pose_align,
-                gripper=gripper_pd_joint_pos,
-                body=body_pd_joint_delta_pos,
-                base=base_pd_joint_vel,
-            ),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(
                 arm=arm_pd_joint_target_delta_pos,
@@ -336,19 +323,11 @@ class Fetch(BaseAgent):
         return deepcopy_dict(controller_configs)
 
     def _after_init(self):
-        self.finger1_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "l_gripper_finger_link"
-        )
-        self.finger2_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "r_gripper_finger_link"
-        )
-        self.tcp: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
+        self.finger1_link = self.robot.links_map["l_gripper_finger_link"]
+        self.finger2_link = self.robot.links_map["r_gripper_finger_link"]
+        self.tcp = self.robot.links_map[self.ee_link_name]
 
-        self.base_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "base_link"
-        )
+        self.base_link = self.robot.links_map["base_link"]
         self.l_wheel_link: Link = self.robot.links_map["l_wheel_link"]
         self.r_wheel_link: Link = self.robot.links_map["r_wheel_link"]
         for link in [self.l_wheel_link, self.r_wheel_link]:
@@ -358,18 +337,8 @@ class Fetch(BaseAgent):
         self.base_link.set_collision_group_bit(
             group=2, bit_idx=FETCH_BASE_COLLISION_BIT, bit=1
         )
-
-        self.torso_lift_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "torso_lift_link"
-        )
-
-        self.head_camera_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "head_camera_link"
-        )
-
-        self.queries: dict[
-            str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
-        ] = dict()
+        self.torso_lift_link = self.robot.links_map["torso_lift_link"]
+        self.head_camera_link = self.robot.links_map["head_camera_link"]
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
@@ -421,7 +390,7 @@ class Fetch(BaseAgent):
         return sapien.Pose(T)
 
     @property
-    def tcp_pos(self) -> Pose:
+    def tcp_pos(self) -> torch.Tensor:
         return (self.finger1_link.pose.p + self.finger2_link.pose.p) / 2
 
     @property

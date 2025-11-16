@@ -37,7 +37,7 @@ class PDJointPosVelController(PDJointPosController):
             targets, self.joints, self.active_joint_indices
         )
 
-    def set_action(self, action: np.ndarray):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         nq = len(action[0]) // 2
 
