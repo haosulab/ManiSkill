@@ -175,13 +175,13 @@ To convert trajectories:
 ```bash
 # Basic conversion
 python -m mani_skill.trajectory.convert_to_lerobot \
-  path/to/trajectory.h5 \
-  path/to/converted/dataset \
+  --traj-path path/to/trajectory.h5 \
+  --output-dir path/to/converted/dataset
 
 # With custom settings
 python -m mani_skill.trajectory.convert_to_lerobot \
-  path/to/trajectory.h5 \
-  path/to/converted/dataset \
+  --traj-path path/to/trajectory.h5 \
+  --output-dir path/to/converted/dataset \
   --task-name "Pick up the red cube" \
   --fps 60 \
   --image-size 1280x720 \
@@ -198,7 +198,7 @@ python -m mani_skill.trajectory.convert_to_lerobot -h
 ```
 ╭─ options ────────────────────────────────────────────────────────────────────────────╮
 │ -h, --help              show this help message and exit                              │
-│ --input-file STR        Path to ManiSkill .h5 trajectory file (required)             │
+│ --traj-path STR         Path to ManiSkill .h5 trajectory file (required)             │
 │ --output-dir STR        Output directory for LeRobot dataset (required)              │
 │ --fps INT               Video FPS (default: 30)                                      │
 │ --task-name {None}|STR  Task description (default: auto-detected from metadata)      │

@@ -33,7 +33,7 @@ DEFAULT_CHUNKS_SIZE = 1000
 
 @dataclass
 class Args:
-    input_file: str
+    traj_path: str
     """Path to ManiSkill .h5 trajectory file"""
     
     output_dir: str
@@ -473,7 +473,7 @@ def main(args: Args):
     if args.fps <= 0:
         raise ValueError("--fps must be positive")
 
-    input_path = Path(args.input_file)
+    input_path = Path(args.traj_path)
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
     
