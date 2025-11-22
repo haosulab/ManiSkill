@@ -1,8 +1,5 @@
-from typing import Tuple
-
 import numpy as np
 import sapien
-import sapien.physx as physx
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
@@ -210,5 +207,3 @@ class FloatingAbilityHandRight(BaseAgent):
         self.tcp = sapien_utils.get_obj_by_name(
             self.robot.get_links(), self.ee_link_name
         )
-
-        self.queries: dict[str, Tuple[physx.PhysxGpuContactQuery, Tuple[int]]] = dict()

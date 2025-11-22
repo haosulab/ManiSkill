@@ -98,7 +98,7 @@ class Koch(BaseAgent):
             self.robot_motor_colors = motor_color
         for link in self.robot.links:
             for i, obj in enumerate(link._objs):
-                rb_comp = obj.entity.find_component_by_type(
+                rb_comp = obj.entity.find_component_by_type(  # pyright: ignore[reportAssignmentType]
                     sapien.render.RenderBodyComponent
                 )
                 if rb_comp is not None:

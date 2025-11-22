@@ -1,4 +1,5 @@
 # isort: off
+# pyright: reportUnusedImport=false
 from .pd_joint_pos import (
     PDJointPosController,
     PDJointPosControllerConfig,

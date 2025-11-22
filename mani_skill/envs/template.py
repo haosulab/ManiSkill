@@ -1,3 +1,4 @@
+# pyright: reportUnusedImport=false
 """
 Code for a minimal environment/task with just a robot being loaded. We recommend copying this template and modifying as you need.
 
@@ -127,12 +128,12 @@ class CustomEnv(BaseEnv):
     def _setup_sensors(self, options: dict):
         # default code here will setup all sensors. You can add additional code to change the sensors e.g.
         # if you want to randomize camera positions
-        return super()._setup_sensors()
+        return super()._setup_sensors(options)
 
     def _load_lighting(self, options: dict):
         # default code here will setup all lighting. You can add additional code to change the lighting e.g.
         # if you want to randomize lighting in the scene
-        return super()._load_lighting()
+        return super()._load_lighting(options)
 
     """
     Episode Initialization Code
@@ -165,8 +166,8 @@ class CustomEnv(BaseEnv):
         # `_get_obs_extra` and `_compute_dense_reward`. Note that as everything is batched, you must return a batched array of
         # `self.num_envs` booleans (or 0/1 values) for success an dfail as done in the example below
         return {
-            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
-            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+            "success": torch.zeros(self.num_envs, device=self.device, dtype=torch.bool),
+            "fail": torch.zeros(self.num_envs, device=self.device, dtype=torch.bool),
         }
 
     def _get_obs_extra(self, info: dict):

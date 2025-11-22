@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import sapien
@@ -10,8 +10,7 @@ from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.utils import common, sapien_utils
-from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils import sapien_utils
 
 
 @register_agent()
@@ -79,7 +78,7 @@ class PandaStick(BaseAgent):
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
@@ -91,17 +90,17 @@ class PandaStick(BaseAgent):
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
-            pos_lower=None,
-            pos_upper=None,
+            pos_lower=-np.inf,
+            pos_upper=np.inf,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
             use_delta=False,
             normalize_action=False,
         )
@@ -110,10 +109,6 @@ class PandaStick(BaseAgent):
         arm_pd_ee_target_delta_pos.use_target = True
         arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
         arm_pd_ee_target_delta_pose.use_target = True
-
-        # PD ee position (for human-interaction/teleoperation)
-        arm_pd_ee_delta_pose_align = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_delta_pose_align.frame = "ee_align"
 
         # PD joint velocity
         arm_pd_joint_vel = PDJointVelControllerConfig(
@@ -149,7 +144,6 @@ class PandaStick(BaseAgent):
             pd_joint_pos=dict(arm=arm_pd_joint_pos),
             pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos),
             pd_ee_delta_pose=dict(arm=arm_pd_ee_delta_pose),
-            pd_ee_delta_pose_align=dict(arm=arm_pd_ee_delta_pose_align),
             pd_ee_pose=dict(arm=arm_pd_ee_pose),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(arm=arm_pd_joint_target_delta_pos),

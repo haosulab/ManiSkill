@@ -8,7 +8,7 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 
 
@@ -117,9 +117,7 @@ class WidowXAI(BaseAgent):
     def _after_loading_articulation(self):
         self.finger1_link = self.robot.links_map["gripper_left"]
         self.finger2_link = self.robot.links_map["gripper_right"]
-        self.tcp = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
+        self.tcp = self.robot.links_map[self.ee_link_name]
 
     @property
     def tcp_pos(self):

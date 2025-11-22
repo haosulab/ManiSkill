@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import cast
 
 import numpy as np
 import sapien
@@ -9,6 +10,7 @@ from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.utils import sapien_utils
+from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import vectorize_pose
 
 
@@ -82,11 +84,13 @@ class AllegroHandRight(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: list[sapien.Entity] = sapien_utils.get_objs_by_names(
-            self.robot.get_links(), self.tip_link_names
+        self.tip_links = cast(
+            list[Link],
+            sapien_utils.get_objs_by_names(self.robot.get_links(), self.tip_link_names),
         )
-        self.palm_link: sapien.Entity = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.palm_link_name
+        self.palm_link = cast(
+            Link,
+            sapien_utils.get_obj_by_name(self.robot.get_links(), self.palm_link_name),
         )
 
     @property

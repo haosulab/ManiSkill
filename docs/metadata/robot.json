@@ -71,10 +71,6 @@
     "quality": "A",
     "name": "Standard Open Arm 100 (SO100)"
   },
-  "stompy": {
-    "quality": "C",
-    "name": "Stompy"
-  },
   "humanoid": {
     "quality": "A",
     "name": "Mujoco Humanoid"

@@ -1,15 +1,15 @@
 from copy import deepcopy
+from typing import cast
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.structs.actor import Actor
 
 
@@ -108,7 +108,7 @@ class Panda(BaseAgent):
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
@@ -120,17 +120,17 @@ class Panda(BaseAgent):
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
         )
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
-            pos_lower=None,
-            pos_upper=None,
+            pos_lower=-np.inf,
+            pos_upper=np.inf,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
             ee_link=self.ee_link_name,
-            urdf_path=self.urdf_path,
+            urdf_path=cast(str, self.urdf_path),
             use_delta=False,
             normalize_action=False,
         )
@@ -218,21 +218,9 @@ class Panda(BaseAgent):
         return deepcopy_dict(controller_configs)
 
     def _after_init(self):
-        self.finger1_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "panda_leftfinger"
-        )
-        self.finger2_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "panda_rightfinger"
-        )
-        self.finger1pad_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "panda_leftfinger_pad"
-        )
-        self.finger2pad_link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "panda_rightfinger_pad"
-        )
-        self.tcp = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), self.ee_link_name
-        )
+        self.finger1_link = self.robot.links_map["panda_leftfinger"]
+        self.finger2_link = self.robot.links_map["panda_rightfinger"]
+        self.tcp = self.robot.links_map[self.ee_link_name]
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
@@ -287,17 +275,3 @@ class Panda(BaseAgent):
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
         return sapien.Pose(T)
-
-    # sensor_configs = [
-    #     CameraConfig(
-    #         uid="hand_camera",
-    #         p=[0.0464982, -0.0200011, 0.0360011],
-    #         q=[0, 0.70710678, 0, 0.70710678],
-    #         width=128,
-    #         height=128,
-    #         fov=1.57,
-    #         near=0.01,
-    #         far=100,
-    #         entity_uid="panda_hand",
-    #     )
-    # ]
