@@ -91,10 +91,18 @@ def main(args: Args):
         env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))
         if len(env_kwargs["robot_uids"]) == 1:
             env_kwargs["robot_uids"] = env_kwargs["robot_uids"][0]
-    env: BaseEnv = gym.make(
-        args.env_id,
-        **env_kwargs
-    )
+    try:
+        env: BaseEnv = gym.make(
+            args.env_id,
+            **env_kwargs
+        )
+    except TypeError as e:
+        assert "got an unexpected keyword argument 'distraction_set'" in str(e)
+        del env_kwargs["distraction_set"]
+        env = gym.make(
+            args.env_id,
+            **env_kwargs
+        )
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
