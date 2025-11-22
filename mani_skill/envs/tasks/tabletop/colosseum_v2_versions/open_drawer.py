@@ -19,7 +19,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs import Articulation, Link, Pose
 from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
-from mani_skill.envs.tasks.tabletop.colosseum_v2_versions.colosseum_v2_env_utils import get_human_render_camera_config, REALSENSE_DEPTH_FOV_VERTICAL_RAD, SHADER
+from mani_skill.envs.tasks.tabletop.colosseum_v2_versions.colosseum_v2_env_utils import get_human_render_camera_config, REALSENSE_DEPTH_FOV_VERTICAL_RAD, SHADER, DEFAULT_CAMERA_WIDTH, DEFAULT_CAMERA_HEIGHT
 from mani_skill.envs.distraction_set import DistractionSet
 
 CABINET_COLLISION_BIT = 29
@@ -32,7 +32,7 @@ CABINET_COLLISION_BIT = 29
     asset_download_ids=["partnet_mobility_cabinet"],
     max_episode_steps=100,
 )
-class OpenDrawerV1Env(BaseEnv):
+class OpenDrawerEnv(BaseEnv):
     """
     **Task Description:**
     Use the Panda open the target drawer out.
@@ -73,15 +73,9 @@ class OpenDrawerV1Env(BaseEnv):
         robot_init_qpos_noise=0.02,
         **kwargs,
     ):
-        assert "camera_width" in kwargs and "camera_height" in kwargs, "camera_width and camera_height must be provided"
-        assert "distraction_set" in kwargs, "distraction_set must be provided"
+        distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
+        self._distraction_set: DistractionSet = DistractionSet(**distraction_set) if isinstance(distraction_set, dict) else distraction_set
         self._human_render_shader = kwargs.pop("human_render_shader", None)
-        self._camera_width = kwargs.pop("camera_width")
-        self._camera_height = kwargs.pop("camera_height")
-        self._distraction_set = kwargs.pop("distraction_set")
-        if isinstance(self._distraction_set, dict):
-            self._distraction_set = DistractionSet(**self._distraction_set)
-        # 
         self.robot_init_qpos_noise = robot_init_qpos_noise
         # TRAIN_JSON.keys(): ['1000' '1004' '1005' '1013' '1016' '1021' '1024' '1027' '1032' '1033'
         #  '1035' '1038' '1040' '1044' '1045' '1052' '1054' '1056' '1061' '1063'
@@ -100,20 +94,20 @@ class OpenDrawerV1Env(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[-0.2, 0.5, 1.1], target=[-0.1, 0, 0.5], shader=self._human_render_shader)
+        return get_human_render_camera_config(eye=(-0.2, 0.5, 1.1), target=(-0.1, 0, 0.5), shader=self._human_render_shader)
 
     @property
     def _default_sensor_configs(self):
-        target = [-0.2, 0, 0.5]
-        pose_center = sapien_utils.look_at(eye=[-0.5, 0.0, 1.25], target=target)
-        pose_left = sapien_utils.look_at(eye=[-0.2, 0.5, 1.1], target=target)
-        pose_right = sapien_utils.look_at(eye=[-0.2, -0.5, 1.1], target=target)
+        target = (-0.2, 0, 0.5)
+        pose_center = sapien_utils.look_at(eye=(-0.5, 0.0, 1.25), target=target)
+        pose_left = sapien_utils.look_at(eye=(-0.2, 0.5, 1.1), target=target)
+        pose_right = sapien_utils.look_at(eye=(-0.2, -0.5, 1.1), target=target)
         cfgs = [
             CameraConfig(
                 uid="camera_center",
                 pose=pose_center,
-                width=self._camera_width,
-                height=self._camera_height,
+                width=DEFAULT_CAMERA_WIDTH,
+                height=DEFAULT_CAMERA_HEIGHT,
                 fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
                 near=0.01,
                 far=100,
@@ -122,8 +116,8 @@ class OpenDrawerV1Env(BaseEnv):
             CameraConfig(
                 uid="camera_left",
                 pose=pose_left,
-                width=self._camera_width,
-                height=self._camera_height,
+                width=DEFAULT_CAMERA_WIDTH,
+                height=DEFAULT_CAMERA_HEIGHT,
                 fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
                 near=0.01,
                 far=100,
@@ -132,8 +126,8 @@ class OpenDrawerV1Env(BaseEnv):
             CameraConfig(
                 uid="camera_right",
                 pose=pose_right,
-                width=self._camera_width,
-                height=self._camera_height,
+                width=DEFAULT_CAMERA_WIDTH,
+                height=DEFAULT_CAMERA_HEIGHT,
                 fov=REALSENSE_DEPTH_FOV_VERTICAL_RAD,
                 near=0.01,
                 far=100,

@@ -11,7 +11,7 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere, solveOpenDrawer,solveRaiseCube
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere,solveOpenDrawer,solveRaiseCube
 from mani_skill.envs.distraction_set import DISTRACTION_SETS
 
 MP_SOLUTIONS = {
@@ -36,28 +36,17 @@ MP_SOLUTIONS = {
 }
 
 """
-# New Colosseum V2 Tasks
-ENV_ID=OpenDrawer-v1
-ENV_ID=PushCube-v2
-ENV_ID=StackCube-v2
-ENV_ID=RaiseCube-v1
-
-DISTRACTION_SET=all
+DISTRACTION_SET=none
 # ^ Must be one of: none, all, distractor_object_cfg, MO_color_cfg, MO_texture_cfg, RO_color_cfg, RO_texture_cfg, table_color_cfg, table_texture_cfg, camera_pose_cfg
 
 python mani_skill/examples/motionplanning/panda/run.py \
-    --camera-width 640 --camera-height 480 \
     --env-id ${ENV_ID} \
     --num-traj 10 \
     --distraction-set ${DISTRACTION_SET} \
     --num-procs 1 \
-    --reward-mode "none" \
+    --reward-mode "sparse" \
     --random-seed \
     --vis
-
-
-# Or, simply spawn the environment and send random actions:
-python -m mani_skill.examples.demo_random_action -e ${ENV_ID} --render-mode="human" --shader="rt-fast" --seed 3 --reward_mode "sparse" --pause
 """
 
 
@@ -77,18 +66,15 @@ def parse_args(args=None):
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str, default="demos", help="where to save the recorded trajectories")
     parser.add_argument("--num-procs", type=int, default=1, help="Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing and only works with the CPU simulation backend at the moment.")
-    parser.add_argument("--camera-width", type=int, required=False, help="Width of the camera.")
-    parser.add_argument("--camera-height", type=int,  required=False, help="Height of the camera.")
     parser.add_argument("--distraction-set", type=str, required=True, help=f"Distraction set to use. Available options are {list(DISTRACTION_SETS.keys())}")
-    parser.add_argument("--include_eih_camera", type=bool, default=False, help=f"Whether to include the EIH camera in the observation.")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
     env_id = args.env_id
-    if args.camera_width is not None and args.camera_height is not None:
-        distraction_set = DISTRACTION_SETS[args.distraction_set.upper()]
-        print("Distraction set:")
-        print(json.dumps(distraction_set.to_dict(), indent=2))
+    distraction_set = DISTRACTION_SETS[args.distraction_set.upper()]
+    print("Distraction set:")
+    print(json.dumps(distraction_set.to_dict(), indent=2))
+    try:
         env = gym.make(
             env_id,
             obs_mode=args.obs_mode,
@@ -99,11 +85,10 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             human_render_camera_configs=dict(shader_pack=args.shader),
             viewer_camera_configs=dict(shader_pack=args.shader),
             sim_backend=args.sim_backend,
-            camera_width=args.camera_width,
-            camera_height=args.camera_height,
             distraction_set=distraction_set
         )
-    else:
+    except TypeError as e:
+        assert "got an unexpected keyword argument 'distraction_set'" in str(e)
         env = gym.make(
             env_id,
             obs_mode=args.obs_mode,
@@ -113,8 +98,9 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             sensor_configs=dict(shader_pack=args.shader),
             human_render_camera_configs=dict(shader_pack=args.shader),
             viewer_camera_configs=dict(shader_pack=args.shader),
-            sim_backend=args.sim_backend
+            sim_backend=args.sim_backend,
         )
+
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
 

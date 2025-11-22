@@ -24,15 +24,10 @@ class StackCubeV2Env(StackCubeEnv):
     def __init__(
         self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs
     ):
-        assert "camera_width" in kwargs, "camera_width must be provided"
-        assert "camera_height" in kwargs, "camera_height must be provided"
-        self._camera_width = kwargs.pop("camera_width")
-        self._camera_height = kwargs.pop("camera_height")
         self._human_render_shader = kwargs.pop("human_render_shader", None)
         # Distraction set
-        self._distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
-        if isinstance(self._distraction_set, dict):
-            self._distraction_set = DistractionSet(**self._distraction_set)
+        distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
+        self._distraction_set: DistractionSet = DistractionSet(**distraction_set) if isinstance(distraction_set, dict) else distraction_set
 
         # self.cubeA_color = [1, 0, 0, 1]
         # self.cubeA_color = [1, 1, 1, 1] # white
@@ -162,9 +157,9 @@ class StackCubeV2Env(StackCubeEnv):
 
     @property
     def _default_sensor_configs(self):
-        target = [0, 0, 0.0]
+        target = (0, 0, 0.0)
         eye_xy = 0.3
         eye_z = 0.4
-        cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)
+        cfgs = get_camera_configs(eye_xy, eye_z, target)
         cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
         return cfgs_adjusted

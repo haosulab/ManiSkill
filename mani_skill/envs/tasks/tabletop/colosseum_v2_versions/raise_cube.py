@@ -45,10 +45,6 @@ class RaiseCubeEnv(BaseEnv):
     def __init__(self, *args, robot_uids="panda", robot_init_qpos_noise=0.02, **kwargs):
 
         # ColosseumV2 stuff:
-        assert "camera_width" in kwargs, "camera_width must be provided"
-        assert "camera_height" in kwargs, "camera_height must be provided"
-        self._camera_width = kwargs.pop("camera_width")
-        self._camera_height = kwargs.pop("camera_height")
         distraction_set: Union[DistractionSet, dict] = kwargs.pop("distraction_set")
         self._distraction_set: DistractionSet = DistractionSet(**distraction_set) if isinstance(distraction_set, dict) else distraction_set
         self._human_render_shader = kwargs.pop("human_render_shader", None)
@@ -109,7 +105,7 @@ class RaiseCubeEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        return get_human_render_camera_config(eye=[0.5, 0.6, 0.5], target=[0.0, 0.0, 0.1], shader=self._human_render_shader)
+        return get_human_render_camera_config(eye=(0.5, 0.6, 0.5), target=(0.0, 0.0, 0.1), shader=self._human_render_shader)
 
 
     @property
@@ -117,7 +113,7 @@ class RaiseCubeEnv(BaseEnv):
         target=(0.1, 0, -0.1)
         eye_xy = 0.35
         eye_z = 0.45
-        cfgs = get_camera_configs(eye_xy, eye_z, target, self._camera_width, self._camera_height)
+        cfgs = get_camera_configs(eye_xy, eye_z, target)
         cfgs_adjusted = self._distraction_set.update_camera_configs(cfgs)
         return cfgs_adjusted
 
@@ -138,9 +134,9 @@ class RaiseCubeEnv(BaseEnv):
         cube_actors = []
         for i in range(self.num_envs):
             builder = self.scene.create_actor_builder()
-            builder.add_box_collision(half_size=[self.cube_half_size] * 3)
+            builder.add_box_collision(half_size=(self.cube_half_size, self.cube_half_size, self.cube_half_size))
             builder.add_box_visual(
-                half_size=[self.cube_half_size] * 3,
+                half_size=(self.cube_half_size, self.cube_half_size, self.cube_half_size),
                 material=sapien.render.RenderMaterial(
                     base_color=np.array([12, 42, 160, 255]) / 255,
                 ),

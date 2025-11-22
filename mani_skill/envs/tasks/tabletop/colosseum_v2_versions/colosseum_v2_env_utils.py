@@ -5,9 +5,12 @@ from mani_skill.utils import sapien_utils
 REALSENSE_DEPTH_FOV_VERTICAL_RAD = 58.0 * np.pi / 180
 REALSENSE_DEPTH_FOV_HORIZONTAL_RAD = 87.0 * np.pi / 180
 
+DEFAULT_CAMERA_WIDTH = 256
+DEFAULT_CAMERA_HEIGHT = 256
+
 SHADER = "default"
 
-def get_camera_configs(xy_offset: float, z_offset: float, target: tuple[float, float, float], camera_width: int, camera_height: int):
+def get_camera_configs(xy_offset: float, z_offset: float, target: tuple[float, float, float], camera_width: int = DEFAULT_CAMERA_WIDTH, camera_height: int = DEFAULT_CAMERA_HEIGHT):
     pose_center = sapien_utils.look_at(eye=[xy_offset, 0,  z_offset], target=target)
     pose_left = sapien_utils.look_at(eye=[0.0, -xy_offset, z_offset], target=target)
     pose_right = sapien_utils.look_at(eye=[0.0, xy_offset, z_offset], target=target)

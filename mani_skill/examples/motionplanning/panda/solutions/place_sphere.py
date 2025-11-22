@@ -80,8 +80,4 @@ def solve(env: PlaceSphereEnv, seed=None, debug=False, vis=False):
 
     res = planner.open_gripper()
     planner.close()
-<<<<<<< HEAD
     return res
-=======
-    return res
->>>>>>> 7df877b (created place-spherev2)
