@@ -4,5 +4,7 @@
         "mani_skill/assets"
     ],
     "reportUnnecessaryTypeIgnoreComment": true,
-    "typeCheckingMode": "basic"
+    "typeCheckingMode": "basic",
+    "reportUnusedImport": "error",
+    "reportUnusedVariable": "warning"
 }

@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union, cast, overload
 
 import gymnasium as gym
 import numpy as np
@@ -142,16 +142,31 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
             return out
 
 
-# TODO (stao): this code can be simplified
-def to_tensor(array: Array, device: Optional[Device] = None):
+@overload
+def to_tensor(array: dict, device: Optional[Device] = None) -> dict:
+    ...
+
+
+@overload
+def to_tensor(
+    array: dict[str, Array], device: Optional[Device] = None
+) -> dict[str, torch.Tensor]:
+    ...
+
+
+@overload
+def to_tensor(array: Array, device: Optional[Device] = None) -> torch.Tensor:
+    ...
+
+
+def to_tensor(array: Union[Array, dict], device: Optional[Device] = None):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
     by the device argument
 
     Args:
         array: The data to map to a tensor
-        device: The device to put the tensor on. By default this is None and to_tensor will put the device on the GPU if physx is enabled
-            and CPU otherwise
+        device: The device to put the tensor on. By default this is None and the device is unchanged
 
     """
     if isinstance(array, (dict)):
@@ -356,8 +371,10 @@ def unbatch(*args: Tuple[Union[Array, Sequence]]):
     return tuple(x)
 
 
-def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
-    if isinstance(array, (dict)):
+def _to_numpy(
+    array: Union[Array, bool, str, float, int, dict]
+) -> Union[np.ndarray, dict, bool, str, float, int]:
+    if isinstance(array, dict):
         return {k: _to_numpy(v) for k, v in array.items()}
     if isinstance(array, torch.Tensor):
         return array.cpu().numpy()
@@ -373,8 +390,23 @@ def _to_numpy(array: Union[Array, Sequence]) -> np.ndarray:
         return np.array(array)
 
 
-def to_numpy(array: Union[Array, Sequence], dtype=None) -> np.ndarray:
-    array = _to_numpy(array)
+@overload
+def to_numpy(array: dict, dtype=None) -> dict:
+    ...
+
+
+@overload
+def to_numpy(array: Array, dtype=None) -> np.ndarray[Any]:
+    ...
+
+
+@overload
+def to_numpy(array: dict[str, Array], dtype=None) -> dict[str, np.ndarray]:
+    ...
+
+
+def to_numpy(array: Union[Array, dict], dtype=None) -> Union[np.ndarray, dict]:
+    array = cast(np.ndarray, _to_numpy(array))
     if dtype is not None:
         return array.astype(dtype)
     return array

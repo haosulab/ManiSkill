@@ -10,10 +10,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import format_path
-from mani_skill.agents.controllers.pd_joint_pos import (
-    PDJointPosController,
-    PDJointPosControllerConfig,
-)
+from mani_skill.agents.controllers.pd_joint_pos import PDJointPosControllerConfig
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import assets, download_asset, sapien_utils
 from mani_skill.utils.logging_utils import logger
@@ -62,7 +59,7 @@ class BaseAgent:
     """unique identifier string of this"""
     urdf_path: Union[str, None] = None
     """path to the .urdf file describe the agent's geometry and visuals. One of urdf_path or mjcf_path must be provided."""
-    urdf_config: Union[str, dict, None] = None
+    urdf_config: Union[dict, None] = None
     """Optional provide a urdf_config to further modify the created articulation"""
     mjcf_path: Union[str, None] = None
     """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else.
@@ -88,7 +85,7 @@ class BaseAgent:
         scene: ManiSkillScene,
         control_freq: int,
         control_mode: Optional[str] = None,
-        agent_idx: Optional[str] = None,
+        agent_idx: Optional[int] = None,
         initial_pose: Optional[Union[sapien.Pose, Pose]] = None,
         build_separate: bool = False,
     ):
@@ -246,7 +243,7 @@ class BaseAgent:
         """Get the currently activated controller uid."""
         return self._control_mode
 
-    def set_control_mode(self, control_mode: str = None):
+    def set_control_mode(self, control_mode: Optional[str] = None):
         """Sets the controller to an pre-existing controller of this agent.
         This does not reset the controller. If given control mode is None, will set to the default control mode."""
         if control_mode is None:
@@ -265,14 +262,17 @@ class BaseAgent:
                 if "balance_passive_force" in config:
                     balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
-                    config,
-                    self.robot,
-                    self._control_freq,
+                    configs=config,
+                    articulation=self.robot,
                     scene=self.scene,
+                    control_freq=self._control_freq,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(
-                    config, self.robot, self._control_freq, scene=self.scene
+                    config=config,
+                    articulation=self.robot,
+                    scene=self.scene,
+                    control_freq=self._control_freq,
                 )
             self.controllers[control_mode].set_drive_property()
             if balance_passive_force:
@@ -352,7 +352,7 @@ class BaseAgent:
         """
         return self.controller.get_state()
 
-    def set_controller_state(self, state: Array):
+    def set_controller_state(self, state: dict):
         """
         Set the state of the controller.
         """
@@ -387,15 +387,15 @@ class BaseAgent:
 
         if not ignore_controller and "controller" in state:
             self.set_controller_state(state["controller"])
-        if self.device.type == "cuda":
+        if self.scene.gpu_sim_enabled:
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
             self.scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #
-    def reset(self, init_qpos: torch.Tensor = None):
+    def reset(self, init_qpos: Optional[torch.Tensor] = None):
         """
         Reset the robot to a clean state with zero velocity and forces.
 

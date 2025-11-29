@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import sapien
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
@@ -9,6 +8,7 @@ from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.utils import get_active_joint_indices
 from mani_skill.utils.sapien_utils import get_objs_by_names
+from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import vectorize_pose
 
 
@@ -76,7 +76,7 @@ class TriFingerPro(BaseAgent):
         super().__init__(*args, **kwargs)
 
     def _after_init(self):
-        self.tip_links: list[sapien.Entity] = get_objs_by_names(
+        self.tip_links: list[Link] = get_objs_by_names(
             self.robot.get_links(), self.tip_link_names
         )
         self.root_joints = [

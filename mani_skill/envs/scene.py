@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
 import sapien
@@ -25,10 +25,12 @@ from mani_skill.utils.structs.types import Array, Device, SimConfig
 
 # try and determine which render system is used by the installed sapien package
 if SAPIEN_RENDER_SYSTEM == "3.1":
-    from sapien.wrapper.scene import get_camera_shader_pack
+    from sapien.wrapper.scene import (
+        get_camera_shader_pack,  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
     GlobalShaderPack = None
-    sapien.render.RenderCameraGroup = "oldtype"  # type: ignore
+    sapien.render.RenderCameraGroup = "oldtype"
 
 
 @dataclass
@@ -50,17 +52,16 @@ class ManiSkillScene:
         self,
         sub_scenes: Optional[list[sapien.Scene]] = None,
         sim_config: SimConfig = SimConfig(),
-        debug_mode: bool = True,
-        device: Device = None,
+        device: Optional[Device] = None,
         parallel_in_single_scene: bool = False,
-        backend: BackendInfo = None,
+        backend: Optional[BackendInfo] = None,
     ):
+        assert device is not None, "device argument is required"
+        assert backend is not None, "backend argument is required"
         if sub_scenes is None:
             sub_scenes = [sapien.Scene()]
         self.sub_scenes = sub_scenes
-        self.px: Union[physx.PhysxCpuSystem, physx.PhysxGpuSystem] = self.sub_scenes[
-            0
-        ].physx_system
+        self.px: physx.PhysxSystem = self.sub_scenes[0].physx_system
         assert all(
             isinstance(s.physx_system, type(self.px)) for s in self.sub_scenes
         ), "all sub-scenes must use the same simulation backend"
@@ -70,12 +71,15 @@ class ManiSkillScene:
         """whether the sub scenes are using the GPU or CPU backend"""
         self.sim_config = sim_config
         self._gpu_sim_initialized = False
-        self.debug_mode = debug_mode
+        if isinstance(device, str):
+            device = torch.device(device)
         self.device = device
         self.backend = backend  # references the backend object stored in BaseEnv class
 
-        self.render_system_group: sapien.render.RenderSystemGroup = None
         self.camera_groups: dict[str, sapien.render.RenderCameraGroup] = dict()
+        self.render_system_group: sapien.render.RenderSystemGroup = (
+            None  # pyright: ignore[reportAttributeAccessIssue]
+        )
 
         self.actors: dict[str, Actor] = dict()
         self.articulations: dict[str, Articulation] = dict()
@@ -90,7 +94,9 @@ class ManiSkillScene:
         self._sensors_initialized = False
         self._human_render_cameras_initialized = False
 
-        self._reset_mask = torch.ones(len(sub_scenes), dtype=bool, device=self.device)
+        self._reset_mask = torch.ones(
+            len(sub_scenes), dtype=torch.bool, device=self.device
+        )
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
         partial env resets"""
 
@@ -180,7 +186,7 @@ class ManiSkillScene:
                 "Cannot remove actors after creating them in GPU sim at the moment"
             )
         else:
-            self.sub_scenes[0].remove_entity(actor._objs[0].entity)
+            self.sub_scenes[0].remove_entity(actor._objs[0])
             self.actors.pop(actor.name)
 
     def remove_articulation(self, articulation: Articulation):
@@ -269,9 +275,12 @@ class ManiSkillScene:
                 if self.gpu_sim_enabled:
                     if isinstance(mount, Actor):
                         camera.set_gpu_pose_batch_index(
-                            mount._objs[i]
-                            .find_component_by_type(physx.PhysxRigidBodyComponent)
-                            .gpu_pose_index
+                            cast(
+                                physx.PhysxRigidDynamicComponent,
+                                mount._objs[i].find_component_by_type(
+                                    physx.PhysxRigidDynamicComponent
+                                ),
+                            ).gpu_pose_index
                         )
                     elif isinstance(mount, Link):
                         camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
@@ -421,6 +430,7 @@ class ManiSkillScene:
                     self._human_render_cameras_initialized = True
                 self.render_system_group.update_render()
             else:
+                assert isinstance(self.px, physx.PhysxGpuSystem)
                 self.px.sync_poses_gpu_to_cpu()
                 self.sub_scenes[0].update_render()
         else:
@@ -445,14 +455,21 @@ class ManiSkillScene:
                 self._gpu_setup_sensors(self.human_render_cameras)
                 self._human_render_cameras_initialized = True
 
-            manager: sapien.render.GpuSyncManager = self.render_system_group
+            manager: sapien.render.GpuSyncManager = (  # pyright: ignore[reportAttributeAccessIssue]
+                self.render_system_group
+            )
             manager.sync()
         else:
             self.sub_scenes[0].update_render()
 
     def get_contacts(self):
-        # TODO (stao): deprecate this API
-        return self.px.get_contacts()
+        if self.gpu_sim_enabled:
+            raise NotImplementedError(
+                "get_contacts is not available for GPU simulation"
+            )
+        else:
+            assert isinstance(self.px, physx.PhysxCpuSystem)
+            return self.px.get_contacts()
 
     def get_all_actors(self):
         """
@@ -643,7 +660,10 @@ class ManiSkillScene:
             else:
                 light_position = position
             light.pose = sapien.Pose(
-                light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
+                light_position,
+                sapien.math.shortest_rotation(
+                    [1, 0, 0], direction  # pyright: ignore[reportArgumentType]
+                ),
             )
             scene.add_entity(entity)
             if self.parallel_in_single_scene:
@@ -689,7 +709,10 @@ class ManiSkillScene:
             else:
                 light_position = position
             light.pose = sapien.Pose(
-                light_position, sapien.math.shortest_rotation([1, 0, 0], direction)
+                light_position,
+                sapien.math.shortest_rotation(
+                    [1, 0, 0], direction  # pyright: ignore[reportArgumentType]
+                ),
             )
             scene.add_entity(entity)
         return
@@ -758,6 +781,7 @@ class ManiSkillScene:
         # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
         # write this code below themselves.
         if self.gpu_sim_enabled:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
             query_hash = hash((obj1, obj2))
             query_key = obj1.name + obj2.name
 
@@ -768,7 +792,14 @@ class ManiSkillScene:
                 and self._pairwise_contact_query_unique_hashes[query_key] != query_hash
             )
             if rebuild_query:
-                body_pairs = list(zip(obj1._bodies, obj2._bodies))
+                body_pairs = cast(
+                    list[
+                        tuple[
+                            physx.PhysxRigidBaseComponent, physx.PhysxRigidBaseComponent
+                        ]
+                    ],
+                    list(zip(obj1._bodies, obj2._bodies)),
+                )
                 self.pairwise_contact_queries[
                     query_key
                 ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
@@ -780,7 +811,8 @@ class ManiSkillScene:
             pairwise_contact_impulses = query.cuda_impulses.torch().clone()
             return pairwise_contact_impulses
         else:
-            contacts = self.px.get_contacts()
+            assert isinstance(self.px, physx.PhysxCpuSystem)
+            contacts = cast(physx.PhysxCpuSystem, self.px).get_contacts()
             pairwise_contact_impulses = sapien_utils.get_pairwise_contact_impulse(
                 contacts, obj1._bodies[0].entity, obj2._bodies[0].entity
             )
@@ -803,19 +835,34 @@ class ManiSkillScene:
     @cached_property
     def scene_offsets(self):
         """torch tensor of shape (num_envs, 3) representing the offset of each scene in the world frame"""
-        return torch.tensor(
-            np.array(
-                [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
-            ),
-            device=self.device,
-        )
+        if self.gpu_sim_enabled:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            return torch.tensor(
+                np.array(
+                    [
+                        self.px.get_scene_offset(sub_scene)
+                        for sub_scene in self.sub_scenes
+                    ]
+                ),
+                device=self.device,
+            )
+        else:
+            raise NotImplementedError(
+                "scene_offsets is not available for CPU simulation"
+            )
 
     @cached_property
     def scene_offsets_np(self):
         """numpy array of shape (num_envs, 3) representing the offset of each scene in the world frame"""
-        return np.array(
-            [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
-        )
+        if self.gpu_sim_enabled:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            return np.array(
+                [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+            )
+        else:
+            raise NotImplementedError(
+                "scene_offsets_np is not available for CPU simulation"
+            )
 
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)
@@ -849,7 +896,7 @@ class ManiSkillScene:
         else:
             raise ValueError(f"Expected Actor or Articulation, got {object}")
 
-    def get_sim_state(self) -> torch.Tensor:
+    def get_sim_state(self) -> dict[str, dict[str, torch.Tensor]]:
         """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
         In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
         environments and D dimensions of padded state per environment.
@@ -873,7 +920,7 @@ class ManiSkillScene:
             del state_dict["articulations"]
         return state_dict
 
-    def set_sim_state(self, state: dict, env_idx: torch.Tensor = None):
+    def set_sim_state(self, state: dict, env_idx: Optional[torch.Tensor] = None):
         if env_idx is not None:
             prev_reset_mask = self._reset_mask.clone()
             # safe guard against setting the wrong states
@@ -904,6 +951,7 @@ class ManiSkillScene:
         Start the CPU/GPU simulation and allocate all buffers and initialize objects
         """
         if enable_gpu:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
             if SAPIEN_RENDER_SYSTEM == "3.1":
                 for scene in self.sub_scenes:
                     scene.update_render()
@@ -927,6 +975,7 @@ class ManiSkillScene:
             articulation.set_pose(articulation.initial_pose)
 
         if enable_gpu:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
             self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
                 self.px.cuda_rigid_body_data.torch()[:, 7:]
             )  # zero out all velocities
@@ -955,6 +1004,7 @@ class ManiSkillScene:
             not self._needs_fetch
         ), "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling _gpu_apply_all again\
             as otherwise there is undefined behavior that is likely impossible to debug"
+        assert isinstance(self.px, physx.PhysxGpuSystem)
         self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_qpos()
         self.px.gpu_apply_articulation_qvel()
@@ -971,6 +1021,7 @@ class ManiSkillScene:
         Should only be called at most once per simulation step as this automatically queries all data for all
         objects built in the scene.
         """
+        assert isinstance(self.px, physx.PhysxGpuSystem)
         if len(self.non_static_actors) > 0:
             self.px.gpu_fetch_rigid_dynamic_data()
 
@@ -998,8 +1049,9 @@ class ManiSkillScene:
             all_render_bodies += [
                 (
                     entity.find_component_by_type(sapien.render.RenderBodyComponent),
-                    entity.find_component_by_type(
-                        physx.PhysxRigidDynamicComponent
+                    cast(
+                        physx.PhysxRigidDynamicComponent,
+                        entity.find_component_by_type(physx.PhysxRigidDynamicComponent),
                     ).gpu_pose_index,
                 )
                 for entity in actor._objs
@@ -1027,6 +1079,7 @@ class ManiSkillScene:
         """
         Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
         """
+        assert isinstance(self.px, physx.PhysxGpuSystem)
         for rb, gpu_pose_index in self._get_all_render_bodies():
             if rb is not None:
                 for s in rb.render_shapes:
@@ -1040,8 +1093,8 @@ class ManiSkillScene:
         """
         Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
         """
-
-        px: physx.PhysxGpuSystem = self.px
+        assert isinstance(self.px, physx.PhysxGpuSystem)
+        px = self.px
 
         shape_pose_indices = []
         shapes = []
@@ -1055,7 +1108,9 @@ class ManiSkillScene:
                 if b is None:
                     continue
                 for s in body.render_shapes:
-                    shape_pose_indices.append(b.gpu_pose_index)
+                    shape_pose_indices.append(
+                        b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
+                    )
                     shapes.append(s)
 
         cam_pose_indices = []
@@ -1068,29 +1123,35 @@ class ManiSkillScene:
                 )
                 if b is None:
                     continue
-                cam_pose_indices.append(b.gpu_pose_index)
+                cam_pose_indices.append(
+                    b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
+                )
                 cams.append(c)
 
-        sync_manager = sapien.render.GpuSyncManager()
+        sync_manager = (
+            sapien.render.GpuSyncManager()  # pyright: ignore[reportAttributeAccessIssue]
+        )
         sync_manager.set_cuda_poses(px.cuda_rigid_body_data)
         sync_manager.set_render_shapes(shape_pose_indices, shapes)
         sync_manager.set_cameras(cam_pose_indices, cams)
 
         self.render_system_group = sync_manager
 
-    def _gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
+    def _gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
         if SAPIEN_RENDER_SYSTEM == "3.1":
             self._sapien_31_gpu_setup_sensors(sensors)
         else:
             self._sapien_gpu_setup_sensors(sensors)
 
-    def _sapien_gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
+    def _sapien_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
                 try:
                     camera_group = self.render_system_group.create_camera_group(
                         sensor.camera._render_cameras,
-                        list(sensor.config.shader_config.texture_names.keys()),
+                        list(
+                            sensor.config.shader_config.texture_names.keys()  # pyright: ignore[reportOptionalMemberAccess]
+                        ),
                     )
                 except RuntimeError as e:
                     raise RuntimeError(
@@ -1109,12 +1170,12 @@ class ManiSkillScene:
                     f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
                 )
 
-    def _sapien_31_gpu_setup_sensors(self, sensors: dict[str, BaseSensor]):
+    def _sapien_31_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
         for name, sensor in sensors.items():
             if isinstance(sensor, Camera):
-                batch_renderer = sapien.render.RenderManager(
-                    sapien.render.get_shader_pack(
-                        sensor.config.shader_config.shader_pack
+                batch_renderer = sapien.render.RenderManager(  # pyright: ignore[reportAttributeAccessIssue]
+                    sapien.render.get_shader_pack(  # pyright: ignore[reportAttributeAccessIssue]
+                        sensor.config.shader_config.shader_pack  # pyright: ignore[reportOptionalMemberAccess]
                     )
                 )
                 batch_renderer.set_size(sensor.config.width, sensor.config.height)
@@ -1135,7 +1196,7 @@ class ManiSkillScene:
         return sensor_data
 
     def get_human_render_camera_images(
-        self, camera_name: str = None
+        self, camera_name: Optional[str] = None
     ) -> dict[str, torch.Tensor]:
         image_data = dict()
         if self.gpu_sim_enabled:
@@ -1150,11 +1211,14 @@ class ManiSkillScene:
                 for name, camera in self.human_render_cameras.items():
                     if camera_name is not None and name != camera_name:
                         continue
-                    assert camera.config.shader_config.shader_pack not in [
-                        "rt",
-                        "rt-fast",
-                        "rt-med",
-                    ], "ray tracing shaders do not work with parallel rendering"
+                    assert (
+                        camera.config.shader_config.shader_pack  # pyright: ignore[reportOptionalMemberAccess]
+                        not in [
+                            "rt",
+                            "rt-fast",
+                            "rt-med",
+                        ]
+                    ), "ray tracing shaders do not work with parallel rendering"
                     camera.capture()
                     rgb = camera.get_obs(
                         rgb=True, depth=False, segmentation=False, position=False

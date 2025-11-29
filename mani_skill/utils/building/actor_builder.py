@@ -35,6 +35,10 @@ class ActorBuilder(SAPIENActorBuilder):
         self._procedural_shapes = []
         """procedurally generated shapes to attach"""
 
+    def set_scene(self, scene: ManiSkillScene):
+        self.scene = scene
+        return self
+
     def set_scene_idxs(
         self,
         scene_idxs: Optional[

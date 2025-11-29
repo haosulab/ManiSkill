@@ -9,14 +9,12 @@ from mani_skill.agents.controllers.utils.kinematics import Kinematics
 from mani_skill.utils import gym_utils, sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
-    matrix_to_euler_angles,
     matrix_to_quaternion,
     quaternion_apply,
     quaternion_multiply,
-    quaternion_to_matrix,
 )
-from mani_skill.utils.structs import Pose
-from mani_skill.utils.structs.types import Array, DriveMode
+from mani_skill.utils.structs import Link, Pose
+from mani_skill.utils.structs.types import DriveMode
 
 from .base_controller import ControllerConfig
 from .pd_joint_pos import PDJointPosController
@@ -28,6 +26,8 @@ class PDEEPosController(PDJointPosController):
     config: "PDEEPosControllerConfig"
     _target_pose = None
 
+    root_link: Link
+
     def _check_gpu_sim_works(self):
         assert (
             self.config.frame == "root_translation"
@@ -36,7 +36,7 @@ class PDEEPosController(PDJointPosController):
     def _initialize_joints(self):
         self.initial_qpos = None
         super()._initialize_joints()
-        if self.device.type == "cuda":
+        if self.scene.gpu_sim_enabled:
             self._check_gpu_sim_works()
         self.kinematics = Kinematics(
             self.config.urdf_path,
@@ -48,9 +48,13 @@ class PDEEPosController(PDJointPosController):
         self.ee_link = self.kinematics.end_link
 
         if self.config.root_link_name is not None:
-            self.root_link = sapien_utils.get_obj_by_name(
+            root_link = sapien_utils.get_obj_by_name(
                 self.articulation.get_links(), self.config.root_link_name
             )
+            assert self.root_link is not None and isinstance(
+                root_link, Link
+            ), f"Root link {self.config.root_link_name} matches more than one link or was not found"
+            self.root_link = root_link
         else:
             self.root_link = self.articulation.root
 
@@ -98,7 +102,7 @@ class PDEEPosController(PDJointPosController):
             target_pose = Pose.create(action)
         return target_pose
 
-    def set_action(self, action: Array):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         self._step = 0
         self._start_qpos = self.qpos
@@ -116,17 +120,23 @@ class PDEEPosController(PDJointPosController):
             self._target_pose = self.compute_target_pose(prev_ee_pose_at_base, action)
         pos_only = type(self.config) == PDEEPosControllerConfig
         if pos_only:
-            action = torch.hstack([action, torch.zeros(action.shape[0], 3, device=self.device)])
+            action = torch.hstack(
+                [action, torch.zeros(action.shape[0], 3, device=self.device)]
+            )
 
-        self._target_qpos = self.kinematics.compute_ik(
-            pose=self._target_pose if ik_via_target_pose else action,
+        _target_qpos = self.kinematics.compute_ik(
+            pose=self._target_pose
+            if ik_via_target_pose
+            else action,  # pyright: ignore[reportArgumentType]
             q0=self.articulation.get_qpos(),
             is_delta_pose=not ik_via_target_pose and self.config.use_delta,
             current_pose=self.ee_pose_at_base,
             solver_config=self.config.delta_solver_config,
         )
-        if self._target_qpos is None:
+        if _target_qpos is None:
             self._target_qpos = self._start_qpos
+        else:
+            self._target_qpos = _target_qpos
         if self.config.interpolate:
             self._step_size = (self._target_qpos - self._start_qpos) / self._sim_steps
         else:
@@ -134,6 +144,7 @@ class PDEEPosController(PDJointPosController):
 
     def get_state(self) -> dict:
         if self.config.use_target:
+            assert self._target_pose is not None, "Target pose is not set"
             return {"target_pose": self._target_pose.raw_pose}
         return {}
 
@@ -151,22 +162,23 @@ class PDEEPosController(PDJointPosController):
 # TODO (stao): This config should really inherit the pd joint pos controller config
 @dataclass
 class PDEEPosControllerConfig(ControllerConfig):
-    pos_lower: Union[float, Sequence[float]]
+    pos_lower: Union[float, Sequence[float], np.ndarray]
     """Lower bound for position control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    pos_upper: Union[float, Sequence[float]]
+    pos_upper: Union[float, Sequence[float], np.ndarray]
     """Upper bound for position control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
 
     # TODO (stao): note stiffness, damping, force limit and friction are properties used by PDJointPos controller, which the PDEEPosController controller inherits from
     # this should be changed as its difficult to figure out how this code is used
-    stiffness: Union[float, Sequence[float]]
-    damping: Union[float, Sequence[float]]
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    stiffness: Union[float, Sequence[float], np.ndarray]
+    damping: Union[float, Sequence[float], np.ndarray]
 
-    ee_link: str = None
+    ee_link: str
     """The name of the end-effector link to control. Note that it does not have to be a end-effector necessarily and could just be any link."""
-    urdf_path: str = None
+    urdf_path: str
     """Path to the URDF file defining the robot to control."""
+
+    force_limit: Union[float, Sequence[float], np.ndarray] = 1e10
+    friction: Union[float, Sequence[float], np.ndarray] = 0.0
 
     frame: Literal[
         "body_translation",
@@ -268,14 +280,10 @@ class PDEEPoseController(PDEEPosController):
 @dataclass
 class PDEEPoseControllerConfig(PDEEPosControllerConfig):
 
-    rot_lower: Union[float, Sequence[float]] = None
-    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    rot_upper: Union[float, Sequence[float]] = None
-    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    stiffness: Union[float, Sequence[float]] = None
-    damping: Union[float, Sequence[float]] = None
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    rot_lower: Union[float, Sequence[float], np.ndarray] = -np.inf
+    """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds. By default this is -np.inf"""
+    rot_upper: Union[float, Sequence[float], np.ndarray] = np.inf
+    """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds. By default this is np.inf"""
 
     frame: Literal[
         "body_translation:root_aligned_body_rotation",

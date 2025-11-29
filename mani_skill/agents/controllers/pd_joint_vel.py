@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence, Union
 
 import numpy as np
+import torch
 from gymnasium import spaces
 
 from mani_skill.utils.structs.types import DriveMode
@@ -36,7 +37,7 @@ class PDJointVelController(BaseController):
             )
             joint.set_friction(friction[i])
 
-    def set_action(self, action: np.ndarray):
+    def set_action(self, action: torch.Tensor):
         action = self._preprocess_action(action)
         self.articulation.set_joint_drive_velocity_targets(
             action, self.joints, self.active_joint_indices

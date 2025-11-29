@@ -3,8 +3,6 @@
 from typing import Sequence
 
 import numpy as np
-import sapien
-import sapien.physx as physx
 from gymnasium import spaces
 
 from mani_skill.utils import common

@@ -1,5 +1,3 @@
-import numpy as np
-import sapien
 import torch
 
 from mani_skill import ASSET_DIR

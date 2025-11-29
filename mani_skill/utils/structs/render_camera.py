@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 
@@ -49,7 +49,7 @@ class RenderCamera:
         cls,
         render_cameras: list[sapien.render.RenderCameraComponent],
         scene: Any,
-        mount: Union[Actor, Link] = None,
+        mount: Optional[Union[Actor, Link]] = None,
     ):
         w, h = (
             render_cameras[0].width,
@@ -310,7 +310,7 @@ class RenderCamera:
         return self._render_cameras[0].fy
 
     @property
-    def global_pose(self) -> sapien.Pose:
+    def global_pose(self) -> Pose:
         if self.scene.gpu_sim_enabled:
             if self.mount is not None:
                 return self.mount.pose * self.get_local_pose()

@@ -7,7 +7,7 @@ import torch
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common, sapien_utils  # pyright: ignore[reportUnusedImport]
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import SimConfig
 
@@ -49,8 +49,8 @@ class CustomEnv(BaseEnv):
 
     def evaluate(self):
         return {
-            "success": torch.zeros(self.num_envs, device=self.device, dtype=bool),
-            "fail": torch.zeros(self.num_envs, device=self.device, dtype=bool),
+            "success": torch.zeros(self.num_envs, device=self.device, dtype=torch.bool),
+            "fail": torch.zeros(self.num_envs, device=self.device, dtype=torch.bool),
         }
 
     def _get_obs_extra(self, info: dict):

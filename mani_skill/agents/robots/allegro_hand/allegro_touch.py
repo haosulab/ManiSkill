@@ -1,8 +1,7 @@
 import itertools
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 import numpy as np
-import sapien
 import torch
 from sapien import physx
 
@@ -54,14 +53,17 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def _after_init(self):
         super()._after_init()
-        self.fsr_links: list[Actor] = sapien_utils.get_objs_by_names(
-            self.robot.get_links(),
-            self.palm_fsr_link_names + self.finger_fsr_link_names,
+        self.fsr_links = cast(
+            list[Actor],
+            sapien_utils.get_objs_by_names(
+                self.robot.get_links(),
+                self.palm_fsr_link_names + self.finger_fsr_link_names,
+            ),
         )
 
-    def get_fsr_obj_impulse(self, obj: Actor = None):
+    def get_fsr_obj_impulse(self, obj: Actor):
         if self.scene.gpu_sim_enabled:
-            px: physx.PhysxGpuSystem = self.scene.px
+            px: physx.PhysxGpuSystem = cast(physx.PhysxGpuSystem, self.scene.px)
             # Create contact query if it is not existed
             if obj.name not in self.pair_query:
                 bodies = list(zip(*[link._bodies for link in self.fsr_links]))
@@ -69,7 +71,14 @@ class AllegroHandRightTouch(AllegroHandRight):
                 obj_bodies = [
                     elem for item in obj._bodies for elem in itertools.repeat(item, 2)
                 ]
-                body_pairs = list(zip(bodies, obj_bodies))
+                body_pairs = cast(
+                    list[
+                        tuple[
+                            physx.PhysxRigidBaseComponent, physx.PhysxRigidBaseComponent
+                        ]
+                    ],
+                    list(zip(bodies, obj_bodies)),
+                )
                 query = px.gpu_create_contact_pair_impulse_query(body_pairs)
                 self.pair_query[obj.name] = (
                     query,
@@ -103,7 +112,7 @@ class AllegroHandRightTouch(AllegroHandRight):
 
     def get_fsr_impulse(self):
         if self.scene.gpu_sim_enabled:
-            px: physx.PhysxGpuSystem = self.scene.px
+            px: physx.PhysxGpuSystem = cast(physx.PhysxGpuSystem, self.scene.px)
             # Create contact query if it is not existed
             if self.body_query is None:
                 # Convert the order of links so that the link from the same sub-scene will come together
