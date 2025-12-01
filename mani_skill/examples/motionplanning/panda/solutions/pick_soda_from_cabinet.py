@@ -2,13 +2,13 @@ import gymnasium as gym
 import numpy as np
 import sapien
 
-from mani_skill.envs.tasks.tabletop.book_in_shelf import PlaceBookEnv
+from mani_skill.envs.tasks.tabletop.pick_soda_from_cabinet import PickSodaFromCabinetEnv
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
 from mani_skill.examples.motionplanning.base_motionplanner.utils import compute_grasp_info_by_obb, get_actor_obb
 
 def main():
-    env: PlaceBookEnv = gym.make(
-        "PlaceBookInShelf-v1",
+    env: PickSodaFromCabinetEnv = gym.make(
+        "PickSodaFromCabinet-v1",
         obs_mode="none",
         control_mode="pd_joint_pos",
         render_mode="rgb_array",
@@ -19,7 +19,7 @@ def main():
         print(res)
     env.close()
 
-def solve(env: PlaceBookEnv, seed=None, debug=False, vis=False):
+def solve(env: PickSodaFromCabinetEnv, seed=None, debug=False, vis=False):
     env.reset(seed=seed)
     assert env.unwrapped.control_mode in [
         "pd_joint_pos",
@@ -39,11 +39,11 @@ def solve(env: PlaceBookEnv, seed=None, debug=False, vis=False):
     
     env = env.unwrapped
     FINGER_LENGTH = 0.025
-    obb = get_actor_obb(env.book_A)
+    obb = get_actor_obb(env.soda)
 
     approaching = np.array([1, 0, 0])
     target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    book_init_pos = env.book_A.pose
+    soda_init_pos = env.soda.pose
 
     # init_pose = book_init_pos * sapien.Pose([-0.5, 0, 0.0])
     # res = planner.move_to_pose_with_screw(init_pose)
@@ -62,23 +62,23 @@ def solve(env: PlaceBookEnv, seed=None, debug=False, vis=False):
     # -------------------------------------------------------------------------- #
     # Reach
     # -------------------------------------------------------------------------- #
-    reach_pose = grasp_pose * sapien.Pose([0.1, 0.0, 0])
+    reach_pose = grasp_pose * sapien.Pose([0.0, 0.0, -0.3])
     res = planner.move_to_pose_with_RRTStar(reach_pose)
     if res == -1: return res
 
     # -------------------------------------------------------------------------- #
     # Grasp
     # -------------------------------------------------------------------------- #
-    res = planner.move_to_pose_with_RRTStar(grasp_pose)
+    res = planner.move_to_pose_with_RRTConnect(grasp_pose)
     if res == -1: return res
     planner.close_gripper(gripper_state=-0.6)
 
     # -------------------------------------------------------------------------- #
-    # Lift
+    # Move Back
     # -------------------------------------------------------------------------- #
-    # lift_pose = sapien.Pose([0, 0, 0.30]) * grasp_pose
-    # res = planner.move_to_pose_with_screw(lift_pose)
-    # if res == -1: return res
+    back_pose = grasp_pose * sapien.Pose([0, 0, -0.3])
+    res = planner.move_to_pose_with_RRTStar(back_pose)
+    if res == -1: return res
 
     # -------------------------------------------------------------------------- #
     # Rotation about the x axis
@@ -113,15 +113,15 @@ def solve(env: PlaceBookEnv, seed=None, debug=False, vis=False):
     #     p=[0, 0, 0],
     #     q=rotation_quat
     # ) * sapien.Pose([0, 0, -0.10])
-    final_pose = sapien.Pose(p=[-0.053, -0.160, 0.2],q=grasp_pose.q)
+    final_pose = sapien.Pose(p=[-0.053, -0.160, 0.1],q=grasp_pose.q)
     res = planner.move_to_pose_with_RRTStar(final_pose)
     if res == -1: return res
     # -------------------------------------------------------------------------- #
     # Lower
     # -------------------------------------------------------------------------- #
-    lower_pose = final_pose * sapien.Pose([0, 0, 0.2])
-    res = planner.move_to_pose_with_RRTStar(lower_pose)
-    if res == -1: return res
+    # lower_pose = final_pose * sapien.Pose([0, 0, 0.2])
+    # res = planner.move_to_pose_with_RRTStar(lower_pose)
+    # if res == -1: return res
 
     planner.open_gripper()
     res = planner.move_to_pose_with_screw(final_pose)
