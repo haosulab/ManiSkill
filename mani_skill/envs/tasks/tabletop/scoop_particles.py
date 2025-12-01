@@ -74,7 +74,7 @@ class ScoopParticlesEnv(BaseEnv):
 
     @property
     def _default_human_render_camera_configs(self):
-        pose = sapien_utils.look_at([0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
+        pose = sapien_utils.look_at([-0.6, 0.7, 0.6], [0.0, 0.0, 0.35])
         return [
             CameraConfig(
                 "render_camera",
@@ -103,11 +103,14 @@ class ScoopParticlesEnv(BaseEnv):
 
         self.dustpan = self.load_glb_as_actor(
             self.scene,
-            glb_file_path="mani_skill/assets/scoop_particles/dustpan.glb",
+            glb_file_path="/home/prajwal/Downloads/ManiSkill-main/mani_skill/assets/scoop_particles/dustpan.glb",
             pose=sapien.Pose(p=[0, 0, 0.015]),
             name="dustpan",
             type="dynamic"
         )
+
+        self.wall = actors.build_box(self.scene, half_sizes=[0.5, 0.02, 0.2], color=
+                                     [0.8, 0.3, 0.3, 1], name="wall", body_type="static", add_collision=True, initial_pose=sapien.Pose(p=[0.2, -0.25, 0.2], q=[0.7071, 0, 0, 0.7071]))
 
     @staticmethod
     def load_glb_as_actor(scene, glb_file_path, pose, name, type="static"):
@@ -146,17 +149,22 @@ class ScoopParticlesEnv(BaseEnv):
             ball_xyz[..., 1] = torch.rand(b, device=self.device) * 0.3 - 0.25
             ball_xyz[..., 2] = self.ball_radius + 0.01
 
-            ball_q = randomization.random_quaternions(
-                b,
-                lock_x=True,
-                lock_y=True,
-                lock_z=False,
-                bounds=(-np.pi / 6, np.pi / 6),
-                device=self.device,
-            )
+            # ball_q = randomization.random_quaternions(
+            #     b,
+            #     lock_x=True,
+            #     lock_y=True,
+            #     lock_z=False,
+            #     bounds=(-np.pi / 6, np.pi / 6),
+            #     device=self.device,
+            # )
 
-            ball_pose = Pose.create_from_pq(p=ball_xyz, q=ball_q)
+            ball_pose = Pose.create_from_pq(p=ball_xyz, q=torch.tensor([1, 0, 0, 0], dtype=torch.float32))
             self.ball.set_pose(ball_pose)
+            wall_xyz = torch.zeros((b, 3), device=self.device)
+            wall_xyz[..., 0] = ball_xyz[..., 0] + 0.07
+            wall_xyz[..., 1] = ball_xyz[..., 1]
+            wall_xyz[..., 2] = 0.2
+            self.wall.set_pose(Pose.create_from_pq(p=wall_xyz, q=torch.tensor([0.7071, 0, 0, 0.7071], dtype=torch.float32)))
 
     def _get_obs_extra(self, info: Dict):
         obs = dict(
@@ -176,21 +184,22 @@ class ScoopParticlesEnv(BaseEnv):
 
         dustpan_pos = self.dustpan.pose.p
 
-        z_dist = ball_pos[..., 2] - dustpan_pos[..., :2]
+        z_dist = ball_pos[..., 2] - dustpan_pos[..., 2]
         xy_dist = torch.linalg.norm(ball_pos[..., :2] - dustpan_pos[..., :2], dim=1)
         # Success condition - cube is pulled close enough
-        ball_z_close_flag = z_dist < ScoopParticlesEnv.ball_radius + 0.02
+        ball_z_close_flag = torch.logical_and(z_dist < ScoopParticlesEnv.ball_radius + 0.02, z_dist > 0.0)
         ball_xy_close_flag = xy_dist < ScoopParticlesEnv.width * 1.414 / 2
-        cube_pulled_close = torch.logical_and(ball_z_close_flag, ball_xy_close_flag)
-        is_ball_static = self.ball.is_static(lin_thresh=1e-2, ang_thresh=0.5)
-        success = torch.logical_and(cube_pulled_close, is_ball_static)
+        ball_pulled_close = torch.logical_and(ball_z_close_flag, ball_xy_close_flag)
+        # is_ball_static = self.ball.is_static(lin_thresh=1e-1, ang_thresh=0.5)
+        # print(is_ball_static)
+        success = ball_pulled_close
 
         return {
             "success": success,
-            "cube_pulled_close": cube_pulled_close,
+            "ball_pulled_close": ball_pulled_close,
             "ball_z_close_flag": ball_z_close_flag,
             "ball_xy_close_flag": ball_xy_close_flag,
-            "is_ball_static": is_ball_static,
+            # "is_ball_static": is_ball_static,
         }
 
     def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):

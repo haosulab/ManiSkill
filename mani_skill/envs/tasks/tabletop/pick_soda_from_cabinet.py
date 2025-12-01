@@ -3,6 +3,7 @@ import numpy as np
 import sapien
 import torch
 import trimesh
+import os
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
@@ -10,14 +11,15 @@ from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
-from mani_skill.utils.scene_builder.table import TableSceneBuilder
+from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
+from mani_skill.utils.scene_builder.robocasa.fixtures.cabinet import OpenCabinet
 from mani_skill.utils.structs.pose import Pose
 from math import fabs
 from mani_skill.utils.geometry import rotation_conversions
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Ensure GPU 0 is used for both sim and render
-@register_env("PlaceBookInShelf-v1", max_episode_steps=50)
-class PlaceBookEnv(BaseEnv):
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Ensure GPU 0 is used for both sim and render
+@register_env("PickSodaFromCabinet-v1", max_episode_steps=50)
+class PickSodaFromCabinetEnv(BaseEnv):
     """
     **Task Description:**
     The goal is to pick up a book and place it inside a shelf with other books already in it.
@@ -58,76 +60,53 @@ class PlaceBookEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_agent(self, options: dict):
-        super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0])) # Loads the panda arm
+        super()._load_agent(options, sapien.Pose(p=[0, 0, 0])) # Loads the panda arm
 
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(
             env=self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
-        # All values obtained carefully from blender
-        # collision_boxes_shelf = [([0.43/2, 0.36/2, 0.05/2], sapien.Pose(p=[0,0.04, 0.015], q=[0.707, -0.707, 0, 0])),
-        #                    ([0.025/2,0.25/2,0.235/2],sapien.Pose(p=[0.144,0.1729,0.023], q=[1,0,0,0])),
-        #                    ([0.025/2, 0.25/2, 0.235/2], sapien.Pose(p=[-0.136, 0.1729, 0.023], q=[1,0,0,0])),
-        #                    ([0.30/2,0.02/2,0.25/2],sapien.Pose(p=[0.0,0.161,-0.1],q=[0.707,0.707,0,0])),
-        #                    ([0.312/2,0.27/2,0.0302/2],sapien.Pose(p=[0.0,0.286,0.018],q=[0.707,-0.707,0,0]))]
-        self.shelf = self.load_glb_as_actor(self.scene, 
-                                            "/home/prajwal/Downloads/ManiSkill-main/mani_skill/assets/book_in_shelf/BookShelf.glb", 
-                                            sapien.Pose(p=[0.293, -0.1, 0], q=[-0.5, -0.5, 0.5, 0.5]), 
-                                            name="custom_glb_shelf",
-                                            type="static")
-                                            
         
-        self.book_A = self.load_glb_as_actor(self.scene, 
-                                             "/home/prajwal/Downloads/ManiSkill-main/mani_skill/assets/book_in_shelf/simple_book_1.glb",
+        # self.cabinet_scene = RoboCasaSceneBuilder(
+        #     env=self, init_robot_base_pos=sapien.Pose(p=[4, -0.6, 0.94], q=[ 0.7071, 0, 0, 0.7071]) )
+        # self.cabinet_scene.build(build_config_idxs=[1])
+        
+        # If you previously built the full robocasa scene, skip it and use this:
+        # programmatic open cabinet only:
+        # size is width, depth, height (meters)
+        cab_size = [0.6, 0.4, 0.9]  # adjust to taste
+        open_cab = OpenCabinet(
+            scene=self.scene,
+            name="open_cabinet",
+            size=cab_size,
+            num_shelves=3,
+            thickness=0.03,
+            texture=None,
+            pos=[-0.2, 0.5, 0.2],  # center pos in world coordinates (x,y,z)
+            rng=np.random.default_rng(),  # or pass your env rng
+        )
+        # Build into the scene (for single env index, pass [0]; for batched envs use proper indices):
+        open_cab.quat = sapien.Pose(q=[0.7071,0,0,-0.7071]).q  # default orientation
+        open_cab.pos = np.array([0.25, -0.12, 0.456])
+        # choose scene indices to build into; if you have a batch, build into all relevant indices
+        built = open_cab.build(scene_idxs=[0])
+        # If environment uses multiple envs, repeat build for each environment index you care about.
+        # Optionally keep a handle:
+        self.open_cabinet = built
+        self.soda = self.load_glb_as_actor(self.scene, 
+                                             "/home/prajwal-vijay/Downloads/ManiSkill-main/mani_skill/assets/place_soda_in_cabinet/opened_soda_can.glb",
                                             sapien.Pose(p=[0.055, -0.158, 0.1], q=[0.854,0.471,0.212,0.068]),
-                                            name="book_A",
+                                            name="soda_can",
+                                            scale=[0.04,0.04,0.04],
                                             type="dynamic")
-        # self.book_B = self.load_glb_as_actor(self.scene, 
-        #                                      "mani_skill/assets/book_in_shelf/simple_book_2.glb",
-        #                                     [([0.04,0.015,0.1], sapien.Pose(p=[0,0,0], q=[1,0,0,0]))],
-        #                                     sapien.Pose(p=[0.0, -0.158, 0.1], q=[0.707,0,-0.707,0]),
-        #                                     name="book_B")
-        # self.cubeA = actors.build_cube(
-        #     self.scene,
-        #     half_size=0.02,
-        #     color=[1, 0, 0, 1],
-        #     name="cubeA",
-        #     initial_pose=sapien.Pose(p=[0, 0, 0.1]),
-        # )
-        # self.cubeB = actors.build_cube(
-        #     self.scene,
-        #     half_size=0.02,
-        #     color=[0, 1, 0, 1],
-        #     name="cubeB",
-        #     initial_pose=sapien.Pose(p=[1, 0, 0.1]),
-        # )
-
 
     @staticmethod
-    def load_glb_as_actor(scene, glb_file_path, pose, name, type="static"):
+    def load_glb_as_actor(scene, glb_file_path, pose, name, scale, type="static"):
         """Load GLB file as a static actor in the scene"""
         builder = scene.create_actor_builder()
-        builder.add_visual_from_file(glb_file_path)
-        builder.add_multiple_convex_collisions_from_file(glb_file_path, decomposition="coacd")
-        
-        # for half_size, box_pose in collision_boxes:
-        #     builder.add_box_collision(half_size=half_size, pose=box_pose)
-        # try:
-        #     # Some kind of error with shape over here.
-        #     mesh_scene = trimesh.load(glb_file_path, force='scene')
-        #     for geom_name, geometry in mesh_scene.geometry.items():
-        #         print(geom_name)
-        #         if geom_name.startswith("collision_"):
-        #             # For each collision mesh, get its vertices and add a convex collision shape
-        #             # The vertices are transformed to be relative to the object's origin
-        #             vertices = geometry.vertices @ mesh_scene.graph.get(geom_name)[0].T
-        #             builder.add_convex_collision_from_points(points=vertices)
-        # except Exception as e:
-        #     print(f"Warning: Failed to load collision mesh from {glb_file_path} with trimesh. Error: {e}")
-        #     # Fallback to a single convex collision if trimesh fails or finds nothing
-        #     builder.add_convex_collision_from_file(glb_file_path)
-        # builder.add_nonconvex_collision_from_file(glb_file_path)
+        builder.add_visual_from_file(glb_file_path, scale=scale)
+        builder.add_multiple_convex_collisions_from_file(glb_file_path, decomposition="coacd", scale=scale)
         builder.set_initial_pose(pose)
         if type=="dynamic":
             actor = builder.build_dynamic(name)
@@ -142,17 +121,17 @@ class PlaceBookEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
 
             xyz = torch.zeros((b, 3))
-            xyz[:, 2] = 0.089
+            xyz[:, 2] = 0.405
             # xy = torch.rand((b, 2)) * 0.2 - 0.1
-            region = [[0.0, 0.0],[0.09, -0.25]] 
+            region = [[0.08, -0.26],[0.162, 0.12]]
             sampler = randomization.UniformPlacementSampler(
                 bounds=region, batch_size=b, device=self.device
             )
             radius = torch.linalg.norm(torch.tensor([0.02, 0.02])) + 0.001
-            bookA_xy = sampler.sample(radius, 100)
-            # cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)
+            soda_xy = sampler.sample(radius, 100)
+            # # cubeB_xy = xy + sampler.sample(radius, 100, verbose=False)
 
-            xyz[:, :2] = bookA_xy
+            xyz[:, :2] = soda_xy
             # qs = randomization.random_quaternions(
             #     b,
             #     lock_x=True,
@@ -161,7 +140,7 @@ class PlaceBookEnv(BaseEnv):
             # )
             # [0.854,0.471,0.212,0.068] - q for sleeping book
             # [0.748, 0.279, -0.464, 0.384] - q for other side facing book
-            self.book_A.set_pose(Pose.create_from_pq(p=xyz.clone(), q=torch.tensor([0.06, -0.162, -0.296, 0.940]).repeat(b,1)))
+            self.soda.set_pose(Pose.create_from_pq(p=xyz.clone(), q=torch.tensor([0.0, 0, 0.7071, 0.7071]).repeat(b,1)))
 
             # xyz[:, :2] = cubeB_xy
             # qs = randomization.random_quaternions(
@@ -171,38 +150,39 @@ class PlaceBookEnv(BaseEnv):
             #     lock_z=False,
             # )
             # self.cubeB.set_pose(Pose.create_from_pq(p=xyz, q=qs))
-
+            # return
     def evaluate(self):
-        pos_shelf = self.shelf.pose.p
-        pos_book = self.book_A.pose.p
-        offset = pos_shelf - pos_book
-        x_flag = torch.abs(offset[..., 0]) <= 0.13 + 0.005
-        y_flag = (
-            torch.abs(offset[..., 1]) <= 0.18 + 0.005
-        )
-        z_flag = torch.abs(offset[..., 2]) <= 0.16 + 0.005
-        is_book_in_shelf = torch.logical_and(torch.logical_and(x_flag, y_flag),  z_flag)
+        # pos_shelf = self.shelf.pose.p
+        # pos_book = self.book_A.pose.p
+        # offset = pos_shelf - pos_book
+        # x_flag = torch.abs(offset[..., 0]) <= 0.13 + 0.005
+        # y_flag = (
+        #     torch.abs(offset[..., 1]) <= 0.18 + 0.005
+        # )
+        # z_flag = torch.abs(offset[..., 2]) <= 0.16 + 0.005
+        # is_book_in_shelf = torch.logical_and(torch.logical_and(x_flag, y_flag),  z_flag)
 
-        # NOTE (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
-        is_book_static = self.book_A.is_static(lin_thresh=1e-2, ang_thresh=0.5)
-        is_book_grasped = self.agent.is_grasping(self.book_A)
-        success = is_book_in_shelf * is_book_static * (~is_book_grasped)
+        # # NOTE (stao): GPU sim can be fast but unstable. Angular velocity is rather high despite it not really rotating
+        is_soda_static = self.soda.is_static(lin_thresh=1e-2, ang_thresh=0.5)
+        print(self.soda.pose.p)
+        is_soda_on_table = self.soda.pose.p[0][2] < 0.1
+        success = is_soda_static * (is_soda_on_table)
         return {
-            "is_book_grasped": is_book_grasped,
-            "is_book_in_shelf": is_book_in_shelf,
-            "is_book_static": is_book_static,
+            # "is_book_grasped": is_book_grasped,
+            "is_soda_on_table": is_soda_on_table,
+            "is_soda_static": is_soda_static,
             "success": success.bool()
         }
-
+        
     def _get_obs_extra(self, info: Dict):
         obs = dict(tcp_pose=self.agent.tcp.pose.raw_pose)
         if "state" in self.obs_mode:
             obs.update(
-                shelf_pose=self.shelf.pose.raw_pose,
-                book_pose=self.book_A.pose.raw_pose,
-                tcp_to_shelf_pos=self.shelf.pose.p - self.agent.tcp.pose.p,
-                tcp_to_book_pos=self.book_A.pose.p - self.agent.tcp.pose.p,
-                book_to_shelf_pos=self.shelf.pose.p - self.book_A.pose.p,
+                cabinet_pose=self.open_cabinet.pose.raw_pose,
+                soda_pose=self.soda.pose.raw_pose,
+                tcp_to_cabinet_pos=self.open_cabinet.pose.p - self.agent.tcp.pose.p,
+                tcp_to_soda_pos=self.soda.pose.p - self.agent.tcp.pose.p,
+                # book_to_shelf_pos=self.shelf.pose.p - self.book_A.pose.p,
             )
         return obs
 
@@ -210,7 +190,7 @@ class PlaceBookEnv(BaseEnv):
         # rotation reward as cosine similarity between peg direction vectors
         # peg center of mass to end of peg, (1,0,0), rotated by peg pose rotation
         # dot product with its goal orientation: (0,0,1) or (0,0,-1)
-        qmats = rotation_conversions.quaternion_to_matrix(self.book_A.pose.q)
+        qmats = rotation_conversions.quaternion_to_matrix(self.soda.pose.q)
         vec = torch.tensor([-1.0, 0, 0], device=self.device)
         goal_vec = torch.tensor([0, 0, 1.0], device=self.device)
         rot_vec = (qmats @ vec).view(-1, 3)
@@ -220,16 +200,16 @@ class PlaceBookEnv(BaseEnv):
 
         # position reward using common maniskill distance reward pattern
         # giving reward in [0,1] for moving center of mass toward half length above table
-        z_dist = torch.abs(self.book_A.pose.p[:, 2] - 0.16)
+        z_dist = torch.abs(self.soda.pose.p[:, 2] - 0.16)
         reward += 1 - torch.tanh(5 * z_dist)
 
         # small reward to motivate initial reaching
         # initially, we want to reach and grip peg
-        to_grip_vec = self.book_A.pose.p - self.agent.tcp.pose.p
+        to_grip_vec = self.soda.pose.p - self.agent.tcp.pose.p
         to_grip_dist = torch.linalg.norm(to_grip_vec, axis=1)
         reaching_rew = 1 - torch.tanh(5 * to_grip_dist)
         # reaching reward granted if gripping block
-        reaching_rew[self.agent.is_grasping(self.book_A)] = 1
+        reaching_rew[self.agent.is_grasping(self.soda)] = 1
         # weight reaching reward less
         reaching_rew = reaching_rew / 5
         reward += reaching_rew
