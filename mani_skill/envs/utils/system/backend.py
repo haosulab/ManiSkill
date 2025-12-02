@@ -1,6 +1,7 @@
 """
 Utilities for determining the simulation backend and devices
 """
+
 import platform
 from dataclasses import dataclass
 from typing import Union
@@ -59,15 +60,13 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
         device = torch.device("cpu")
         sim_device = sapien.Device("cpu")
     elif sim_backend == "physx_cuda":
-        device = torch.device("cuda")
-        sim_device = (
-            sapien.Device(f"cuda:{sim_device_id}")
-            if sim_device_id is not None
-            else sapien.Device("cuda")
-        )
+        device_str = f"cuda:{sim_device_id}" if sim_device_id is not None else "cuda"
+        device = torch.device(device_str)
+        sim_device = sapien.Device(device_str)
     elif sim_backend[:4] == "cuda":
-        device = torch.device(sim_backend)
-        sim_device = sapien.Device(sim_backend)
+        device_str = f"cuda:{sim_device_id}" if sim_device_id is not None else "cuda"
+        device = torch.device(device_str)
+        sim_device = sapien.Device(device_str)
     else:
         raise ValueError(f"Invalid simulation backend: {sim_backend}")
 
@@ -79,15 +78,13 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
                 "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
             )
         elif render_backend == "sapien_cuda":
-            render_device = (
-                sapien.Device(f"cuda:{render_device_id}")
-                if render_device_id is not None
-                else sapien.Device("cuda")
-            )
+            device_str = f"cuda:{render_device_id}" if render_device_id is not None else "cuda"
+            render_device = sapien.Device(device_str)
         elif render_backend == "sapien_cpu":
             render_device = sapien.Device("cpu")
         elif render_backend[:4] == "cuda":
-            render_device = sapien.Device(render_backend)
+            device_str = f"cuda:{render_device_id}" if render_device_id is not None else "cuda"
+            render_device = sapien.Device(device_str)
         elif render_backend == "none" or render_backend is None:
             render_device = None
         else:
