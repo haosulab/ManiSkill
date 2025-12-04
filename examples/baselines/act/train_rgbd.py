@@ -45,8 +45,6 @@ OBS_KEYS_TO_REMOVE = {"world__T__ee", "world__T__root"}
 @dataclass
 class Args:
 
-    camera_width: int
-    camera_height: int
     distraction_set: str
 
     exp_name: Optional[str] = None
@@ -494,8 +492,6 @@ if __name__ == "__main__":
     # env setup
     env_kwargs = dict(
         control_mode=args.control_mode, reward_mode="sparse", obs_mode="rgbd" if args.include_depth else "rgb", render_mode="rgb_array",
-        camera_width=args.camera_width,
-        camera_height=args.camera_height,
         distraction_set=DISTRACTION_SETS[args.distraction_set.upper()],
     )
     if args.max_episode_steps is not None:
