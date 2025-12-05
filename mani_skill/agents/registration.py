@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from mani_skill import logger
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.utils import assets
+from typing import Type, TypeVar
+
+T = TypeVar("T", bound=BaseAgent)
 
 
 @dataclass
@@ -22,7 +25,7 @@ def register_agent(asset_download_ids: list[str] = [], override=False):
         override (bool): whether to override the agent if it is already registered.
     """
 
-    def _register_agent(agent_cls: type[BaseAgent]):
+    def _register_agent(agent_cls: Type[T]) -> Type[T]:
         if agent_cls.uid in REGISTERED_AGENTS:
             if override:
                 logger.warn(f"Overriding registered agent {agent_cls.uid}")
