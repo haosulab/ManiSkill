@@ -1,7 +1,6 @@
 """
 Utilities for determining the simulation backend and devices
 """
-
 import platform
 from dataclasses import dataclass
 from typing import Union
