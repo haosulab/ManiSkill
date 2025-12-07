@@ -268,9 +268,9 @@ class PDEEPoseController(PDEEPosController):
 @dataclass
 class PDEEPoseControllerConfig(PDEEPosControllerConfig):
 
-    rot_lower: Union[float, Sequence[float]] = None
+    rot_lower: Union[float, Sequence[float]] = -2 * np.pi
     """Lower bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
-    rot_upper: Union[float, Sequence[float]] = None
+    rot_upper: Union[float, Sequence[float]] = 2 * np.pi
     """Upper bound for rotation control. If a single float then X, Y, and Z rotations are bounded by this value. Otherwise can be three floats to specify each dimensions bounds"""
     stiffness: Union[float, Sequence[float]] = None
     damping: Union[float, Sequence[float]] = None
