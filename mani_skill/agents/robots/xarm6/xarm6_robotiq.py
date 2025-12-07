@@ -160,8 +160,8 @@ class XArm6Robotiq(BaseAgent):
         )
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
-            pos_lower=None,
-            pos_upper=None,
+            pos_lower=-2.0,
+            pos_upper=2.0,
             stiffness=self.arm_stiffness,
             damping=self.arm_damping,
             force_limit=self.arm_force_limit,
