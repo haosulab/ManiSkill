@@ -87,13 +87,6 @@ class EnvSpec:
             entry_point,
             max_episode_steps=self.max_episode_steps,
             kwargs=self.default_kwargs,
-            additional_wrappers=[
-                WrapperSpec(
-                    "MSTimeLimit",
-                    entry_point="mani_skill.utils.registration:TimeLimitWrapper",
-                    kwargs=dict(max_episode_steps=self.max_episode_steps),
-                )
-            ],
         )
 
 
