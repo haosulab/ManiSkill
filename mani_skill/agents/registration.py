@@ -1,21 +1,23 @@
 from dataclasses import dataclass
-from typing import Dict, List
 
 from mani_skill import logger
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.utils import assets
+from typing import Type, TypeVar
+
+T = TypeVar("T", bound=BaseAgent)
 
 
 @dataclass
 class AgentSpec:
     agent_cls: type[BaseAgent]
-    asset_download_ids: List[str]
+    asset_download_ids: list[str]
 
 
-REGISTERED_AGENTS: Dict[str, AgentSpec] = {}
+REGISTERED_AGENTS: dict[str, AgentSpec] = {}
 
 
-def register_agent(asset_download_ids: List[str] = [], override=False):
+def register_agent(asset_download_ids: list[str] = [], override=False):
     """A decorator to register agents into ManiSkill so they can be used easily by string uid.
 
     Args:
@@ -23,7 +25,7 @@ def register_agent(asset_download_ids: List[str] = [], override=False):
         override (bool): whether to override the agent if it is already registered.
     """
 
-    def _register_agent(agent_cls: type[BaseAgent]):
+    def _register_agent(agent_cls: Type[T]) -> Type[T]:
         if agent_cls.uid in REGISTERED_AGENTS:
             if override:
                 logger.warn(f"Overriding registered agent {agent_cls.uid}")

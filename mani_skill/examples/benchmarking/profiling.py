@@ -31,7 +31,7 @@ class Profiler:
         self.output_format = output_format
         self.synchronize_torch = synchronize_torch
         self.stats = dict()
-        
+
         # Initialize NVML
         self._gpu_handle = None
         try:
@@ -133,7 +133,7 @@ class Profiler:
                     return memory_usage
         return None
 def images_to_video(
-    images: List[np.ndarray],
+    images: list[np.ndarray],
     output_dir: str,
     video_name: str,
     fps: int = 10,

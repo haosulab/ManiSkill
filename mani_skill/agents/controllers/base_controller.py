@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import sapien
@@ -28,7 +28,7 @@ class BaseController:
     The controller is an interface for the robot to interact with the environment.
     """
 
-    joints: List[ArticulationJoint]
+    joints: list[ArticulationJoint]
     """active joints controlled"""
     active_joint_indices: torch.Tensor
     """indices of active joints controlled. Equivalent to [x.active_index for x in self.joints]"""
@@ -174,12 +174,12 @@ class BaseController:
         )
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(dof={len(self.active_joint_indices)}, active_joints={len(self.joints)}, joints=({', '.join([x.name for x in self.joints])}))"
+        return f"{self.__class__.__name__}(dof={self.single_action_space.shape[0]}, active_joints={len(self.joints)}, joints=({', '.join([x.name for x in self.joints])}))"
 
 
 @dataclass
 class ControllerConfig:
-    joint_names: List[str]
+    joint_names: list[str]
     """the names of the joints to control. Note that some controller configurations might not actually let you directly control all the given joints
     and will instead have some other implicit control (e.g. Passive controllers or mimic controllers)."""
     # NOTE(jigu): It is a class variable in this base class,
@@ -193,7 +193,7 @@ class ControllerConfig:
 class DictController(BaseController):
     def __init__(
         self,
-        configs: Dict[str, ControllerConfig],
+        configs: dict[str, ControllerConfig],
         articulation: Articulation,
         control_freq: int,
         sim_freq: int = None,
@@ -204,7 +204,7 @@ class DictController(BaseController):
         self.articulation = articulation
         self._control_freq = control_freq
 
-        self.controllers: Dict[str, BaseController] = dict()
+        self.controllers: dict[str, BaseController] = dict()
         for uid, config in configs.items():
             self.controllers[uid] = config.controller_cls(
                 config, articulation, control_freq, sim_freq=sim_freq, scene=scene
@@ -252,7 +252,7 @@ class DictController(BaseController):
         for controller in self.controllers.values():
             controller.reset()
 
-    def set_action(self, action: Dict[str, np.ndarray]):
+    def set_action(self, action: dict[str, np.ndarray]):
         for uid, controller in self.controllers.items():
             controller.set_action(action[uid])
 

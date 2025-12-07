@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict
 
 import torch
 
@@ -36,7 +35,7 @@ class BaseSensor:
         """
         raise NotImplementedError()
 
-    def get_params(self) -> Dict:
+    def get_params(self) -> dict:
         """
         Get parameters for this sensor. Should return a dictionary with keys mapping to torch.Tensor values
         """

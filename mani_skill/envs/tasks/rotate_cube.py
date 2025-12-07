@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import torch
@@ -250,7 +250,7 @@ class RotateCubeEnv(BaseEnv):
                 )
             )
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             goal_pos=self.obj_goal.pose.p,
             goal_q=self.obj_goal.pose.q,
@@ -262,7 +262,7 @@ class RotateCubeEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         obj_pos = self.obj.pose.p
         obj_q = self.obj.pose.q
         goal_pos = self.obj_goal.pose.p
@@ -341,7 +341,7 @@ class RotateCubeEnv(BaseEnv):
         total_reward[info["success"]] = 15
         return total_reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         self.max_reward = 15
         dense_reward = self.compute_dense_reward(obs=obs, action=action, info=info)
         norm_dense_reward = dense_reward / (2 * self.max_reward) + 0.5

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import sapien
@@ -21,7 +21,7 @@ class QuadrupedSpinEnv(BaseEnv):
     agent: ANYmalC
     default_qpos: torch.Tensor
 
-    _UNDESIRED_CONTACT_LINK_NAMES: List[str] = None
+    _UNDESIRED_CONTACT_LINK_NAMES: list[str] = None
 
     def __init__(self, *args, robot_uids="anymal-c", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -86,7 +86,7 @@ class QuadrupedSpinEnv(BaseEnv):
             "is_fallen": is_fallen,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             root_linear_velocity=self.agent.robot.root_linear_velocity,
             root_angular_velocity=self.agent.robot.root_angular_velocity,
@@ -100,7 +100,7 @@ class QuadrupedSpinEnv(BaseEnv):
         contact_exists = torch.norm(forces, dim=-1).max(-1).values > threshold
         return contact_exists
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         rotation_reward = self.agent.robot.root_angular_velocity[:, 2]
         # various penalties:
         lin_vel_z_l2 = torch.square(self.agent.robot.root_linear_velocity[:, 2])
@@ -119,7 +119,7 @@ class QuadrupedSpinEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         max_reward = 2.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

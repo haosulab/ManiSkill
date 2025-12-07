@@ -1,4 +1,4 @@
 build
-source/user_guide/reference/_autosummary/
+source/api/
 source/tasks_generated/*
 !source/tasks_generated/index.md

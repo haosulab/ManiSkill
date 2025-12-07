@@ -2,7 +2,7 @@
 Various sampling functions/classes for fast, vectorized sampling of e.g. object poses
 """
 
-from typing import List, Tuple
+from typing import Tuple
 
 import torch
 
@@ -21,7 +21,7 @@ class UniformPlacementSampler:
 
     def __init__(
         self,
-        bounds: Tuple[List[float], List[float]],
+        bounds: Tuple[list[float], list[float]],
         batch_size: int,
         device: Device = None,
     ) -> None:

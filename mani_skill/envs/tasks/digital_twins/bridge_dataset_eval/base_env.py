@@ -2,7 +2,7 @@
 Base environment for Bridge dataset environments
 """
 import os
-from typing import Dict, List, Literal
+from typing import Literal
 
 import numpy as np
 import sapien
@@ -158,7 +158,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
-    objects_excluded_from_greenscreening: List[str] = []
+    objects_excluded_from_greenscreening: list[str] = []
     """object ids that should not be greenscreened"""
 
     obj_static_friction = 0.5
@@ -166,12 +166,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
     def __init__(
         self,
-        obj_names: List[str],
+        obj_names: list[str],
         xyz_configs: torch.Tensor,
         quat_configs: torch.Tensor,
         **kwargs,
     ):
-        self.objs: Dict[str, Actor] = dict()
+        self.objs: dict[str, Actor] = dict()
         self.obj_names = obj_names
         self.source_obj_name = obj_names[0]
         self.target_obj_name = obj_names[1]
@@ -192,9 +192,13 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             }
             robot_cls = WidowX250SBridgeDatasetSink
 
-        self.model_db: Dict[str, Dict] = io_utils.load_json(
+        self.model_db: dict[str, dict] = io_utils.load_json(
             BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
+
+        self.consecutive_grasp = None
+        self.episode_stats = None
+
         super().__init__(
             robot_uids=robot_cls,
             **kwargs,
@@ -454,17 +458,31 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             )[0, :, 0]
             """target object bbox size (3, )"""
 
+            if self.consecutive_grasp is None:
+                self.consecutive_grasp = torch.zeros(
+                    self.num_envs, dtype=torch.int32
+                ).to(self.device)
+            if self.episode_stats is None:
+                self.episode_stats = dict(
+                    moved_correct_obj=torch.zeros(
+                        (self.num_envs,), dtype=torch.bool
+                    ).to(self.device),
+                    moved_wrong_obj=torch.zeros((self.num_envs,), dtype=torch.bool).to(
+                        self.device
+                    ),
+                    is_src_obj_grasped=torch.zeros(
+                        (self.num_envs,), dtype=torch.bool
+                    ).to(self.device),
+                    consecutive_grasp=torch.zeros(
+                        (self.num_envs,), dtype=torch.bool
+                    ).to(self.device),
+                )
             # stats to track
-            self.consecutive_grasp = torch.zeros((b,), dtype=torch.int32)
-            self.episode_stats = dict(
-                # all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
-                moved_correct_obj=torch.zeros((b,), dtype=torch.bool),
-                moved_wrong_obj=torch.zeros((b,), dtype=torch.bool),
-                # near_tgt_obj=torch.zeros((b,), dtype=torch.bool),
-                is_src_obj_grasped=torch.zeros((b,), dtype=torch.bool),
-                # is_closest_to_tgt=torch.zeros((b,), dtype=torch.bool),
-                consecutive_grasp=torch.zeros((b,), dtype=torch.bool),
-            )
+            self.consecutive_grasp[env_idx] = 0
+            self.episode_stats["moved_correct_obj"][env_idx] = 0
+            self.episode_stats["moved_wrong_obj"][env_idx] = 0
+            self.episode_stats["is_src_obj_grasped"][env_idx] = 0
+            self.episode_stats["consecutive_grasp"][env_idx] = 0
 
     def _settle(self, t: int = 0.5):
         """run the simulation for some steps to help settle the objects"""

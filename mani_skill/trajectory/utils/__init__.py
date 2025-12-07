@@ -6,8 +6,6 @@ Utils for working with ManiSkill trajectory files
 import h5py
 import numpy as np
 
-from mani_skill.utils.structs.types import Array
-
 
 def _get_dict_len(x):
     if isinstance(x, dict) or isinstance(x, h5py.Group):

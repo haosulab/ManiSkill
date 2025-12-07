@@ -1,12 +1,10 @@
-from typing import List
-
 import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import HTML, display
 from matplotlib import animation
 
 
-def display_images(images: List[np.ndarray], dpi=100.0, format="html5_video", **kwargs):
+def display_images(images: list[np.ndarray], dpi=100.0, format="html5_video", **kwargs):
     """Display images as an animation in jupyter notebook.
 
     Args:

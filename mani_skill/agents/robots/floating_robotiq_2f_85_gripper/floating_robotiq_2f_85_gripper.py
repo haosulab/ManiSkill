@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Union
 
 import numpy as np
 import sapien
@@ -59,7 +59,7 @@ class FloatingRobotiq2F85Gripper(BaseAgent):
     @property
     def _controller_configs(
         self,
-    ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
+    ) -> dict[str, Union[ControllerConfig, DictControllerConfig]]:
 
         # define a simple controller to control the floating base with XYZ/RPY control.
         base_pd_joint_pos = PDJointPosControllerConfig(

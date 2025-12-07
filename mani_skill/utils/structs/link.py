@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Callable, Dict, List, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import sapien
 import sapien.physx as physx
@@ -38,7 +38,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     joint: ArticulationJoint = None
     """the joint of which this link is a child of. If this is a view/merged link then this joint is also a view/merged joint"""
 
-    meshes: Dict[str, List[trimesh.Trimesh]] = field(default_factory=dict)
+    meshes: dict[str, list[trimesh.Trimesh]] = field(default_factory=dict)
     """
     map from user-defined mesh groups (e.g. "handle" meshes for cabinets) to a list of trimesh.Trimesh objects corresponding to each physx link object managed here
     """
@@ -58,7 +58,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     @classmethod
     def create(
         cls,
-        physx_links: List[physx.PhysxArticulationLinkComponent],
+        physx_links: list[physx.PhysxArticulationLinkComponent],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
     ):
@@ -75,36 +75,29 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         )
 
     @classmethod
-    def merge(cls, links: List["Link"], name: str = None):
+    def merge(cls, links: list["Link"], name: str = None):
         objs = []
         joint_objs = []
         merged_joint_indexes = []
         merged_active_joint_indexes = []
         articulation_objs = []
-        is_root = links[0].is_root
+        has_one_root_link = any(link.is_root.any() for link in links)
         merged_scene_idxs = []
-        num_objs_per_actor = links[0]._num_objs
         for link in links:
             objs += link._objs
-            assert (
-                link.is_root == is_root
-            ), "all links given to merge must all be root or all not be root links"
             merged_scene_idxs.append(link._scene_idxs)
-            # if link is not root, then there are joints we can merge automatically
-            if not is_root:
+            # if all links are not root links, then there are joints we can merge automatically
+            if not has_one_root_link:
                 joint_objs += link.joint._objs
                 articulation_objs += link.articulation._objs
 
                 merged_active_joint_indexes.append(link.joint.active_index)
                 merged_joint_indexes.append(link.joint.index)
-            assert (
-                link._num_objs == num_objs_per_actor
-            ), "Each given link must have the same number of managed objects"
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = Link.create(
             objs, scene=links[0].scene, scene_idxs=merged_scene_idxs
         )
-        if not is_root:
+        if not has_one_root_link:
             merged_active_joint_indexes = torch.concat(merged_active_joint_indexes)
             merged_joint_indexes = torch.concat(merged_joint_indexes)
             merged_joint = ArticulationJoint.create(
@@ -116,9 +109,10 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 active_joint_index=merged_active_joint_indexes,
             )
             merged_link.joint = merged_joint
+            if name is not None:
+                merged_joint.name = f"{name}_joints"
             merged_joint.child_link = merged_link
         # remove articulation reference as it does not make sense and is only used to instantiate some properties like the physx system
-        # TODO (stao): akin to the joint merging above, we can also make a view of the articulations of each link. Is it necessary?
         merged_link.articulation = None
         merged_link.name = name
         merged_link.merged = True
@@ -132,7 +126,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         """
         Returns each managed link objects render shape list (a list of lists)
         """
-        all_render_shapes: List[List[sapien.render.RenderShape]] = []
+        all_render_shapes: list[list[sapien.render.RenderShape]] = []
         for obj in self._objs:
             rb_comp = obj.entity.find_component_by_type(
                 sapien.render.RenderBodyComponent
@@ -143,7 +137,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
 
     def get_visual_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> List[trimesh.Trimesh]:
+    ) -> list[trimesh.Trimesh]:
         """
         Returns the visual mesh of each managed link object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -189,7 +183,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         filter: Callable[
             [physx.PhysxArticulationLinkComponent, sapien.render.RenderShape], bool
         ],
-    ) -> List[trimesh.primitives.Box]:
+    ) -> list[trimesh.primitives.Box]:
         # First we need to pre-compute the bounding box of the link at 0. This will be slow the first time
         bboxes = []
         for link, link_render_shapes in zip(self._objs, self.render_shapes):
@@ -250,7 +244,9 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 raw_pose = new_pose
             return Pose.create(raw_pose)
         else:
-            return Pose.create([obj.entity_pose for obj in self._objs])
+            return Pose.create(
+                [obj.entity_pose for obj in self._objs], device=self.device
+            )
 
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:

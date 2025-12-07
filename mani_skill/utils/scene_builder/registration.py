@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict
 
 from mani_skill import logger
 from mani_skill.agents.base_agent import BaseAgent
@@ -13,7 +12,7 @@ class SceneBuilderSpec:
     scene_builder_cls: type[scene_builder.SceneBuilder]
 
 
-REGISTERED_SCENE_BUILDERS: Dict[str, SceneBuilderSpec] = {}
+REGISTERED_SCENE_BUILDERS: dict[str, SceneBuilderSpec] = {}
 
 
 def register_scene_builder(uid: str, override=False):
@@ -33,7 +32,7 @@ def register_scene_builder(uid: str, override=False):
                 logger.warn(
                     f"Scene Builder {uid} is already registered. Skip registration."
                 )
-            return scene_builder_cls
+                return scene_builder_cls
 
         REGISTERED_SCENE_BUILDERS[uid] = SceneBuilderSpec(
             scene_builder_cls=scene_builder_cls

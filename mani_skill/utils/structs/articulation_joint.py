@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import sapien.physx as physx
@@ -39,7 +39,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     parent_link: Optional[Link] = None
     name: str = None
 
-    _physx_articulations: List[physx.PhysxArticulation] = None
+    _physx_articulations: list[physx.PhysxArticulation] = None
 
     def __str__(self):
         return f"<{self.name}: struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
@@ -53,8 +53,8 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @classmethod
     def create(
         cls,
-        physx_joints: List[physx.PhysxArticulationJoint],
-        physx_articulations: List[physx.PhysxArticulation],
+        physx_joints: list[physx.PhysxArticulationJoint],
+        physx_articulations: list[physx.PhysxArticulation],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
         joint_index: torch.Tensor,
@@ -102,6 +102,20 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
             ]
         else:
             return torch.tensor([self._physx_articulations[0].qpos[self.active_index]])
+
+    @qpos.setter
+    def qpos(self, arg1: torch.Tensor):
+        if self.scene.gpu_sim_enabled:
+            arg1 = common.to_tensor(arg1, device=self.device)
+            self.px.cuda_articulation_qpos.torch()[
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.active_index,
+            ] = arg1
+        else:
+            arg1 = common.to_numpy(arg1)
+            new_qpos = self.articulation._objs[0].qpos
+            new_qpos[self.active_index] = arg1
+            self.articulation._objs[0].qpos = new_qpos
 
     @property
     def qvel(self):
@@ -218,7 +232,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         return torch.tensor([obj.dof for obj in self._objs])
 
     @property
-    def drive_mode(self) -> List[typing.Literal["force", "acceleration"]]:
+    def drive_mode(self) -> list[typing.Literal["force", "acceleration"]]:
         """
         :type: typing.Literal['force', 'acceleration']
         """
@@ -226,20 +240,28 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def drive_target(self) -> torch.Tensor:
+        assert (
+            self.active_index is not None
+        ), "Cannot get drive position targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Getting drive targets of individual joints is not implemented yet."
-            )
+            return self.articulation.px.cuda_articulation_target_qpos.torch()[
+                self._data_index,
+                self.active_index,
+            ]
         else:
             return torch.from_numpy(self._objs[0].drive_target[None, :])
 
     @drive_target.setter
     def drive_target(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
+        assert (
+            self.active_index is not None
+        ), "Cannot set drive position targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Setting drive targets of individual joints is not implemented yet."
-            )
+            self.articulation.px.cuda_articulation_target_qpos.torch()[
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.active_index,
+            ] = arg1
         else:
             if arg1.shape == ():
                 arg1 = arg1.reshape(
@@ -249,20 +271,28 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def drive_velocity_target(self) -> torch.Tensor:
+        assert (
+            self.active_index is not None
+        ), "Cannot get drive velocity targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Cannot read drive velocity targets at the moment in GPU simulation"
-            )
+            return self.articulation.px.cuda_articulation_target_qvel.torch()[
+                self._data_index,
+                self.active_index,
+            ]
         else:
             return torch.from_numpy(self._objs[0].drive_velocity_target[None, :])
 
     @drive_velocity_target.setter
     def drive_velocity_target(self, arg1: Array) -> None:
         arg1 = common.to_tensor(arg1, device=self.device)
+        assert (
+            self.active_index is not None
+        ), "Cannot set drive velocity targets of inactive joints"
         if self.scene.gpu_sim_enabled:
-            raise NotImplementedError(
-                "Cannot set drive velocity targets at the moment in GPU simulation"
-            )
+            self.articulation.px.cuda_articulation_target_qvel.torch()[
+                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.active_index,
+            ] = arg1
         else:
             if arg1.shape == ():
                 arg1 = arg1.reshape(
@@ -287,7 +317,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
 
     @property
     def global_pose(self) -> Pose:
-        return self.pose_in_child * self.child_link.pose
+        return self.child_link.pose * self.pose_in_child
 
     @property
     def limits(self) -> torch.Tensor:
@@ -345,7 +375,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @property
     def type(
         self,
-    ) -> List[
+    ) -> list[
         typing.Literal["fixed", "revolute", "revolute_unwrapped", "prismatic", "free"]
     ]:
         return [obj.type for obj in self._objs]

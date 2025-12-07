@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -176,7 +176,7 @@ class PullCubeToolEnv(BaseEnv):
             cube_pose = Pose.create_from_pq(p=cube_xyz, q=cube_q)
             self.cube.set_pose(cube_pose)
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
@@ -217,7 +217,7 @@ class PullCubeToolEnv(BaseEnv):
             ),
         }
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
 
         tcp_pos = self.agent.tcp.pose.p
         cube_pos = self.cube.pose.p
@@ -272,7 +272,7 @@ class PullCubeToolEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         """
         Normalizes the dense reward by the maximum possible reward (success bonus)

@@ -1,11 +1,11 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
 import torch
 
 import mani_skill.envs.utils.randomization as randomization
-from mani_skill.agents.robots import SO100, Fetch, Panda, XArm6Robotiq
+from mani_skill.agents.robots import SO100, Fetch, Panda, WidowXAI, XArm6Robotiq
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.tasks.tabletop.pick_cube_cfgs import PICK_CUBE_CONFIGS
 from mani_skill.sensors.camera import CameraConfig
@@ -15,23 +15,23 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.pose import Pose
 
+PICK_CUBE_DOC_STRING = """**Task Description:**
+A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
+capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
+
+**Randomizations:**
+- the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
+- the cube's z-axis rotation is randomized to a random angle
+- the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
+
+**Success Conditions:**
+- the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
+- the robot is static (q velocity < 0.2)
+"""
+
 
 @register_env("PickCube-v1", max_episode_steps=50)
 class PickCubeEnv(BaseEnv):
-    """
-    **Task Description:**
-    A simple task where the objective is to grasp a red cube and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
-    capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
-
-    **Randomizations:**
-    - the cube's xy position is randomized on top of a table in the region [0.1, 0.1] x [-0.1, -0.1]. It is placed flat on the table
-    - the cube's z-axis rotation is randomized to a random angle
-    - the target goal position (marked by a green sphere) of the cube has its xy position randomized in the region [0.1, 0.1] x [-0.1, -0.1] and z randomized in [0, 0.3]
-
-    **Success Conditions:**
-    - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
-    - the robot is static (q velocity < 0.2)
-    """
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = [
@@ -39,9 +39,9 @@ class PickCubeEnv(BaseEnv):
         "fetch",
         "xarm6_robotiq",
         "so100",
+        "widowxai",
     ]
-    agent: Union[Panda, Fetch, XArm6Robotiq, SO100]
-    cube_half_size = 0.02
+    agent: Union[Panda, Fetch, XArm6Robotiq, SO100, WidowXAI]
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
@@ -129,7 +129,7 @@ class PickCubeEnv(BaseEnv):
             goal_xyz[:, 2] = torch.rand((b)) * self.max_goal_height + xyz[:, 2]
             self.goal_site.set_pose(Pose.create_from_pq(goal_xyz))
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         # in reality some people hack is_grasped into observations by checking if the gripper can close fully or not
         obs = dict(
             is_grasped=info["is_grasped"],
@@ -158,7 +158,7 @@ class PickCubeEnv(BaseEnv):
             "is_grasped": is_grasped,
         }
 
-    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: torch.Tensor, info: dict):
         tcp_to_obj_dist = torch.linalg.norm(
             self.cube.pose.p - self.agent.tcp_pose.p, axis=1
         )
@@ -175,7 +175,7 @@ class PickCubeEnv(BaseEnv):
         reward += place_reward * is_grasped
 
         qvel = self.agent.robot.get_qvel()
-        if self.robot_uids == "panda":
+        if self.robot_uids in ["panda", "widowxai"]:
             qvel = qvel[..., :-2]
         elif self.robot_uids == "so100":
             qvel = qvel[..., :-1]
@@ -186,15 +186,31 @@ class PickCubeEnv(BaseEnv):
         return reward
 
     def compute_normalized_dense_reward(
-        self, obs: Any, action: torch.Tensor, info: Dict
+        self, obs: Any, action: torch.Tensor, info: dict
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
 
 
+PickCubeEnv.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="Panda")
+
+
 @register_env("PickCubeSO100-v1", max_episode_steps=50)
 class PickCubeSO100Env(PickCubeEnv):
-
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeSO100-v1_rt.mp4"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, robot_uids="so100", **kwargs)
+
+
+PickCubeSO100Env.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="SO100")
+
+
+@register_env("PickCubeWidowXAI-v1", max_episode_steps=50)
+class PickCubeWidowXAIEnv(PickCubeEnv):
+    _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCubeWidowXAI-v1_rt.mp4"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, robot_uids="widowxai", **kwargs)
+
+
+PickCubeWidowXAIEnv.__doc__ = PICK_CUBE_DOC_STRING.format(robot_id="WidowXAI")

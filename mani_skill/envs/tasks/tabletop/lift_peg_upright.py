@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import sapien
@@ -20,7 +20,7 @@ from mani_skill.utils.structs.types import Array
 
 @register_env("LiftPegUpright-v1", max_episode_steps=50)
 class LiftPegUprightEnv(BaseEnv):
-    """
+    r"""
     **Task Description:**
     A simple task where the objective is to move a peg laying on the table to any upright position on the table
 
@@ -98,7 +98,7 @@ class LiftPegUprightEnv(BaseEnv):
             "success": is_peg_upright & close_to_table,
         }
 
-    def _get_obs_extra(self, info: Dict):
+    def _get_obs_extra(self, info: dict):
         obs = dict(
             tcp_pose=self.agent.tcp.pose.raw_pose,
         )
@@ -108,7 +108,7 @@ class LiftPegUprightEnv(BaseEnv):
             )
         return obs
 
-    def compute_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_dense_reward(self, obs: Any, action: Array, info: dict):
         # rotation reward as cosine similarity between peg direction vectors
         # peg center of mass to end of peg, (1,0,0), rotated by peg pose rotation
         # dot product with its goal orientation: (0,0,1) or (0,0,-1)
@@ -139,6 +139,6 @@ class LiftPegUprightEnv(BaseEnv):
         reward[info["success"]] = 3
         return reward
 
-    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
+    def compute_normalized_dense_reward(self, obs: Any, action: Array, info: dict):
         max_reward = 3.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward

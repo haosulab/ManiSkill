@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 import numpy as np
 import sapien
@@ -38,7 +38,7 @@ class ActorBuilder(SAPIENActorBuilder):
     def set_scene_idxs(
         self,
         scene_idxs: Optional[
-            Union[List[int], Sequence[int], torch.Tensor, np.ndarray]
+            Union[list[int], Sequence[int], torch.Tensor, np.ndarray]
         ] = None,
     ):
         """
@@ -160,6 +160,7 @@ class ActorBuilder(SAPIENActorBuilder):
                 component.cmass_local_pose = self._cmass_local_pose
                 component.inertia = self._inertia
 
+        component.name = self.name
         return component
 
     def build_dynamic(self, name):
@@ -179,11 +180,12 @@ class ActorBuilder(SAPIENActorBuilder):
         build the raw sapien entity. Modifies original SAPIEN function to accept new procedurally generated render components
         """
         entity = sapien.Entity()
-        if self.visual_records or len(self._procedural_shapes) > 0:
-            render_component = self.build_render_component()
-            for shape in self._procedural_shapes:
-                render_component.attach(shape)
-            entity.add_component(render_component)
+        if self.scene.can_render():
+            if self.visual_records or len(self._procedural_shapes) > 0:
+                render_component = self.build_render_component()
+                for shape in self._procedural_shapes:
+                    render_component.attach(shape)
+                entity.add_component(render_component)
         entity.add_component(self.build_physx_component())
         entity.name = self.name
         return entity
@@ -265,9 +267,9 @@ class ActorBuilder(SAPIENActorBuilder):
     def add_plane_repeated_visual(
         self,
         pose: sapien.Pose = sapien.Pose(),
-        half_size: List[float] = [5, 5],
+        half_size: list[float] = [5, 5],
         mat: sapien.render.RenderMaterial = None,
-        texture_repeat: List[float] = [1, 1],
+        texture_repeat: list[float] = [1, 1],
     ):
         """Procedurally generateds a repeated 2D texture. Works similarly to https://mujoco.readthedocs.io/en/stable/XMLreference.html#asset-material-texrepeat
 

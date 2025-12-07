@@ -2,7 +2,7 @@
 
 To add a new robot, you can follow any of the existing robots built already as templates in ManiSkill. We also highly recommend that you read through the [custom robot tutorial](../user_guide/tutorials/custom_robots.md) to learn how to make new robots and tune them.
 
-ManiSkill is a supporter of open-source and we encourage you to make contributions to help grow our [list of robots](../robots) in simulation!
+ManiSkill is a supporter of open-source and we encourage you to make contributions to help grow our [list of robots](../robots/index.md) in simulation!
 
 ## Contributing the Robot to ManiSkill
 

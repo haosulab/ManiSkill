@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -15,10 +15,10 @@ class BaseRealAgent:
     to the real world.
 
     Args:
-        sensor_configs (Dict[str, BaseSensorConfig]): the sensor configs to create the agent with.
+        sensor_configs (dict[str, BaseSensorConfig]): the sensor configs to create the agent with.
     """
 
-    def __init__(self, sensor_configs: Dict[str, BaseSensorConfig] = dict()):
+    def __init__(self, sensor_configs: dict[str, BaseSensorConfig] = dict()):
         self.sensor_configs = sensor_configs
 
         self._sim_agent: BaseAgent = None
@@ -99,13 +99,13 @@ class BaseRealAgent:
     # data access for e.g. joint position values, sensor observations etc.
     # All of the def get_x() functions should return numpy arrays and be implemented
     # ---------------------------------------------------------------------------- #
-    def capture_sensor_data(self, sensor_names: Optional[List[str]] = None):
+    def capture_sensor_data(self, sensor_names: Optional[list[str]] = None):
         """
         Capture the sensor data asynchronously from the agent based on the given sensor names. If sensor_names is None then all sensor data should be captured. This should not return anything and should be async if possible.
         """
         raise NotImplementedError
 
-    def get_sensor_data(self, sensor_names: Optional[List[str]] = None):
+    def get_sensor_data(self, sensor_names: Optional[list[str]] = None):
         """
         Get the desired sensor observations from the agent based on the given sensor names. If sensor_names is None then all sensor data should be returned. The expected format for cameras is in line with the simulation's
         format for cameras.
@@ -126,7 +126,7 @@ class BaseRealAgent:
         """
         raise NotImplementedError
 
-    def get_sensor_params(self, sensor_names: List[str] = None):
+    def get_sensor_params(self, sensor_names: list[str] = None):
         """
         Get the parameters of the desired sensors based on the given sensor names. If sensor_names is None then all sensor parameters should be returned. The expected format for cameras is in line with the simulation's
         format is:

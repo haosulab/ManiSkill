@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -217,6 +217,7 @@ class Fetch(BaseAgent):
             self.gripper_stiffness,
             self.gripper_damping,
             self.gripper_force_limit,
+            mimic={"r_gripper_finger_joint": {"joint": "l_gripper_finger_joint"}},
         )
 
         # -------------------------------------------------------------------------- #
@@ -366,7 +367,7 @@ class Fetch(BaseAgent):
             self.robot.get_links(), "head_camera_link"
         )
 
-        self.queries: Dict[
+        self.queries: dict[
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int]]
         ] = dict()
 

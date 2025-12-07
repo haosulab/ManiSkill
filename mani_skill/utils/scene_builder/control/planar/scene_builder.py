@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 import sapien
 import sapien.render
@@ -11,7 +9,7 @@ from mani_skill.utils.scene_builder import SceneBuilder
 
 
 class PlanarSceneBuilder(SceneBuilder):
-    def build(self, build_config_idxs: List[int] = None):
+    def build(self, build_config_idxs: list[int] = None):
         # ground - a strip with length along +x
         self.ground = build_ground(
             self.scene,
@@ -31,4 +29,4 @@ class PlanarSceneBuilder(SceneBuilder):
             ),
         )
         self.wall.build_static(name="wall")
-        self.scene_objects: List[sapien.Entity] = [self.ground, self.wall]
+        self.scene_objects: list[sapien.Entity] = [self.ground, self.wall]
