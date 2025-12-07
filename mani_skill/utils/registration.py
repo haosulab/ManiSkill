@@ -242,11 +242,11 @@ def register_env(
         gym.register(
             uid,
             entry_point=partial(make, env_id=uid),
+            # NOTE (stao): gym.make_vec is now deprecated and should not be used with ManiSkill. It does not work for gym versions > 1.
             vector_entry_point=partial(make_vec, env_id=uid),
             max_episode_steps=max_episode_steps,
             disable_env_checker=True,  # Temporary solution as we allow empty observation spaces
             kwargs=deepcopy(kwargs),
-            # TODO (stao): why arent custom vec envs allowed to have this?
             additional_wrappers=[
                 WrapperSpec(
                     "MSTimeLimit",
