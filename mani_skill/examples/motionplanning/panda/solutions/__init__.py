@@ -10,10 +10,6 @@ from .pull_cube import solve as solvePullCube
 from .draw_svg import solve as solveDrawSVG
 from .draw_triangle import solve as solveDrawTriangle
 from .stack_pyramid import solve as solveStackPyramid
-from .book_in_shelf import solve as solveBookInShelf
-from .scoop_particles import solve as solveScoopParticles
 
-# new
-from .place_sphere import solve as solvePlaceSphere
 from .open_drawer import solve as solveOpenDrawer
 from .raise_cube import solve as solveRaiseCube

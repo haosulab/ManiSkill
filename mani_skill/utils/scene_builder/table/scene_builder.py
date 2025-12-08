@@ -14,7 +14,6 @@ from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.scene_builder import SceneBuilder
 
 
-# TODO (stao): make the build and initialize api consistent with other scenes
 class TableSceneBuilder(SceneBuilder):
 
     def build(self, remove_table_from_state_dict_registry: bool = False, scene_idx: Optional[int] = None, name_suffix: str = "", add_visual_from_file: bool = True):
@@ -71,7 +70,7 @@ class TableSceneBuilder(SceneBuilder):
             self.scene, floor_width=floor_width, altitude=-self.table_height, name=f"ground{name_suffix}"
         )
         self.table = table
-        self.scene_objects: List[sapien.Entity] = [self.table, self.ground]
+        self.scene_objects: list[sapien.Entity] = [self.table, self.ground]
 
     def initialize(self, env_idx: torch.Tensor, table_z_rotation_angle: float = np.pi/2.0, qpos_0: Optional[np.ndarray] = None):
         # table_height = 0.9196429
@@ -136,27 +135,6 @@ class TableSceneBuilder(SceneBuilder):
             qpos[:, -2:] = 0.04
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
-        elif self.env.robot_uids == "xmate3_robotiq":
-            qpos = np.array(
-                [0, np.pi / 6, 0, np.pi / 3, 0, np.pi / 2, -np.pi / 2, 0, 0]
-            )
-            if self.env._enhanced_determinism:
-                qpos = (
-                    self.env._batched_episode_rng[env_idx].normal(
-                        0, self.robot_init_qpos_noise, len(qpos)
-                    )
-                    + qpos
-                )
-            else:
-                qpos = (
-                    self.env._episode_rng.normal(
-                        0, self.robot_init_qpos_noise, (b, len(qpos))
-                    )
-                    + qpos
-                )
-            qpos[:, -2:] = 0
-            self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.562, 0, 0]))
         elif self.env.robot_uids in [
             "xarm6_allegro_left",
             "xarm6_allegro_right",
@@ -171,7 +149,7 @@ class TableSceneBuilder(SceneBuilder):
                 + qpos
             )
             self.env.agent.reset(qpos)
-            self.env.agent.robot.set_pose(sapien.Pose([-0.45, 0, 0]))
+            self.env.agent.robot.set_pose(sapien.Pose([-0.522, 0, 0]))
         elif self.env.robot_uids == "fetch":
             qpos = np.array(
                 [
@@ -309,6 +287,21 @@ class TableSceneBuilder(SceneBuilder):
                 )
             self.env.agent.reset(qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-0.615, 0, 0]))
+        elif self.env.robot_uids in ["widowxai", "widowxai_wristcam"]:
+            qpos = self.env.agent.keyframes["ready_to_grasp"].qpos
+            self.env.agent.reset(qpos)
+        elif self.env.robot_uids == "so100":
+            qpos = np.array([0, 0, 0, np.pi / 2, np.pi / 2, 0])
+            qpos = (
+                self.env._episode_rng.normal(
+                    0, self.robot_init_qpos_noise, (b, len(qpos))
+                )
+                + qpos
+            )
+            self.env.agent.reset(qpos)
+            self.env.agent.robot.set_pose(
+                sapien.Pose([-0.725, 0, 0], q=euler2quat(0, 0, np.pi / 2))
+            )
 
 
 # TODO (stao): make the build and initialize api consistent with other scenes

@@ -44,5 +44,4 @@ imgui.ini
 # testing
 .coverage*
 htmlcov/
-
 venv/
