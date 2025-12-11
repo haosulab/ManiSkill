@@ -17,7 +17,9 @@ class MultiAgent(BaseAgent, Generic[T]):
         self.scene = agents[0].scene
         self.sensor_configs = []
         for i, agent in enumerate(self.agents):
-            self.sensor_configs += agent._sensor_configs
+            for sensor_config in agent._sensor_configs:
+                sensor_config.uid = f"{i}-{sensor_config.uid}"
+                self.sensor_configs.append(sensor_config)
             self.agents_dict[f"{agent.uid}-{i}"] = agent
 
     def get_proprioception(self):
