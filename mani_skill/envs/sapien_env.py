@@ -780,11 +780,7 @@ class BaseEnv(gym.Env):
         # Add agent sensors
         self._agent_sensor_configs = dict()
         if self.agent is not None:
-            self._agent_sensor_configs = parse_camera_configs(
-                self.agent.sensor_configs 
-                if isinstance(self.agent, MultiAgent)
-                else self.agent._sensor_configs
-            )
+            self._agent_sensor_configs = parse_camera_configs(self.agent._sensor_configs)
             self._sensor_configs.update(self._agent_sensor_configs)
 
         # Add human render camera configs
@@ -819,7 +815,7 @@ class BaseEnv(gym.Env):
         for uid, sensor_config in self._sensor_configs.items():
             if uid in self._agent_sensor_configs:
                 if isinstance(self.agent, MultiAgent):
-                    agent_idx = int(uid.split("-")[0])
+                    agent_idx = self.agent._sensor_config_agent_map[uid]
                     articulation = self.agent.agents[agent_idx].robot 
                 else:
                     articulation = self.agent.robot

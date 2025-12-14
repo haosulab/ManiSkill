@@ -4,6 +4,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.sensors.base_sensor import BaseSensorConfig
 
 T = TypeVar("T")
 
@@ -16,10 +17,12 @@ class MultiAgent(BaseAgent, Generic[T]):
         self.agents_dict: dict[str, BaseAgent] = dict()
         self.scene = agents[0].scene
         self.sensor_configs = []
+        self._sensor_config_agent_map: dict[str, int] = dict()
         for i, agent in enumerate(self.agents):
             for sensor_config in agent._sensor_configs:
-                sensor_config.uid = f"{i}-{sensor_config.uid}"
+                sensor_config.uid = f"{agent.uid}-{i}-{sensor_config.uid}"
                 self.sensor_configs.append(sensor_config)
+                self._sensor_config_agent_map[sensor_config.uid] = i
             self.agents_dict[f"{agent.uid}-{i}"] = agent
 
     def get_proprioception(self):
@@ -27,6 +30,11 @@ class MultiAgent(BaseAgent, Generic[T]):
         for i, agent in enumerate(self.agents):
             proprioception[f"{agent.uid}-{i}"] = agent.get_proprioception()
         return proprioception
+
+    @property
+    def _sensor_configs(self) -> list[BaseSensorConfig]:
+        """Returns a list of sensor configs for this agent. It contains the sensor configs of the individual agents."""
+        return self.sensor_configs
 
     @property
     def control_mode(self):
