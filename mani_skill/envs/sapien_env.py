@@ -814,7 +814,11 @@ class BaseEnv(gym.Env):
 
         for uid, sensor_config in self._sensor_configs.items():
             if uid in self._agent_sensor_configs:
-                articulation = self.agent.robot
+                if isinstance(self.agent, MultiAgent):
+                    agent_idx = self.agent._sensor_config_agent_map[uid]
+                    articulation = self.agent.agents[agent_idx].robot 
+                else:
+                    articulation = self.agent.robot
             else:
                 articulation = None
             if isinstance(sensor_config, StereoDepthCameraConfig):
