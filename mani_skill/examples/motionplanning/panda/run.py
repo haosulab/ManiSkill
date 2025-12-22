@@ -11,7 +11,7 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere,solveOpenDrawer,solveRaiseCube
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere,solveOpenDrawer,solveRaiseCube, solvePlaceBookInShelf, solveHangClothingFrameOnPole, solvePickSodaFromCabinet, solveRotateArrow, solveScoopParticles
 from mani_skill.envs.distraction_set import DISTRACTION_SETS
 
 MP_SOLUTIONS = {
@@ -33,9 +33,16 @@ MP_SOLUTIONS = {
     "OpenDrawer-v1": solveOpenDrawer,               # new
     "PushCube-v2": solvePushCube,                   # new
     "StackCube-v2": solveStackCube,                 # new
+
+    "PlaceBookInShelf-v1": solvePlaceBookInShelf,
+    "HangClothingFrameOnPole-v1": solveHangClothingFrameOnPole,
+    "PickSodaFromCabinet-v1": solvePickSodaFromCabinet,
+    "RotateArrow-v1": solveRotateArrow,
+    "ScoopParticles-v1": solveScoopParticles,
 }
 
 """
+ENV_ID=StackCube-v1
 DISTRACTION_SET=none
 # ^ Must be one of: none, all, distractor_object_cfg, MO_color_cfg, MO_texture_cfg, RO_color_cfg, RO_texture_cfg, table_color_cfg, table_texture_cfg, camera_pose_cfg
 
@@ -46,6 +53,7 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --num-procs 1 \
     --reward-mode "sparse" \
     --random-seed \
+    --save-video \
     --vis
 """
 
@@ -164,8 +172,8 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
                     success_rate=np.mean(successes),
                     failed_motion_plan_rate=failed_motion_plans / (seed + 1),
                     avg_episode_length=np.mean(solution_episode_lengths),
-                    max_episode_length=np.max(solution_episode_lengths),
-                    min_episode_length=np.min(solution_episode_lengths)
+                    max_episode_length=np.max(solution_episode_lengths) if solution_episode_lengths else -1,
+                    min_episode_length=np.min(solution_episode_lengths) if solution_episode_lengths else -1
                 )
             )
             seed += 1

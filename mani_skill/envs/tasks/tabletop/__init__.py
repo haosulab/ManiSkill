@@ -17,6 +17,6 @@ from .roll_ball import RollBallEnv
 from .push_t import PushTEnv
 from .pull_cube_tool import PullCubeToolEnv
 from .stack_pyramid import StackPyramidEnv
-
+from .hang_clothing_frame_on_pole import HangClothingFrameOnPoleEnv
 # 
 from .colosseum_v2_versions import *

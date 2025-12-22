@@ -1,0 +1,137 @@
+import numpy as np
+import sapien
+import gymnasium as gym
+import time
+from mani_skill.envs.tasks.tabletop.scoop_particles import ScoopParticlesEnv
+from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
+from mani_skill.examples.motionplanning.base_motionplanner.utils import compute_grasp_info_by_obb, get_actor_obb
+
+def main():
+    env: ScoopParticlesEnv = gym.make(
+        "ScoopParticles-v1",
+        obs_mode="none",
+        control_mode="pd_joint_pos",
+        render_mode="rgb_array",
+        reward_mode="dense",
+    )
+    for seed in range(100):
+        res = solve(env, seed=seed, debug=False, vis=True)
+        print(res)
+    env.close()
+
+def solve(env: ScoopParticlesEnv, seed=None, debug=False, vis=False):
+    env.reset(seed=seed)
+    planner = PandaArmMotionPlanningSolver(
+        env,
+        debug=debug,
+        vis=vis,
+        base_pose=env.unwrapped.agent.robot.pose,
+        visualize_target_grasp_pose=vis,
+        print_env_info=False,
+        joint_vel_limits=0.75,
+        joint_acc_limits=0.75,
+    )
+
+    env = env.unwrapped
+
+    # Get tool OBB and compute grasp pose
+    tool_obb = get_actor_obb(env.dustpan)
+    approaching = np.array([0, 0, -1])
+    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
+
+    grasp_info = compute_grasp_info_by_obb(
+        tool_obb,
+        approaching=approaching,
+        target_closing=target_closing,
+        depth=0.03,
+    )
+    closing, center = grasp_info["closing"], grasp_info["center"]
+    grasp_pose = env.agent.build_grasp_pose(approaching, closing, env.dustpan.pose.sp.p)
+    offset = sapien.Pose([-0.05, 0, 0])
+    grasp_pose = grasp_pose * (offset)
+
+    # -------------------------------------------------------------------------- #
+    # Reach
+    # -------------------------------------------------------------------------- #
+    reach_pose = grasp_pose * sapien.Pose([0, 0, -0.15])  # 15 cm above grasp pose
+    res = planner.move_to_pose_with_screw(reach_pose)
+    if res == -1: return res
+
+    # -------------------------------------------------------------------------- #
+    # Grasp
+    # -------------------------------------------------------------------------- #
+    res = planner.move_to_pose_with_screw(grasp_pose)
+    if res == -1: return res
+    planner.close_gripper()
+
+    # -------------------------------------------------------------------------- #
+    # Lift tool to safe height
+    # -------------------------------------------------------------------------- #
+    # lift_height = 0.35  
+    # lift_pose = sapien.Pose(grasp_pose.p + np.array([0, 0, lift_height]))
+    # lift_pose.set_q(grasp_pose.q)  # Maintain grasp orientation
+    # res = planner.move_to_pose_with_screw(lift_pose)
+    # if res == -1: return res
+
+    ball_pos = env.ball.pose.sp.p
+    approach_offset = sapien.Pose([-0.07, 0, 0.0])
+    approach_pose = sapien.Pose(ball_pos)*approach_offset
+    approach_pose.set_q(grasp_pose.q)
+    res = planner.move_to_pose_with_screw(approach_pose)
+    if res == -1: return res
+    planner.close_gripper()
+    # -------------------------------------------------------------------------- #
+    lift_rotn_y = 60.0 / 180.0 * np.pi  # Rotate 10 degrees around Y axis
+    lift_rot_pose = approach_pose * sapien.Pose(p=[-0.02, 0, -0.05], q=[np.cos(lift_rotn_y/2), 0, np.sin(lift_rotn_y/2), 0])
+    res = planner.move_to_pose_with_RRTStar(lift_rot_pose)
+    if res == -1: return res
+
+
+    lift_height = 0.36
+    lift_pose = sapien.Pose(approach_pose.p + np.array([0, 0, lift_height]))
+    lift_pose.set_q(lift_rot_pose.q)  # Maintain grasp orientation
+    res = planner.move_to_pose_with_RRTStar(lift_pose)
+    if res == -1: return res
+
+
+    # ball_pos = env.ball.pose.sp.p
+    # approach_offset = sapien.Pose(
+    #     [-(env.hook_length + env.cube_half_size + 0.08),  
+    #     -0.0,  
+    #     lift_height - 0.05]  
+    # )
+    # approach_pose = sapien.Pose(cube_pos) * approach_offset
+    # approach_pose.set_q(grasp_pose.q)
+    
+    # res = planner.move_to_pose_with_screw(approach_pose)
+    # if res == -1: return res
+
+    # # -------------------------------------------------------------------------- #
+    # # Lower tool behind cube
+    # # -------------------------------------------------------------------------- #
+    # behind_offset = sapien.Pose(
+    #     [-(env.hook_length + env.cube_half_size),  
+    #     -0.067,  
+    #     0] 
+    # )
+    # hook_pose = sapien.Pose(cube_pos) * behind_offset
+    # hook_pose.set_q(grasp_pose.q)
+    
+    # res = planner.move_to_pose_with_screw(hook_pose)
+    # if res == -1: return res
+
+    # # -------------------------------------------------------------------------- #
+    # # Pull cube
+    # # -------------------------------------------------------------------------- #
+    # pull_offset = sapien.Pose([-0.35, 0, 0])
+    # target_pose = hook_pose * pull_offset
+    # res = planner.move_to_pose_with_screw(target_pose)
+    # if res == -1: return res
+    # print("\nLift complete. Holding position for 5 seconds...")
+    # time.sleep(5)
+    planner.close()
+    return res
+
+
+if __name__ == "__main__":
+    main()
