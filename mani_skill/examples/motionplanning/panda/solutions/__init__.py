@@ -24,8 +24,6 @@ from .place_apple_on_plate import solve as solvePlaceAppleOnPlate
 from .pick_banana_from_open_drawer import solve as solvePickBananaFromOpenDrawer
 # new
 from .place_sphere import solve as solvePlaceSphere
-# from .open_drawer import solve as solveOpenDrawer  # OpenDrawerV1Env doesn't exist
-# from .raise_cube import solve as solveRaiseCube  # RaiseCubeEnv doesn't exist
 from .place_dish_in_rack import solve as solvePlaceDishInRack
 from .pick_dish_from_rack import solve as solvePickDishFromRack
 from .pour_sphere import solve as solvePourSphere
