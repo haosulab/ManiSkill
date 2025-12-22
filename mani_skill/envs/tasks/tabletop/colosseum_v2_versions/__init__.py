@@ -2,3 +2,6 @@ from .open_drawer import OpenDrawerEnv
 from .push_cube_v2 import PushCubeV2Env
 from .stack_cube_v2 import StackCubeV2Env
 from .raise_cube import RaiseCubeEnv
+from .pick_banana_from_open_drawer import PickBananaFromOpenDrawerEnv
+from .place_apple_on_plate import PlaceAppleOnPlateEnv
+from .place_lightbulb_socket import PickLightbulbPlaceSocketEnv

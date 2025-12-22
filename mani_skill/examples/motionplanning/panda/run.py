@@ -11,7 +11,7 @@ from tqdm import tqdm
 import os.path as osp
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.trajectory.merge_trajectory import merge_trajectories
-from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere,solveOpenDrawer,solveRaiseCube, solvePlaceBookInShelf, solveHangClothingFrameOnPole, solvePickSodaFromCabinet, solveRotateArrow, solveScoopParticles
+from mani_skill.examples.motionplanning.panda.solutions import solvePushCube, solvePickCube, solveStackCube, solvePegInsertionSide, solvePlugCharger, solvePullCubeTool, solveLiftPegUpright, solvePullCube, solveDrawTriangle, solveDrawSVG, solvePlaceSphere,solveOpenDrawer,solveRaiseCube, solvePlaceBookInShelf, solveHangClothingFrameOnPole, solvePickSodaFromCabinet, solveRotateArrow, solveScoopParticles, solvePickLightbulbPlaceSocket, solvePlaceAppleOnPlate,solvePickBananaFromOpenDrawer
 from mani_skill.envs.distraction_set import DISTRACTION_SETS
 
 MP_SOLUTIONS = {
@@ -39,10 +39,13 @@ MP_SOLUTIONS = {
     "PickSodaFromCabinet-v1": solvePickSodaFromCabinet,
     "RotateArrow-v1": solveRotateArrow,
     "ScoopParticles-v1": solveScoopParticles,
+    "PickBananaFromOpenDrawer-v1": solvePickBananaFromOpenDrawer,    # new
+    "PickLightbulbPlaceSocket-v1": solvePickLightbulbPlaceSocket, #new
+    "PlaceAppleOnPlate-v1": solvePlaceAppleOnPlate  # new
 }
 
 """
-ENV_ID=StackCube-v1
+ENV_ID=PickBananaFromOpenDrawer-v1
 DISTRACTION_SET=none
 # ^ Must be one of: none, all, distractor_object_cfg, MO_color_cfg, MO_texture_cfg, RO_color_cfg, RO_texture_cfg, table_color_cfg, table_texture_cfg, camera_pose_cfg
 
@@ -53,7 +56,17 @@ python mani_skill/examples/motionplanning/panda/run.py \
     --num-procs 1 \
     --reward-mode "sparse" \
     --random-seed \
+    --only-count-success \
     --save-video \
+    --vis
+
+python mani_skill/examples/motionplanning/panda/run.py \
+    --env-id PickBananaFromOpenDrawer-v1 \
+    --num-traj 10 \
+    --distraction-set none \
+    --num-procs 1 \
+    --reward-mode "sparse" \
+    --random-seed \
     --vis
 """
 
@@ -155,6 +168,7 @@ def _main(args, proc_id: int = 0, start_seed: int = 0) -> str:
             success = res[-1]["success"].item()
             elapsed_steps = res[-1]["elapsed_steps"].item()
             solution_episode_lengths.append(elapsed_steps)
+        print(f"Success: {success}")
         successes.append(success)
         if args.only_count_success and not success:
             seed += 1
