@@ -6,13 +6,22 @@ To start contributing, raise an issue at https://github.com/haosulab/ManiSkill/i
 
 ## Setup and Installation
 
-We recommend using Python 3.9 to build and develop on ManiSkill, although we currently aim to support versions 3.8 and above. To get started you must set up a conda/mamba environment which can be done as follows
+We recommend using Python 3.11 to build and develop on ManiSkill, although we currently aim to support versions 3.10 and above. To get started you must set up a [uv](https://docs.astral.sh/uv/) or [conda/mamba](https://mamba.readthedocs.io/en/latest/index.html) environment which can be done as follows
 
 ```
-conda create -n "ms_dev" "python==3.9"
+# using uv
 git clone https://github.com/haosulab/ManiSkill.git
 cd ManiSkill
-pip install -e .[build] # install ManiSkill locally with testing dependencies
+uv venv -p python3.11
+uv pip install -e .[dev] # install ManiSkill locally with testing dependencies
+```
+
+```
+# or using conda/mamba
+conda create -n "ms_dev" "python==3.11"
+git clone https://github.com/haosulab/ManiSkill.git
+cd ManiSkill
+pip install -e .[dev] # install ManiSkill locally with testing dependencies
 ```
 
 Then to setup pre-commit, run
