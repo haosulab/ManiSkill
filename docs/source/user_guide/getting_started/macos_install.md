@@ -4,19 +4,19 @@
 
 # MacOS Installation
 
-ManiSkill supports MacOS and can let you run CPU simulation and the standard rendering. GPU simulation is currently not yet supported on MacOS. To get started we strongly recommend setting up a python conda/mamba environment with python version >= 3.9. You can then install ManiSkill as follows
+ManiSkill supports MacOS and can let you run CPU simulation and the standard rendering. GPU simulation is currently not yet supported on MacOS. To get started we strongly recommend setting up a python [uv](https://docs.astral.sh/uv/) or  [conda/mamba](https://mamba.readthedocs.io/en/latest/index.html) environment with python version >= 3.10. You can then install ManiSkill as follows
 
 ```
-conda create -n ms3 "python=3.11" # or use the faster mamba
+# using uv
+uv venv -p python3.11
+uv pip install mani_skill-nightly
+```
+
+```
+# or using conda/mamba
+conda create -n ms3 "python=3.11"
 conda activate ms3
-pip install mani_skill-nightly torch
-```
-
-Currently as we are still testing MacOS the full pypi package of the underlying renderer/physics engine is not available on PyPi so you need to install it from the SAPIEN GitHub releases page. Running the script below will do it for you:
-
-```
-PY_VERSION=$(python -c "import sys; print(f'cp{sys.version_info.major}{sys.version_info.minor}')")
-pip install https://github.com/haosulab/SAPIEN/releases/download/nightly/sapien-3.0.0.dev20250303+291f6a77-$PY_VERSION-$PY_VERSION-macosx_12_0_universal2.whl
+pip install mani_skill-nightly
 ```
 
 After this you need to install Vulkan which is described in the next section.
