@@ -147,13 +147,13 @@ class PickClutterEnv(BaseEnv):
     def _sample_target_objects(self):
         # note this samples new target objects for every sub-scene
         target_objects = []
-        for i in range(self.num_envs):
-            selected_obj_idxs = torch.randint(low=0, high=99999, size=(self.num_envs,))
-            selected_obj_idxs[i] = selected_obj_idxs[i] % len(
-                self.selectable_target_objects[-1]
+        selected_obj_idxs = self._batched_episode_rng.randint(low=0, high=99999)
+        for i, selected_obj_idx in enumerate(selected_obj_idxs):
+            selected_obj_idx = selected_obj_idx % len(
+                self.selectable_target_objects[i]
             )
             target_objects.append(
-                self.selectable_target_objects[-1][selected_obj_idxs[i]]
+                self.selectable_target_objects[i][selected_obj_idx]
             )
         self.target_object = Actor.merge(target_objects, name="target_object")
 
