@@ -14,7 +14,7 @@ ManiSkill is a powerful unified framework for robot simulation and training powe
 - GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 30,000+ FPS with a 4090 GPU!
 - GPU parallelized simulation, enabling high throughput state-based synthetic data collection in simulation
 - GPU parallelized heterogeneous simulation, where every parallel environment has a completely different scene/set of objects
-- Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dextrous manipulation)
+- Example tasks cover a wide range of different robot embodiments (humanoids, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, drawing/cleaning, dexterous manipulation)
 - Flexible and simple task building API that abstracts away much of the complex GPU memory management code via an object oriented design
 - Real2sim environments for scalably evaluating real-world policies 100x faster via GPU simulation.
 - Sim2real support for deploying policies trained in simulation to the real world
