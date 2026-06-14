@@ -9,7 +9,9 @@ import torch
 import mani_skill.render.utils as render_utils
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
 from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
-from mani_skill.sim.sapien.builders.articulation_builder import SapienArticulationBuilder
+from mani_skill.sim.sapien.builders.articulation_builder import (
+    SapienArticulationBuilder,
+)
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
 
@@ -31,10 +33,10 @@ class GPUMemoryConfig:
     heap_capacity: int = 2**26
     found_lost_pairs_capacity: int = (
         2**25
-    )  # 262144 is SAPIEN default but most tasks work with 2**25
+    )  # 262144 is SAPIEN default but most tasks use 2**25
     found_lost_aggregate_pairs_capacity: int = 2**10
     total_aggregate_pairs_capacity: int = 2**10
-    collision_stack_size: int = 64 * 64 * 1024  # this is the same default as SAPIEN
+    collision_stack_size: int = 64 * 64 * 1024  # default as SAPIEN
     """Increase this if you get 'Collision stack overflow detected'"""
 
     def dict(self):
@@ -68,10 +70,10 @@ class SceneConfig:
     # contacts may be missed if distance changes too fast
     # NOTE (fxiang): solver iterations 15 is recommended to balance speed and accuracy. If stable
     # grasps are necessary >= 20 is preferred.
-    # NOTE (fxiang): can try using more cpu_workers as it may also make it faster if there are a
-    # lot of collisions, collision filtering is on CPU
-    # NOTE (fxiang): enable_enhanced_determinism is for CPU probably. If there are 10 far apart
-    # sub scenes, this being True makes it so they do not impact each other at all
+    # NOTE (fxiang): can try using more cpu_workers as it may also make it faster if there are a lot
+    # of collisions, collision filtering is on CPU
+    # NOTE (fxiang): enable_enhanced_determinism is for CPU probably. If there are 10 far apart sub
+    # scenes, this being True makes it so they do not impact each other at all
 
 
 @dataclass(frozen=True)
@@ -109,7 +111,7 @@ class SapienSim(BaseSim):
         if cfg is None:
             cfg = SapienSimConfig()
 
-        # Determine the devices simulation and/or rendering are running on
+        # Determine devices simulation and/or rendering are running on
         sim_device_torch = torch.device("cpu")
         render_device_torch = torch.device("cpu")
         if sim_backend is not None:
@@ -146,7 +148,8 @@ class SapienSim(BaseSim):
                     render_device_torch = torch.device("cpu")
                     render_backend = "sapien_cpu"
                     logger.warning(
-                        "Detected MacOS system, forcing render backend to be sapien:cpu in order to be MacOS compatible."
+                        "Detected MacOS system, forcing render backend to be sapien:cpu in order "
+                        "to be MacOS compatible."
                     )
                 elif render_backend == "sapien_cuda":
                     device_str = (
@@ -171,13 +174,15 @@ class SapienSim(BaseSim):
                     self._render_device = None
                     render_device_torch = torch.device("cpu")
                 else:
-                    # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
+                    # handle special cases such as for AMD gpus, render_backend must be defined as
+                    # pci:... instead as cuda is not available.
                     self._render_device = sapien.Device(render_backend)
                     render_device_torch = torch.device(render_backend)
         except RuntimeError as e:
             if str(e) == 'failed to find device "cuda"':
                 logger.warning(
-                    f'Requested to use render device "{render_backend}", but CUDA device was not found. Falling back to "cpu" device. Rendering might be disabled.'
+                    f'Requested to use render device "{render_backend}", but CUDA device was not '
+                    'found. Falling back to "cpu" device. Rendering might be disabled.'
                 )
                 self._render_device = sapien.Device("cpu")
                 render_device_torch = torch.device("cpu")
@@ -188,7 +193,7 @@ class SapienSim(BaseSim):
         super().__init__(
             num_envs,
             cfg,
-            sim_device_torch=sim_device_torch,
+            physics_device_torch=sim_device_torch,
             render_device_torch=render_device_torch,
         )
 
@@ -218,7 +223,7 @@ class SapienSim(BaseSim):
             enable_tgs=self.cfg.scene_config.enable_tgs,
             enable_ccd=self.cfg.scene_config.enable_ccd,
             enable_enhanced_determinism=self.cfg.scene_config.enable_enhanced_determinism,
-            enable_friction_every_iteration=self.cfg.scene_config.enable_friction_every_iteration,
+            enable_friction_every_iteration=self.cfg.scene_config.enable_friction_every_iteration,  # noqa: E501
             cpu_workers=self.cfg.scene_config.cpu_workers,
         )
         physx.set_default_material(**self.cfg.default_materials_config.dict())
@@ -271,13 +276,14 @@ class SapienSim(BaseSim):
         self._pairwise_contact_queries: dict[
             str, physx.PhysxGpuContactPairImpulseQuery
         ] = dict()
-        """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU simulation only to cache queries as
-        query creation will pause any GPU sim computation"""
+        """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU
+        simulation only to cache queries as query creation will pause any GPU sim computation"""
         self._pairwise_contact_query_unique_hashes: dict[str, int] = dict()
-        """maps keys in self.pairwise_contact_queries to unique hashes dependent on the actual objects involved in the query.
-        This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
-        non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
-        to invalidate the cached queries."""
+        """maps keys in self.pairwise_contact_queries to unique hashes dependent on the actual
+        objects involved in the query. This is used to determine automatically when to rebuild
+        contact queries as keys for self.pairwise_contact_queries are kept non-unique between
+        episode resets in order to be easily rebuilt and deallocate old queries. This essentially
+        acts as a way to invalidate the cached queries."""
 
     def create_actor_builder(self):
         return SapienActorBuilder().set_scene(self)

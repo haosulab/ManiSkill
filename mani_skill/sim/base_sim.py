@@ -26,14 +26,14 @@ class BaseSimConfig:
     """
 
     spacing: float = 5.0
-    """Controls the spacing between parallel environments when simulating on GPU in meters. Increase
-    this value if you expect objects in one parallel environment to impact objects within
-    this spacing distance."""
+    """Controls the spacing between parallel environments when simulating on GPU in meters.
+    Increase this value if you expect objects in one parallel environment to impact objects
+    within this spacing distance."""
     sim_freq: int = 120
     """simulation frequency (Hz)."""
     control_freq: int = 60
-    """control frequency (Hz). Every control step (e.g. env.step)
-    contains (sim_freq / control_freq) physics steps."""
+    """control frequency (Hz). Every control step (e.g. env.step) contains
+    (sim_freq / control_freq) physics steps."""
 
     default_materials_config: DefaultMaterialsConfig = field(
         default_factory=DefaultMaterialsConfig
@@ -44,13 +44,13 @@ class BaseSim(ABC):
     """
     Base class for all simulation backends.
 
-    A simulation backend consists of primarily a physics engine and a renderer. It is possible for
-    a simulation backend to only have one or the other as well.
+    A simulation backend consists of primarily a physics engine and a renderer. It is possible
+    for a simulation backend to only have one or the other as well.
     """
 
     id: str
     """The id of the simulation backend."""
-    sim_device_torch: torch.device
+    physics_device_torch: torch.device
     """The torch device that physics engine returns data on."""
     render_device_torch: torch.device
     """The torch device that the renderer returns data on."""
@@ -65,12 +65,16 @@ class BaseSim(ABC):
         self,
         num_envs: int = 1,
         cfg: BaseSimConfig | None = None,
-        sim_device_torch: torch.device = torch.device("cpu"),
-        render_device_torch: torch.device = torch.device("cpu"),
+        physics_device_torch: torch.device | None = None,
+        render_device_torch: torch.device | None = None,
     ):
+        if physics_device_torch is None:
+            physics_device_torch = torch.device("cpu")
+        if render_device_torch is None:
+            render_device_torch = torch.device("cpu")
         self.num_envs = num_envs
         self.cfg = cfg or BaseSimConfig()
-        self.sim_device_torch = sim_device_torch
+        self.physics_device_torch = physics_device_torch
         self.render_device_torch = render_device_torch
 
     def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
@@ -81,8 +85,10 @@ class BaseSim(ABC):
                 return package_name, parts[0], parts[1]
             return package_name, backend_name, None
         raise ValueError(
-            f"Invalid backend: {backend}. Should be in the format <package_name.backend_name> or <package_name.backend_name:device_id>."
+            f"Invalid backend: {backend}. Should be in the format "
+            "<package_name.backend_name> or <package_name.backend_name:device_id>."
         )
+
     ### Shared derived properties ###
     @property
     def timestep(self) -> float:
@@ -99,7 +105,8 @@ class BaseSim(ABC):
     @abstractmethod
     def create_articulation_builder(self) -> BaseArticulationBuilder:
         """
-        Creates an ArticulationBuilder object that can be used to build articulations in this scene.
+        Creates an ArticulationBuilder object that can be used to build articulations in
+        this scene.
         """
 
     ### Code for compiling simulator scene for rendering ###
@@ -129,9 +136,9 @@ class BaseSim(ABC):
     @abstractmethod
     def compile_physical_scene(self):
         """
-        Compiles the simulation scene for physical simulation. Usually necessary to have an explicit
-        compilation stage for simulators with GPU parallelization, but some simulators permit
-        larger changes to the physical scene at runtime.
+        Compiles the simulation scene for physical simulation. Usually necessary to have an
+        explicit compilation stage for simulators with GPU parallelization, but some
+        simulators permit larger changes to the physical scene at runtime.
         """
 
     ### Physical simulation code ###

@@ -4,14 +4,9 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
-import numpy as np
-import sapien.physx as physx
 import torch
 
-from mani_skill.utils import common, sapien_utils
-from mani_skill.utils.structs.decorators import before_gpu_init
-from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import Array
+from mani_skill.utils import common
 
 if TYPE_CHECKING:
     from mani_skill.sim.base_sim import BaseSim
@@ -26,13 +21,9 @@ class BaseStruct(Generic[T]):
 
     _scene_idxs: torch.Tensor
     """A list of indexes indicating which sub-scene each managed object is in."""
-    physics_sim: BaseSim
+    sim: BaseSim
     """
-    The simulation that physically simulates this struct's objects.
-    """
-    render_sim: BaseSim
-    """
-    The simulation that renders this struct's objects.
+    The simulation backend for this struct.
     """
 
     def __post_init__(self):
@@ -58,8 +49,9 @@ class BaseStruct(Generic[T]):
     @property
     def device(self):
         """The device that simulation data is returned on."""
-        # TODO (stao): split between sim and render device? One can check more accurately via which render and physics sim is used.
-        return self.physics_sim.sim_device_torch
+        # TODO (stao): split between sim and render device? One can check more accurately via
+        # which render and physics sim is used.
+        return self.sim.physics_device_torch
 
     @property
     def _num_objs(self):
