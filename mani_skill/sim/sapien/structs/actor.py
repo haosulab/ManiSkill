@@ -64,8 +64,7 @@ class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         cls,
         entities: list[sapien.Entity],
         scene_idxs: torch.Tensor,
-        physics_sim: SapienSim | None = None,
-        render_sim: SapienSim | None = None,
+        sim: SapienSim,
         shared_name: str | None = None,
     ):
 
@@ -94,14 +93,13 @@ class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             ]
         return cls(
             _objs=entities,
-            physics_sim=physics_sim,  # type: ignore
-            render_sim=render_sim,  # type: ignore
+            sim=sim,  # type: ignore
             _scene_idxs=scene_idxs,
             px_body_type=px_body_type,
-            _bodies=bodies,  # type: ignore
+            _bodies=bodies,
             _body_data_name=(
                 "cuda_rigid_body_data"
-                if isinstance(physics_sim.px, physx.PhysxGpuSystem)
+                if isinstance(sim.px, physx.PhysxGpuSystem)
                 else None
             ),
             name=shared_name,
