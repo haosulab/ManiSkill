@@ -1,30 +1,40 @@
 from dataclasses import dataclass
 from functools import cached_property
-import numpy as np
-from mani_skill.utils.structs.base import BaseStruct
 from typing import Generic, TypeVar, cast
-from mani_skill.sim.sapien.sim import SapienSim
+
+import numpy as np
 import sapien.physx as physx
 import torch
-from mani_skill.utils import common, sapien_utils
+
+from mani_skill.sim.sapien.sim import SapienSim
 from mani_skill.sim.sapien.structs.decorators import before_gpu_init
-from mani_skill.utils.structs import Pose, Array
+from mani_skill.utils import common, sapien_utils
+from mani_skill.utils.structs import Array, Pose
+from mani_skill.utils.structs.base import BaseStruct
 
 T = TypeVar("T")
+
 
 @dataclass
 class SapienBaseStruct(BaseStruct, Generic[T]):
     """
     Base class for all structs that manage objects in simulation across sub-scenes.
     """
+
     physics_sim: SapienSim
     render_sim: SapienSim
 
     _objs: list[T]
-    """list of objects of type T managed by this dataclass. This should not be modified after initialization. The struct hash is dependent on the hash of this list."""
+    """
+    list of objects of type T managed by this dataclass. This should not be modified after
+    initialization. The struct hash is dependent on the hash of this list.
+    """
 
     def __str__(self):
-        return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
+        return (
+            f"<struct of type {self.__class__}; managing {self._num_objs} "
+            f"{self._objs[0].__class__} objects>"
+        )
 
     @cached_property
     def __maniskill_hash__(self):
@@ -37,6 +47,7 @@ class SapienBaseStruct(BaseStruct, Generic[T]):
         """The physx system objects managed by this dataclass are working on"""
         return self.physics_sim.px
 
+
 @dataclass
 class PhysxRigidBaseComponentStruct(SapienBaseStruct[T], Generic[T]):
     _bodies: list[physx.PhysxRigidBaseComponent]
@@ -45,26 +56,27 @@ class PhysxRigidBaseComponentStruct(SapienBaseStruct[T], Generic[T]):
     # API from physx.PhysxRigidBaseComponent
     # ---------------------------------------------------------------------------- #
     # TODO (stao): To be added
-    # def attach(self, collision_shape: PhysxCollisionShape) -> PhysxRigidBaseComponent:
+    # def attach(self, collision_shape: PhysxCollisionShape)
     #     ...
-    # def compute_global_aabb_tight(self) -> numpy.ndarray[tuple[typing.Literal[2], typing.Literal[3]], numpy.dtype[numpy.float32]]:
+    # def compute_global_aabb_tight(self)
     #     ...
-    # def get_collision_shapes(self) -> list[PhysxCollisionShape]:
+    # def get_collision_shapes(self)
     #     ...
-    # def get_global_aabb_fast(self) -> numpy.ndarray[tuple[typing.Literal[2], typing.Literal[3]], numpy.dtype[numpy.float32]]:
+    # def get_global_aabb_fast(self)
     #     ...
     # @property
     # def _physx_pointer(self) -> int:
     #     ...
     # @property
-    # def collision_shapes(self) -> list[PhysxCollisionShape]:
+    # def collision_shapes(self)
     #     ...
+
 
 @dataclass
 class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]):
     _bodies: list[physx.PhysxRigidBodyComponent]
-    _body_data_name: str
-    _body_data_index_internal: torch.Tensor
+    _body_data_name: str | None = None
+    _body_data_index_internal: torch.Tensor | None = None
 
     @property
     def px(self):
@@ -73,20 +85,27 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
 
     @cached_property
     def _body_data_index(self):
-        """a list of indexes of each GPU rigid body in the `px.cuda_rigid_body_data` buffer, one for each element in `self._objs`"""
+        """a list of indexes of each GPU rigid body in the `px.cuda_rigid_body_data` buffer, one for
+        each element in `self._objs`"""
         if self._body_data_index_internal is None:
             self._body_data_index_internal = torch.tensor(
-                [cast(physx.PhysxRigidDynamicComponent, body).gpu_pose_index for body in self._bodies], device=self.device
+                [
+                    cast(physx.PhysxRigidDynamicComponent, body).gpu_pose_index
+                    for body in self._bodies
+                ],
+                device=self.device,
             )
         return self._body_data_index_internal
 
     @property
     def _body_data(self) -> torch.Tensor:
-        return getattr(self.px, self._body_data_name).torch()
+        return getattr(self.px, self._body_data_name).torch()  # type: ignore
 
     @cached_property
     def _body_force_query(self):
-        return cast(physx.PhysxGpuSystem, self.px).gpu_create_contact_body_impulse_query(self._bodies) # type: ignore
+        return cast(
+            physx.PhysxGpuSystem, self.px
+        ).gpu_create_contact_body_impulse_query(self._bodies)  # type: ignore
 
     def get_net_contact_forces(self):
         """
@@ -103,11 +122,14 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         representing x, y, and z direction of impulse.
         """
         if self.physics_sim.gpu_sim_enabled:
-            cast(physx.PhysxGpuSystem, self.px).gpu_query_contact_body_impulses(self._body_force_query)
+            cast(physx.PhysxGpuSystem, self.px).gpu_query_contact_body_impulses(
+                self._body_force_query
+            )
             return self._body_force_query.cuda_impulses.torch().clone()
         else:
             body_contacts = sapien_utils.get_cpu_actor_contacts(
-                cast(physx.PhysxCpuSystem, self.px).get_contacts(), self._bodies[0].entity
+                cast(physx.PhysxCpuSystem, self.px).get_contacts(),
+                self._bodies[0].entity,
             )
             net_force = common.to_tensor(
                 sapien_utils.compute_total_impulse(body_contacts)
@@ -119,8 +141,8 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     # ---------------------------------------------------------------------------- #
 
     # TODO: To be added
-    # def add_force_at_point(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], point: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
-    # def add_force_torque(self, force: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], torque: numpy.ndarray[numpy.float32, _Shape, _Shape[3]], mode: typing.Literal['force', 'acceleration', 'velocity_change', 'impulse'] = 'force') -> None: ...
+    # def add_force_at_point
+    # def add_force_torque
     def get_angular_damping(self) -> torch.Tensor:
         return self.angular_damping
 
@@ -232,8 +254,6 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @property
     def linear_velocity(self) -> torch.Tensor:
         if self.physics_sim.gpu_sim_enabled:
-            # NOTE (stao): SAPIEN version 3.0.0b1 gpu sim has a bug inherited from physx where linear/angular velocities are in the wrong order
-            # for link entities, namely 7:10 was angular velocity and 10:13 was linear velocity. SAPIEN 3.0.0 and above fixes this
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.from_numpy(self._bodies[0].linear_velocity[None, :]).to(
@@ -296,8 +316,10 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     def set_angular_velocity(self, arg0: Array):
         """
         Set the angular velocity of the dynamic rigid body.
+
         Args:
-            arg0: The angular velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same angular velocity to all managed bodies.
+            arg0: The angular velocity to set. Can be of shape (N, 3) where N is the number of
+                managed bodies or (3,) to apply the same angular velocity to all managed bodies.
         """
         self.angular_velocity = arg0
 
@@ -307,7 +329,9 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         """
         Set the linear velocity of the dynamic rigid body.
         Args:
-            arg0: The linear velocity to set. Can be of shape (N, 3) where N is the number of managed bodies or (3, ) to apply the same linear velocity to all managed bodies.
+            arg0: The linear velocity to set. Can be of shape (N, 3) where N is the number
+                of managed bodies or (3,) to apply the same linear velocity to all managed
+                bodies.
         """
         self.linear_velocity = arg0
 
@@ -315,12 +339,15 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         """
         Set some motion axes of the dynamic rigid body to be locked
         Args:
-            axes: list of 6 true/false values indicating whether which  of the 6 DOFs of the body is locked.
-                  The order is linear X, Y, Z followed by angular X, Y, Z. If given a single list of length 6, it will be applied to all managed bodies.
-                  If given a a batch of shape (N, 6), you can modify the N managed bodies each in batch.
+            axes: list of 6 true/false values indicating which of the 6 DOFs of the body is
+                locked. The order is linear X, Y, Z followed by angular X, Y, Z. If given a
+                single list of length 6, it will be applied to all managed bodies. If given a
+                batch of shape (N, 6), you can modify the N managed bodies each in batch.
+
 
         Example:
-            set_locked_motion_axes([True, False, False, False, True, False]) allows the object to move along the X axis and rotate about the Y axis
+            set_locked_motion_axes([True, False, False, False, True, False]) allows the object
+            to move along the X axis and rotate about the Y axis.
         """
         self.locked_motion_axes = axes
 
@@ -339,13 +366,14 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if self.physics_sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
-                self._body_data_index[self.physics_sim._reset_mask[self._scene_idxs]], 10:13
+                self._body_data_index[self.physics_sim._reset_mask[self._scene_idxs]],
+                10:13,
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._bodies[0].angular_velocity = arg1 # type: ignore
+            self._bodies[0].angular_velocity = arg1  # type: ignore
 
     @property
     def gpu_index(self):
@@ -410,13 +438,14 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if self.physics_sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
-                self._body_data_index[self.physics_sim._reset_mask[self._scene_idxs]], 7:10
+                self._body_data_index[self.physics_sim._reset_mask[self._scene_idxs]],
+                7:10,
             ] = arg1
         else:
             arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._bodies[0].linear_velocity = arg1 # type: ignore
+            self._bodies[0].linear_velocity = arg1  # type: ignore
 
     @property
     def locked_motion_axes(self) -> Array:
@@ -441,8 +470,6 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
 @dataclass
 class PhysxJointComponentStruct(SapienBaseStruct[T], Generic[T]):
-    # def create(cls, bodies: Sequence[PhysxRigidBodyComponentStruct], parent_bodies: Sequence[PhysxRigidBodyComponentStruct]):
-    # TODO
     # parent: PhysxRigidBaseComponentStruct # TODO what is this for?
     pose_in_child: Pose
     pose_in_parent: Pose
