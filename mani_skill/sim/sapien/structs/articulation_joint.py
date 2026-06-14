@@ -12,17 +12,17 @@ import torch
 from mani_skill.sim.sapien.structs.base import SapienBaseStruct
 from mani_skill.sim.sapien.structs.decorators import before_gpu_init
 from mani_skill.utils import common
-from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs import Pose, ArticulationJoint
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.sim.sapien.sim import SapienSim
-    from mani_skill.sim.sapien.structs.articulation import Articulation
+    from mani_skill.sim.sapien.structs.articulation import SapienArticulation
     from mani_skill.sim.sapien.structs.link import Link
 
 
 @dataclass
-class ArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint]):
+class SapienArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint], ArticulationJoint):
     """
     Wrapper around physx.PhysxArticulationJoint objects
 
@@ -35,7 +35,7 @@ class ArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint]):
     active_index: torch.Tensor | None
     """index of this joint amongst the active joints"""
 
-    articulation: Articulation | None = None
+    articulation: SapienArticulation | None = None
     child_link: Link | None = None
     parent_link: Link | None = None
     name: str = None

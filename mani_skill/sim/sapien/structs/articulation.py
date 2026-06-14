@@ -11,7 +11,7 @@ import sapien.physx as physx
 import torch
 import trimesh
 
-from mani_skill.sim.sapien.structs.articulation_joint import ArticulationJoint
+from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 from mani_skill.sim.sapien.structs.base import SapienBaseStruct
 from mani_skill.sim.sapien.structs.link import Link
 from mani_skill.utils import common
@@ -20,7 +20,7 @@ from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
     merge_meshes,
 )
-from mani_skill.utils.structs import Pose
+from mani_skill.utils.structs import Pose, Articulation
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
+class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation):
     """
     Wrapper around physx.PhysxArticulation objects
     """
@@ -39,13 +39,13 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
     """Maps link name to the Link object"""
     root: Link
     """The root Link object"""
-    joints: list[ArticulationJoint]
+    joints: list[SapienArticulationJoint]
     """list of Joint objects"""
-    joints_map: dict[str, ArticulationJoint]
+    joints_map: dict[str, SapienArticulationJoint]
     """Maps joint name to the Joint object"""
-    active_joints: list[ArticulationJoint]
+    active_joints: list[SapienArticulationJoint]
     """list of active Joint objects, referencing elements in self.joints"""
-    active_joints_map: dict[str, ArticulationJoint]
+    active_joints_map: dict[str, SapienArticulationJoint]
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
     name: str = None
@@ -96,7 +96,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
         scene_idxs: torch.Tensor,
         _merged: bool = False,
         _process_links: bool = True,
-    ) -> Articulation:
+    ) -> SapienArticulation:
         """
         Create a managed articulation object given a list of physx articulations. Note that this
         function requires all given articulations to be the same articulations. To create an object
@@ -181,7 +181,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
             ]
 
             joints_map = dict()
-            wrapped_joints: list[ArticulationJoint] = []
+            wrapped_joints: list[SapienArticulationJoint] = []
             for joint_index, joints in enumerate(all_joint_objs):
                 # TODO (stao): remove the try except / figure out the exception class
                 try:
@@ -190,7 +190,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
                     )
                 except Exception:
                     active_joint_index = None
-                wrapped_joint = ArticulationJoint.create(
+                wrapped_joint = SapienArticulationJoint.create(
                     physx_joints=joints,
                     physx_articulations=physx_articulations,
                     sim=sim,
@@ -241,7 +241,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
     @classmethod
     def merge(
         cls,
-        articulations: list["Articulation"],
+        articulations: list["SapienArticulation"],
         name: str = None,
         merge_links: bool = False,
     ):
@@ -268,7 +268,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
                 "Each given articulation must have the same number of managed objects"
             )
         merged_scene_idxs = torch.concat(merged_scene_idxs)
-        merged_articulation = Articulation.create_from_physx_articulations(
+        merged_articulation = SapienArticulation.create_from_physx_articulations(
             objs, scene, merged_scene_idxs, _merged=True, _process_links=merge_links
         )
         merged_articulation.name = name
@@ -517,7 +517,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
         return self.get_net_contact_impulses(link_names) / self.sim.timestep
 
     def get_joint_target_indices(
-        self, joint_indices: Union[Array, list[int], list[ArticulationJoint]]
+        self, joint_indices: Union[Array, list[int], list[SapienArticulationJoint]]
     ):
         """
         Gets the meshgrid indexes for indexing px.cuda_articulation_target_* values given a 1D list
@@ -530,7 +530,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
             joint_indices = tuple(joint_indices)
         if joint_indices not in self._cached_joint_target_indices:
             vals = joint_indices
-            if isinstance(joint_indices[0], ArticulationJoint):
+            if isinstance(joint_indices[0], SapienArticulationJoint):
                 for joint in joint_indices:
                     assert joint.articulation == self, (
                         "Can only fetch this articulation's joint_target_indices when provided "
@@ -602,7 +602,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
     # low: float = -3.4028234663852886e+38, high: float = 3.4028234663852886e+38,
     # limit_stiffness: float = 0) -> None: ...
 
-    def find_joint_by_name(self, arg0: str) -> ArticulationJoint:
+    def find_joint_by_name(self, arg0: str) -> SapienArticulationJoint:
         if self.merged:
             raise RuntimeError(
                 "Cannot call find_joint_by_name when the articulation object is managing "
@@ -913,7 +913,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_targets(
         self,
         targets: Array,
-        joints: Optional[list[ArticulationJoint]] = None,
+        joints: Optional[list[SapienArticulationJoint]] = None,
         joint_indices: Optional[torch.Tensor] = None,
     ):
         """
@@ -941,7 +941,7 @@ class Articulation(SapienBaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_velocity_targets(
         self,
         targets: Array,
-        joints: Optional[list[ArticulationJoint]] = None,
+        joints: Optional[list[SapienArticulationJoint]] = None,
         joint_indices: Optional[torch.Tensor] = None,
     ):
         """

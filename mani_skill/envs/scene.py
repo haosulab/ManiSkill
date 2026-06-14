@@ -66,6 +66,12 @@ class ManiSkillScene:
 
         self.physics_sim = physics_sim
         self.render_sim = render_sim
+        self.physics_sim.scene = self
+        self.render_sim.scene = self
+        if self.physics_sim == self.render_sim:
+            # TODO (stao): optimizations if physics and render sims are the same object
+            # e.g. both using sapien
+            pass
 
         self.sim_config = sim_config
 

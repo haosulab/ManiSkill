@@ -13,7 +13,7 @@ from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill import logger
 from mani_skill.sim.builders.articulation import ArticulationBuilder
-from mani_skill.sim.sapien.structs.articulation import Articulation
+from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 from mani_skill.utils import common
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
@@ -125,7 +125,7 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
 
     def build(
         self, name=None, fix_root_link=None, build_mimic_joints=True
-    ) -> Articulation:
+    ) -> SapienArticulation:
         assert self.scene is not None
         if name is not None:
             self.set_name(name)
@@ -223,10 +223,10 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-        articulation: Articulation = Articulation.create_from_physx_articulations(
+        articulation: SapienArticulation = SapienArticulation.create_from_physx_articulations(
             articulations, self.scene, self.scene_idxs
         )
         articulation.initial_pose = self.initial_pose
-        self.scene.articulations[self.name] = articulation
-        self.scene.add_to_state_dict_registry(articulation)
+        self.scene.scene.articulations[self.name] = articulation
+        self.scene.scene.add_to_state_dict_registry(articulation)
         return articulation

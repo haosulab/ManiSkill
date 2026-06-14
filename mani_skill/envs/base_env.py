@@ -1181,9 +1181,10 @@ class BaseEnv(gym.Env):
         The function should be called in reset(). Called by `self._reconfigure`"""
 
         # create a "global" scene object that users can work with that is linked with all other scenes created
+        sim_object = SapienSim()
         self.scene = ManiSkillScene(
-            physics_sim=SapienSim(),
-            render_sim=SapienSim(),
+            physics_sim=sim_object,
+            render_sim=sim_object,
             sim_config=self.sim_config,
             device=self.device,
             parallel_in_single_scene=self._parallel_in_single_scene,

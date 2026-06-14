@@ -9,7 +9,7 @@ import sapien.physx as physx
 import torch
 import trimesh
 
-from mani_skill.sim.sapien.structs.articulation_joint import ArticulationJoint
+from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 from mani_skill.sim.sapien.structs.base import PhysxRigidBodyComponentStruct
 from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
@@ -20,7 +20,7 @@ from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
-    from mani_skill.sim.sapien.structs.articulation import Articulation
+    from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 
 
 @dataclass
@@ -29,7 +29,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """
 
-    articulation: Articulation = None
+    articulation: SapienArticulation = None
     """
     the articulation that this link is a part of. If this is None, most likely this link
     object is a view/merged link object in which case there is no one articulation that can
@@ -38,7 +38,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
 
     name: str = None
 
-    joint: ArticulationJoint = None
+    joint: SapienArticulationJoint = None
     """
     the joint of which this link is a child of. If this is a view/merged link then this joint
     is also a view/merged joint
@@ -109,7 +109,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         if not has_one_root_link:
             merged_active_joint_indexes = torch.concat(merged_active_joint_indexes)
             merged_joint_indexes = torch.concat(merged_joint_indexes)
-            merged_joint = ArticulationJoint.create(
+            merged_joint = SapienArticulationJoint.create(
                 joint_objs,
                 physx_articulations=articulation_objs,
                 scene=links[0].scene,
@@ -308,7 +308,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def get_index(self):
         return self.index
 
-    def get_joint(self) -> ArticulationJoint:
+    def get_joint(self) -> SapienArticulationJoint:
         return self.joint
 
     # def get_parent(self) -> PhysxArticulationLinkComponent: ...

@@ -1,11 +1,15 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
-
+from typing import TYPE_CHECKING
 import torch
 
 from mani_skill.sim.builders.actor import BaseActorBuilder
 from mani_skill.sim.builders.articulation import BaseArticulationBuilder
 from mani_skill.utils.structs.pose import Pose
+
+if TYPE_CHECKING:
+    from mani_skill.envs.scene import ManiSkillScene
 
 
 @dataclass(frozen=True)
@@ -46,6 +50,14 @@ class BaseSim(ABC):
 
     A simulation backend consists of primarily a physics engine and a renderer. It is possible
     for a simulation backend to only have one or the other as well.
+
+    Args:
+        num_envs: The number of environments to simulate.
+        cfg: The configuration for the simulation backend.
+        physics_device_torch: The torch device that physics engine returns data on. If none,
+            this sim object is not performing any physics simulation.
+        render_device_torch: The torch device that the renderer returns data on. If none,
+            this sim object is not performing any rendering.
     """
 
     id: str
@@ -60,7 +72,9 @@ class BaseSim(ABC):
     """The number of environments to simulate."""
     _reset_mask: torch.Tensor
     """A mask for controlling which sub-scenes permit modifications to object data"""
-
+    scene: ManiSkillScene
+    """The ManiSkillScene that this simulation backend is associated with."""
+    
     def __init__(
         self,
         num_envs: int = 1,
