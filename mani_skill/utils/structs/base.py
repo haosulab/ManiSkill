@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 import numpy as np
 import sapien.physx as physx
@@ -14,30 +14,36 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.base_sim import BaseSim
 T = TypeVar("T")
 
 
 @dataclass
 class BaseStruct(Generic[T]):
     """
-    Base class of all structs that manage sapien objects on CPU/GPU
+    Base class of all structs that manage objects in simulation across sub-scenes.
     """
 
-    _objs: list[T]
-    """list of objects of type T managed by this dataclass. This should not be modified after initialization. The struct hash is dependent on the hash of this list."""
+    # _objs: list[T]
+    # """list of objects of type T managed by this dataclass. This should not be modified after initialization. The struct hash is dependent on the hash of this list."""
     _scene_idxs: torch.Tensor
-    """a list of indexes parallel to `self._objs` indicating which sub-scene each of those objects are actually in by index"""
-    scene: ManiSkillScene
-    """The ManiSkillScene object that manages the sub-scenes this dataclasses's objects are in"""
+    """A list of indexes indicating which sub-scene each managed object is in."""
+    physics_sim: BaseSim
+    """
+    The simulation that physically simulates this struct's objects.
+    """
+    render_sim: BaseSim
+    """
+    The simulation that renders this struct's objects.
+    """
 
     def __post_init__(self):
         if not isinstance(self._scene_idxs, torch.Tensor):
-            self._scene_idxs = common.to_tensor(self._scene_idxs)
+            self._scene_idxs = common.to_tensor(cast(list[int], self._scene_idxs))
         self._scene_idxs = self._scene_idxs.to(torch.int).to(self.device)
 
     def __str__(self):
-        return f"<struct of type {self.__class__}; managing {self._num_objs} {self._objs[0].__class__} objects>"
+        return f"<struct of type {self.__class__}; managing {self._num_objs} objects>"
 
     def __repr__(self):
         return self.__str__()
@@ -53,16 +59,18 @@ class BaseStruct(Generic[T]):
 
     @property
     def device(self):
-        return self.scene.device
+        """The device that simulation data is returned on."""
+        # TODO (stao): split between sim and render device? One can check more accurately via which render and physics sim is used.
+        return self.physics_sim.sim_device_torch
 
     @property
     def _num_objs(self):
-        return len(self._objs)
+        return self._scene_idxs.shape[0]
 
-    @property
-    def px(self):
-        """The physx system objects managed by this dataclass are working on"""
-        return self.scene.px
+    # @property
+    # def px(self):
+    #     """The physx system objects managed by this dataclass are working on"""
+    #     return self.scene.px
 
 
 @dataclass

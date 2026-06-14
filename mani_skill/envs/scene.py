@@ -52,8 +52,8 @@ class ManiSkillScene:
     def __init__(
         self,
         # sub_scenes: Optional[list[sapien.Scene]] = None,
-        physics_sims: list[BaseSim] = [],
-        render_sims: list[BaseSim] = [],
+        physics_sim: BaseSim,
+        render_sim: BaseSim,
         sim_config: SimConfig = SimConfig(),
         device: Optional[Device] = None,
         parallel_in_single_scene: bool = False,
@@ -62,8 +62,8 @@ class ManiSkillScene:
         assert device is not None, "device argument is required"
         assert backend is not None, "backend argument is required"
 
-        self.physics_sims = physics_sims
-        self.render_sims = render_sims
+        self.physics_sim = physics_sim
+        self.render_sim = render_sim
 
         self.sim_config = sim_config
 

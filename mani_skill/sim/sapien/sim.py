@@ -8,8 +8,8 @@ import torch
 
 import mani_skill.render.utils as render_utils
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
-from mani_skill.sim.sapien.actor_builder import SapienActorBuilder
-from mani_skill.sim.sapien.articulation_builder import SapienArticulationBuilder
+from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
+from mani_skill.sim.sapien.builders.articulation_builder import SapienArticulationBuilder
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
 
@@ -290,15 +290,9 @@ class SapienSim(BaseSim):
         pass
 
     def add_camera(self, pose: Pose):
-        """
-        Adds a camera to the simulation scene.
-        """
         pass
 
     def can_render(self):
-        """
-        Whether the simulation backend can render.
-        """
         return True
 
     ### Code for compiling simulator scene for physical simulation ###
@@ -307,3 +301,6 @@ class SapienSim(BaseSim):
 
     def physics_step(self):
         pass
+
+    def can_physics(self):
+        return True

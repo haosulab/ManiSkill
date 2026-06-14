@@ -133,3 +133,9 @@ class BaseSim(ABC):
         """
         Runs a single physics step at `self.cfg.sim_freq` Hz.
         """
+
+    @abstractmethod
+    def can_physics(self):
+        """
+        Whether the simulation backend can run physical simulation.
+        """

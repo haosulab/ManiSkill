@@ -13,16 +13,31 @@ import trimesh
 
 from mani_skill.utils import common
 from mani_skill.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
-from mani_skill.utils.structs.base import PhysxRigidDynamicComponentStruct
+from mani_skill.utils.structs.base import BaseStruct, PhysxRigidDynamicComponentStruct
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
+@dataclass
+class Actor(BaseStruct):
+    """
+    The actor class manages a rigid body object in simulation.
+    """
+
+    hidden: bool = False
+    """Whether this actor is hidden from any camera sensors."""
+
+    merged: bool = False
+    """Whether this object is a view of other actors as a result of Actor.merge."""
+
+    name: str | None = None
+    """The name of the actor."""
+
 
 @dataclass
-class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
+class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
     """
     Wrapper around sapien.Entity objects mixed in with useful properties from the RigidBodyDynamicComponent components
 
