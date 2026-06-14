@@ -9,18 +9,18 @@ import sapien.physx as physx
 import torch
 import trimesh
 
+from mani_skill.sim.sapien.structs.articulation_joint import ArticulationJoint
 from mani_skill.sim.sapien.structs.base import PhysxRigidBodyComponentStruct
 from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
     merge_meshes,
 )
-from mani_skill.utils.structs.articulation_joint import ArticulationJoint
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
-    from mani_skill.utils.structs import Articulation
+    from mani_skill.sim.sapien.structs.articulation import Articulation
 
 
 @dataclass

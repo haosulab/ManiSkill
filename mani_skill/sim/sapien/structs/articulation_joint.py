@@ -10,15 +10,15 @@ import sapien.physx as physx
 import torch
 
 from mani_skill.sim.sapien.structs.base import SapienBaseStruct
+from mani_skill.sim.sapien.structs.decorators import before_gpu_init
 from mani_skill.utils import common
-from mani_skill.utils.structs.decorators import before_gpu_init
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.sim.sapien.sim import SapienSim
-    from mani_skill.utils.structs.articulation import Articulation
-    from mani_skill.utils.structs.link import Link
+    from mani_skill.sim.sapien.structs.articulation import Articulation
+    from mani_skill.sim.sapien.structs.link import Link
 
 
 @dataclass
@@ -32,7 +32,7 @@ class ArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint]):
 
     index: torch.Tensor
     """index of this joint among all joints"""
-    active_index: torch.Tensor
+    active_index: torch.Tensor | None
     """index of this joint amongst the active joints"""
 
     articulation: Articulation | None = None
@@ -62,7 +62,7 @@ class ArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint]):
         sim: SapienSim,
         scene_idxs: torch.Tensor,
         joint_index: torch.Tensor,
-        active_joint_index: torch.Tensor = None,
+        active_joint_index: torch.Tensor | None = None,
     ):
         """Creates an object for managing articulation joints in articulations
 
