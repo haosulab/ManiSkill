@@ -13,9 +13,9 @@ from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill import logger
 from mani_skill.sim.builders.articulation import ArticulationBuilder
+from mani_skill.sim.sapien.structs.articulation import Articulation
 from mani_skill.utils import common
-from mani_skill.utils.structs import Articulation, Pose
-from mani_skill.utils.structs.pose import to_sapien_pose
+from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
 if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
@@ -48,8 +48,10 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
         ] = None,
     ):
         """
-        Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask
+        Set a list of scene indices to build this object in. Cannot be used in conjunction with
+        scene mask
         """
+
         self.scene_idxs = scene_idxs
         return self
 
@@ -66,12 +68,15 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
 
     def build_entities(self, *args, **kwargs):
         raise NotImplementedError(
-            "_build_entities is a private function in ManiSkill. Use build() to properly build articulation"
+            (
+                "_build_entities is a private function in ManiSkill. Use build() to properly "
+                "build articulation"
+            )
         )
 
-    def _build_entities(
-        self, fix_root_link=None, name_prefix="", initial_pose=sapien.Pose()
-    ):
+    def _build_entities(self, fix_root_link=None, name_prefix="", initial_pose=None):
+        if initial_pose is None:
+            initial_pose = sapien.Pose()
         entities = []
         links = []
         for b in self.link_builders:
@@ -140,9 +145,13 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
         num_arts = len(self.scene_idxs)
 
         if self.initial_pose is None:
-            logger.warn(
-                f"No initial pose set for articulation builder of {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]. There may be simulation issues/bugs if this articulation at it's initial pose collides with other objects at their initial poses."
+            logger.warning(
+                f"No initial pose set for articulation builder of {self.name}, setting to default "
+                "pose q=[1,0,0,0], p=[0,0,0]. There may be simulation issues/bugs if this "
+                "articulation at its initial pose collides with other objects at their initial "
+                "poses."
             )
+
             self.initial_pose = sapien.Pose()
         self.initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = self.initial_pose.raw_pose.shape[0]

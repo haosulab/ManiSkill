@@ -1182,8 +1182,8 @@ class BaseEnv(gym.Env):
 
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(
-            physics_sims=[SapienSim()],
-            render_sims=[SapienSim()],
+            physics_sim=SapienSim(),
+            render_sim=SapienSim(),
             sim_config=self.sim_config,
             device=self.device,
             parallel_in_single_scene=self._parallel_in_single_scene,

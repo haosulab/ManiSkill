@@ -8,10 +8,6 @@ import torch
 
 import mani_skill.render.utils as render_utils
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
-from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
-from mani_skill.sim.sapien.builders.articulation_builder import (
-    SapienArticulationBuilder,
-)
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
 
@@ -286,9 +282,15 @@ class SapienSim(BaseSim):
         acts as a way to invalidate the cached queries."""
 
     def create_actor_builder(self):
+        from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
+
         return SapienActorBuilder().set_scene(self)
 
     def create_articulation_builder(self):
+        from mani_skill.sim.sapien.builders.articulation_builder import (
+            SapienArticulationBuilder,
+        )
+
         return SapienArticulationBuilder().set_scene(self)
 
     ### Code for compiling simulator scene for rendering ###

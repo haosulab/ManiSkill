@@ -16,7 +16,6 @@ from mani_skill.envs.utils.system.backend import BackendInfo
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
-from mani_skill.sim.sapien.structs.drive import Drive
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
@@ -151,7 +150,7 @@ class ManiSkillScene:
         from ..utils.building.urdf_loader import URDFLoader
 
         loader = URDFLoader()
-        loader.set_scene(self.physics_sims[0])
+        loader.set_scene(self.physics_sim)
         return loader
 
     def create_mjcf_loader(self):
@@ -486,6 +485,8 @@ class ManiSkillScene:
         body1: Union[Actor, Link],
         pose1: Union[sapien.Pose, Pose],
     ):
+        from mani_skill.sim.sapien.structs.drive import Drive
+
         # body0 and body1 should be in parallel.
         return Drive.create_from_actors_or_links(
             self.physics_sim, body0, pose0, body1, pose1, body0._scene_idxs
@@ -751,7 +752,7 @@ class ManiSkillScene:
     # ---------------------------------------------------------------------------- #
     @property
     def num_envs(self):
-        return self.physics_sims[0].num_envs
+        return self.physics_sim.num_envs
 
     def get_pairwise_contact_impulses(
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
