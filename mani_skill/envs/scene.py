@@ -16,10 +16,10 @@ from mani_skill.envs.utils.system.backend import BackendInfo
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
+from mani_skill.sim.sapien.structs.drive import Drive
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
-from mani_skill.utils.structs.drive import Drive
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
@@ -46,7 +46,8 @@ class StateDictRegistry:
 
 class ManiSkillScene:
     """
-    ManiSkillScene class manages the core simulation and all parallel sub-scenes without any simulator backend specific code.
+    ManiSkillScene class manages the core simulation and all parallel sub-scenes without any
+    simulator backend specific code.
     """
 
     def __init__(
@@ -54,13 +55,15 @@ class ManiSkillScene:
         # sub_scenes: Optional[list[sapien.Scene]] = None,
         physics_sim: BaseSim,
         render_sim: BaseSim,
-        sim_config: SimConfig = SimConfig(),
+        sim_config: SimConfig | None = None,
         device: Optional[Device] = None,
         parallel_in_single_scene: bool = False,
         backend: Optional[BackendInfo] = None,
     ):
         assert device is not None, "device argument is required"
         assert backend is not None, "backend argument is required"
+        if sim_config is None:
+            sim_config = SimConfig()
 
         self.physics_sim = physics_sim
         self.render_sim = render_sim
@@ -76,9 +79,12 @@ class ManiSkillScene:
         self.articulations: dict[str, Articulation] = dict()
 
         self.actor_views: dict[str, Actor] = dict()
-        """views of actors in any sub-scenes created by using Actor.merge and queryable as if it were a single Actor"""
+        """views of actors in any sub-scenes created by using Actor.merge and queryable as if it
+        were a single Actor"""
+
         self.articulation_views: dict[str, Articulation] = dict()
-        """views of articulations in any sub-scenes created by using Articulation.merge and queryable as if it were a single Articulation"""
+        """views of articulations in any sub-scenes created by using Articulation.merge and
+        queryable as if it were a single Articulation"""
 
         self.sensors: dict[str, BaseSensor] = dict()
         self.human_render_cameras: dict[str, Camera] = dict()
@@ -88,11 +94,16 @@ class ManiSkillScene:
         self._reset_mask = torch.ones(
             self.num_envs, dtype=torch.bool, device=self.device
         )
-        """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
-        partial env resets"""
+        """
+        Used internally by various objects like Actor, Link, and Controllers to auto mask out
+        sub-scenes so they do not get modified during partial env resets
+        """
 
         self._needs_fetch = False
-        """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
+        """
+        Used internally to raise some errors ahead of time of when there may be
+        undefined behaviors
+        """
 
         self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
@@ -100,10 +111,15 @@ class ManiSkillScene:
         self.state_dict_registry: StateDictRegistry = StateDictRegistry(
             actors=dict(), articulations=dict()
         )
-        """state dict registry that map actor/articulation names to Actor/Articulation struct references. Only these structs are used for the environment state"""
+        """state dict registry that map actor/articulation names to Actor/Articulation struct
+        references. Only these structs are used for the environment state"""
 
     def can_render(self):
-        """Whether or not this Scene object permits rendering, depending on the rendering device selected"""
+        """
+        Whether or not this Scene object permits rendering, depending on the rendering device
+        selected
+        """
+
         return render_utils.can_render(self.backend.render_device)
 
     # -------------------------------------------------------------------------- #
@@ -115,17 +131,19 @@ class ManiSkillScene:
         from mani_skill.sim.builders.actor import ActorBuilder
 
         builder = ActorBuilder()
-        for sim in self.physics_sims:
-            builder.add_sim(sim)
+        builder.add_sim(self.physics_sim)
+        builder.add_sim(self.render_sim)
         return builder
 
     def create_articulation_builder(self):
-        """Creates an ArticulationBuilder object that can be used to build articulations in this scene."""
+        """Creates an ArticulationBuilder object that can be used to build articulations in this
+        scene."""
+
         from mani_skill.sim.builders.articulation import ArticulationBuilder
 
         builder = ArticulationBuilder()
-        for sim in self.physics_sims:
-            builder.add_sim(sim)
+        builder.add_sim(self.physics_sim)
+        builder.add_sim(self.render_sim)
         return builder
 
     def create_urdf_loader(self):
@@ -166,7 +184,7 @@ class ManiSkillScene:
                 "Cannot remove articulations after creating them in GPU sim at the moment"
             )
         else:
-            entities = [l.entity for l in articulation._objs[0].links]
+            entities = [link.entity for link in articulation._objs[0].links]
             for e in entities:
                 self.sub_scenes[0].remove_entity(e)
             self.articulations.pop(articulation.name)
@@ -362,13 +380,15 @@ class ManiSkillScene:
         self, update_sensors: bool = True, update_human_render_cameras: bool = True
     ):
         """
-        Updates the renderer based on the current simulation state. Note that on the first call if a sensor/human render camera is required to be updated,
-        GPU memory will be allocated for the sensor/human render camera respectively.
+        Updates the renderer based on the current simulation state. Note that on the first call,
+        if a sensor or human render camera is required to be updated, GPU memory will be allocated
+        for the sensor or human render camera respectively.
 
         Arguments:
             update_sensors (bool): Whether to update the sensors.
             update_human_render_cameras (bool): Whether to update the human render cameras.
         """
+
         if SAPIEN_RENDER_SYSTEM == "3.1":
             self._sapien_31_update_render(
                 update_sensors=update_sensors,
@@ -383,8 +403,8 @@ class ManiSkillScene:
     def _sapien_update_render(
         self, update_sensors: bool = True, update_human_render_cameras: bool = True
     ):
-        # note that this design is such that no GPU memory is allocated for memory unless requested for, which can occur
-        # after the e.g. physx GPU simulation is initialized.
+        # note that this design ensures GPU memory is only allocated when explicitly requested,
+        # which can occur after, for example, physx GPU simulation has been initialized.
         if self.gpu_sim_enabled:
             if not self.parallel_in_single_scene:
                 if self.render_system_group is None:
@@ -411,7 +431,6 @@ class ManiSkillScene:
     ):
         if self.gpu_sim_enabled:
             if self.render_system_group is None:
-                # TODO (stao): for new render system support the parallel in single scene rendering option
                 for scene in self.sub_scenes:
                     scene.update_render()
                 self._setup_gpu_rendering()
@@ -443,8 +462,10 @@ class ManiSkillScene:
 
     def get_all_actors(self):
         """
-        Returns list of all sapien.Entity objects that have rigid dynamic and static components across all sub scenes
+        Returns a list of all sapien.Entity objects that have rigid dynamic and static components
+        across all sub scenes.
         """
+
         return [
             c.entity
             for c in self.px.rigid_dynamic_components + self.px.rigid_static_components
@@ -467,7 +488,7 @@ class ManiSkillScene:
     ):
         # body0 and body1 should be in parallel.
         return Drive.create_from_actors_or_links(
-            self, body0, pose0, body1, pose1, body0._scene_idxs
+            self.physics_sim, body0, pose0, body1, pose1, body0._scene_idxs
         )
 
     # def create_connection(
@@ -601,13 +622,15 @@ class ManiSkillScene:
         direction,
         color,
         shadow=False,
-        position=[0, 0, 0],
+        position=None,
         shadow_scale=10.0,
         shadow_near=-10.0,
         shadow_far=10.0,
         shadow_map_size=2048,
         scene_idxs: Optional[list[int]] = None,
     ):
+        if position is None:
+            position = [0, 0, 0]
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
         for scene_idx in scene_idxs:
@@ -638,9 +661,6 @@ class ManiSkillScene:
             )
             scene.add_entity(entity)
             if self.parallel_in_single_scene:
-                # for directional lights adding multiple does not make much sense
-                # and for parallel gui rendering setup accurate lighting does not matter as it is only
-                # for demo purposes
                 break
         return
 
@@ -737,21 +757,20 @@ class ManiSkillScene:
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
     ):
         """
-        Get the impulse vectors between two actors/links. Returns impulse vector of shape (N, 3)
-        where N is the number of environments and 3 is the dimension of the impulse vector itself,
-        representing x, y, and z direction of impulse.
+        Get the impulse vectors between two actors/links. Returns impulse vector of shape
+        (N, 3), where N is the number of environments and 3 is the dimension of the impulse
+        vector itself, representing x, y, and z direction of impulse.
 
-        Note that dividing the impulse value by self.px.timestep yields the pairwise contact force in Newtons. The equivalent API for that
-        is self.get_pairwise_contact_force(obj1, obj2). It is generally recommended to use the force values since they are independent of the
-        timestep (dt = 1 / sim_freq) of the simulation.
+        Note that dividing the impulse value by self.px.timestep yields the pairwise contact
+        force in Newtons. The equivalent API for that is self.get_pairwise_contact_force(obj1,
+        obj2). It is generally recommended to use the force values since they are independent of
+        the timestep (dt = 1 / sim_freq) of the simulation.
 
         Args:
             obj1: Actor | Link
             obj2: Actor | Link
         """
-        # TODO (stao): Is there any optimization improvement when putting all queries all together and fetched together
-        # vs multiple smaller queries? If so, might be worth exposing a helpful API for that instead of having user
-        # write this code below themselves.
+
         if self.gpu_sim_enabled:
             assert isinstance(self.px, physx.PhysxGpuSystem)
             query_hash = hash((obj1, obj2))
@@ -806,7 +825,9 @@ class ManiSkillScene:
 
     @cached_property
     def scene_offsets(self):
-        """torch tensor of shape (num_envs, 3) representing the offset of each scene in the world frame"""
+        """torch tensor of shape (num_envs, 3) representing the offset of each scene
+        in the world frame"""
+
         if self.gpu_sim_enabled:
             assert isinstance(self.px, physx.PhysxGpuSystem)
             return torch.tensor(
@@ -825,7 +846,9 @@ class ManiSkillScene:
 
     @cached_property
     def scene_offsets_np(self):
-        """numpy array of shape (num_envs, 3) representing the offset of each scene in the world frame"""
+        """numpy array of shape (num_envs, 3) representing the offset of each scene in the
+        world frame"""
+
         if self.gpu_sim_enabled:
             assert isinstance(self.px, physx.PhysxGpuSystem)
             return np.array(
@@ -869,12 +892,18 @@ class ManiSkillScene:
             raise ValueError(f"Expected Actor or Articulation, got {object}")
 
     def get_sim_state(self) -> dict[str, dict[str, torch.Tensor]]:
-        """Get simulation state. Returns a dictionary with two nested dictionaries "actors" and "articulations".
-        In the nested dictionaries they map the actor/articulation name to a vector of shape (N, D) for N parallel
-        environments and D dimensions of padded state per environment.
+        """Get simulation state.
 
-        Note that static actor data are not included. It is expected that an environment reconstructs itself in a deterministic manner such that
-        the same static actors always have the same states"""
+        Returns a dictionary with two nested dictionaries, "actors" and "articulations".
+        In the nested dictionaries, each maps the actor/articulation name to a vector of shape
+        (N, D) where N is the number of parallel environments and D is the dimension of the
+        padded state per environment.
+
+        Note that static actor data are not included. It is expected that an environment
+        reconstructs itself deterministically such that the same static actors always have the
+        same states.
+        """
+
         state_dict = dict()
         state_dict["actors"] = dict()
         state_dict["articulations"] = dict()
@@ -929,18 +958,20 @@ class ManiSkillScene:
                     scene.update_render()
             self.px.gpu_init()
         self.non_static_actors: list[Actor] = []
-        # find non static actors, and set data indices that are now available after gpu_init was called
+        # find non static actors, and set data indices that are now available after
+        # gpu_init was called
         for actor in self.actors.values():
             if actor.px_body_type == "static":
                 continue
             self.non_static_actors.append(actor)
             if enable_gpu:
-                actor._body_data_index  # only need to access this attribute to populate it
+                actor._body_data_index  # noqa only need to access this attribute to populate it
 
         for articulation in self.articulations.values():
-            articulation._data_index
+            articulation._data_index  # noqa
             for link in articulation.links:
-                link._body_data_index
+                link._body_data_index  # noqa
+
         for actor in self.non_static_actors:
             actor.set_pose(actor.initial_pose)
         for articulation in self.articulations.values():
@@ -973,8 +1004,9 @@ class ManiSkillScene:
         Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
         """
         assert not self._needs_fetch, (
-            "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling _gpu_apply_all again\
-            as otherwise there is undefined behavior that is likely impossible to debug"
+            "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling "
+            "_gpu_apply_all again as otherwise there is undefined behavior that is likely "
+            "impossible to debug"
         )
         assert isinstance(self.px, physx.PhysxGpuSystem)
         self.px.gpu_apply_rigid_dynamic_data()
@@ -990,8 +1022,8 @@ class ManiSkillScene:
     def _gpu_fetch_all(self):
         """
         Queries simulation for all relevant GPU data. Note that this has some overhead.
-        Should only be called at most once per simulation step as this automatically queries all data for all
-        objects built in the scene.
+        Should only be called at most once per simulation step as this automatically queries
+        all data for all objects built in the scene.
         """
         assert isinstance(self.px, physx.PhysxGpuSystem)
         if len(self.non_static_actors) > 0:
@@ -1128,18 +1160,23 @@ class ManiSkillScene:
                 except RuntimeError as e:
                     raise RuntimeError(
                         "Unable to create GPU parallelized camera group. "
-                        "If the error is about being unable to create a buffer, you are likely using too many Cameras. "
-                        "Either use less cameras (via less parallel envs) and/or reduce the size of the cameras. "
-                        "Another common cause is using a memory intensive shader, you can try using the 'minimal' shader "
-                        "which optimizes for GPU memory but disables some advanced functionalities. "
-                        "Another option is to avoid rendering with the rgb_array mode / using the human render cameras as "
-                        "they can be more memory intensive as they typically have higher resolutions for the purposes of visualization."
+                        "If the error is about being unable to create a buffer, you are "
+                        "likely using too many Cameras. Either use less cameras (via less "
+                        "parallel envs) and/or reduce the size of the cameras. Another common "
+                        "cause is using a memory intensive shader. You can try using the "
+                        "'minimal' shader which optimizes for GPU memory but disables some "
+                        "advanced functionalities. Another option is to avoid rendering with the "
+                        "rgb_array mode or using the human render cameras, as they can be more "
+                        "memory intensive (they typically have higher resolutions for the purposes "
+                        "of visualization)."
                     ) from e
+
                 sensor.camera.camera_group = camera_group
                 self.camera_groups[name] = camera_group
             else:
                 raise NotImplementedError(
-                    f"This sensor {sensor} of type {sensor.__class__} has not been implemented yet on the GPU"
+                    f"This sensor {sensor} of type {sensor.__class__} has not been "
+                    "implemented yet on the GPU"
                 )
 
     def _sapien_31_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
@@ -1155,7 +1192,8 @@ class ManiSkillScene:
                 sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
             else:
                 raise NotImplementedError(
-                    f"This sensor {sensor} of type {sensor.__class__} has not bget_picture_cuda implemented yet on the GPU"
+                    f"This sensor {sensor} of type {sensor.__class__} has not been "
+                    "implemented yet on the GPU"
                 )
 
     def get_sensor_images(
