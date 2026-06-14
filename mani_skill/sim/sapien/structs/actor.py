@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity], Actor):
+class SapienActor(Actor[PhysxRigidDynamicComponentStruct[sapien.Entity]]):
     """
     Wrapper around sapien.Entity objects mixed in with useful properties from the
     RigidBodyDynamicComponent components
@@ -34,7 +34,6 @@ class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity], Actor):
     """
 
     px_body_type: Literal["kinematic", "static", "dynamic"] = None
-    hidden: bool = False
 
     initial_pose: Pose = None
     """
@@ -43,10 +42,6 @@ class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity], Actor):
     gpu system is initialized. It may also be useful to help reset a environment to an initial
     state without having to manage initial poses yourself
     """
-    name: str = None
-
-    merged: bool = False
-    """Whether this object is a view of other actors as a result of Actor.merge"""
 
     def __str__(self):
         return (

@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Generic, TypeVar
 
 from mani_skill.utils.structs.base import BaseStruct
 
-if TYPE_CHECKING:
-    pass
+T = TypeVar("T", bound=BaseStruct)
 
 
 @dataclass
-class Actor(BaseStruct):
+class Actor(Generic[T]):
     """
-    The actor class manages a rigid body object in simulation.
+    The actor class manages rigid body objects in simulation.
     """
 
     hidden: bool = False
