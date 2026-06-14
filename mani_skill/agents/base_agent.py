@@ -277,7 +277,7 @@ class BaseAgent:
             self.controllers[control_mode].set_drive_property()
             if balance_passive_force:
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
-                if not self.scene._gpu_sim_initialized:
+                if not self.scene.physics_sim._gpu_sim_initialized:
                     for link in self.robot.links:
                         link.disable_gravity = True
                 else:
