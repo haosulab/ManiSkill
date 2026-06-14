@@ -2,10 +2,6 @@
 # TODO (stao): There are a lot of crazy circular imports going on here so skipping isorting for now
 from .base import (
     BaseStruct as BaseStruct,
-    PhysxJointComponentStruct as PhysxJointComponentStruct,
-    PhysxRigidBaseComponentStruct as PhysxRigidBaseComponentStruct,
-    PhysxRigidBodyComponentStruct as PhysxRigidBodyComponentStruct,
-    PhysxRigidDynamicComponentStruct as PhysxRigidDynamicComponentStruct,
 )
 from .pose import Pose as Pose
 

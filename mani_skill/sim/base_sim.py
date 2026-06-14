@@ -58,6 +58,8 @@ class BaseSim(ABC):
     """The configuration for the simulation backend."""
     num_envs: int
     """The number of environments to simulate."""
+    _reset_mask: torch.Tensor
+    """A mask for controlling which sub-scenes permit modifications to object data"""
 
     def __init__(
         self,
@@ -81,6 +83,11 @@ class BaseSim(ABC):
         raise ValueError(
             f"Invalid backend: {backend}. Should be in the format <package_name.backend_name> or <package_name.backend_name:device_id>."
         )
+    ### Shared derived properties ###
+    @property
+    def timestep(self) -> float:
+        """The timestep of the simulation."""
+        return 1.0 / self.cfg.sim_freq
 
     ### Code for adding builders to a scene for rendering/physics simulation ###
     @abstractmethod
