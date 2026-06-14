@@ -2,11 +2,13 @@
 
 A guide for migrating code from ManiSkill 3 to ManiSkill 4, in addition to (strong) recommendations of things to be aware of when upgrading to ManiSkill 4, ranging from changes in default values like sim/control frequencies to TODO
 
-## Things that you **must** change and be aware of
+## Things that you **must** change or be aware of
 
 - There is no guarantee any randomness / RNG in maniskill 3 will return the same expected randomness in maniskill 4.
 
 - State in maniskill 4 now includes joint targets and joint target velocities if available. Previously these were not included, which can sometimes lead to differences when setting state and taking `None` actions.
+
+- Simulation and rendering backends are not limited to those provided by [Sapien](https://github.com/haosulab/sapien). Going forward, all backends are named with the following format: `<package_name:backend_name>`. So `physx_cuda` is now `sapien.physx_cuda` and the rendering backend `cuda` is now `sapien.cuda`. With the newton support since mujoco warp is used via newton, the mujoco warp backend is named `newton.mujoco_warp`. For a full list of possible backends and their details see TODO(stao). We will still provide backwards compatability however. Device IDs can still be specified as before e.g. `physx_cuda:0` becomes `sapien.physx_cuda:0` to run physx simulation on the `cuda:0` device.
 
 ## Strong recommendations
 
@@ -23,11 +25,11 @@ A guide for migrating code from ManiSkill 3 to ManiSkill 4, in addition to (stro
 
 ### Changes:
 
-- `ManiSkillScene` is no longer a used class. To support multiple simulation backends beyond just SAPIEN, we now have a new general `BaseSim` class that defines all the standard functionalities of a simulator needed by ManiSkill, primarily physics (sub) stepping, rendering, and building objects/scenes with model builder type approaches as done by newton and SAPIEN. These simulator backend classes like `NewtonSim` and `SapienSim` are now located in `mani_skill/sim`, moving `ManiSkillScene` type functionality out of the `mani_skill/envs` folder. The envs folder is now reserved primarily for code working with the gymnasium style / environment class way of building tasks in ManiSkill. Finally we call this a `Sim` instead of `Scene` since the word scene gets thrown around a lot and usually is referring to a "group of assets" or a individual parallel environment, not an actual simulator / engine. So now in ManiSkill, a single "scene" is a single parallel environment in the codebase (e.g. actor builders have a scene_idxs property to dictate which parallel environments the actor is built in).
+- To support multiple simulation backends beyond just SAPIEN, we now have a new general `BaseSim` class that defines all the standard functionalities of a simulator needed by ManiSkill, primarily physics (sub) stepping, rendering, and building objects/scenes with model builder type approaches as done by newton and SAPIEN. These simulator backend classes like `NewtonSim` and `SapienSim` are now located in `mani_skill/sim`. The hierarchcy of classes now from top (user interface) to bottom (sim/rendering code) is now mostly organized as `BaseEnv` > `ManiSkillScene` > `BaseSim`. While `BaseEnv` and `ManiSkillScene` both do not have simulator specific code anymore, we keep these two separate classes for organizational purposes. All robot learning, gymnasium-interface, and generic task building related code are in `BaseEnv`, with all code for managing different physics/rendering engines and exposing their data moved to `ManiSkillScene`.
 
 - `BaseSim` class comes with a `BaseSimConfig` class which defines all the most typically important simulation configurations needed in ManiSkill that spread across backends. If a simulator backend doesn't support one of these configuration attributes (e.g. physics/simulation frequency), we probably will not support that simulator. If the attribute is not used (e.g. perhaps a GPU parallelized simulator has no concept of spacing if designed that way), that backend can simply choose to not parse that attribute. These configs are also more often than not frozen dataclasses now, making it harder to make the mistake of assuming some properties can be changed while a GPU sim is running.
 
 ### Deprecations
 
-- `ManiSkillScene`, replaced by `NewtonSim` and `SapienSim`
+- `ManiSkillScene`, all sapien specific functions/properties are moved to `SapienSim`. Deprecate `timestep` property and setters/getters.
 - `ActorBuilder` functions that add collisions no longer have a `patch_radius` or `min_patch_radius` option. These are physx specific and are only available if you specifically are using SAPIEN/physx backends. `is_trigger` is also no longer an argument, it was never used to begin with.

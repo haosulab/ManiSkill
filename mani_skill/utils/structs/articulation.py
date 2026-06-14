@@ -11,7 +11,7 @@ import sapien.physx as physx
 import torch
 import trimesh
 
-from mani_skill.utils import common, sapien_utils
+from mani_skill.utils import common
 from mani_skill.utils.geometry.trimesh_utils import (
     get_component_meshes,
     get_render_shape_meshes,
@@ -21,7 +21,7 @@ from mani_skill.utils.structs import ArticulationJoint, BaseStruct, Link, Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.sapien import SapienSim
 
 
 @dataclass
@@ -63,9 +63,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     _cached_joint_target_indices: dict[int, torch.Tensor] = field(default_factory=dict)
     """Map from a set of joints of this articulation and the indexing torch tensor to use for setting drive targets in GPU sims."""
 
-    _net_contact_force_queries: dict[
-        Tuple, physx.PhysxGpuContactBodyImpulseQuery
-    ] = field(default_factory=dict)
+    _net_contact_force_queries: dict[Tuple, physx.PhysxGpuContactBodyImpulseQuery] = (
+        field(default_factory=dict)
+    )
     """Maps a tuple of link names to pre-saved net contact force queries"""
 
     def __str__(self):
@@ -81,7 +81,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def create_from_physx_articulations(
         cls,
         physx_articulations: list[physx.PhysxArticulation],
-        scene: ManiSkillScene,
+        scene: SapienSim,
         scene_idxs: torch.Tensor,
         _merged: bool = False,
         _process_links: bool = True,
@@ -124,8 +124,10 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             if _process_links:
                 assert num_links == len(articulation.links) and num_joints == len(
                     articulation.joints
-                ), "Gave different physx articulations. Articulation object created via create_from_physx_articulations can only \
+                ), (
+                    "Gave different physx articulations. Articulation object created via create_from_physx_articulations can only \
                     manage the same articulations, not different ones. Use merge instead if you want to manage different articulations"
+                )
             for i, link in enumerate(articulation.links):
                 all_links_objs[i].append(link)
             for i, joint in enumerate(articulation.joints):
@@ -243,9 +245,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         for articulation in articulations:
             objs += articulation._objs
             merged_scene_idxs.append(articulation._scene_idxs)
-            assert (
-                articulation._num_objs == num_objs_per_actor
-            ), "Each given articulation must have the same number of managed objects"
+            assert articulation._num_objs == num_objs_per_actor, (
+                "Each given articulation must have the same number of managed objects"
+            )
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_articulation = Articulation.create_from_physx_articulations(
             objs, scene, merged_scene_idxs, _merged=True, _process_links=merge_links
@@ -354,14 +356,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 this also returns a single Trimesh.Mesh object instead of a list. This can be useful for efficiency reasons if you know
                 ahead of time all of the managed actors have the same collision mesh
         """
-        assert (
-            not self.merged
-        ), "Currently you cannot fetch collision meshes of merged articulations as merged articulations only share a root link"
+        assert not self.merged, (
+            "Currently you cannot fetch collision meshes of merged articulations as merged articulations only share a root link"
+        )
         if self.scene.gpu_sim_enabled:
-            assert (
-                self.scene._gpu_sim_initialized
-            ), "During GPU simulation link pose data is not accessible until after \
+            assert self.scene._gpu_sim_initialized, (
+                "During GPU simulation link pose data is not accessible until after \
                 initialization, and link poses are needed to get the correct collision mesh of an entire articulation"
+            )
         else:
             self._objs[0].pose = self._objs[0].pose
         # TODO (stao): Can we have a batched version of trimesh?
@@ -401,14 +403,14 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         Returns the visual mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
         """
-        assert (
-            not self.merged
-        ), "Currently you cannot fetch visual meshes of merged articulations as merged articulations only share a root link"
+        assert not self.merged, (
+            "Currently you cannot fetch visual meshes of merged articulations as merged articulations only share a root link"
+        )
         if self.scene.gpu_sim_enabled:
-            assert (
-                self.scene._gpu_sim_initialized
-            ), "During GPU simulation link pose data is not accessible until after \
+            assert self.scene._gpu_sim_initialized, (
+                "During GPU simulation link pose data is not accessible until after \
                 initialization, and link poses are needed to get the correct visual mesh of an entire articulation"
+            )
         else:
             self._objs[0].pose = self._objs[0].pose
         meshes: list[trimesh.Trimesh] = []
@@ -449,9 +451,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                 bodies = []
                 for k in link_names:
                     bodies += self.links_map[k]._bodies
-                self._net_contact_force_queries[
-                    tuple(link_names)
-                ] = self.px.gpu_create_contact_body_impulse_query(bodies)
+                self._net_contact_force_queries[tuple(link_names)] = (
+                    self.px.gpu_create_contact_body_impulse_query(bodies)
+                )
             query = self._net_contact_force_queries[tuple(link_names)]
             self.px.gpu_query_contact_body_impulses(query)
             return (
@@ -510,9 +512,9 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             vals = joint_indices
             if isinstance(joint_indices[0], ArticulationJoint):
                 for joint in joint_indices:
-                    assert (
-                        joint.articulation == self
-                    ), "Can only fetch this articulation's joint_target_indices when provided joints from this articulation"
+                    assert joint.articulation == self, (
+                        "Can only fetch this articulation's joint_target_indices when provided joints from this articulation"
+                    )
                 vals = [
                     x.active_index[0] for x in joint_indices
                 ]  # active_index on joint is batched but it should be the same value across all managed joint objects

@@ -11,7 +11,9 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    pass
+
+from mani_skill.sim.sapien.sim import SapienSim
 
 
 class ParsedURDFData(TypedDict):
@@ -21,7 +23,8 @@ class ParsedURDFData(TypedDict):
 
 
 class URDFLoader(SapienURDFLoader):
-    scene: ManiSkillScene
+    # scene: ManiSkillScene
+    sim: SapienSim
     name: str = None
     disable_self_collisions: bool = False
 
@@ -103,7 +106,7 @@ class URDFLoader(SapienURDFLoader):
             for a in actors:
                 name2entity[a.name] = a
 
-            for scene_idx, scene in enumerate(self.scene.sub_scenes):
+            for scene_idx, scene in enumerate(self.sim.sub_scenes):
                 for cam in cameras:
                     cam_component = RenderCameraComponent(cam["width"], cam["height"])
                     if cam["fovx"] is not None and cam["fovy"] is not None:

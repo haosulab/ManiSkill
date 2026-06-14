@@ -14,7 +14,6 @@ import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
 
-import mani_skill.render.utils as render_utils
 from mani_skill import logger
 from mani_skill.agents import REGISTERED_AGENTS, BaseAgent, MultiAgent
 from mani_skill.envs.scene import ManiSkillScene
@@ -35,6 +34,7 @@ from mani_skill.sensors.camera import (
     update_sensor_configs_from_dict,
 )
 from mani_skill.sensors.depth_camera import StereoDepthCameraConfig
+from mani_skill.sim.sapien import SapienSim
 from mani_skill.utils import common, gym_utils, sapien_utils, tree
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.pose import Pose
@@ -244,10 +244,11 @@ class BaseEnv(gym.Env):
             If you want to do CPU sim backends and have environment vectorization you must use multi-processing across CPUs.
             This can be done via the gymnasium's AsyncVectorEnv API""")
 
-        if shader_dir is not None:
-            if "rt" == shader_dir[:2]:
-                if num_envs > 1 and parallel_in_single_scene == False:
-                    raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
+        # TODO (stao): Update warning messages on renderers
+        # if shader_dir is not None:
+        #     if "rt" == shader_dir[:2]:
+        #         if num_envs > 1 and parallel_in_single_scene == False:
+        #             raise RuntimeError("""Currently you cannot run ray-tracing on more than one environment in a single process""")
 
         assert not parallel_in_single_scene or (obs_mode not in ["sensor_data", "pointcloud", "rgb", "depth", "rgbd"]), \
             "Parallel rendering from parallel cameras is only supported when the gui/viewer is not used. parallel_in_single_scene must be False if using parallel rendering. If True only state based observations are supported."
@@ -1174,61 +1175,20 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Simulation and other gym interfaces
     # -------------------------------------------------------------------------- #
-    def _set_scene_config(self):
-        physx.set_shape_config(contact_offset=self.sim_config.scene_config.contact_offset, rest_offset=self.sim_config.scene_config.rest_offset)
-        physx.set_body_config(solver_position_iterations=self.sim_config.scene_config.solver_position_iterations, solver_velocity_iterations=self.sim_config.scene_config.solver_velocity_iterations, sleep_threshold=self.sim_config.scene_config.sleep_threshold)
-        gravity = self.sim_config.scene_config.gravity
-        if not isinstance(gravity, np.ndarray):
-            gravity = np.array(gravity)
-        physx.set_scene_config(gravity=gravity, bounce_threshold=self.sim_config.scene_config.bounce_threshold, enable_pcm=self.sim_config.scene_config.enable_pcm, enable_tgs=self.sim_config.scene_config.enable_tgs, enable_ccd=self.sim_config.scene_config.enable_ccd, enable_enhanced_determinism=self.sim_config.scene_config.enable_enhanced_determinism, enable_friction_every_iteration=self.sim_config.scene_config.enable_friction_every_iteration, cpu_workers=self.sim_config.scene_config.cpu_workers )  # pyright: ignore[reportArgumentType]
-        physx.set_default_material(**self.sim_config.default_materials_config.dict())
 
     def _setup_scene(self):
         """Setup the simulation scene instance.
         The function should be called in reset(). Called by `self._reconfigure`"""
-        self._set_scene_config()
-        if self._sim_device.is_cuda():
-            physx_system = physx.PhysxGpuSystem(device=self._sim_device)
-            # Create the scenes in a square grid
-            sub_scenes = []
-            scene_grid_length = int(np.ceil(np.sqrt(self.num_envs)))
-            for scene_idx in range(self.num_envs):
-                scene_x, scene_y = (
-                    scene_idx % scene_grid_length - scene_grid_length // 2,
-                    scene_idx // scene_grid_length - scene_grid_length // 2,
-                )
-                systems: list[sapien.System] = [physx_system]
-                if render_utils.can_render(self._render_device):
-                    systems.append(sapien.render.RenderSystem(self._render_device))
-                scene = sapien.Scene(
-                    systems=systems
-                )
-                physx_system.set_scene_offset(
-                    scene,
-                    [
-                        scene_x * self.sim_config.spacing,
-                        scene_y * self.sim_config.spacing,
-                        0,
-                    ],
-                )
-                sub_scenes.append(scene)
-        else:
-            physx_system = physx.PhysxCpuSystem()
-            systems = [physx_system]
-            if render_utils.can_render(self._render_device):
-                systems.append(sapien.render.RenderSystem(self._render_device))
-            sub_scenes = [
-                sapien.Scene(systems)
-            ]
+
         # create a "global" scene object that users can work with that is linked with all other scenes created
         self.scene = ManiSkillScene(
-            sub_scenes,
+            physics_sims=[SapienSim()],
+            render_sims=[SapienSim()],
             sim_config=self.sim_config,
             device=self.device,
             parallel_in_single_scene=self._parallel_in_single_scene,
             backend=self.backend
         )
-        self.scene.px.timestep = 1.0 / self._sim_freq
         if not self.scene.can_render():
             if self.render_mode is not None:
                 logger.warning(f'The chosen render mode is "{self.render_mode}", but selected rendering device "{self.scene.backend.render_device}" does not support rendering')

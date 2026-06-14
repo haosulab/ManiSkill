@@ -19,7 +19,7 @@ from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.sapien import SapienSim
     from mani_skill.utils.structs import Articulation
 
 
@@ -59,7 +59,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def create(
         cls,
         physx_links: list[physx.PhysxArticulationLinkComponent],
-        scene: ManiSkillScene,
+        scene: SapienSim,
         scene_idxs: torch.Tensor,
     ):
         return cls(

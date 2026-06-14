@@ -1,11 +1,15 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from __future__ import annotations
 
-from mani_skill.sim.base_sim import BaseSim
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
 from mani_skill.sim.builders.base_builder import BaseBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Vec3
+
+if TYPE_CHECKING:
+    from mani_skill.sim.base_sim import BaseSim
 
 
 class BaseActorBuilder(BaseBuilder, ABC):

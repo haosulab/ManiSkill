@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 import torch
 
-from mani_skill.sim.builders.actor import ActorBuilder
-from mani_skill.sim.builders.articulation import ArticulationBuilder
+from mani_skill.sim.builders.actor import BaseActorBuilder
+from mani_skill.sim.builders.articulation import BaseArticulationBuilder
 from mani_skill.utils.structs.pose import Pose
 
 
@@ -16,7 +16,7 @@ class DefaultMaterialsConfig:
     restitution: float = 0
 
     def dict(self):
-        return {k: v for k, v in dataclass.asdict(self).items()}
+        return {k: v for k, v in asdict(self).items()}
 
 
 @dataclass(frozen=True)
@@ -49,26 +49,51 @@ class BaseSim(ABC):
     """
 
     id: str
-    """the id of the simulation backend"""
+    """The id of the simulation backend."""
+    sim_device_torch: torch.device
+    """The torch device that physics engine returns data on."""
+    render_device_torch: torch.device
+    """The torch device that the renderer returns data on."""
+    cfg: BaseSimConfig
+    """The configuration for the simulation backend."""
+    num_envs: int
+    """The number of environments to simulate."""
 
-    device: torch.device
-    """the torch device on which the simulation is running"""
-
-    def __init__(self, cfg: BaseSimConfig | None = None):
+    def __init__(
+        self,
+        num_envs: int = 1,
+        cfg: BaseSimConfig | None = None,
+        sim_device_torch: torch.device = torch.device("cpu"),
+        render_device_torch: torch.device = torch.device("cpu"),
+    ):
+        self.num_envs = num_envs
         self.cfg = cfg or BaseSimConfig()
+        self.sim_device_torch = sim_device_torch
+        self.render_device_torch = render_device_torch
+
+    def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
+        if "." in backend:
+            package_name, backend_name = backend.split(".")
+            parts = backend_name.split(":")
+            if len(parts) == 2:
+                return package_name, parts[0], parts[1]
+            return package_name, backend_name, None
+        raise ValueError(
+            f"Invalid backend: {backend}. Should be in the format <package_name.backend_name> or <package_name.backend_name:device_id>."
+        )
 
     ### Code for adding builders to a scene for rendering/physics simulation ###
-    def create_actor_builder(self) -> ActorBuilder:
+    @abstractmethod
+    def create_actor_builder(self) -> BaseActorBuilder:
         """
         Creates an ActorBuilder object that can be used to build actors in this scene.
         """
-        return ActorBuilder().add_sim(self)
 
-    def create_articulation_builder(self) -> ArticulationBuilder:
+    @abstractmethod
+    def create_articulation_builder(self) -> BaseArticulationBuilder:
         """
         Creates an ArticulationBuilder object that can be used to build articulations in this scene.
         """
-        return ArticulationBuilder().add_sim(self)
 
     ### Code for compiling simulator scene for rendering ###
     @abstractmethod
@@ -85,6 +110,12 @@ class BaseSim(ABC):
     def add_camera(self, pose: Pose):
         """
         Adds a camera to the simulation scene.
+        """
+
+    @abstractmethod
+    def can_render(self):
+        """
+        Whether the simulation backend can render.
         """
 
     ### Code for compiling simulator scene for physical simulation ###

@@ -1,9 +1,14 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-from mani_skill.sim.base_sim import BaseSim
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
 from mani_skill.sim.builders.base_builder import BaseBuilder
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.pose import Pose
+
+if TYPE_CHECKING:
+    from mani_skill.sim.base_sim import BaseSim
 
 
 class BaseArticulationBuilder(BaseBuilder, ABC):

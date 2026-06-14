@@ -12,19 +12,19 @@ from sapien.wrapper.articulation_builder import (
 from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill import logger
+from mani_skill.sim.builders.articulation import ArticulationBuilder
 from mani_skill.utils import common
 from mani_skill.utils.structs import Articulation, Pose
 from mani_skill.utils.structs.pose import to_sapien_pose
-from mani_skill.sim.builders.articulation import ArticulationBuilder
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.sapien import SapienSim
 
 
 class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationBuilder):
     """Articulation builder for working with SAPIEN"""
 
-    scene: ManiSkillScene
+    scene: SapienSim
     disable_self_collisions: bool = False
 
     def __init__(self):
@@ -33,7 +33,7 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
         self.scene_idxs = None
         self.initial_pose = None
 
-    def set_scene(self, scene: ManiSkillScene):
+    def set_scene(self, scene: SapienSim):
         self.scene = scene
         return self
 
@@ -124,13 +124,14 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
         assert self.scene is not None
         if name is not None:
             self.set_name(name)
-        assert (
-            self.name is not None
-            and self.name != ""
-            and self.name not in self.scene.articulations
-        ), (
-            "built actors in ManiSkill must have unique names and cannot be None or empty strings"
-        )
+        # TODO (stao): move this check to scene level, not in builder...
+        # assert (
+        #     self.name is not None
+        #     and self.name != ""
+        #     and self.name not in self.scene.articulations
+        # ), (
+        #     "built actors in ManiSkill must have unique names and cannot be None or empty strings"
+        # )
 
         if self.scene_idxs is not None:
             pass
@@ -150,10 +151,10 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
 
         articulations = []
         for i, scene_idx in enumerate(self.scene_idxs):
-            if self.scene.parallel_in_single_scene:
-                sub_scene = self.scene.sub_scenes[0]
-            else:
-                sub_scene = self.scene.sub_scenes[scene_idx]
+            # if self.scene.parallel_in_single_scene:
+            #     sub_scene = self.scene.sub_scenes[0]
+            # else:
+            sub_scene = self.scene.sub_scenes[scene_idx]
             if initial_pose_b == 1:
                 articulation_pose = to_sapien_pose(initial_pose_np)
             else:

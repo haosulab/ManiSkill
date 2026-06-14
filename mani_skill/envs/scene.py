@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Mapping, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
 import sapien
@@ -23,6 +25,9 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.render_camera import RenderCamera
 from mani_skill.utils.structs.types import Array, Device, SimConfig
 
+if TYPE_CHECKING:
+    from mani_skill.sim.base_sim import BaseSim
+
 # try and determine which render system is used by the installed sapien package
 if SAPIEN_RENDER_SYSTEM == "3.1":
     from sapien.wrapper.scene import (
@@ -41,16 +46,14 @@ class StateDictRegistry:
 
 class ManiSkillScene:
     """
-    Class that manages a list of sub-scenes (sapien.Scene). In CPU simulation there should only be one sub-scene.
-    In GPU simulation, there can be many sub-scenes, and this wrapper ensures that use calls to many of the original sapien.Scene API
-    are applied to all sub-scenes. This includes calls to change object poses, velocities, drive targets etc.
-
-    This wrapper also helps manage GPU states if GPU simulation is used
+    ManiSkillScene class manages the core simulation and all parallel sub-scenes without any simulator backend specific code.
     """
 
     def __init__(
         self,
-        sub_scenes: Optional[list[sapien.Scene]] = None,
+        # sub_scenes: Optional[list[sapien.Scene]] = None,
+        physics_sims: list[BaseSim] = [],
+        render_sims: list[BaseSim] = [],
         sim_config: SimConfig = SimConfig(),
         device: Optional[Device] = None,
         parallel_in_single_scene: bool = False,
@@ -58,28 +61,16 @@ class ManiSkillScene:
     ):
         assert device is not None, "device argument is required"
         assert backend is not None, "backend argument is required"
-        if sub_scenes is None:
-            sub_scenes = [sapien.Scene()]
-        self.sub_scenes = sub_scenes
-        self.px: physx.PhysxSystem = self.sub_scenes[0].physx_system
-        assert all(
-            isinstance(s.physx_system, type(self.px)) for s in self.sub_scenes
-        ), "all sub-scenes must use the same simulation backend"
-        self.gpu_sim_enabled = (
-            True if isinstance(self.px, physx.PhysxGpuSystem) else False
-        )
-        """whether the sub scenes are using the GPU or CPU backend"""
+
+        self.physics_sims = physics_sims
+        self.render_sims = render_sims
+
         self.sim_config = sim_config
-        self._gpu_sim_initialized = False
+
         if isinstance(device, str):
             device = torch.device(device)
         self.device = device
         self.backend = backend  # references the backend object stored in BaseEnv class
-
-        self.camera_groups: dict[str, sapien.render.RenderCameraGroup] = dict()
-        self.render_system_group: sapien.render.RenderSystemGroup = (
-            None  # pyright: ignore[reportAttributeAccessIssue]
-        )
 
         self.actors: dict[str, Actor] = dict()
         self.articulations: dict[str, Articulation] = dict()
@@ -95,24 +86,13 @@ class ManiSkillScene:
         self._human_render_cameras_initialized = False
 
         self._reset_mask = torch.ones(
-            len(sub_scenes), dtype=torch.bool, device=self.device
+            self.num_envs, dtype=torch.bool, device=self.device
         )
         """Used internally by various objects like Actor, Link, and Controllers to auto mask out sub-scenes so they do not get modified during
         partial env resets"""
 
         self._needs_fetch = False
         """Used internally to raise some errors ahead of time of when there may be undefined behaviors"""
-
-        self.pairwise_contact_queries: dict[
-            str, physx.PhysxGpuContactPairImpulseQuery
-        ] = dict()
-        """dictionary mapping pairwise contact query keys to GPU contact queries. Used in GPU simulation only to cache queries as
-        query creation will pause any GPU sim computation"""
-        self._pairwise_contact_query_unique_hashes: dict[str, int] = dict()
-        """maps keys in self.pairwise_contact_queries to unique hashes dependent on the actual objects involved in the query.
-        This is used to determine automatically when to rebuild contact queries as keys for self.pairwise_contact_queries are kept
-        non-unique between episode resets in order to be easily rebuilt and deallocate old queries. This essentially acts as a way
-        to invalidate the cached queries."""
 
         self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
@@ -129,41 +109,31 @@ class ManiSkillScene:
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene
     # -------------------------------------------------------------------------- #
-    @property
-    def timestep(self):
-        """The current simulation timestep"""
-        return self.px.timestep
-
-    @timestep.setter
-    def timestep(self, timestep):
-        self.px.timestep = timestep
-
-    def set_timestep(self, timestep):
-        """Sets the current simulation timestep"""
-        self.timestep = timestep
-
-    def get_timestep(self):
-        """Returns the current simulation timestep"""
-        return self.timestep
 
     def create_actor_builder(self):
-        """Creates an ActorBuilder object that can be used to build actors in this scene"""
-        from ..utils.building.actor_builder import ActorBuilder
+        """Creates an ActorBuilder object that can be used to build actors in this scene."""
+        from mani_skill.sim.builders.actor import ActorBuilder
 
-        return ActorBuilder().set_scene(self)
+        builder = ActorBuilder()
+        for sim in self.physics_sims:
+            builder.add_sim(sim)
+        return builder
 
     def create_articulation_builder(self):
-        """Creates an ArticulationBuilder object that can be used to build articulations in this scene"""
-        from ..utils.building.articulation_builder import ArticulationBuilder
+        """Creates an ArticulationBuilder object that can be used to build articulations in this scene."""
+        from mani_skill.sim.builders.articulation import ArticulationBuilder
 
-        return ArticulationBuilder().set_scene(self)
+        builder = ArticulationBuilder()
+        for sim in self.physics_sims:
+            builder.add_sim(sim)
+        return builder
 
     def create_urdf_loader(self):
         """Creates a URDFLoader object that can be used to load URDF files into this scene"""
         from ..utils.building.urdf_loader import URDFLoader
 
         loader = URDFLoader()
-        loader.set_scene(self)
+        loader.set_scene(self.physics_sims[0])
         return loader
 
     def create_mjcf_loader(self):
@@ -247,9 +217,9 @@ class ManiSkillScene:
                 if len(self.sub_scenes) > 1:
                     # repeat the intrinsic along batch dim
                     intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
-            assert len(intrinsic) == len(
-                self.sub_scenes
-            ), "intrinsic matrix batch dim not equal to the number of sub-scenes"
+            assert len(intrinsic) == len(self.sub_scenes), (
+                "intrinsic matrix batch dim not equal to the number of sub-scenes"
+            )
         for i, scene in enumerate(self.sub_scenes):
             # Create camera component
             camera = RenderCameraComponent(width, height)
@@ -329,9 +299,9 @@ class ManiSkillScene:
                 if len(self.sub_scenes) > 1:
                     # repeat the intrinsic along batch dim
                     intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
-            assert len(intrinsic) == len(
-                self.sub_scenes
-            ), "intrinsic matrix batch dim not equal to the number of sub-scenes"
+            assert len(intrinsic) == len(self.sub_scenes), (
+                "intrinsic matrix batch dim not equal to the number of sub-scenes"
+            )
 
         for i, scene in enumerate(self.sub_scenes):
             # Create camera component
@@ -662,7 +632,8 @@ class ManiSkillScene:
             light.pose = sapien.Pose(
                 light_position,
                 sapien.math.shortest_rotation(
-                    [1, 0, 0], direction  # pyright: ignore[reportArgumentType]
+                    [1, 0, 0],
+                    direction,  # pyright: ignore[reportArgumentType]
                 ),
             )
             scene.add_entity(entity)
@@ -711,7 +682,8 @@ class ManiSkillScene:
             light.pose = sapien.Pose(
                 light_position,
                 sapien.math.shortest_rotation(
-                    [1, 0, 0], direction  # pyright: ignore[reportArgumentType]
+                    [1, 0, 0],
+                    direction,  # pyright: ignore[reportArgumentType]
                 ),
             )
             scene.add_entity(entity)
@@ -759,7 +731,7 @@ class ManiSkillScene:
     # ---------------------------------------------------------------------------- #
     @property
     def num_envs(self):
-        return len(self.sub_scenes)
+        return self.physics_sims[0].num_envs
 
     def get_pairwise_contact_impulses(
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
@@ -800,9 +772,9 @@ class ManiSkillScene:
                     ],
                     list(zip(obj1._bodies, obj2._bodies)),
                 )
-                self.pairwise_contact_queries[
-                    query_key
-                ] = self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                self.pairwise_contact_queries[query_key] = (
+                    self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                )
                 self._pairwise_contact_query_unique_hashes[query_key] = query_hash
 
             query = self.pairwise_contact_queries[query_key]
@@ -870,28 +842,28 @@ class ManiSkillScene:
 
     def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
         if isinstance(object, Actor):
-            assert (
-                object.name not in self.state_dict_registry.actors
-            ), f"Object {object.name} already in state dict registry"
+            assert object.name not in self.state_dict_registry.actors, (
+                f"Object {object.name} already in state dict registry"
+            )
             self.state_dict_registry.actors[object.name] = object
         elif isinstance(object, Articulation):
-            assert (
-                object.name not in self.state_dict_registry.articulations
-            ), f"Object {object.name} already in state dict registry"
+            assert object.name not in self.state_dict_registry.articulations, (
+                f"Object {object.name} already in state dict registry"
+            )
             self.state_dict_registry.articulations[object.name] = object
         else:
             raise ValueError(f"Expected Actor or Articulation, got {object}")
 
     def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
         if isinstance(object, Actor):
-            assert (
-                object.name in self.state_dict_registry.actors
-            ), f"Object {object.name} not in state dict registry"
+            assert object.name in self.state_dict_registry.actors, (
+                f"Object {object.name} not in state dict registry"
+            )
             del self.state_dict_registry.actors[object.name]
         elif isinstance(object, Articulation):
-            assert (
-                object.name in self.state_dict_registry.articulations
-            ), f"Object {object.name} not in state dict registry"
+            assert object.name in self.state_dict_registry.articulations, (
+                f"Object {object.name} not in state dict registry"
+            )
             del self.state_dict_registry.articulations[object.name]
         else:
             raise ValueError(f"Expected Actor or Articulation, got {object}")
@@ -911,9 +883,9 @@ class ManiSkillScene:
                 continue
             state_dict["actors"][actor.name] = actor.get_state().clone()
         for articulation in self.state_dict_registry.articulations.values():
-            state_dict["articulations"][
-                articulation.name
-            ] = articulation.get_state().clone()
+            state_dict["articulations"][articulation.name] = (
+                articulation.get_state().clone()
+            )
         if len(state_dict["actors"]) == 0:
             del state_dict["actors"]
         if len(state_dict["articulations"]) == 0:
@@ -1000,10 +972,10 @@ class ManiSkillScene:
         """
         Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
         """
-        assert (
-            not self._needs_fetch
-        ), "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling _gpu_apply_all again\
+        assert not self._needs_fetch, (
+            "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling _gpu_apply_all again\
             as otherwise there is undefined behavior that is likely impossible to debug"
+        )
         assert isinstance(self.px, physx.PhysxGpuSystem)
         self.px.gpu_apply_rigid_dynamic_data()
         self.px.gpu_apply_articulation_qpos()
