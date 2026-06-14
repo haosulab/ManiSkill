@@ -21,8 +21,8 @@ class SapienBaseStruct(BaseStruct, Generic[T]):
     Base class for all structs that manage objects in simulation across sub-scenes.
     """
 
-    physics_sim: SapienSim
-    render_sim: SapienSim
+    sim: SapienSim
+    """The Sapien simulation backend object the struct operates on."""
 
     _objs: list[T]
     """
@@ -45,7 +45,7 @@ class SapienBaseStruct(BaseStruct, Generic[T]):
     @property
     def px(self):
         """The physx system objects managed by this dataclass are working on"""
-        return self.physics_sim.px
+        return self.sim.px
 
 
 @dataclass
@@ -81,7 +81,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
     @property
     def px(self):
         """The physx system objects managed by this dataclass are working on"""
-        return self.physics_sim.px
+        return self.sim.px
 
     @cached_property
     def _body_data_index(self):
@@ -113,7 +113,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         where N is the number of environments, and 3 is the dimension of the force vector itself,
         representing x, y, and z direction of force.
         """
-        return self.get_net_contact_impulses() / self.physics_sim.timestep
+        return self.get_net_contact_impulses() / self.sim.timestep
 
     def get_net_contact_impulses(self):
         """
@@ -121,7 +121,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
         where N is the number of environments, and 3 is the dimension of the impulse vector itself,
         representing x, y, and z direction of impulse.
         """
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             cast(physx.PhysxGpuSystem, self.px).gpu_query_contact_body_impulses(
                 self._body_force_query
             )
@@ -198,7 +198,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
 
     @property
     def angular_velocity(self) -> torch.Tensor:
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self._body_data[self._body_data_index, 10:13]
         else:
             return torch.tensor(
@@ -253,7 +253,7 @@ class PhysxRigidBodyComponentStruct(PhysxRigidBaseComponentStruct[T], Generic[T]
 
     @property
     def linear_velocity(self) -> torch.Tensor:
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.from_numpy(self._bodies[0].linear_velocity[None, :]).to(
@@ -354,7 +354,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     # def wake_up(self) -> None: ...
     @property
     def angular_velocity(self) -> torch.Tensor:
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self._body_data[self._body_data_index, 10:13]
         else:
             return torch.from_numpy(self._bodies[0].angular_velocity[None, :]).to(
@@ -363,10 +363,10 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @angular_velocity.setter
     def angular_velocity(self, arg1: Array):
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
-                self._body_data_index[self.physics_sim._reset_mask[self._scene_idxs]],
+                self._body_data_index[self.sim._reset_mask[self._scene_idxs]],
                 10:13,
             ] = arg1
         else:
@@ -377,14 +377,14 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @property
     def gpu_index(self):
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return [b.gpu_index for b in self._bodies]
         else:
             raise AttributeError("GPU index is not supported when gpu is not enabled")
 
     @property
     def gpu_pose_index(self):
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return [b.gpu_pose_index for b in self._bodies]
         else:
             raise AttributeError(
@@ -394,7 +394,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     @property
     @before_gpu_init
     def is_sleeping(self):
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return [b.is_sleeping for b in self._bodies]
         else:
             return [self._bodies[0].is_sleeping]
@@ -425,7 +425,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
     #     pass
     @property
     def linear_velocity(self) -> torch.Tensor:
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self._body_data[self._body_data_index, 7:10]
         else:
             return torch.tensor(
@@ -435,10 +435,10 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
 
     @linear_velocity.setter
     def linear_velocity(self, arg1: Array):
-        if self.physics_sim.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
-                self._body_data_index[self.physics_sim._reset_mask[self._scene_idxs]],
+                self._body_data_index[self.sim._reset_mask[self._scene_idxs]],
                 7:10,
             ] = arg1
         else:
