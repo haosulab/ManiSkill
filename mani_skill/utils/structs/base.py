@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import torch
 
@@ -14,7 +14,7 @@ T = TypeVar("T")
 
 
 @dataclass
-class BaseStruct(Generic[T]):
+class BaseStruct:
     """
     Base class of all structs that manage objects in simulation across sub-scenes.
     """

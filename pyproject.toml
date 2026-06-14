@@ -80,5 +80,6 @@ markers = [
 select = [
     "E", "F", "B", "I",
 ]
+ignore = ["B905"]
 [tool.ruff.lint.pycodestyle]
 max-line-length = 100
