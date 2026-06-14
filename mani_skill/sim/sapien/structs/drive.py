@@ -11,7 +11,7 @@ import torch
 from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.sim.sapien.structs.base import PhysxJointComponentStruct
 from mani_skill.sim.sapien.structs.decorators import before_gpu_init
-from mani_skill.sim.sapien.structs.link import Link
+from mani_skill.sim.sapien.structs.link import SapienLink
 from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
@@ -75,9 +75,9 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
     @staticmethod
     def create_from_actors_or_links(
         sim: SapienSim,
-        entities0: Union[SapienActor, Link] = None,
+        entities0: Union[SapienActor, SapienLink] = None,
         pose0: Union[sapien.Pose, Pose] = None,
-        entities1: Union[SapienActor, Link] = None,
+        entities1: Union[SapienActor, SapienLink] = None,
         pose1: Union[sapien.Pose, Pose] = None,
         scene_idxs: torch.Tensor = None,
     ) -> "Drive":
@@ -96,9 +96,9 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
         """
         objs0 = entities0._objs
         objs1 = entities1._objs
-        if isinstance(entities0, Link):
+        if isinstance(entities0, SapienLink):
             objs0 = [x.entity for x in objs0]
-        if isinstance(entities1, Link):
+        if isinstance(entities1, SapienLink):
             objs1 = [x.entity for x in objs1]
 
         return Drive.create_from_entities(sim, objs0, pose0, objs1, pose1, scene_idxs)

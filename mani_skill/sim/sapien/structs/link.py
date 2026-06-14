@@ -15,6 +15,7 @@ from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
     merge_meshes,
 )
+from mani_skill.utils.structs import Link
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
+class SapienLink(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent], Link):
     """
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """
@@ -85,7 +86,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
         )
 
     @classmethod
-    def merge(cls, links: list["Link"], name: str = None):
+    def merge(cls, links: list["SapienLink"], name: str = None):
         objs = []
         joint_objs = []
         merged_joint_indexes = []
@@ -103,7 +104,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                 merged_active_joint_indexes.append(link.joint.active_index)
                 merged_joint_indexes.append(link.joint.index)
         merged_scene_idxs = torch.concat(merged_scene_idxs)
-        merged_link = Link.create(
+        merged_link = SapienLink.create(
             objs, scene=links[0].scene, scene_idxs=merged_scene_idxs
         )
         if not has_one_root_link:

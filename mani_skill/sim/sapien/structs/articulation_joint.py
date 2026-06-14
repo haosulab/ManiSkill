@@ -18,7 +18,7 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.sim.sapien.sim import SapienSim
     from mani_skill.sim.sapien.structs.articulation import SapienArticulation
-    from mani_skill.sim.sapien.structs.link import Link
+    from mani_skill.sim.sapien.structs.link import SapienLink
 
 
 @dataclass
@@ -36,8 +36,8 @@ class SapienArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint], Ar
     """index of this joint amongst the active joints"""
 
     articulation: SapienArticulation | None = None
-    child_link: Link | None = None
-    parent_link: Link | None = None
+    child_link: SapienLink | None = None
+    parent_link: SapienLink | None = None
     name: str = None
 
     _physx_articulations: list[physx.PhysxArticulation] = None

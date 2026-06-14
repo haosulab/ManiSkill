@@ -13,7 +13,7 @@ import trimesh
 
 from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 from mani_skill.sim.sapien.structs.base import SapienBaseStruct
-from mani_skill.sim.sapien.structs.link import Link
+from mani_skill.sim.sapien.structs.link import SapienLink
 from mani_skill.utils import common
 from mani_skill.utils.geometry.trimesh_utils import (
     get_component_meshes,
@@ -33,11 +33,11 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     Wrapper around physx.PhysxArticulation objects
     """
 
-    links: list[Link]
+    links: list[SapienLink]
     """list of Link objects"""
-    links_map: dict[str, Link]
+    links_map: dict[str, SapienLink]
     """Maps link name to the Link object"""
-    root: Link
+    root: SapienLink
     """The root Link object"""
     joints: list[SapienArticulationJoint]
     """list of Joint objects"""
@@ -131,7 +131,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             [] for _ in range(num_joints)
         ]
 
-        links_map: dict[str, Link] = dict()
+        links_map: dict[str, SapienLink] = dict()
         for articulation in physx_articulations:
             if _process_links:
                 assert num_links == len(articulation.links) and num_joints == len(
@@ -146,11 +146,11 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
                 all_links_objs[i].append(link)
             for i, joint in enumerate(articulation.joints):
                 all_joint_objs[i].append(joint)
-        wrapped_links: list[Link] = []
+        wrapped_links: list[SapienLink] = []
 
         root = None
         for links in all_links_objs:
-            wrapped_link = Link.create(links, sim, scene_idxs)
+            wrapped_link = SapienLink.create(links, sim, scene_idxs)
             wrapped_link.name = "_".join(
                 links[0].name.replace(self.name, "", 1).split("_")[1:]
             )
@@ -610,7 +610,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             )
         return self.joints_map[arg0]
 
-    def find_link_by_name(self, arg0: str) -> Link:
+    def find_link_by_name(self, arg0: str) -> SapienLink:
         if self.merged:
             raise RuntimeError(
                 "Cannot call find_link_by_name when the articulation object is managing "

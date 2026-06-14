@@ -13,6 +13,7 @@ import trimesh
 from mani_skill.sim.sapien.structs.base import PhysxRigidDynamicComponentStruct
 from mani_skill.utils import common
 from mani_skill.utils.geometry.trimesh_utils import get_component_meshes, merge_meshes
+from mani_skill.utils.structs import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose, vectorize_pose
 from mani_skill.utils.structs.types import Array
 
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
+class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity], Actor):
     """
     Wrapper around sapien.Entity objects mixed in with useful properties from the
     RigidBodyDynamicComponent components
