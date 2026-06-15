@@ -1,2 +1,2 @@
-from .actor import ActorBuilder as ActorBuilder
-from .articulation import ArticulationBuilder as ArticulationBuilder
+from .actor import BaseActorBuilder as BaseActorBuilder
+from .articulation import BaseArticulationBuilder as BaseArticulationBuilder

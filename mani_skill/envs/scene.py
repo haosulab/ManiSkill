@@ -68,10 +68,9 @@ class ManiSkillScene:
         self.render_sim = render_sim
         self.physics_sim.scene = self
         self.render_sim.scene = self
-        if self.physics_sim == self.render_sim:
-            # TODO (stao): optimizations if physics and render sims are the same object
-            # e.g. both using sapien
-            pass
+        self._shared_sim_packages = self.physics_sim == self.render_sim
+        # TODO (stao): optimizations if physics and render sims are the same object
+        # e.g. both using sapien
 
         self.sim_config = sim_config
 
@@ -133,11 +132,14 @@ class ManiSkillScene:
 
     def create_actor_builder(self):
         """Creates an ActorBuilder object that can be used to build actors in this scene."""
-        from mani_skill.sim.builders.actor import ActorBuilder
+        from mani_skill.sim.builders.actor import BaseActorBuilder
 
-        builder = ActorBuilder()
-        builder.add_sim(self.physics_sim)
-        builder.add_sim(self.render_sim)
+        builder = BaseActorBuilder()
+        if self._shared_sim_packages:
+            builder._add_sim(self.physics_sim)
+        else:
+            builder._add_sim(self.physics_sim)
+            builder._add_sim(self.render_sim)
         return builder
 
     def create_articulation_builder(self):
@@ -147,8 +149,11 @@ class ManiSkillScene:
         from mani_skill.sim.builders.articulation import ArticulationBuilder
 
         builder = ArticulationBuilder()
-        builder.add_sim(self.physics_sim)
-        builder.add_sim(self.render_sim)
+        if self._shared_sim_packages:
+            builder._add_sim(self.physics_sim)
+        else:
+            builder._add_sim(self.physics_sim)
+            builder._add_sim(self.render_sim)
         return builder
 
     def create_urdf_loader(self):
@@ -156,7 +161,11 @@ class ManiSkillScene:
         from ..utils.building.urdf_loader import URDFLoader
 
         loader = URDFLoader()
-        loader.set_scene(self.physics_sim)
+        if self._shared_sim_packages:
+            loader.set_scene(self.physics_sim)
+        else:
+            loader.set_scene(self.physics_sim)
+            loader.set_scene(self.render_sim)
         return loader
 
     def create_mjcf_loader(self):

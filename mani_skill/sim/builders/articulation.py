@@ -56,7 +56,7 @@ class ArticulationBuilder(BaseArticulationBuilder):
     def __init__(self):
         pass
 
-    def add_sim(self, sim: BaseSim):
+    def _add_sim(self, sim: BaseSim):
         """
         Add a simulation backend that should track this builder. Whenever this articulation is
         built, the simulator backend will include this articulation in its state and compile
@@ -72,7 +72,7 @@ class ArticulationBuilder(BaseArticulationBuilder):
         self._sim_builders[sim.id] = sim.create_articulation_builder()
         return self
 
-    def remove_sim(self, sim: BaseSim):
+    def _remove_sim(self, sim: BaseSim):
         """
         Remove a simulation backend that is tracking this builder.
         """

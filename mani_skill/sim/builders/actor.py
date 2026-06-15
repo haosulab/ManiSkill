@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from mani_skill.sim.builders.base_builder import BaseBuilder
@@ -12,18 +11,68 @@ if TYPE_CHECKING:
     from mani_skill.sim.base_sim import BaseSim
 
 
-class BaseActorBuilder(BaseBuilder, ABC):
+class BaseActorBuilder(BaseBuilder):
     # TODO (stao): can this re-use for soft body? need to check newton api
     """Base actor builder for building rigid body objects (actors) in a simulation.
-    Actor builders for each simulator backend should inherit from this class."""
+    Actor builders for each simulator backend should inherit from this class.
 
-    # NOTE (stao): most sims have a concept of a initial pose
+    Not all building functions need to be implemented. Errors are thrown
+    if un-implemented functions are called.
+    """
+
     initial_pose: Pose | None = None
     """The initial pose of the actor when it gets built and spawned into the simulation."""
 
     scene_idxs: list[int] | None = None
     """The list of scene indices to build this actor in. If None, the actor will be
     built in all scenes."""
+
+    _sims: dict[str, BaseSim] = {}
+    """Dictionary of simulators that will be tracking this builder. There can be multiple simulators
+    that track this builder in order to support using different simulators for physics and
+    rendering. If you are writing an ActorBuilder for a simulator package (e.g. Sapien/Newton),
+    you should not be accessing this attribute ever."""
+
+    _sim_builders: dict[str, BaseActorBuilder] = {}
+    """Dictionary mapping sim id to the corresponding actor builder for that simulator."""
+
+    # NOTE (stao): To reduce the amount of duplicate code, we check if calls
+    # calls to actor builders are from a concrete ActorBuilder (for e.g. Sapien/Newton) or
+    # from the BaseActorBuilder. If the call is from the BaseActorBuilder, we proceed
+    # If not and _sims is accessed, this indicates that the concrete ActorBuilder did not
+    # implement the particular modular building function (e.g. add_box_collision).
+    # this design makes it so that we can have a shared BaseActorBuilder for users
+    # to build actors across different simulators while on the backend we can implement
+    # a subset of the full actor builder functionality and don't need  two BaseActorBuilder
+    # classes.
+
+    def _add_sim(self, sim: BaseSim):
+        """
+        Add a simulation backend that should track this builder. Whenever this actor is built,
+        the simulator backend will include this actor in its state and compile it in the scene.
+
+        Args:
+            sim: The simulation backend to add.
+
+        Returns:
+            The actor builder.
+        """
+        self._sims[sim.id] = sim
+        self._sim_builders[sim.id] = sim.create_actor_builder()
+        return self
+
+    def _remove_sim(self, sim: BaseSim):
+        """
+        Remove a simulation backend that is tracking this builder.
+
+        Args:
+            sim: The simulation backend to remove.
+
+        Returns:
+            The actor builder.
+        """
+        self._sims.pop(sim.id)
+        return self
 
     def set_scene_idxs(self, scene_idxs: list[int] | None = None):
         """
@@ -39,7 +88,6 @@ class BaseActorBuilder(BaseBuilder, ABC):
         self.scene_idxs = scene_idxs
         return self
 
-    @abstractmethod
     def build(self, name: str) -> Actor:
         """
         Build the actor.
@@ -50,6 +98,26 @@ class BaseActorBuilder(BaseBuilder, ABC):
         Returns:
             The built actor.
         """
+        raise NotImplementedError()
+
+    def build_kinematic(self, name: str) -> Actor:
+        """
+        Build the actor as a kinematic object.
+
+        Args:
+            name: The name of the actor.
+
+        Returns:
+            The built actor.
+        """
+        for sim in self._sims.values():
+            if type(self._sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self._sim_builders[sim.id].__class__.__name__} does not support "
+                    "build_kinematic."
+                )
+            self._sim_builders[sim.id].build_kinematic(name=name)
+        return self
 
     ### Standard primitive building functions, based on Sapien's original ActorBuilder ###
     def add_box_collision(
@@ -74,7 +142,19 @@ class BaseActorBuilder(BaseBuilder, ABC):
         Returns:
             The actor builder.
         """
-        raise NotImplementedError("")
+        for sim in self._sims.values():
+            if type(self._sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self._sim_builders[sim.id].__class__.__name__} does not support "
+                    "add_box_collision."
+                )
+            self._sim_builders[sim.id].add_box_collision(
+                pose=pose,
+                half_size=half_size,
+                material=material,
+                density=density,
+            )
+        return self
 
     def add_box_visual(
         self,
@@ -142,66 +222,51 @@ class BaseActorBuilder(BaseBuilder, ABC):
         """
         raise NotImplementedError("")
 
+    # def add_convex_collision_from_file(
+    #     self,
+    #     filename,
+    #     pose: sapien.Pose = sapien.Pose(),
+    #     scale: Vec3 = (1, 1, 1),
+    #     material: Union[sapien.physx.PhysxMaterial, None] = None,
+    #     density: float = 1000,
+    #     patch_radius: float = 0,
+    #     min_patch_radius: float = 0,
+    #     is_trigger: bool = False,
+    # ):
+    #     """
+    #     Add a convex collision from a file to the actor.
+    #     """
+    #     raise NotImplementedError("")
 
-class ActorBuilder(BaseActorBuilder):
-    """Actor builder for building rigid body objects (actors) in a simulation. This
-    is simulator independent and can be used to build actors across different simulators
-    simultaneously to support e.g. rendering in one simulator and running physics in another."""
-
-    _sims: dict[str, BaseSim] = {}
-    """dictionary of simulators that will be tracking this builder. There can be multiple simulators
-    that track this builder in order to support using different simulators for physics and
-    rendering."""
-
-    _sim_builders: dict[str, BaseActorBuilder] = {}
-    """dictionary mapping sim id to the corresponding actor builder for that simulator."""
-
-    def __init__(self):
-        pass
-
-    def add_sim(self, sim: BaseSim):
-        """
-        Add a simulation backend that should track this builder. Whenever this actor is built,
-        the simulator backend will include this actor in its state and compile it in the scene.
-
-        Args:
-            sim: The simulation backend to add.
-
-        Returns:
-            The actor builder.
-        """
-        self._sims[sim.id] = sim
-        self._sim_builders[sim.id] = sim.create_actor_builder()
-        return self
-
-    def remove_sim(self, sim: BaseSim):
-        """
-        Remove a simulation backend that is tracking this builder.
-
-        Args:
-            sim: The simulation backend to remove.
-
-        Returns:
-            The actor builder.
-        """
-        self._sims.pop(sim.id)
-        return self
-
-    def build(self):
-        pass
-
-    def add_box_collision(
+    def add_visual_from_file(
         self,
-        pose: Pose,
-        half_size: Vec3 = (1.0, 1.0, 1.0),
-        material: Any | Vec3 | None = None,
-        density: float = 1000.0,
-    ) -> "ActorBuilder":
+        filename: str,
+        pose: Pose | None = None,
+        scale: Vec3 = (1, 1, 1),
+        material: Any | None = None,
+        name: str = "",
+    ):
+        """
+        Add a visual mesh from a file to the actor.
+
+        Args:
+            filename: The path to the file containing the visual mesh.
+            pose: The pose of the visual mesh relative to actor's local frame.
+            scale: The scale of the visual mesh.
+            material: The material of the visual mesh. This is dependent on simulator backend used.
+            name: The name of the visual mesh.
+        """
         for sim in self._sims.values():
-            self._sim_builders[sim.id].add_box_collision(
+            if type(self._sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self._sim_builders[sim.id].__class__.__name__} does not support "
+                    "add_visual_from_file."
+                )
+            self._sim_builders[sim.id].add_visual_from_file(
+                filename=filename,
                 pose=pose,
-                half_size=half_size,
+                scale=scale,
                 material=material,
-                density=density,
+                name=name,
             )
         return self
