@@ -321,7 +321,7 @@ class SapienSim(BaseSim):
         pass
 
     def physics_step(self):
-        pass
+        self.px.step()
 
     def can_physics(self):
         return True
