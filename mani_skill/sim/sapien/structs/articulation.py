@@ -762,7 +762,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @property
     def qacc(self):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self.px.cuda_articulation_qacc.torch()[
                 self._data_index, : self.max_dof
             ]
@@ -774,7 +774,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     #     pass
     @property
     def qf(self):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self.px.cuda_articulation_qf.torch()[
                 self._data_index, : self.max_dof
             ]
@@ -783,7 +783,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @qf.setter
     def qf(self, arg1: torch.Tensor):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qf.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
@@ -808,7 +808,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @property
     def qpos(self):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             # NOTE (stao): cuda_articulation_qpos is of shape (M, N) where M is the total number of
             # articulations in the physx scene, N is the max dof of all those articulations.
             return self.px.cuda_articulation_qpos.torch()[
@@ -819,10 +819,10 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @qpos.setter
     def qpos(self, arg1: torch.Tensor):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qpos.torch()[
-                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self._data_index[self.sim._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -833,7 +833,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @property
     def qvel(self):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             return self.px.cuda_articulation_qvel.torch()[
                 self._data_index, : self.max_dof
             ]
@@ -842,7 +842,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @qvel.setter
     def qvel(self, arg1: torch.Tensor):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qvel.torch()[
                 self._data_index[self.scene._reset_mask[self._scene_idxs]],
@@ -860,10 +860,10 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @root_angular_velocity.setter
     def root_angular_velocity(self, arg1: Array) -> None:
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.root._body_data_index[self.sim._reset_mask[self._scene_idxs]],
                 10:13,
             ] = arg1
         else:
@@ -878,10 +878,10 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
 
     @root_linear_velocity.setter
     def root_linear_velocity(self, arg1: Array) -> None:
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self.scene._reset_mask[self._scene_idxs]],
+                self.root._body_data_index[self.sim._reset_mask[self._scene_idxs]],
                 7:10,
             ] = arg1
         else:
