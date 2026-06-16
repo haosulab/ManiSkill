@@ -79,7 +79,7 @@ class SapienSimConfig(BaseSimConfig):
 
 
 class SapienSim(BaseSim):
-    # TODO (stao): sapien sim uses sim_backend and render_backend strings, but BaseSim(ABC) uses 
+    # TODO (stao): sapien sim uses sim_backend and render_backend strings, but BaseSim(ABC) uses
     # devices. Consolidate the two?
     """
     Simulation backend for SAPIEN.
@@ -92,6 +92,7 @@ class SapienSim(BaseSim):
         render_backend: The backend to use for the rendering. If none,
             this sim object is not performing any rendering.
     """
+
     id: str = "sapien"
     cfg: SapienSimConfig
 
