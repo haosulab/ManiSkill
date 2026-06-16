@@ -189,6 +189,24 @@ def test_env_reconfiguration(env_id):
 #     del env
 
 
+# Unlike the reproducibility tests above, this only checks the batch size of the episode seeds, which is
+# deterministic even though GPU sim is not.
+@pytest.mark.gpu_sim
+def test_seeded_then_unseeded_reset_keeps_episode_seed_batch_size():
+    # Regression for #1456: a scalar-seeded reset expanded the main seed with `+` (numpy broadcast, which
+    # yields num_envs-1 entries) instead of np.concatenate, so a following unseeded reset under
+    # reconfiguration shrank _episode_seed to num_envs-1.
+    num_envs = 4
+    env = gym.make(ENV_IDS[0], num_envs=num_envs, reconfiguration_freq=1)
+    base: BaseEnv = env.unwrapped
+    env.reset(seed=1)
+    assert len(base._episode_seed) == num_envs
+    env.reset()
+    assert len(base._episode_seed) == num_envs
+    env.close()
+    del env
+
+
 # def test_env_raise_value_error_for_nan_actions():
 #     env = gym.make(ENV_IDS[0])
 #     obs, _ = env.reset(seed=2000)

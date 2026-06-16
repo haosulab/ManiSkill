@@ -1001,7 +1001,7 @@ class BaseEnv(gym.Env):
         self._main_seed = seed_list
         self._main_rng = np.random.RandomState(self._main_seed[0])
         if len(self._main_seed) == 1 and self.num_envs > 1:
-            self._main_seed = self._main_seed + np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,)).tolist()
+            self._main_seed = np.concatenate((self._main_seed, np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,))))
         self._batched_main_rng = BatchedRNG.from_seeds(self._main_seed, backend=self._batched_rng_backend)
 
     def _set_episode_rng(self, seed: Union[None, list[int], np.ndarray[Any], int], env_idx: torch.Tensor):
