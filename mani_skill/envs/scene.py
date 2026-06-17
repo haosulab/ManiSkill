@@ -63,7 +63,7 @@ class ManiSkillScene:
         assert backend is not None, "backend argument is required"
         if sim_config is None:
             sim_config = SimConfig()
-
+        self.gpu_sim_enabled = physics_sim.gpu_sim_enabled
         self.physics_sim = physics_sim
         self.render_sim = render_sim
         self.physics_sim.scene = self
@@ -388,7 +388,7 @@ class ManiSkillScene:
     #     return self.get_cameras()
 
     def step(self):
-        self.px.step()
+        self.physics_sim.physics_step()
 
     def update_render(
         self, update_sensors: bool = True, update_human_render_cameras: bool = True

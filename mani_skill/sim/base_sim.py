@@ -74,7 +74,9 @@ class BaseSim(ABC):
     """A mask for controlling which sub-scenes permit modifications to object data"""
     scene: ManiSkillScene
     """The ManiSkillScene that this simulation backend is associated with."""
-    
+    gpu_sim_enabled: bool
+    """Whether the simulation backend is batched."""
+
     def __init__(
         self,
         num_envs: int = 1,
@@ -90,6 +92,10 @@ class BaseSim(ABC):
         self.cfg = cfg or BaseSimConfig()
         self.physics_device_torch = physics_device_torch
         self.render_device_torch = render_device_torch
+        if self.physics_device_torch.type == "cuda":
+            self.gpu_sim_enabled = True
+        else:
+            self.gpu_sim_enabled = False
 
     def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
         if "." in backend:
