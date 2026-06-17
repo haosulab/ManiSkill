@@ -78,10 +78,17 @@ class BaseActorBuilder(BaseBuilder):
 
     def set_initial_pose(self, initial_pose: Pose | None = None):
         """
-        Set the initial pose of the actor. This is the pose of the actor when it is built and 
+        Set the initial pose of the actor. This is the pose of the actor when it is built and
         spawned into the simulation before any physics steps are taken.
         """
         self.initial_pose = initial_pose
+        for sim in self._sims.values():
+            if type(self._sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self._sim_builders[sim.id].__class__.__name__} does not support "
+                    "set_initial_pose."
+                )
+            self._sim_builders[sim.id].set_initial_pose(initial_pose)
         return self
 
     def set_scene_idxs(self, scene_idxs: list[int] | None = None):
@@ -134,6 +141,26 @@ class BaseActorBuilder(BaseBuilder):
                     "build_kinematic."
                 )
             actor = self._sim_builders[sim.id].build_kinematic(name=name)
+        return actor
+
+    def build_static(self, name: str) -> Actor:
+        """
+        Build the actor as a static object. The actor's pose is set to it's initial pose and can
+        never be changed.
+
+        Args:
+            name: The name of the actor.
+
+        Returns:
+            The built actor.
+        """
+        for sim in self._sims.values():
+            if type(self._sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self._sim_builders[sim.id].__class__.__name__} does not support "
+                    "build_static."
+                )
+            actor = self._sim_builders[sim.id].build_static(name=name)
         return actor
 
     ### Standard primitive building functions, based on Sapien's original ActorBuilder ###
@@ -205,7 +232,7 @@ class BaseActorBuilder(BaseBuilder):
                 min_patch_radius=min_patch_radius,
             )
         return self
-    
+
     def add_capsule_visual(
         self,
         pose: Pose | None = None,
