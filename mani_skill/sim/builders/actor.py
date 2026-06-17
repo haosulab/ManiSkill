@@ -61,6 +61,8 @@ class BaseActorBuilder(BaseBuilder):
         """
         self._sims[sim.id] = sim
         self._sim_builders[sim.id] = sim.create_actor_builder()
+        # TODO (stao): set render sim too?
+        self._sim_builders[sim.id].set_physics_sim(sim)
         return self
 
     def _remove_sim(self, sim: BaseSim):
@@ -75,6 +77,9 @@ class BaseActorBuilder(BaseBuilder):
         """
         self._sims.pop(sim.id)
         return self
+
+    def set_physics_sim(self, physics_sim: BaseSim):
+        self.physics_sim = physics_sim
 
     def set_initial_pose(self, initial_pose: Pose | None = None):
         """
