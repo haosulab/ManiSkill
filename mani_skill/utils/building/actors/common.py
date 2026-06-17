@@ -9,14 +9,14 @@ import sapien
 import sapien.render
 
 from mani_skill.envs.scene import ManiSkillScene
-from mani_skill.utils.building.actor_builder import ActorBuilder
+from mani_skill.sim.builders.actor import BaseActorBuilder
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
 
 def get_actor_builder(
     scene: ManiSkillScene, id: str, add_collision: bool = True, add_visual: bool = True
-) -> ActorBuilder:
+) -> BaseActorBuilder:
     """Returns an :py:class:`~mani_skill.utils.building.actor_builder.ActorBuilder` given an ID specifying which dataset/source and then the ID of the asset.
 
     Currently these IDs are hardcoded for a few datasets. We may add more actor datasets in the future for easy loading by users
@@ -45,11 +45,11 @@ def get_actor_builder(
 
 
 def _build_by_type(
-    builder: ActorBuilder,
+    builder: BaseActorBuilder,
     name,
     body_type,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: list[int] | None = None,
+    initial_pose: Pose | None = None,
 ):
     if scene_idxs is not None:
         builder.set_scene_idxs(scene_idxs)
