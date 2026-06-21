@@ -77,8 +77,6 @@ class BaseSim(ABC):
     """The configuration for the simulation backend."""
     num_envs: int
     """The number of environments to simulate."""
-    _reset_mask: torch.Tensor
-    """A mask for controlling which sub-scenes permit modifications to object data"""
     scene: ManiSkillScene
     """The ManiSkillScene that this simulation backend is associated with."""
     gpu_sim_enabled: bool
@@ -109,9 +107,6 @@ class BaseSim(ABC):
             self.gpu_sim_enabled = False
         self.actors = dict()
         self.articulations = dict()
-        self._reset_mask = torch.ones(
-            num_envs, dtype=torch.bool, device=self.physics_device_torch
-        )
 
     def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
         if "." in backend:
@@ -251,5 +246,11 @@ class BaseSim(ABC):
         Queries simulation for all relevant GPU data. Note that this has some overhead.
         Should only be called at most once per simulation step as this automatically queries
         all data for all objects built in the scene.
+        """
+        raise NotImplementedError()
+
+    def _gpu_update_articulation_kinematics(self):
+        """
+        Updates the articulation kinematics on the GPU.
         """
         raise NotImplementedError()

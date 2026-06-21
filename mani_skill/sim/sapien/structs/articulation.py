@@ -20,7 +20,7 @@ from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
     merge_meshes,
 )
-from mani_skill.utils.structs import Pose, Articulation
+from mani_skill.utils.structs import Articulation, Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -242,7 +242,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def merge(
         cls,
         articulations: list["SapienArticulation"],
-        name: str = None,
+        name: str,
         merge_links: bool = False,
     ):
         """
@@ -258,7 +258,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
                 links.
         """
         objs = []
-        scene = articulations[0].scene
+        sim = articulations[0].sim
         merged_scene_idxs = []
         num_objs_per_actor = articulations[0]._num_objs
         for articulation in articulations:
@@ -269,10 +269,10 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             )
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_articulation = SapienArticulation.create_from_physx_articulations(
-            objs, scene, merged_scene_idxs, _merged=True, _process_links=merge_links
+            objs, sim, merged_scene_idxs, _merged=True, _process_links=merge_links
         )
         merged_articulation.name = name
-        scene.articulation_views[merged_articulation.name] = merged_articulation
+        sim.scene.articulation_views[merged_articulation.name] = merged_articulation
         return merged_articulation
 
     # -------------------------------------------------------------------------- #
@@ -313,10 +313,10 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def set_state(self, state: Array, env_idx: Optional[torch.Tensor] = None):
         if self.sim.gpu_sim_enabled:
             if env_idx is not None:
-                prev_reset_mask = self.sim._reset_mask.clone()
+                prev_reset_mask = self.sim.scene._reset_mask.clone()
                 # safe guard against setting the wrong states
-                self.sim._reset_mask[:] = False
-                self.sim._reset_mask[env_idx] = True
+                self.sim.scene._reset_mask[:] = False
+                self.sim.scene._reset_mask[env_idx] = True
             state = common.to_tensor(state, device=self.device)
             self.set_root_pose(Pose.create(state[:, :7]))
             self.set_root_linear_velocity(state[:, 7:10])
@@ -324,7 +324,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             self.set_qpos(state[:, 13 : 13 + self.max_dof])
             self.set_qvel(state[:, 13 + self.max_dof : 13 + self.max_dof * 2])
             if env_idx is not None:
-                self.scene._reset_mask = prev_reset_mask
+                self.sim.scene._reset_mask = prev_reset_mask
         else:
             state = common.to_numpy(state[0])
             self.set_root_pose(sapien.Pose(state[0:3], state[3:7]))
@@ -786,7 +786,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_articulation_qf.torch()[
-                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+                self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -811,7 +811,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
         if self.sim.gpu_sim_enabled:
             # NOTE (stao): cuda_articulation_qpos is of shape (M, N) where M is the total number of
             # articulations in the physx scene, N is the max dof of all those articulations.
-            return self.px.cuda_articulation_qpos.torch()[
+            return self.px.cuda_articulation_qpos.torch()[  # type: ignore
                 self._data_index, : self.max_dof
             ]
         else:
@@ -821,8 +821,8 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def qpos(self, arg1: torch.Tensor):
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
-            self.px.cuda_articulation_qpos.torch()[
-                self._data_index[self.sim._reset_mask[self._scene_idxs]],
+            self.px.cuda_articulation_qpos.torch()[  # type: ignore
+                self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -834,7 +834,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     @property
     def qvel(self):
         if self.sim.gpu_sim_enabled:
-            return self.px.cuda_articulation_qvel.torch()[
+            return self.px.cuda_articulation_qvel.torch()[  # type: ignore
                 self._data_index, : self.max_dof
             ]
         else:
@@ -844,8 +844,8 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def qvel(self, arg1: torch.Tensor):
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
-            self.px.cuda_articulation_qvel.torch()[
-                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+            self.px.cuda_articulation_qvel.torch()[  # type: ignore
+                self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
         else:
@@ -863,7 +863,9 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self.sim._reset_mask[self._scene_idxs]],
+                self.root._body_data_index[
+                    self.sim.scene._reset_mask[self._scene_idxs]
+                ],
                 10:13,
             ] = arg1
         else:
@@ -880,8 +882,10 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def root_linear_velocity(self, arg1: Array) -> None:
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
-            self.px.cuda_rigid_body_data.torch()[
-                self.root._body_data_index[self.sim._reset_mask[self._scene_idxs]],
+            self.px.cuda_rigid_body_data.torch()[  # type: ignore
+                self.root._body_data_index[
+                    self.sim.scene._reset_mask[self._scene_idxs]
+                ],
                 7:10,
             ] = arg1
         else:
@@ -930,9 +934,9 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
                 gx, gy = self.get_joint_target_indices(joints)
             else:
                 gx, gy = self.get_joint_target_indices(joint_indices)
-            self.px.cuda_articulation_target_qpos.torch()[
-                gx[self.sim._reset_mask[self._scene_idxs]],
-                gy[self.sim._reset_mask[self._scene_idxs]],
+            self.px.cuda_articulation_target_qpos.torch()[  # type: ignore
+                gx[self.sim.scene._reset_mask[self._scene_idxs]],
+                gy[self.sim.scene._reset_mask[self._scene_idxs]],
             ] = targets
         else:
             for i, joint in enumerate(joints):
@@ -958,9 +962,9 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
                 gx, gy = self.get_joint_target_indices(joints)
             else:
                 gx, gy = self.get_joint_target_indices(joint_indices)
-            self.px.cuda_articulation_target_qvel.torch()[
-                gx[self.sim._reset_mask[self._scene_idxs]],
-                gy[self.sim._reset_mask[self._scene_idxs]],
+            self.px.cuda_articulation_target_qvel.torch()[  # type: ignore
+                gx[self.sim.scene._reset_mask[self._scene_idxs]],
+                gy[self.sim.scene._reset_mask[self._scene_idxs]],
             ] = targets
         else:
             for i, joint in enumerate(joints):

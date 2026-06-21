@@ -12,7 +12,7 @@ import torch
 from mani_skill.sim.sapien.structs.base import SapienBaseStruct
 from mani_skill.sim.sapien.structs.decorators import before_gpu_init
 from mani_skill.utils import common
-from mani_skill.utils.structs import Pose, ArticulationJoint
+from mani_skill.utils.structs import ArticulationJoint, Pose
 from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
@@ -22,7 +22,9 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class SapienArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint], ArticulationJoint):
+class SapienArticulationJoint(
+    SapienBaseStruct[physx.PhysxArticulationJoint], ArticulationJoint
+):
     """
     Wrapper around physx.PhysxArticulationJoint objects
 
@@ -246,7 +248,7 @@ class SapienArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint], Ar
         )
         if self.sim.gpu_sim_enabled:
             self.articulation.px.cuda_articulation_target_qpos.torch()[
-                self._data_index[self.sim._reset_mask[self._scene_idxs]],
+                self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 self.active_index,
             ] = arg1
         else:
@@ -277,7 +279,7 @@ class SapienArticulationJoint(SapienBaseStruct[physx.PhysxArticulationJoint], Ar
         )
         if self.sim.gpu_sim_enabled:
             self.articulation.px.cuda_articulation_target_qvel.torch()[
-                self._data_index[self.sim._reset_mask[self._scene_idxs]],
+                self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 self.active_index,
             ] = arg1
         else:

@@ -87,12 +87,6 @@ class ManiSkillScene:
         sub-scenes so they do not get modified during partial env resets
         """
 
-        self._needs_fetch = False
-        """
-        Used internally to raise some errors ahead of time of when there may be
-        undefined behaviors
-        """
-
         self.parallel_in_single_scene: bool = parallel_in_single_scene
         """Whether rendering all parallel scenes in the viewer/gui is enabled"""
 
@@ -175,13 +169,19 @@ class ManiSkillScene:
 
     def remove_actor(self, actor: Actor):
         """Removes an actor from the scene. Only works in CPU simulation."""
-        for sim in [self.physics_sim, self.render_sim]:
-            sim.remove_actor(actor)
+        if self._shared_sim_packages:
+            self.physics_sim.remove_actor(actor)
+        else:
+            self.physics_sim.remove_actor(actor)
+            self.render_sim.remove_actor(actor)
 
     def remove_articulation(self, articulation: Articulation):
         """Removes an articulation from the scene. Only works in CPU simulation."""
-        for sim in [self.physics_sim, self.render_sim]:
-            sim.remove_articulation(articulation)
+        if self._shared_sim_packages:
+            self.physics_sim.remove_articulation(articulation)
+        else:
+            self.physics_sim.remove_articulation(articulation)
+            self.render_sim.remove_articulation(articulation)
 
     def add_camera(
         self,
@@ -737,8 +737,11 @@ class ManiSkillScene:
         """
         Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
         """
-        for sim in [self.physics_sim, self.render_sim]:
-            sim._gpu_apply_all()
+        if self._shared_sim_packages:
+            self.physics_sim._gpu_apply_all()
+        else:
+            self.physics_sim._gpu_apply_all()
+            self.render_sim._gpu_apply_all()
 
     def _gpu_fetch_all(self):
         """
@@ -746,8 +749,20 @@ class ManiSkillScene:
         Should only be called at most once per simulation step as this automatically queries
         all data for all objects built in the scene.
         """
-        for sim in [self.physics_sim, self.render_sim]:
-            sim._gpu_fetch_all()
+        if self.gpu_sim_enabled:
+            if self._shared_sim_packages:
+                self.physics_sim._gpu_fetch_all()
+            else:
+                self.physics_sim._gpu_fetch_all()
+                self.render_sim._gpu_fetch_all()
+
+    def _gpu_update_articulation_kinematics(self):
+        # NOTE (stao): this is a bit specific to physx/sapien I think
+        if self._shared_sim_packages:
+            self.physics_sim._gpu_update_articulation_kinematics()
+        else:
+            self.physics_sim._gpu_update_articulation_kinematics()
+            self.render_sim._gpu_update_articulation_kinematics()
 
     # ---------------------------------------------------------------------------- #
     # CPU/GPU sim Rendering Code

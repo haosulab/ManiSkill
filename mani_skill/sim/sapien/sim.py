@@ -18,10 +18,10 @@ from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
+from mani_skill.sim.sapien.structs.render_camera import RenderCamera
 from mani_skill.utils import common
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.render_camera import RenderCamera
 from mani_skill.utils.structs.types import Array
 
 if SAPIEN_RENDER_SYSTEM == "3.1":
@@ -227,7 +227,11 @@ class SapienSim(BaseSim):
                 render_backend = "sapien_cpu"
             else:
                 raise e
-
+        self._needs_fetch = False
+        """
+        Used internally to raise some errors ahead of time of when there may be
+        undefined behaviors
+        """
         super().__init__(
             num_envs,
             cfg,
@@ -672,6 +676,9 @@ class SapienSim(BaseSim):
             self.px.gpu_fetch_articulation_target_qvel()
 
         self._needs_fetch = False
+
+    def _gpu_update_articulation_kinematics(self):
+        self.px.gpu_update_articulation_kinematics()  # type: ignore
 
     def physics_step(self):
         self.px.step()

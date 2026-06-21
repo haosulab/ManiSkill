@@ -956,7 +956,7 @@ class BaseEnv(gym.Env):
         if self.gpu_sim_enabled:
             # ensure all updates to object poses and configurations are applied on GPU after task initialization
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
+            self.scene._gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
 
         # we reset controllers here because some controllers depend on the agent/articulation qpos/poses

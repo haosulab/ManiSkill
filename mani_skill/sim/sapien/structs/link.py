@@ -275,15 +275,15 @@ class SapienLink(
             if self.sim.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)
-                mask = self.sim._reset_mask[self._scene_idxs]
+                mask = self.sim.scene._reset_mask[self._scene_idxs]
                 new_xyzs = arg1[:, :3] + self.sim.scene_offsets[self._scene_idxs[mask]]
                 new_pose = torch.zeros((mask.sum(), 7), device=self.device)
                 new_pose[:, 3:] = arg1[:, 3:]
                 new_pose[:, :3] = new_xyzs
                 arg1 = new_pose
-            self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index[self.sim._reset_mask[self._scene_idxs]], :7
-            ] = arg1  # type: ignore
+            self.px.cuda_rigid_body_data.torch()[  # type: ignore
+                self._body_data_index[self.sim.scene._reset_mask[self._scene_idxs]], :7
+            ] = arg1
         else:
             if isinstance(arg1, sapien.Pose):
                 for obj in self._objs:

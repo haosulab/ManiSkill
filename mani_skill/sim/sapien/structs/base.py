@@ -366,7 +366,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
-                self._body_data_index[self.sim._reset_mask[self._scene_idxs]],
+                self._body_data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 10:13,
             ] = arg1
         else:
@@ -438,7 +438,7 @@ class PhysxRigidDynamicComponentStruct(PhysxRigidBodyComponentStruct[T], Generic
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
             self._body_data[
-                self._body_data_index[self.sim._reset_mask[self._scene_idxs]],
+                self._body_data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 7:10,
             ] = arg1
         else:

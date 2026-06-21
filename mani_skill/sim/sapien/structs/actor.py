@@ -151,16 +151,16 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
     def set_state(self, state: Array, env_idx: Optional[torch.Tensor] = None):
         if self.sim.gpu_sim_enabled:
             if env_idx is not None:
-                prev_reset_mask = self.sim._reset_mask.clone()
+                prev_reset_mask = self.sim.scene._reset_mask.clone()
                 # safe guard against setting the wrong states
-                self.sim._reset_mask[:] = False
-                self.sim._reset_mask[env_idx] = True
+                self.sim.scene._reset_mask[:] = False
+                self.sim.scene._reset_mask[env_idx] = True
             state = common.to_tensor(state, device=self.device)
             self.set_pose(Pose.create(state[:, :7]))
             self.set_linear_velocity(state[:, 7:10])
             self.set_angular_velocity(state[:, 10:13])
             if env_idx is not None:
-                self.sim._reset_mask = prev_reset_mask
+                self.sim.scene._reset_mask = prev_reset_mask
         else:
             state = common.to_numpy(state[0])
             self.set_pose(sapien.Pose(state[0:3], state[3:7]))  # type: ignore
@@ -379,7 +379,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     raw_pose = self.px.cuda_rigid_body_data.torch()[  # type: ignore
                         self._body_data_index, :7
                     ]
-                    if self.sim.parallel_in_single_scene:
+                    if self.sim.scene.parallel_in_single_scene:
                         new_xyzs = (
                             raw_pose[:, :3] - self.sim.scene_offsets[self._scene_idxs]
                         )
@@ -400,19 +400,21 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1, device=self.device)
             if self.hidden:
-                self.before_hide_pose[self.sim._reset_mask[self._scene_idxs]] = arg1
+                self.before_hide_pose[self.sim.scene._reset_mask[self._scene_idxs]] = (
+                    arg1
+                )
                 return
             if self.sim.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)
-                mask = self.sim._reset_mask[self._scene_idxs]
+                mask = self.sim.scene._reset_mask[self._scene_idxs]
                 new_xyzs = arg1[:, :3] + self.sim.scene_offsets[self._scene_idxs[mask]]
                 new_pose = torch.zeros((mask.sum(), 7), device=self.device)
                 new_pose[:, 3:] = arg1[:, 3:]
                 new_pose[:, :3] = new_xyzs
                 arg1 = new_pose
             self.px.cuda_rigid_body_data.torch()[  # type: ignore
-                self._body_data_index[self.sim._reset_mask[self._scene_idxs]],
+                self._body_data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 :7,
             ] = arg1
         else:
