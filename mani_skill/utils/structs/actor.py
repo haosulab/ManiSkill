@@ -20,5 +20,5 @@ class Actor(Generic[T]):
     merged: bool = False
     """Whether this object is a view of other actors as a result of Actor.merge."""
 
-    name: str | None = None
-    """The name of the actor."""
+    name: str = ""
+    """The name of the actor. Must be unique within the scene."""

@@ -402,7 +402,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
             if self.hidden:
                 self.before_hide_pose[self.sim._reset_mask[self._scene_idxs]] = arg1
                 return
-            if self.sim.parallel_in_single_scene:
+            if self.sim.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)
                 mask = self.sim._reset_mask[self._scene_idxs]

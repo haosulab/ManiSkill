@@ -1,12 +1,19 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
+
 import torch
 
 from mani_skill.sim.builders.actor import BaseActorBuilder
 from mani_skill.sim.builders.articulation import BaseArticulationBuilder
+from mani_skill.utils.structs.actor import Actor
+from mani_skill.utils.structs.articulation import Articulation
+from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.render_camera import RenderCamera
+from mani_skill.utils.structs.types import Array
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
@@ -76,6 +83,10 @@ class BaseSim(ABC):
     """The ManiSkillScene that this simulation backend is associated with."""
     gpu_sim_enabled: bool
     """Whether the simulation backend is batched."""
+    actors: dict[str, Actor]
+    """The dictionary of actors in the simulation backend."""
+    articulations: dict[str, Articulation]
+    """The dictionary of articulations in the simulation backend."""
 
     def __init__(
         self,
@@ -96,6 +107,11 @@ class BaseSim(ABC):
             self.gpu_sim_enabled = True
         else:
             self.gpu_sim_enabled = False
+        self.actors = dict()
+        self.articulations = dict()
+        self._reset_mask = torch.ones(
+            num_envs, dtype=torch.bool, device=self.physics_device_torch
+        )
 
     def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
         if "." in backend:
@@ -104,6 +120,18 @@ class BaseSim(ABC):
             if len(parts) == 2:
                 return package_name, parts[0], parts[1]
             return package_name, backend_name, None
+        else:
+            # Backward compatability for old backend format
+            if backend == "physx_cpu":
+                return "sapien", "physx_cpu", None
+            elif backend == "physx_cuda":
+                return "sapien", "physx_cuda", None
+            elif backend == "cuda":
+                return "sapien", "cuda", None
+            elif backend == "cpu":
+                return "sapien", "cpu", None
+            elif backend == "sapien_cuda":
+                return "sapien", "sapien_cuda", None
         raise ValueError(
             f"Invalid backend: {backend}. Should be in the format "
             "<package_name.backend_name> or <package_name.backend_name:device_id>."
@@ -129,6 +157,51 @@ class BaseSim(ABC):
         this scene.
         """
 
+    def remove_actor(self, actor: Actor):
+        """
+        Removes an actor from the simulation scene.
+        """
+        raise NotImplementedError()
+
+    def remove_articulation(self, articulation: Articulation):
+        """
+        Removes an articulation from the simulation scene.
+        """
+        raise NotImplementedError()
+
+    ### Code for working with cameras and sensors ###
+    def add_camera(
+        self,
+        name: str,
+        pose: Pose,
+        width: int,
+        height: int,
+        near: float,
+        far: float,
+        fovy: float | list[float],
+        intrinsic: Array | None = None,
+        mount: Actor | Link | None = None,
+    ) -> RenderCamera:
+        """
+        Adds a camera to the simulation scene.
+        """
+        raise NotImplementedError()
+
+    ### Code for lighting ###
+    def add_directional_light(
+        self,
+        direction,
+        color,
+        shadow=False,
+        position=None,
+        shadow_scale=10.0,
+        shadow_near=-10.0,
+        shadow_far=10.0,
+        shadow_map_size=2048,
+        scene_idxs: list[int] | None = None,
+    ):
+        raise NotImplementedError()
+
     ### Code for compiling simulator scene for rendering ###
     @abstractmethod
     def compile_render_scene(self):
@@ -137,15 +210,6 @@ class BaseSim(ABC):
         """
 
     ### Rendering code ###
-    # TODO (stao): add_camera or call this add_sensor and eventually support other kinds of sensors?
-    # feel like cameras need a lot of special treatment in general...
-    # (e.g. mounting, batching+tiling, evals etc.)
-    @abstractmethod
-    def add_camera(self, pose: Pose):
-        """
-        Adds a camera to the simulation scene.
-        """
-
     @abstractmethod
     def can_render(self):
         """
@@ -173,3 +237,19 @@ class BaseSim(ABC):
         """
         Whether the simulation backend can run physical simulation.
         """
+
+    ### Accelerate data management code ###
+
+    def _gpu_apply_all(self):
+        """
+        Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
+        """
+        raise NotImplementedError()
+
+    def _gpu_fetch_all(self):
+        """
+        Queries simulation for all relevant GPU data. Note that this has some overhead.
+        Should only be called at most once per simulation step as this automatically queries
+        all data for all objects built in the scene.
+        """
+        raise NotImplementedError()

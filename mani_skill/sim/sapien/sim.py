@@ -1,15 +1,41 @@
+from __future__ import annotations
+
 import platform
 from dataclasses import asdict, dataclass, field
+from functools import cached_property
+from typing import TYPE_CHECKING, Mapping, cast
 
 import numpy as np
 import sapien
 import sapien.physx as physx
 import torch
+from sapien.render import RenderCameraComponent
 
 import mani_skill.render.utils as render_utils
+
+# try and determine which render system is used by the installed sapien package
+from mani_skill.render import SAPIEN_RENDER_SYSTEM
+from mani_skill.sensors.base_sensor import BaseSensor
+from mani_skill.sensors.camera import Camera
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
+from mani_skill.utils import common
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
+from mani_skill.utils.structs.render_camera import RenderCamera
+from mani_skill.utils.structs.types import Array
+
+if SAPIEN_RENDER_SYSTEM == "3.1":
+    from sapien.wrapper.scene import (
+        get_camera_shader_pack,  # pyright: ignore[reportAttributeAccessIssue]
+    )
+
+    GlobalShaderPack = None
+    sapien.render.RenderCameraGroup = "oldtype"
+
+if TYPE_CHECKING:
+    from mani_skill.sim.sapien.structs.actor import SapienActor
+    from mani_skill.sim.sapien.structs.articulation import SapienArticulation
+    from mani_skill.sim.sapien.structs.link import SapienLink
 
 
 @dataclass
@@ -95,6 +121,8 @@ class SapienSim(BaseSim):
 
     id: str = "sapien"
     cfg: SapienSimConfig
+    actors: dict[str, SapienActor]
+    articulations: dict[str, SapienArticulation]
 
     _sim_device: sapien.Device | None = None
     """The sapien device that the physics engine runs on."""
@@ -106,7 +134,7 @@ class SapienSim(BaseSim):
     px: physx.PhysxSystem
     """The physics system of the sub-scenes."""
 
-    camera_groups: dict[str, sapien.render.RenderCameraGroup] = dict()
+    camera_groups: dict[str, sapien.render.RenderCameraGroup] = dict()  # type: ignore
     """The Sapien camera groups of the sub-scenes for tiled rendering"""
     render_system_group: sapien.render.RenderSystemGroup | None = None
     """The Sapien render system group of the sub-scenes for tiled rendering"""
@@ -307,22 +335,539 @@ class SapienSim(BaseSim):
 
         return SapienArticulationBuilder().set_scene(self)
 
-    ### Code for compiling simulator scene for rendering ###
+    def remove_actor(self, actor: SapienActor):
+        if self.gpu_sim_enabled:
+            raise NotImplementedError(
+                "Cannot remove actors after creating them in GPU sim at the moment"
+            )
+        else:
+            self.sub_scenes[0].remove_entity(actor._objs[0])
+            self.actors.pop(actor.name)
+
+    def remove_articulation(self, articulation: SapienArticulation):
+        if self.gpu_sim_enabled:
+            raise NotImplementedError(
+                "Cannot remove articulations after creating them in GPU sim at the moment"
+            )
+        else:
+            entities = [link.entity for link in articulation._objs[0].links]
+            for e in entities:
+                self.sub_scenes[0].remove_entity(e)
+            self.articulations.pop(articulation.name)
+
+    def add_directional_light(
+        self,
+        direction,
+        color,
+        shadow=False,
+        position=None,
+        shadow_scale=10.0,
+        shadow_near=-10.0,
+        shadow_far=10.0,
+        shadow_map_size=2048,
+        scene_idxs: list[int] | None = None,
+    ):
+        if position is None:
+            position = [0, 0, 0]
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.scene.parallel_in_single_scene:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
+            entity = sapien.Entity()
+            entity.name = "directional_light"
+            light = sapien.render.RenderDirectionalLightComponent()
+            entity.add_component(light)
+            light.color = color
+            light.shadow = shadow
+            light.shadow_near = shadow_near
+            light.shadow_far = shadow_far
+            light.shadow_half_size = shadow_scale
+            light.shadow_map_size = shadow_map_size
+            if self.scene.parallel_in_single_scene:
+                light_position = position + self.scene_offsets_np[scene_idx]
+            else:
+                light_position = position
+            light.pose = sapien.Pose(
+                light_position,  # type: ignore
+                sapien.math.shortest_rotation(
+                    [1, 0, 0],  # type: ignore
+                    direction,
+                ),
+            )
+            scene.add_entity(entity)
+            if self.scene.parallel_in_single_scene:
+                break
+        return
+
     def compile_render_scene(self):
         pass
 
-    def add_camera(self, pose: Pose):
-        pass
+    def add_camera(
+        self,
+        name: str,
+        pose: Pose,
+        width: int,
+        height: int,
+        near: float,
+        far: float,
+        fovy: float | list[float] | None = None,
+        intrinsic: Array | None = None,
+        mount: SapienActor | SapienLink | None = None,
+    ) -> RenderCamera:
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            return self._sapien_31_add_camera(
+                name, pose, width, height, near, far, fovy, intrinsic, mount
+            )
+        else:
+            return self._sapien_add_camera(
+                name, pose, width, height, near, far, fovy, intrinsic, mount
+            )
+
+    def _sapien_add_camera(
+        self,
+        name: str,
+        pose: Pose,
+        width: int,
+        height: int,
+        near: float,
+        far: float,
+        fovy: float | list[float] | None = None,
+        intrinsic: Array | None = None,
+        mount: SapienActor | SapienLink | None = None,
+    ) -> RenderCamera:
+        """internal helper function to add (mounted) cameras"""
+        cameras = []
+        pose = Pose.create(pose)
+        # TODO (stao): support scene idxs property for cameras in the future
+        # move intrinsic to np and batch intrinsic if it is not batched
+        if intrinsic is not None:
+            intrinsic = common.to_numpy(intrinsic)
+            if len(intrinsic.shape) == 2:
+                intrinsic = intrinsic[None, :]
+                if len(self.sub_scenes) > 1:
+                    # repeat the intrinsic along batch dim
+                    intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
+            assert len(intrinsic) == len(self.sub_scenes), (
+                "intrinsic matrix batch dim not equal to the number of sub-scenes"
+            )
+        for i, scene in enumerate(self.sub_scenes):
+            # Create camera component
+            camera = RenderCameraComponent(width, height)
+            if fovy is not None:
+                if isinstance(fovy, float) or isinstance(fovy, int):
+                    camera.set_fovy(fovy, compute_x=True)
+                else:
+                    camera.set_fovy(fovy[i], compute_x=True)
+            elif intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
+            if isinstance(near, float) or isinstance(near, int):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, float) or isinstance(far, int):
+                camera.far = far
+            else:
+                camera.far = far[i]
+
+            # mount camera to actor/link
+            if mount is not None:
+                if self.gpu_sim_enabled:
+                    if isinstance(mount, SapienActor):
+                        camera.set_gpu_pose_batch_index(
+                            cast(
+                                physx.PhysxRigidDynamicComponent,
+                                mount._objs[i].find_component_by_type(
+                                    physx.PhysxRigidDynamicComponent
+                                ),
+                            ).gpu_pose_index
+                        )
+                    elif isinstance(mount, SapienLink):
+                        camera.set_gpu_pose_batch_index(mount._objs[i].gpu_pose_index)
+                    else:
+                        raise ValueError(
+                            f"Tried to mount camera on object of type {mount.__class__}"
+                        )
+                if isinstance(mount, SapienLink):
+                    mount._objs[i].entity.add_component(camera)
+                else:
+                    mount._objs[i].add_component(camera)
+            else:
+                camera_mount = sapien.Entity()
+                camera_mount.add_component(camera)
+                scene.add_entity(camera_mount)
+                camera_mount.name = f"scene-{i}_{name}"
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
+            camera.name = f"scene-{i}_{name}"
+            cameras.append(camera)
+        return RenderCamera.create(cameras, self, mount=mount)
+
+    def _sapien_31_add_camera(
+        self,
+        name: str,
+        pose: Pose,
+        width: int,
+        height: int,
+        near: float,
+        far: float,
+        fovy: float | list[float] | None = None,
+        intrinsic: Array | None = None,
+        mount: SapienActor | SapienLink | None = None,
+    ) -> RenderCamera:
+        """internal helper function to add (mounted) cameras"""
+        cameras = []
+        pose = Pose.create(pose)
+        # TODO (stao): support scene idxs property for cameras in the future
+        # move intrinsic to np and batch intrinsic if it is not batched
+        if intrinsic is not None:
+            intrinsic = common.to_numpy(intrinsic)
+            if len(intrinsic.shape) == 2:
+                intrinsic = intrinsic[None, :]
+                if len(self.sub_scenes) > 1:
+                    # repeat the intrinsic along batch dim
+                    intrinsic = intrinsic.repeat(len(self.sub_scenes), 0)
+            assert len(intrinsic) == len(self.sub_scenes), (
+                "intrinsic matrix batch dim not equal to the number of sub-scenes"
+            )
+
+        for i, scene in enumerate(self.sub_scenes):
+            # Create camera component
+            camera = RenderCameraComponent(
+                width, height, GlobalShaderPack or get_camera_shader_pack()
+            )
+            if fovy is not None:
+                if isinstance(fovy, (float, int)):
+                    camera.set_fovy(fovy, compute_x=True)
+                else:
+                    camera.set_fovy(fovy[i], compute_x=True)
+            elif intrinsic is not None:
+                camera.set_focal_lengths(intrinsic[i, 0, 0], intrinsic[i, 1, 1])
+                camera.set_principal_point(intrinsic[i, 0, 2], intrinsic[i, 1, 2])
+            if isinstance(near, (float, int)):
+                camera.near = near
+            else:
+                camera.near = near[i]
+            if isinstance(far, (float, int)):
+                camera.far = far
+            else:
+                camera.far = far[i]
+
+            # mount camera to actor/link
+            if mount is not None:
+                if isinstance(mount, SapienLink):
+                    mount._objs[i].entity.add_component(camera)
+                else:
+                    mount._objs[i].add_component(camera)
+            else:
+                camera_mount = sapien.Entity()
+                camera_mount.set_pose(sapien.Pose([0, 0, 0]))
+                camera_mount.add_component(camera)
+                camera_mount.name = f"scene-{i}_{name}"
+                scene.add_entity(camera_mount)
+            if len(pose) == 1:
+                camera.local_pose = pose.sp
+            else:
+                camera.local_pose = pose[i].sp
+            camera.name = f"scene-{i}_{name}"
+            cameras.append(camera)
+            scene.update_render()
+        return RenderCamera.create(cameras, self, mount=mount)
 
     def can_render(self):
         return True
 
-    ### Code for compiling simulator scene for physical simulation ###
     def compile_physical_scene(self):
-        pass
+        enable_gpu = self.gpu_sim_enabled
+        if enable_gpu:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            if SAPIEN_RENDER_SYSTEM == "3.1":
+                for scene in self.sub_scenes:
+                    scene.update_render()
+            self.px.gpu_init()
+        self.non_static_actors: list[SapienActor] = []
+        # find non static actors, and set data indices that are now available after
+        # gpu_init was called
+        for actor in self.actors.values():
+            if actor.px_body_type == "static":
+                continue
+            self.non_static_actors.append(actor)
+            if enable_gpu:
+                actor._body_data_index  # noqa only need to access this attribute to populate it
+
+        for articulation in self.articulations.values():
+            articulation._data_index  # noqa
+            for link in articulation.links:
+                link._body_data_index  # noqa
+
+        for actor in self.non_static_actors:
+            actor.set_pose(actor.initial_pose)
+        for articulation in self.articulations.values():
+            articulation.set_pose(articulation.initial_pose)
+
+        if enable_gpu:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            self.px.cuda_rigid_body_data.torch()[:, 7:] = torch.zeros_like(
+                self.px.cuda_rigid_body_data.torch()[:, 7:]
+            )  # zero out all velocities
+            self.px.cuda_articulation_qvel.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qvel.torch()
+            )  # zero out all q velocities
+            self.px.cuda_articulation_qf.torch()[:, :] = torch.zeros_like(
+                self.px.cuda_articulation_qf.torch()
+            )  # zero out all qf
+
+            self.px.gpu_apply_rigid_dynamic_data()
+            self.px.gpu_apply_articulation_root_pose()
+            self.px.gpu_apply_articulation_root_velocity()
+            self.px.gpu_apply_articulation_qvel()
+            self.px.gpu_apply_articulation_qf()
+
+            self._gpu_sim_initialized = True
+            self.px.gpu_update_articulation_kinematics()
+            self._gpu_fetch_all()
+
+    def _gpu_apply_all(self):
+        """
+        Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
+        """
+        assert not self._needs_fetch, (
+            "Once _gpu_apply_all is called, you must call _gpu_fetch_all before calling "
+            "_gpu_apply_all again as otherwise there is undefined behavior that is likely "
+            "impossible to debug"
+        )
+        assert isinstance(self.px, physx.PhysxGpuSystem)
+        self.px.gpu_apply_rigid_dynamic_data()
+        self.px.gpu_apply_articulation_qpos()
+        self.px.gpu_apply_articulation_qvel()
+        self.px.gpu_apply_articulation_qf()
+        self.px.gpu_apply_articulation_root_pose()
+        self.px.gpu_apply_articulation_root_velocity()
+        self.px.gpu_apply_articulation_target_position()
+        self.px.gpu_apply_articulation_target_velocity()
+        self._needs_fetch = True
+
+    def _gpu_fetch_all(self):
+        """
+        Queries simulation for all relevant GPU data. Note that this has some overhead.
+        Should only be called at most once per simulation step as this automatically queries
+        all data for all objects built in the scene.
+        """
+        assert isinstance(self.px, physx.PhysxGpuSystem)
+        if len(self.non_static_actors) > 0:
+            self.px.gpu_fetch_rigid_dynamic_data()
+
+        if len(self.articulations) > 0:
+            self.px.gpu_fetch_articulation_link_pose()
+            self.px.gpu_fetch_articulation_link_velocity()
+            self.px.gpu_fetch_articulation_qpos()
+            self.px.gpu_fetch_articulation_qvel()
+            self.px.gpu_fetch_articulation_qacc()
+            self.px.gpu_fetch_articulation_target_qpos()
+            self.px.gpu_fetch_articulation_target_qvel()
+
+        self._needs_fetch = False
 
     def physics_step(self):
         self.px.step()
 
     def can_physics(self):
         return True
+
+    ### GPU Simulation Management ###
+
+    @cached_property
+    def scene_offsets(self):
+        """torch tensor of shape (num_envs, 3) representing the offset of each scene
+        in the world frame"""
+
+        if self.gpu_sim_enabled:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            return torch.tensor(
+                np.array(
+                    [
+                        self.px.get_scene_offset(sub_scene)
+                        for sub_scene in self.sub_scenes
+                    ]
+                ),
+                device=self.physics_device_torch,
+            )
+        else:
+            raise NotImplementedError(
+                "scene_offsets is not available for CPU simulation"
+            )
+
+    @cached_property
+    def scene_offsets_np(self):
+        """numpy array of shape (num_envs, 3) representing the offset of each scene in the
+        world frame"""
+
+        if self.gpu_sim_enabled:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            return np.array(
+                [self.px.get_scene_offset(sub_scene) for sub_scene in self.sub_scenes]
+            )
+        else:
+            raise NotImplementedError(
+                "scene_offsets_np is not available for CPU simulation"
+            )
+
+    ### CPU/GPU SAPIEN Rendering Code ###
+    def _get_all_render_bodies(
+        self,
+    ) -> list[tuple[sapien.render.RenderBodyComponent, int]]:
+        all_render_bodies = []
+        for actor in self.actors.values():
+            if actor.px_body_type == "static":
+                continue
+            all_render_bodies += [
+                (
+                    entity.find_component_by_type(sapien.render.RenderBodyComponent),
+                    cast(
+                        physx.PhysxRigidDynamicComponent,
+                        entity.find_component_by_type(physx.PhysxRigidDynamicComponent),
+                    ).gpu_pose_index,
+                )
+                for entity in actor._objs
+            ]
+        for articulation in self.articulations.values():
+            all_render_bodies += [
+                (
+                    px_link.entity.find_component_by_type(
+                        sapien.render.RenderBodyComponent
+                    ),
+                    px_link.gpu_pose_index,
+                )
+                for link in articulation.links
+                for px_link in link._objs
+            ]
+        return all_render_bodies
+
+    def _setup_gpu_rendering(self):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_setup_gpu_rendering()
+        else:
+            self._sapien_setup_gpu_rendering()
+
+    def _sapien_setup_gpu_rendering(self):
+        """
+        Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
+        """
+        assert isinstance(self.px, physx.PhysxGpuSystem)
+        for rb, gpu_pose_index in self._get_all_render_bodies():
+            if rb is not None:
+                for s in rb.render_shapes:
+                    s.set_gpu_pose_batch_index(gpu_pose_index)
+        self.render_system_group = sapien.render.RenderSystemGroup(
+            [s.render_system for s in self.sub_scenes]
+        )
+        self.render_system_group.set_cuda_poses(self.px.cuda_rigid_body_data)
+
+    def _sapien_31_setup_gpu_rendering(self):
+        """
+        Prepares the scene for GPU parallelized rendering to enable taking e.g. RGB images
+        """
+        assert isinstance(self.px, physx.PhysxGpuSystem)
+        px = self.px
+
+        shape_pose_indices = []
+        shapes = []
+        scene_id = 0
+        for scene in self.sub_scenes:
+            scene_id += 1
+            for body in scene.render_system.render_bodies:
+                b = body.entity.find_component_by_type(
+                    sapien.physx.PhysxRigidBodyComponent
+                )
+                if b is None:
+                    continue
+                for s in body.render_shapes:
+                    shape_pose_indices.append(
+                        b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
+                    )
+                    shapes.append(s)
+
+        cam_pose_indices = []
+        cams = []
+        for cameras in self.scene.sensors.values():
+            assert isinstance(cameras, Camera), f"Expected Camera, got {cameras}"
+            for c in cameras.camera._render_cameras:
+                b = c.entity.find_component_by_type(
+                    sapien.physx.PhysxRigidBodyComponent
+                )
+                if b is None:
+                    continue
+                cam_pose_indices.append(
+                    b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
+                )
+                cams.append(c)
+
+        sync_manager = (
+            sapien.render.GpuSyncManager()  # pyright: ignore[reportAttributeAccessIssue]
+        )
+        sync_manager.set_cuda_poses(px.cuda_rigid_body_data)
+        sync_manager.set_render_shapes(shape_pose_indices, shapes)
+        sync_manager.set_cameras(cam_pose_indices, cams)
+
+        self.render_system_group = sync_manager
+
+    def _gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_gpu_setup_sensors(sensors)
+        else:
+            self._sapien_gpu_setup_sensors(sensors)
+
+    def _sapien_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
+        for name, sensor in sensors.items():
+            if isinstance(sensor, Camera):
+                try:
+                    assert self.render_system_group is not None
+                    camera_group = self.render_system_group.create_camera_group(
+                        sensor.camera._render_cameras,
+                        list(
+                            sensor.config.shader_config.texture_names.keys()  # pyright: ignore[reportOptionalMemberAccess]
+                        ),
+                    )
+                except RuntimeError as e:
+                    raise RuntimeError(
+                        "Unable to create GPU parallelized camera group. "
+                        "If the error is about being unable to create a buffer, you are "
+                        "likely using too many Cameras. Either use less cameras (via less "
+                        "parallel envs) and/or reduce the size of the cameras. Another common "
+                        "cause is using a memory intensive shader. You can try using the "
+                        "'minimal' shader which optimizes for GPU memory but disables some "
+                        "advanced functionalities. Another option is to avoid rendering with the "
+                        "rgb_array mode or using the human render cameras, as they can be more "
+                        "memory intensive (they typically have higher resolutions for the purposes "
+                        "of visualization)."
+                    ) from e
+
+                sensor.camera.camera_group = camera_group
+                self.camera_groups[name] = camera_group
+            else:
+                raise NotImplementedError(
+                    f"This sensor {sensor} of type {sensor.__class__} has not been "
+                    "implemented yet on the GPU"
+                )
+
+    def _sapien_31_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
+        for name, sensor in sensors.items():
+            if isinstance(sensor, Camera):
+                batch_renderer = sapien.render.RenderManager(  # pyright: ignore[reportAttributeAccessIssue]
+                    sapien.render.get_shader_pack(  # pyright: ignore[reportAttributeAccessIssue]
+                        sensor.config.shader_config.shader_pack  # pyright: ignore[reportOptionalMemberAccess]
+                    )
+                )
+                batch_renderer.set_size(sensor.config.width, sensor.config.height)
+                batch_renderer.set_cameras(sensor.camera._render_cameras)
+                sensor.camera.camera_group = self.camera_groups[name] = batch_renderer
+            else:
+                raise NotImplementedError(
+                    f"This sensor {sensor} of type {sensor.__class__} has not been "
+                    "implemented yet on the GPU"
+                )

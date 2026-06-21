@@ -216,7 +216,7 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
         assert (
             self.name is not None
             and self.name != ""
-            and self.name not in self.sim.scene.actors
+            and self.name not in self.sim.actors
         ), (
             "built actors in ManiSkill must have unique names and cannot be None or empty strings"
         )
@@ -248,7 +248,7 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
         if initial_pose_b == 1:
             initial_pose_np = initial_pose_np.repeat(num_actors, axis=0)
         if self.sim.scene.parallel_in_single_scene:
-            initial_pose_np[:, :3] += self.sim.scene.scene_offsets_np[
+            initial_pose_np[:, :3] += self.sim.scene_offsets_np[
                 common.to_numpy(self.scene_idxs)
             ]
         entities = []
@@ -278,7 +278,7 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
             )
         else:
             actor.initial_pose = self.initial_pose
-        self.sim.scene.actors[self.name] = actor
+        self.sim.actors[self.name] = actor
         self.sim.scene.add_to_state_dict_registry(actor)
         return actor
 

@@ -9,7 +9,6 @@ import sapien.physx as physx
 import torch
 import trimesh
 
-from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 from mani_skill.sim.sapien.structs.base import PhysxRigidBodyComponentStruct
 from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
@@ -22,10 +21,13 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
     from mani_skill.sim.sapien.structs.articulation import SapienArticulation
+    from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 
 
 @dataclass
-class SapienLink(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent], Link):
+class SapienLink(
+    PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent], Link
+):
     """
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """
@@ -253,7 +255,7 @@ class SapienLink(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkCompon
     def pose(self) -> Pose:
         if self.sim.gpu_sim_enabled:
             raw_pose = self.px.cuda_rigid_body_data.torch()[self._body_data_index, :7]  # type: ignore
-            if self.sim.parallel_in_single_scene:
+            if self.sim.scene.parallel_in_single_scene:
                 new_xyzs = raw_pose[:, :3] - self.sim.scene_offsets[self._scene_idxs]
                 new_pose = torch.zeros_like(raw_pose)
                 new_pose[:, 3:] = raw_pose[:, 3:]
@@ -270,7 +272,7 @@ class SapienLink(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkCompon
         if self.sim.gpu_sim_enabled:
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1, device=self.device)
-            if self.sim.parallel_in_single_scene:
+            if self.sim.scene.parallel_in_single_scene:
                 if len(arg1.shape) == 1:
                     arg1 = arg1.view(1, -1)
                 mask = self.sim._reset_mask[self._scene_idxs]
