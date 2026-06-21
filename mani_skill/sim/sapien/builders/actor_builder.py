@@ -7,35 +7,53 @@ import sapien
 import sapien.physx as physx
 import torch
 from sapien import ActorBuilder as OriginalSAPIENActorBuilder
+from sapien.wrapper.actor_builder import CollisionShapeRecord, VisualShapeRecord
 from sapien.wrapper.coacd import do_coacd
 
 from mani_skill import logger
 from mani_skill.sim.builders.actor import BaseActorBuilder
+from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.utils import common
-from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.sapien.sim import SapienSim
 
 
 class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
     """Actor builder for working with SAPIEN"""
 
-    scene: ManiSkillScene
+    sim: SapienSim
 
     def __init__(self):
-        super().__init__()
-        self.initial_pose = None
+        self.collision_records: list[CollisionShapeRecord] = []
+        self.visual_records: list[VisualShapeRecord] = []
+        self.use_density = True
+        self.collision_groups = [1, 1, 0, 0]
+        # self.scene = None
+        self.physx_body_type = "dynamic"
+        self.name = ""
+
+        self._mass = 0
+        self._cmass_local_pose = sapien.Pose()
+        self._inertia = np.zeros(3)
+        self._auto_inertial = True
+
+        self._initial_pose: sapien.Pose = sapien.Pose()
         self.scene_idxs = None
         self._allow_overlapping_plane_collisions = False
         self._plane_collision_poses = set()
         self._procedural_shapes = []
         """procedurally generated shapes to attach"""
 
-    def set_scene(self, scene: ManiSkillScene):
-        self.scene = scene
-        return self
+    @property
+    def initial_pose(self) -> Pose | None:
+        """The initial pose of the actor when it gets built and spawned into the simulation."""
+        return Pose.create(self._initial_pose)
+
+    @initial_pose.setter
+    def initial_pose(self, initial_pose: Pose):
+        self._initial_pose = to_sapien_pose(initial_pose)
 
     def set_scene_idxs(
         self,
@@ -177,7 +195,7 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
         build the raw sapien entity. Modifies original SAPIEN function to accept new procedurally generated render components
         """
         entity = sapien.Entity()
-        if self.scene.can_render():
+        if self.sim.can_render():
             if self.visual_records or len(self._procedural_shapes) > 0:
                 render_component = self.build_render_component()
                 for shape in self._procedural_shapes:
@@ -198,43 +216,48 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
         assert (
             self.name is not None
             and self.name != ""
-            and self.name not in self.scene.actors
+            and self.name not in self.sim.scene.actors
         ), (
             "built actors in ManiSkill must have unique names and cannot be None or empty strings"
         )
 
         if self.scene_idxs is not None:
             self.scene_idxs = common.to_tensor(
-                self.scene_idxs, device=self.scene.device
+                self.scene_idxs, device=self.sim.physics_device_torch
             ).to(torch.int)
         else:
-            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
+            self.scene_idxs = torch.arange((self.sim.num_envs), dtype=int)
         num_actors = len(self.scene_idxs)
 
         if self.initial_pose is None:
-            logger.warn(
-                f"No initial pose set for actor builder of {self.name}, setting to default pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow down simulation, see https://github.com/mani-skill/ManiSkill/issues/421."
+            logger.warning(
+                f"No initial pose set for actor builder of {self.name}, setting to default "
+                "pose q=[1,0,0,0], p=[0,0,0]. Not setting reasonable initial poses may slow "
+                "down simulation in PhysX, see https://github.com/mani-skill/ManiSkill/issues/421."
             )
             self.initial_pose = Pose.create(sapien.Pose())
         else:
-            self.initial_pose = Pose.create(self.initial_pose, device=self.scene.device)
+            self.initial_pose = Pose.create(
+                self.initial_pose,
+                device=self.sim.physics_device_torch,
+            )
 
         initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_actors
         initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)
         if initial_pose_b == 1:
             initial_pose_np = initial_pose_np.repeat(num_actors, axis=0)
-        if self.scene.parallel_in_single_scene:
-            initial_pose_np[:, :3] += self.scene.scene_offsets_np[
+        if self.sim.scene.parallel_in_single_scene:
+            initial_pose_np[:, :3] += self.sim.scene.scene_offsets_np[
                 common.to_numpy(self.scene_idxs)
             ]
         entities = []
 
         for i, scene_idx in enumerate(self.scene_idxs):
-            if self.scene.parallel_in_single_scene:
-                sub_scene = self.scene.sub_scenes[0]
+            if self.sim.scene.parallel_in_single_scene:
+                sub_scene = self.sim.sub_scenes[0]
             else:
-                sub_scene = self.scene.sub_scenes[scene_idx]
+                sub_scene = self.sim.sub_scenes[scene_idx]
             entity = self.build_entity()
             # prepend scene idx to entity name to indicate which sub-scene it is in
             entity.name = f"scene-{scene_idx}_{self.name}"
@@ -242,21 +265,21 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
             entity.pose = to_sapien_pose(initial_pose_np[i])
             sub_scene.add_entity(entity)
             entities.append(entity)
-        actor = Actor.create_from_entities(entities, self.scene, self.scene_idxs)
+        actor = SapienActor.create_from_entities(entities, self.scene_idxs, self.sim)
 
         # if it is a static body type and this is a GPU sim but we are given a single initial pose, we repeat it for the purposes of observations
         if (
             self.physx_body_type == "static"
             and initial_pose_b == 1
-            and self.scene.gpu_sim_enabled
+            and self.sim.gpu_sim_enabled
         ):
             actor.initial_pose = Pose.create(
                 self.initial_pose.raw_pose.repeat(num_actors, 1)
             )
         else:
             actor.initial_pose = self.initial_pose
-        self.scene.actors[self.name] = actor
-        self.scene.add_to_state_dict_registry(actor)
+        self.sim.scene.actors[self.name] = actor
+        self.sim.scene.add_to_state_dict_registry(actor)
         return actor
 
     """

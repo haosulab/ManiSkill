@@ -298,7 +298,7 @@ class SapienSim(BaseSim):
     def create_actor_builder(self):
         from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
 
-        return SapienActorBuilder().set_scene(self)
+        return SapienActorBuilder()
 
     def create_articulation_builder(self):
         from mani_skill.sim.sapien.builders.articulation_builder import (
