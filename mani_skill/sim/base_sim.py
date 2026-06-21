@@ -85,6 +85,8 @@ class BaseSim(ABC):
     """The dictionary of actors in the simulation backend."""
     articulations: dict[str, Articulation]
     """The dictionary of articulations in the simulation backend."""
+    _gpu_sim_initialized: bool = False
+    """whether the GPU simulation has been initialized"""
 
     def __init__(
         self,
@@ -107,6 +109,7 @@ class BaseSim(ABC):
             self.gpu_sim_enabled = False
         self.actors = dict()
         self.articulations = dict()
+        self._gpu_sim_initialized = False
 
     def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
         if "." in backend:
@@ -252,5 +255,17 @@ class BaseSim(ABC):
     def _gpu_update_articulation_kinematics(self):
         """
         Updates the articulation kinematics on the GPU.
+        """
+        raise NotImplementedError()
+
+    def _gpu_apply_articulation_target_position(self):
+        """
+        Applies the articulation target position on the GPU.
+        """
+        raise NotImplementedError()
+
+    def _gpu_apply_articulation_target_velocity(self):
+        """
+        Applies the articulation target velocity on the GPU.
         """
         raise NotImplementedError()

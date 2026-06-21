@@ -389,7 +389,7 @@ class BaseAgent:
             self.set_controller_state(state["controller"])
         if self.scene.gpu_sim_enabled:
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
+            self.scene.physics_sim._gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
 
     # -------------------------------------------------------------------------- #

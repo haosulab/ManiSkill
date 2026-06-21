@@ -680,6 +680,12 @@ class SapienSim(BaseSim):
     def _gpu_update_articulation_kinematics(self):
         self.px.gpu_update_articulation_kinematics()  # type: ignore
 
+    def _gpu_apply_articulation_target_position(self):
+        self.px.gpu_apply_articulation_target_position()  # type: ignore
+
+    def _gpu_apply_articulation_target_velocity(self):
+        self.px.gpu_apply_articulation_target_velocity()  # type: ignore
+
     def physics_step(self):
         self.px.step()
 

@@ -1117,13 +1117,13 @@ class BaseEnv(gym.Env):
                 if isinstance(self.agent.controller, dict):
                     # TODO: a small optimization is to cache whether the dict of controllers has any that set qpos/qvel values
                     # in the BaseAgent/MultiAgent class. Code below just avoids iterating over the dict of controllers each time
-                    self.scene.px.gpu_apply_articulation_target_position()  # pyright: ignore[reportAttributeAccessIssue]
-                    self.scene.px.gpu_apply_articulation_target_velocity()  # pyright: ignore[reportAttributeAccessIssue]
+                    self.scene.physics_sim._gpu_apply_articulation_target_position()
+                    self.scene.physics_sim._gpu_apply_articulation_target_velocity()
                 else:
                     if self.agent.controller.sets_target_qpos:
-                        self.scene.px.gpu_apply_articulation_target_position()  # pyright: ignore[reportAttributeAccessIssue]
+                        self.scene.physics_sim._gpu_apply_articulation_target_position()
                     if self.agent.controller.sets_target_qvel:
-                        self.scene.px.gpu_apply_articulation_target_velocity()  # pyright: ignore[reportAttributeAccessIssue]
+                        self.scene.physics_sim._gpu_apply_articulation_target_velocity()
         self._before_control_step()
         for _ in range(self._sim_steps_per_control):
             if self.agent is not None:
@@ -1305,7 +1305,7 @@ class BaseEnv(gym.Env):
         Called by `self._reconfigure`
         """
         assert self._viewer is not None
-        self._viewer.set_scene(self.scene.sub_scenes[0])
+        self._viewer.set_scene(self.scene.physics_sim.sub_scenes[0])
         control_window = (
             cast(sapien.utils.viewer.control_window.ControlWindow, sapien_utils.get_obj_by_type(
                 self._viewer.plugins, sapien.utils.viewer.control_window.ControlWindow
@@ -1326,7 +1326,8 @@ class BaseEnv(gym.Env):
             self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
             self._setup_viewer()
         if self.gpu_sim_enabled and self.scene._gpu_sim_initialized:
-            self.scene.px.sync_poses_gpu_to_cpu()  # pyright: ignore[reportAttributeAccessIssue]
+            # TODO (stao): this is sapien specific code...
+            self.scene.render_sim.px.sync_poses_gpu_to_cpu()  # pyright: ignore[reportAttributeAccessIssue]
         self._viewer.render()
         for obj in self._hidden_objects:
             obj.hide_visual()

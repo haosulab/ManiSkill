@@ -104,6 +104,12 @@ class ManiSkillScene:
     def articulations(self):
         return self.physics_sim.articulations
 
+    @property
+    def _gpu_sim_initialized(self) -> bool:
+        """whether the GPU simulation has been initialized"""
+        # TODO (stao): some functions might only care if the render sim is initialized...?
+        return self.physics_sim._gpu_sim_initialized
+
     def can_render(self):
         """
         Whether or not this Scene object permits rendering, depending on the rendering device
@@ -211,81 +217,6 @@ class ManiSkillScene:
 
     def step(self):
         self.physics_sim.physics_step()
-
-    def update_render(
-        self, update_sensors: bool = True, update_human_render_cameras: bool = True
-    ):
-        """
-        Updates the renderer based on the current simulation state. Note that on the first call,
-        if a sensor or human render camera is required to be updated, GPU memory will be allocated
-        for the sensor or human render camera respectively.
-
-        Arguments:
-            update_sensors (bool): Whether to update the sensors.
-            update_human_render_cameras (bool): Whether to update the human render cameras.
-        """
-
-        if SAPIEN_RENDER_SYSTEM == "3.1":
-            self._sapien_31_update_render(
-                update_sensors=update_sensors,
-                update_human_render_cameras=update_human_render_cameras,
-            )
-        else:
-            self._sapien_update_render(
-                update_sensors=update_sensors,
-                update_human_render_cameras=update_human_render_cameras,
-            )
-
-    def _sapien_update_render(
-        self, update_sensors: bool = True, update_human_render_cameras: bool = True
-    ):
-        # note that this design ensures GPU memory is only allocated when explicitly requested,
-        # which can occur after, for example, physx GPU simulation has been initialized.
-        if self.gpu_sim_enabled:
-            if not self.parallel_in_single_scene:
-                if self.render_system_group is None:
-                    self._setup_gpu_rendering()
-                if not self._sensors_initialized and update_sensors:
-                    self._gpu_setup_sensors(self.sensors)
-                    self._sensors_initialized = True
-                if (
-                    not self._human_render_cameras_initialized
-                    and update_human_render_cameras
-                ):
-                    self._gpu_setup_sensors(self.human_render_cameras)
-                    self._human_render_cameras_initialized = True
-                self.render_system_group.update_render()
-            else:
-                assert isinstance(self.px, physx.PhysxGpuSystem)
-                self.px.sync_poses_gpu_to_cpu()
-                self.sub_scenes[0].update_render()
-        else:
-            self.sub_scenes[0].update_render()
-
-    def _sapien_31_update_render(
-        self, update_sensors: bool = True, update_human_render_cameras: bool = True
-    ):
-        if self.gpu_sim_enabled:
-            if self.render_system_group is None:
-                for scene in self.sub_scenes:
-                    scene.update_render()
-                self._setup_gpu_rendering()
-            if not self._sensors_initialized and update_sensors:
-                self._gpu_setup_sensors(self.sensors)
-                self._sensors_initialized = True
-            if (
-                not self._human_render_cameras_initialized
-                and update_human_render_cameras
-            ):
-                self._gpu_setup_sensors(self.human_render_cameras)
-                self._human_render_cameras_initialized = True
-
-            manager: sapien.render.GpuSyncManager = (  # pyright: ignore[reportAttributeAccessIssue]
-                self.render_system_group
-            )
-            manager.sync()
-        else:
-            self.sub_scenes[0].update_render()
 
     def get_contacts(self):
         if self.gpu_sim_enabled:
