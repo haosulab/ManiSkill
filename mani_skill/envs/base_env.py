@@ -377,7 +377,7 @@ class BaseEnv(gym.Env):
     @property
     def gpu_sim_enabled(self):
         """Whether the gpu simulation is enabled."""
-        return self.scene.gpu_sim_enabled
+        return self.scene.physics_sim.gpu_sim_enabled
 
     @property
     def _default_sim_config(self):
@@ -740,7 +740,7 @@ class BaseEnv(gym.Env):
         self._load_scene(options)
         if self.scene.can_render(): self._load_lighting(options)
 
-        self.scene._setup(enable_gpu=self.gpu_sim_enabled)
+        self.scene._setup()
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         if self.scene.can_render(): self._setup_sensors(options)
         if self.render_mode == "human" and self._viewer is None:
@@ -1181,7 +1181,7 @@ class BaseEnv(gym.Env):
         The function should be called in reset(). Called by `self._reconfigure`"""
 
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        sim_object = SapienSim()
+        sim_object = SapienSim(num_envs=self.num_envs, sim_backend=self.backend.sim_backend, render_backend=self.backend.render_backend)
         self.scene = ManiSkillScene(
             physics_sim=sim_object,
             render_sim=sim_object,
