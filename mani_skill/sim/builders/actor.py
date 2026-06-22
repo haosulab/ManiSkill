@@ -105,8 +105,13 @@ class BaseActorBuilder(BaseBuilder):
         Returns:
             The actor builder.
         """
-        self.scene_idxs = scene_idxs
-        return self
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not support "
+                    "set_scene_idxs."
+                )
+            self.__sim_builders[sim.id].set_scene_idxs(scene_idxs)
 
     def build(self, name: str) -> Actor:
         """

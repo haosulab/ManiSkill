@@ -252,7 +252,6 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
                 common.to_numpy(self.scene_idxs)
             ]
         entities = []
-
         for i, scene_idx in enumerate(self.scene_idxs):
             if self.sim.scene.parallel_in_single_scene:
                 sub_scene = self.sim.sub_scenes[0]

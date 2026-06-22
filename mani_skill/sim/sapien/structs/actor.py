@@ -102,7 +102,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
         )
 
     @classmethod
-    def merge(cls, actors: list["SapienActor"], name: str | None = None):
+    def merge(cls, actors: list["SapienActor"], name: str):
         """
         Merge actors together under one view so that they can all be managed by one python
         dataclass object. This can be useful for e.g. randomizing the asset loaded into a
@@ -119,7 +119,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
         """
 
         objs = []
-        scene = actors[0].scene  # type: ignore
+        sim = actors[0].sim
         _builder_initial_poses = []
         merged_scene_idxs = []
         for actor in actors:
@@ -127,11 +127,13 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
             merged_scene_idxs.append(actor._scene_idxs)
             _builder_initial_poses.append(actor.initial_pose.raw_pose)
         merged_scene_idxs = torch.concat(merged_scene_idxs)
-        merged_actor = SapienActor.create_from_entities(objs, scene, merged_scene_idxs)
-        merged_actor.name = name  # type: ignore
+        merged_actor: "Actor" = SapienActor.create_from_entities(
+            objs, merged_scene_idxs, sim
+        )
+        merged_actor.name = name
         merged_actor.initial_pose = Pose.create(torch.vstack(_builder_initial_poses))
         merged_actor.merged = True
-        scene.actor_views[merged_actor.name] = merged_actor
+        sim.scene.actor_views[merged_actor.name] = merged_actor
         return merged_actor
 
     # -------------------------------------------------------------------------- #
