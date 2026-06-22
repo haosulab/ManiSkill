@@ -20,9 +20,11 @@ A guide for migrating code from ManiSkill 3 to ManiSkill 4, in addition to (stro
 
 - Default tasks have a new environment ID version of `-v4` (to reflect maniskill v4). They are currently all `-v1`. I am not sure why we chose `-v1`.
 
+- `Actor.px_body_type` is renamed to `Actor.body_type` since we support more than just physx.
 
 
-## Full list of breaking changes including internal changes and deprecations
+
+## Full list of breaking changes including internal changes and deprecations not included in above
 
 
 ### Changes:

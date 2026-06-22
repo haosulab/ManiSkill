@@ -6,7 +6,6 @@ from typing import Any, Optional, Sequence, Tuple, Union, cast
 import dacite
 import gymnasium as gym
 import numpy as np
-import sapien
 import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
@@ -997,7 +996,7 @@ class BaseEnv(gym.Env):
     def _clear_sim_state(self):
         """Clear simulation state (velocities)"""
         for actor in self.scene.actors.values():
-            if actor.px_body_type == "dynamic":
+            if actor.body_type == "dynamic":
                 actor.set_linear_velocity(torch.zeros(3, device=self.device))
                 actor.set_angular_velocity(torch.zeros(3, device=self.device))
         for articulation in self.scene.articulations.values():

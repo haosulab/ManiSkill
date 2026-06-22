@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
+import torch
+
 from mani_skill.utils.structs.base import BaseStruct
 
 T = TypeVar("T", bound=BaseStruct)
@@ -22,3 +24,34 @@ class Articulation(Generic[T]):
 
     name: str = ""
     """The name of the articulation. Must be unique within the scene."""
+
+    def set_qpos(self, qpos: torch.Tensor):
+        """
+        Set the qpos of the articulation.
+        """
+        raise NotImplementedError()
+
+    def set_qvel(self, qvel: torch.Tensor):
+        """
+        Set the qvel of the articulation.
+        """
+        raise NotImplementedError()
+
+    def set_root_linear_velocity(self, velocity: torch.Tensor):
+        """
+        Set the root linear velocity of the articulation.
+        """
+        raise NotImplementedError()
+
+    def set_root_angular_velocity(self, velocity: torch.Tensor):
+        """
+        Set the root angular velocity of the articulation.
+        """
+        raise NotImplementedError()
+
+    @property
+    def max_dof(self) -> int:
+        """
+        The maximum number of DOFs of the articulation.
+        """
+        raise NotImplementedError()

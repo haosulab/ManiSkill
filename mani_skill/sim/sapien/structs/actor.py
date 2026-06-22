@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 import sapien
 import sapien.physx as physx
@@ -32,8 +32,6 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     On CPU, more properties are available
     """
-
-    px_body_type: Literal["kinematic", "static", "dynamic"] = None
 
     initial_pose: Pose = None
     """
@@ -91,7 +89,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
             _objs=entities,
             sim=sim,  # type: ignore
             _scene_idxs=scene_idxs,
-            px_body_type=px_body_type,
+            body_type=px_body_type,
             _bodies=bodies,
             _body_data_name=(
                 "cuda_rigid_body_data"

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
 import torch
 
@@ -28,6 +28,9 @@ class Actor(Generic[T]):
 
     name: str = ""
     """The name of the actor. Must be unique within the scene."""
+
+    body_type: Literal["kinematic", "static", "dynamic"] = "dynamic"
+    """The type of the body of the actor."""
 
     @abstractmethod
     def create_from_entities(
@@ -70,5 +73,17 @@ class Actor(Generic[T]):
     def show_visual(self):
         """
         Show the visuals of the actor.
+        """
+        raise NotImplementedError()
+
+    def set_linear_velocity(self, velocity: torch.Tensor):
+        """
+        Set the linear velocity of the actor.
+        """
+        raise NotImplementedError()
+
+    def set_angular_velocity(self, velocity: torch.Tensor):
+        """
+        Set the angular velocity of the actor.
         """
         raise NotImplementedError()
