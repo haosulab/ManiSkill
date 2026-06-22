@@ -1181,7 +1181,13 @@ class BaseEnv(gym.Env):
         The function should be called in reset(). Called by `self._reconfigure`"""
 
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        sim_object = SapienSim(num_envs=self.num_envs, sim_backend=self.backend.sim_backend, render_backend=self.backend.render_backend)
+        sim_object = SapienSim(
+            num_envs=self.num_envs,
+            sim_backend=self.backend.sim_backend,
+            render_backend=self.backend.render_backend,
+            # TODO (stao): figure out how to insert custom configs depending on sim backend
+            cfg=self.sim_config,
+        )
         self.scene = ManiSkillScene(
             physics_sim=sim_object,
             render_sim=sim_object,

@@ -2,9 +2,7 @@ from typing import Any, Union
 
 import numpy as np
 import sapien as sapien
-import sapien.physx as physx
 import torch
-from sapien import Pose
 
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
@@ -49,7 +47,7 @@ class SceneManipulationEnv(BaseEnv):
         init_config_idxs=None,
         num_envs=1,
         reconfiguration_freq=None,
-        **kwargs
+        **kwargs,
     ):
         if isinstance(scene_builder_cls, str):
             scene_builder_cls = REGISTERED_SCENE_BUILDERS[
@@ -68,13 +66,13 @@ class SceneManipulationEnv(BaseEnv):
             robot_uids=robot_uids,
             reconfiguration_freq=reconfiguration_freq,
             num_envs=num_envs,
-            **kwargs
+            **kwargs,
         )
 
     @property
     def _default_sim_config(self):
         return SimConfig(
-            spacing=50,
+            spacing=20,
             gpu_memory_config=GPUMemoryConfig(
                 found_lost_pairs_capacity=2**25,
                 max_rigid_patch_count=2**21,
@@ -92,9 +90,9 @@ class SceneManipulationEnv(BaseEnv):
             )
             self.init_config_idxs = options.get("init_config_idxs", None)
         else:
-            assert (
-                "build_config_idxs" not in options
-            ), "options dict cannot contain build_config_idxs without reconfigure=True"
+            assert "build_config_idxs" not in options, (
+                "options dict cannot contain build_config_idxs without reconfigure=True"
+            )
             self.init_config_idxs = options.get(
                 "init_config_idxs", self.init_config_idxs
             )
