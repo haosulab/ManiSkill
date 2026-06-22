@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import sapien
-import sapien.physx as physx
 import sapien.render
 import torch
 
@@ -216,13 +215,7 @@ class ManiSkillScene:
         self.physics_sim.physics_step()
 
     def get_contacts(self):
-        if self.gpu_sim_enabled:
-            raise NotImplementedError(
-                "get_contacts is not available for GPU simulation"
-            )
-        else:
-            assert isinstance(self.px, physx.PhysxCpuSystem)
-            return self.px.get_contacts()
+        self.physics_sim.get_contacts()
 
     def get_all_actors(self):
         """
@@ -437,7 +430,7 @@ class ManiSkillScene:
         state_dict["actors"] = dict()
         state_dict["articulations"] = dict()
         for actor in self.state_dict_registry.actors.values():
-            if actor.px_body_type == "static":
+            if actor.body_type == "static":
                 continue
             state_dict["actors"][actor.name] = actor.get_state().clone()
         for articulation in self.state_dict_registry.articulations.values():

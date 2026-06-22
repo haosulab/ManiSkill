@@ -6,7 +6,6 @@ from typing import Any, Optional, Sequence, Tuple, Union, cast
 import dacite
 import gymnasium as gym
 import numpy as np
-import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space
 
@@ -22,7 +21,6 @@ from mani_skill.envs.utils.system.backend import (
     CPU_SIM_BACKENDS,
     parse_sim_and_render_backend,
 )
-from mani_skill.sim.sapien import SapienSim
 from mani_skill.sim.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.sim.sensors.camera import (
     Camera,
@@ -30,7 +28,7 @@ from mani_skill.sim.sensors.camera import (
     parse_sensor_configs,
     update_sensor_configs_from_dict,
 )
-from mani_skill.utils import common, gym_utils, sapien_utils, tree
+from mani_skill.utils import common, gym_utils, tree
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SimConfig
@@ -172,7 +170,7 @@ class BaseEnv(gym.Env):
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
 
-    _viewer: Union[sapien.utils.Viewer, None] = None
+    _viewer: Any | None = None
 
     _sample_video_link: Optional[str] = None
     """a link to a sample video of the task. This is mostly used for automatic documentation generation"""
@@ -353,7 +351,8 @@ class BaseEnv(gym.Env):
     @property
     def _default_sim_config(self):
         return SimConfig()
-    def _load_agent(self, options: dict, initial_agent_poses: Optional[Union[sapien.Pose, Pose]] = None, build_separate: bool = False):
+
+    def _load_agent(self, options: dict, initial_agent_poses: Pose | None = None, build_separate: bool = False):
         """
         loads the agent/controllable articulations into the environment. The default function provides a convenient way to setup the agent/robot by a robot_uid
         (stored in self.robot_uids) without requiring the user to have to write the robot building and controller code themselves. For more
@@ -426,7 +425,7 @@ class BaseEnv(gym.Env):
         self,
     ) -> CameraConfig:
         """Default configuration for the viewer camera, controlling shader, fov, etc. By default if there is a human render camera called "render_camera" then the viewer will use that camera's pose."""
-        return CameraConfig(uid="viewer", pose=sapien.Pose([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000, fov=np.pi / 2)
+        return CameraConfig(uid="viewer", pose=Pose.create_from_pq([0, 0, 1]), width=1920, height=1080, shader_pack="default", near=0.0, far=1000, fov=np.pi / 2)
 
     @property
     def sim_freq(self) -> int:
@@ -715,8 +714,6 @@ class BaseEnv(gym.Env):
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
         if self.scene.can_render(): self._setup_sensors(options)
         if self.render_mode == "human" and self._viewer is None:
-            self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
-        if self._viewer is not None:
             self._setup_viewer()
         self._reconfig_counter = self.reconfiguration_freq
 
@@ -1150,13 +1147,15 @@ class BaseEnv(gym.Env):
         The function should be called in reset(). Called by `self._reconfigure`"""
 
         # create a "global" scene object that users can work with that is linked with all other scenes created
-        sim_object = SapienSim(
-            num_envs=self.num_envs,
-            sim_backend=self.backend.sim_backend,
-            render_backend=self.backend.render_backend,
-            # TODO (stao): figure out how to insert custom configs depending on sim backend
-            cfg=self.sim_config,
-        )
+        if self.backend.sim_backend_package == "sapien":
+            from mani_skill.sim.sapien import SapienSim
+            sim_object = SapienSim(
+                num_envs=self.num_envs,
+                sim_backend=self.backend.sim_backend,
+                render_backend=self.backend.render_backend,
+                # TODO (stao): figure out how to insert custom configs depending on sim backend
+                cfg=self.sim_config,
+            )
         self.device = sim_object.sim_device_torch
         self._elapsed_steps = (
             torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
@@ -1293,31 +1292,38 @@ class BaseEnv(gym.Env):
 
         Called by `self._reconfigure`
         """
-        assert self._viewer is not None
-        self._viewer.set_scene(self.scene.physics_sim.sub_scenes[0])
-        control_window = (
-            cast(sapien.utils.viewer.control_window.ControlWindow, sapien_utils.get_obj_by_type(
-                self._viewer.plugins, sapien.utils.viewer.control_window.ControlWindow
-            ))
-        )
-        control_window.show_joint_axes = False
-        control_window.show_camera_linesets = False
-        if "render_camera" in self._human_render_cameras:
-            self._viewer.set_camera_pose(
-                self._human_render_cameras["render_camera"].camera.global_pose[0].sp
-            )
+        # TODO (stao): Improve this code, maybe have some general viewer?
+        if self.backend.render_backend_package == "sapien":
+            import sapien.utils.viewer.control_window
 
+            from mani_skill.sim.sapien.sensors.camera import SapienCamera
+            from mani_skill.sim.sapien.sim import SapienSim
+            from mani_skill.utils import sapien_utils
+            if self._viewer is None:
+                self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
+            assert self._viewer is not None
+            self._viewer.set_scene(cast(SapienSim, self.scene.render_sim).sub_scenes[0])
+            control_window = (
+                cast(sapien.utils.viewer.control_window.ControlWindow, sapien_utils.get_obj_by_type(
+                    self._viewer.plugins, sapien.utils.viewer.control_window.ControlWindow
+                ))
+            )
+            control_window.show_joint_axes = False
+            control_window.show_camera_linesets = False
+            if "render_camera" in self._human_render_cameras:
+                self._viewer.set_camera_pose(cast(SapienCamera, self._human_render_cameras["render_camera"]).camera.global_pose[0].sp)
+        else:
+            raise NotImplementedError(f"Viewer creation not supported for the renderer backend: {self.backend.render_backend_package}")
     def render_human(self):
         """render the environment by opening a GUI viewer. This also returns the viewer object. Any objects registered in the _hidden_objects list will be shown"""
         for obj in self._hidden_objects:
             obj.show_visual()
         if self._viewer is None:
-            self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
             self._setup_viewer()
         if self.gpu_sim_enabled and self.scene._gpu_sim_initialized:
             # TODO (stao): this is sapien specific code...
             self.scene.render_sim.px.sync_poses_gpu_to_cpu()  # pyright: ignore[reportAttributeAccessIssue]
-        self._viewer.render()
+        self._viewer.render() # type: ignore
         for obj in self._hidden_objects:
             obj.hide_visual()
         return self._viewer

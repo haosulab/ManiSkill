@@ -13,12 +13,16 @@ class BackendInfo:
     # """the device in which to return all simulation data on"""
     # sim_device: sapien.Device
     # """the device on which the physics simulation is running"""
+    sim_backend_package: str
+    """the package name of the physics simulation backend"""
     sim_backend: str
-    """the backend name of the physics simulation"""
+    """the full backend name of the physics simulation"""
     # render_device: Union[sapien.Device, None]
     # """the device on which the renderer is running. If none then we disable rendering."""
+    render_backend_package: str
+    """the package name of the renderer"""
     render_backend: str
-    """the backend name of the renderer"""
+    """the full backend name of the renderer"""
 
 
 CPU_SIM_BACKENDS = set(["cpu", "physx_cpu", "sapien:physx_cpu"])
@@ -94,8 +98,10 @@ def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> Backe
     return BackendInfo(
         # device=device,
         # sim_device=sim_device,
+        sim_backend_package=package_name,
         sim_backend=f"{package_name}.{sim_backend}"
         + (f":{sim_device_id}" if sim_device_id is not None else ""),
+        render_backend_package=package_name,
         render_backend=f"{package_name}.{render_backend}"
         + (f":{render_device_id}" if render_device_id is not None else ""),
     )

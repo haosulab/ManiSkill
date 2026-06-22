@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from mani_skill.sim.base_sim import BaseSim
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Actor(Generic[T]):
     """
     The actor class manages rigid body objects in simulation.

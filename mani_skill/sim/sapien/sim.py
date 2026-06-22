@@ -246,8 +246,9 @@ class SapienSim(BaseSim):
 
         gpu_mem_config = self.cfg.gpu_memory_config.dict()
 
-        # NOTE (stao): there isn't a easy way to check of collision_stack_size is supported for the installed sapien3 version
-        # to get around that we just try and except. To be removed once mac/windows platforms can upgrade to latest sapien versions
+        # NOTE (stao): there isn't a easy way to check of collision_stack_size is supported for
+        # the installed sapien3 version to get around that we just try and except. To be removed
+        # once mac/windows platforms can upgrade to latest sapien versions
         try:
             physx.set_gpu_memory_config(**gpu_mem_config)
         except TypeError:
@@ -759,7 +760,7 @@ class SapienSim(BaseSim):
         # find non static actors, and set data indices that are now available after
         # gpu_init was called
         for actor in self.actors.values():
-            if actor.px_body_type == "static":
+            if actor.body_type == "static":
                 continue
             self.non_static_actors.append(actor)
             if enable_gpu:
@@ -894,6 +895,15 @@ class SapienSim(BaseSim):
             )
             return common.to_tensor(pairwise_contact_impulses)[None, :]
 
+    def get_contacts(self):
+        if self.gpu_sim_enabled:
+            raise NotImplementedError(
+                "get_contacts is not available for GPU simulation"
+            )
+        else:
+            assert isinstance(self.px, physx.PhysxCpuSystem)
+            return self.px.get_contacts()
+
     ### GPU Simulation Management ###
 
     @cached_property
@@ -938,7 +948,7 @@ class SapienSim(BaseSim):
     ) -> list[tuple[sapien.render.RenderBodyComponent, int]]:
         all_render_bodies = []
         for actor in self.actors.values():
-            if actor.px_body_type == "static":
+            if actor.body_type == "static":
                 continue
             all_render_bodies += [
                 (

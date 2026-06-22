@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from mani_skill.sim.sapien.sim import SapienSim
 
 
-@dataclass
-class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
+@dataclass(kw_only=True)
+class SapienActor(PhysxRigidDynamicComponentStruct[sapien.Entity], Actor):
     """
     Wrapper around sapien.Entity objects mixed in with useful properties from the
     RigidBodyDynamicComponent components
@@ -140,7 +140,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     def get_state(self):
         pose = self.pose
-        if self.px_body_type != "dynamic":
+        if self.body_type != "dynamic":
             vel = torch.zeros((self._num_objs, 3), device=self.device)
             ang_vel = torch.zeros((self._num_objs, 3), device=self.device)
         else:
@@ -164,7 +164,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
         else:
             state = common.to_numpy(state[0])
             self.set_pose(sapien.Pose(state[0:3], state[3:7]))  # type: ignore
-            if self.px_body_type == "dynamic":
+            if self.body_type == "dynamic":
                 self.set_linear_velocity(state[7:10])
                 self.set_angular_velocity(state[10:13])
 
@@ -366,7 +366,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
     @property
     def pose(self) -> Pose:
         if self.sim.gpu_sim_enabled:
-            if self.px_body_type == "static":
+            if self.body_type == "static":
                 # NOTE (stao): usually _builder_initial_pose is just one pose, but for static
                 # objects in GPU sim we repeat it if necessary so it can be used as part of
                 # observations if needed
@@ -394,7 +394,7 @@ class SapienActor(Actor, PhysxRigidDynamicComponentStruct[sapien.Entity]):
     @pose.setter
     def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
         if self.sim.gpu_sim_enabled:
-            assert self.px_body_type != "static", (
+            assert self.body_type != "static", (
                 "Static objects cannot change poses in GPU sim after environment is loaded"
             )
             if not isinstance(arg1, torch.Tensor):

@@ -285,6 +285,13 @@ class BaseSim(ABC):
         """
         raise NotImplementedError()
 
+    def get_contacts(self):
+        """
+        Get the contacts in the simulation scene.
+        """
+        # TODO (stao): decide on a contact's dataclass system
+        raise NotImplementedError()
+
     ### Accelerator data management code ###
     def _gpu_apply_all(self):
         """
