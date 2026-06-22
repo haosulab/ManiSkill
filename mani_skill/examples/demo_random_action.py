@@ -1,15 +1,15 @@
+from dataclasses import dataclass
+from typing import Annotated, Optional, Union
+
 import gymnasium as gym
 import numpy as np
 import sapien
+import tyro
 
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import gym_utils
 from mani_skill.utils.wrappers import RecordEpisode
 
-
-import tyro
-from dataclasses import dataclass
-from typing import List, Optional, Annotated, Union
 
 @dataclass
 class Args:
@@ -25,7 +25,7 @@ class Args:
     sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
     """Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'"""
 
-    render_backend: Annotated[str, tyro.conf.arg(aliases=["-rb"])] = "gpu"
+    render_backend: Annotated[str, tyro.conf.arg(aliases=["-rb"])] = "sapien.cuda"
     """Which render backend to use. Can be 'gpu', 'cpu', 'none'"""
 
     reward_mode: Optional[str] = None
@@ -52,8 +52,11 @@ class Args:
     quiet: bool = False
     """Disable verbose output."""
 
-    seed: Annotated[Optional[Union[int, list[int]]], tyro.conf.arg(aliases=["-s"])] = None
+    seed: Annotated[Optional[Union[int, list[int]]], tyro.conf.arg(aliases=["-s"])] = (
+        None
+    )
     """Seed(s) for random actions and simulator. Can be a single integer or a list of integers. Default is None (no seeds)"""
+
 
 def main(args: Args):
     if args.render_mode == "none":
@@ -65,8 +68,16 @@ def main(args: Args):
     if args.seed is not None:
         np.random.seed(args.seed[0])
     parallel_in_single_scene = args.render_mode == "human"
-    if args.render_mode == "human" and args.obs_mode in ["sensor_data", "rgb", "rgbd", "depth", "point_cloud"]:
-        print("Disabling parallel single scene/GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render")
+    if args.render_mode == "human" and args.obs_mode in [
+        "sensor_data",
+        "rgb",
+        "rgbd",
+        "depth",
+        "point_cloud",
+    ]:
+        print(
+            "Disabling parallel single scene/GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render"
+        )
         parallel_in_single_scene = False
     if args.render_mode == "human" and args.num_envs == 1:
         parallel_in_single_scene = False
@@ -88,14 +99,17 @@ def main(args: Args):
         env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))
         if len(env_kwargs["robot_uids"]) == 1:
             env_kwargs["robot_uids"] = env_kwargs["robot_uids"][0]
-    env: BaseEnv = gym.make(
-        args.env_id,
-        **env_kwargs
-    )
+    env: BaseEnv = gym.make(args.env_id, **env_kwargs)
     record_dir = args.record_dir
     if record_dir:
         record_dir = record_dir.format(env_id=args.env_id)
-        env = RecordEpisode(env, record_dir, info_on_video=False, save_trajectory=False, max_steps_per_video=gym_utils.find_max_episode_steps_value(env))
+        env = RecordEpisode(
+            env,
+            record_dir,
+            info_on_video=False,
+            save_trajectory=False,
+            max_steps_per_video=gym_utils.find_max_episode_steps_value(env),
+        )
 
     if verbose:
         print("Observation space", env.observation_space)
@@ -106,7 +120,7 @@ def main(args: Args):
 
     obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
     if args.seed is not None and env.action_space is not None:
-            env.action_space.seed(args.seed[0])
+        env.action_space.seed(args.seed[0])
     if args.render_mode == "human":
         viewer = env.render()
         if isinstance(viewer, sapien.utils.Viewer):

@@ -223,7 +223,7 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
 
         if self.scene_idxs is not None:
             self.scene_idxs = common.to_tensor(
-                self.scene_idxs, device=self.sim.physics_device_torch
+                self.scene_idxs, device=self.sim.sim_device_torch
             ).to(torch.int)
         else:
             self.scene_idxs = torch.arange((self.sim.num_envs), dtype=int)
@@ -239,7 +239,7 @@ class SapienActorBuilder(OriginalSAPIENActorBuilder, BaseActorBuilder):
         else:
             self.initial_pose = Pose.create(
                 self.initial_pose,
-                device=self.sim.physics_device_torch,
+                device=self.sim.sim_device_torch,
             )
 
         initial_pose_b = self.initial_pose.raw_pose.shape[0]

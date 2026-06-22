@@ -62,7 +62,7 @@ class BaseSim(ABC):
     Args:
         num_envs: The number of environments to simulate.
         cfg: The configuration for the simulation backend.
-        physics_device_torch: The torch device that physics engine returns data on. If none,
+        sim_device_torch: The torch device that physics engine returns data on. If none,
             this sim object is not performing any physics simulation.
         render_device_torch: The torch device that the renderer returns data on. If none,
             this sim object is not performing any rendering.
@@ -70,8 +70,8 @@ class BaseSim(ABC):
 
     id: str
     """The id of the simulation backend."""
-    physics_device_torch: torch.device
-    """The torch device that physics engine returns data on."""
+    sim_device_torch: torch.device
+    """The torch device that the physics engine returns data on."""
     render_device_torch: torch.device
     """The torch device that the renderer returns data on."""
     cfg: BaseSimConfig
@@ -93,48 +93,24 @@ class BaseSim(ABC):
         self,
         num_envs: int = 1,
         cfg: BaseSimConfig | None = None,
-        physics_device_torch: torch.device | None = None,
+        sim_device_torch: torch.device | None = None,
         render_device_torch: torch.device | None = None,
     ):
-        if physics_device_torch is None:
-            physics_device_torch = torch.device("cpu")
+        if sim_device_torch is None:
+            sim_device_torch = torch.device("cpu")
         if render_device_torch is None:
             render_device_torch = torch.device("cpu")
         self.num_envs = num_envs
         self.cfg = cfg or BaseSimConfig()
-        self.physics_device_torch = physics_device_torch
+        self.sim_device_torch = sim_device_torch
         self.render_device_torch = render_device_torch
-        if self.physics_device_torch.type == "cuda":
+        if self.sim_device_torch.type == "cuda":
             self.gpu_sim_enabled = True
         else:
             self.gpu_sim_enabled = False
         self.actors = dict()
         self.articulations = dict()
         self._gpu_sim_initialized = False
-
-    def _parse_backend_device_id(self, backend: str) -> tuple[str, str, str | None]:
-        if "." in backend:
-            package_name, backend_name = backend.split(".")
-            parts = backend_name.split(":")
-            if len(parts) == 2:
-                return package_name, parts[0], parts[1]
-            return package_name, backend_name, None
-        else:
-            # Backward compatability for old backend format
-            if backend == "physx_cpu":
-                return "sapien", "physx_cpu", None
-            elif backend == "physx_cuda":
-                return "sapien", "physx_cuda", None
-            elif backend == "cuda":
-                return "sapien", "cuda", None
-            elif backend == "cpu":
-                return "sapien", "cpu", None
-            elif backend == "sapien_cuda":
-                return "sapien", "sapien_cuda", None
-        raise ValueError(
-            f"Invalid backend: {backend}. Should be in the format "
-            "<package_name.backend_name> or <package_name.backend_name:device_id>."
-        )
 
     ### Shared derived properties ###
     @property

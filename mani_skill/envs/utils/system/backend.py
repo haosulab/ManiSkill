@@ -1,31 +1,27 @@
 """
 Utilities for determining the simulation backend and devices
 """
-import platform
-from dataclasses import dataclass
-from typing import Union
 
-import sapien
-import torch
+from dataclasses import dataclass
 
 from mani_skill.utils.logging_utils import logger
 
 
 @dataclass
 class BackendInfo:
-    device: torch.device
-    """the device in which to return all simulation data on"""
-    sim_device: sapien.Device
-    """the device on which the physics simulation is running"""
+    # device: torch.device
+    # """the device in which to return all simulation data on"""
+    # sim_device: sapien.Device
+    # """the device on which the physics simulation is running"""
     sim_backend: str
     """the backend name of the physics simulation"""
-    render_device: Union[sapien.Device, None]
-    """the device on which the renderer is running. If none then we disable rendering."""
+    # render_device: Union[sapien.Device, None]
+    # """the device on which the renderer is running. If none then we disable rendering."""
     render_backend: str
     """the backend name of the renderer"""
 
 
-CPU_SIM_BACKENDS = set(["cpu", "physx_cpu"])
+CPU_SIM_BACKENDS = set(["cpu", "physx_cpu", "sapien:physx_cpu"])
 
 sim_backend_name_mapping = {
     "cpu": "physx_cpu",
@@ -43,65 +39,63 @@ render_backend_name_mapping = {
 }
 
 
-def parse_backend_device_id(backend: str) -> tuple[str, int]:
-    if ":" in backend:
-        return backend.split(":")
-    return backend, None
+def parse_backend_device_id(
+    backend: str, sim_backend: bool = True
+) -> tuple[str, str, str | None]:
+    if "." in backend:
+        package_name, backend_name = backend.split(".")
+        parts = backend_name.split(":")
+        if len(parts) == 2:
+            return package_name, parts[0], parts[1]
+        return package_name, backend_name, None
+    else:
+        # Backward compatability for old backend format
+        logger.warning(
+            f"Using legacy backend naming: {backend}. Please use the new format "
+            "<package_name.backend_name> instead."
+        )
+
+        if sim_backend:
+            if backend == "physx_cpu":
+                return "sapien", "physx_cpu", None
+            elif backend == "physx_cuda":
+                return "sapien", "physx_cuda", None
+            elif backend == "gpu":
+                return "sapien", "physx_cuda", None
+            elif backend == "cuda":
+                return "sapien", "physx_cuda", None
+            elif backend == "cpu":
+                return "sapien", "physx_cpu", None
+        else:
+            if backend == "sapien_cpu":
+                return "sapien", "sapien_cpu", None
+            elif backend == "sapien_cuda":
+                return "sapien", "sapien_cuda", None
+            elif backend == "cuda":
+                return "sapien", "sapien_cuda", None
+            elif backend == "gpu":
+                return "sapien", "sapien_cuda", None
+            elif backend == "cpu":
+                return "sapien", "sapien_cpu", None
+    raise ValueError(
+        f"Invalid backend: {backend}. Should be in the format "
+        "<package_name.backend_name> or <package_name.backend_name:device_id>."
+    )
 
 
 def parse_sim_and_render_backend(sim_backend: str, render_backend: str) -> BackendInfo:
     # Parse sim_backend string to check for CUDA device specification
-    sim_backend, sim_device_id = parse_backend_device_id(sim_backend)
-    render_backend, render_device_id = parse_backend_device_id(render_backend)
-    sim_backend = sim_backend_name_mapping[sim_backend]
-    render_backend = render_backend_name_mapping.get(render_backend, render_backend)
-    if sim_backend == "physx_cpu":
-        device = torch.device("cpu")
-        sim_device = sapien.Device("cpu")
-    elif sim_backend == "physx_cuda":
-        device_str = f"cuda:{sim_device_id}" if sim_device_id is not None else "cuda"
-        device = torch.device(device_str)
-        sim_device = sapien.Device(device_str)
-    elif sim_backend[:4] == "cuda":
-        device_str = f"cuda:{sim_device_id}" if sim_device_id is not None else "cuda"
-        device = torch.device(device_str)
-        sim_device = sapien.Device(device_str)
-    else:
-        raise ValueError(f"Invalid simulation backend: {sim_backend}")
-
-    try:
-        if platform.system() == "Darwin":
-            render_device = sapien.Device("cpu")
-            render_backend = "sapien_cpu"
-            logger.warning(
-                "Detected MacOS system, forcing render backend to be sapien_cpu and render device to be MacOS compatible."
-            )
-        elif render_backend == "sapien_cuda":
-            device_str = f"cuda:{render_device_id}" if render_device_id is not None else "cuda"
-            render_device = sapien.Device(device_str)
-        elif render_backend == "sapien_cpu":
-            render_device = sapien.Device("cpu")
-        elif render_backend[:4] == "cuda":
-            device_str = f"cuda:{render_device_id}" if render_device_id is not None else "cuda"
-            render_device = sapien.Device(device_str)
-        elif render_backend == "none" or render_backend is None:
-            render_device = None
-        else:
-            # handle special cases such as for AMD gpus, render_backend must be defined as pci:... instead as cuda is not available.
-            render_device = sapien.Device(render_backend)
-    except RuntimeError as e:
-        if str(e) == 'failed to find device "cuda"':
-            logger.warning(
-                f'Requested to use render device "{render_backend}", but CUDA device was not found. Falling back to "cpu" device. Rendering might be disabled.'
-            )
-            render_device = sapien.Device("cpu")
-            render_backend = "sapien_cpu"
-        else:
-            raise
+    package_name, sim_backend, sim_device_id = parse_backend_device_id(
+        sim_backend, sim_backend=True
+    )
+    package_name, render_backend, render_device_id = parse_backend_device_id(
+        render_backend, sim_backend=False
+    )
     return BackendInfo(
-        device=device,
-        sim_device=sim_device,
-        sim_backend=sim_backend_name_mapping[sim_backend],
-        render_device=render_device,
-        render_backend=render_backend,
+        # device=device,
+        # sim_device=sim_device,
+        sim_backend=f"{package_name}.{sim_backend}"
+        + (f":{sim_device_id}" if sim_device_id is not None else ""),
+        render_backend=f"{package_name}.{render_backend}"
+        + (f":{render_device_id}" if render_device_id is not None else ""),
     )

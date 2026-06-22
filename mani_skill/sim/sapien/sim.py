@@ -12,16 +12,17 @@ import torch
 from sapien.render import RenderCameraComponent
 
 import mani_skill.render.utils as render_utils
+from mani_skill.envs.utils.system.backend import parse_backend_device_id
 
 # try and determine which render system is used by the installed sapien package
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
+from mani_skill.sim.sapien.sensors.camera import SapienCamera
 from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 from mani_skill.sim.sapien.structs.link import SapienLink
 from mani_skill.sim.sapien.structs.render_camera import RenderCamera
 from mani_skill.sim.sensors.base_sensor import BaseSensor
-from mani_skill.sim.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
@@ -151,8 +152,8 @@ class SapienSim(BaseSim):
         sim_device_torch = torch.device("cpu")
         render_device_torch = torch.device("cpu")
         if sim_backend is not None:
-            package_name, sim_backend, sim_device_id = self._parse_backend_device_id(
-                sim_backend
+            package_name, sim_backend, sim_device_id = parse_backend_device_id(
+                sim_backend, sim_backend=True
             )
             assert package_name == "sapien"
             if sim_backend == "physx_cpu":
@@ -176,7 +177,7 @@ class SapienSim(BaseSim):
         try:
             if render_backend is not None:
                 package_name, render_backend, render_device_id = (
-                    self._parse_backend_device_id(render_backend)
+                    parse_backend_device_id(render_backend, sim_backend=False)
                 )
                 assert package_name == "sapien"
                 if platform.system() == "Darwin":
@@ -235,10 +236,12 @@ class SapienSim(BaseSim):
         super().__init__(
             num_envs,
             cfg,
-            physics_device_torch=sim_device_torch,
+            sim_device_torch=sim_device_torch,
             render_device_torch=render_device_torch,
         )
-
+        if self.sim_device_torch.type == "cuda":
+            if not physx.is_gpu_enabled():
+                physx.enable_gpu()
         self._set_scene_config()
         self._build_sub_scenes()
 
@@ -894,7 +897,7 @@ class SapienSim(BaseSim):
                         for sub_scene in self.sub_scenes
                     ]
                 ),
-                device=self.physics_device_torch,
+                device=self.sim_device_torch,
             )
         else:
             raise NotImplementedError(
@@ -994,16 +997,16 @@ class SapienSim(BaseSim):
         cam_pose_indices = []
         cams = []
         for cameras in self.scene.sensors.values():
-            assert isinstance(cameras, Camera), f"Expected Camera, got {cameras}"
+            assert isinstance(cameras, SapienCamera), (
+                f"Expected SapienCamera, got {cameras}"
+            )
             for c in cameras.camera._render_cameras:
                 b = c.entity.find_component_by_type(
                     sapien.physx.PhysxRigidBodyComponent
                 )
                 if b is None:
                     continue
-                cam_pose_indices.append(
-                    b.gpu_pose_index  # pyright: ignore[reportAttributeAccessIssue]
-                )
+                cam_pose_indices.append(b.gpu_pose_index)
                 cams.append(c)
 
         sync_manager = (
@@ -1023,14 +1026,12 @@ class SapienSim(BaseSim):
 
     def _sapien_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
         for name, sensor in sensors.items():
-            if isinstance(sensor, Camera):
+            if isinstance(sensor, SapienCamera):
                 try:
                     assert self.render_system_group is not None
                     camera_group = self.render_system_group.create_camera_group(
                         sensor.camera._render_cameras,
-                        list(
-                            sensor.config.shader_config.texture_names.keys()  # pyright: ignore[reportOptionalMemberAccess]
-                        ),
+                        list(sensor.config.shader_config.texture_names.keys()),
                     )
                 except RuntimeError as e:
                     raise RuntimeError(
@@ -1056,10 +1057,10 @@ class SapienSim(BaseSim):
 
     def _sapien_31_gpu_setup_sensors(self, sensors: Mapping[str, BaseSensor]):
         for name, sensor in sensors.items():
-            if isinstance(sensor, Camera):
+            if isinstance(sensor, SapienCamera):
                 batch_renderer = sapien.render.RenderManager(  # pyright: ignore[reportAttributeAccessIssue]
                     sapien.render.get_shader_pack(  # pyright: ignore[reportAttributeAccessIssue]
-                        sensor.config.shader_config.shader_pack  # pyright: ignore[reportOptionalMemberAccess]
+                        sensor.config.shader_config.shader_pack
                     )
                 )
                 batch_renderer.set_size(sensor.config.width, sensor.config.height)

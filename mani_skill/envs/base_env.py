@@ -219,15 +219,11 @@ class BaseEnv(gym.Env):
 
         if sim_backend == "auto":
             if num_envs > 1:
-                sim_backend = "physx_cuda"
+                sim_backend = "sapien.physx_cuda"
             else:
-                sim_backend = "physx_cpu"
+                sim_backend = "sapien.physx_cpu"
         self.backend = parse_sim_and_render_backend(sim_backend, render_backend)
         # determine the sim and render devices
-        self.device = self.backend.device
-        if self.device.type == "cuda":
-            if not physx.is_gpu_enabled():
-                physx.enable_gpu()
 
         # raise a number of nicer errors
         if self.backend.sim_backend in CPU_SIM_BACKENDS and num_envs > 1:
@@ -304,9 +300,6 @@ class BaseEnv(gym.Env):
 
         # Use a fixed (main) seed to enhance determinism
         self._set_main_rng([2022 + i for i in range(self.num_envs)])
-        self._elapsed_steps = (
-            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
-        )
         self._last_obs = None
         """the last observation returned by the environment"""
         obs, _ = self.reset(seed=[2022 + i for i in range(self.num_envs)], options=dict(reconfigure=True))
@@ -608,7 +601,7 @@ class BaseEnv(gym.Env):
                     )
         # explicitly synchronize and wait for cuda kernels to finish
         # this prevents the GPU from making poor scheduling decisions when other physx code begins to run
-        if self.backend.render_device.is_cuda():  # pyright: ignore[reportOptionalMemberAccess]
+        if self.scene.render_sim.id == "sapien" and self.scene.render_sim.render_device_torch.type == "cuda":
             torch.cuda.synchronize()
         return sensor_obs
 
@@ -810,7 +803,7 @@ class BaseEnv(gym.Env):
             else:
                 articulation = None
             if isinstance(sensor_config, CameraConfig):
-                sensor_cls = Camera
+                sensor_cls = self._camera_cls
                 self._sensors[uid] = sensor_cls(
                     sensor_config,
                     self.scene,
@@ -823,7 +816,7 @@ class BaseEnv(gym.Env):
         # Cameras for rendering only
         self._human_render_cameras = dict()
         for uid, camera_config in self._human_render_camera_configs.items():
-            self._human_render_cameras[uid] = Camera(
+            self._human_render_cameras[uid] = self._camera_cls(
                 camera_config,
                 self.scene,
             )
@@ -886,24 +879,25 @@ class BaseEnv(gym.Env):
         reconfigure = reconfigure or (
             self._reconfig_counter == 0 and self.reconfiguration_freq != 0
         )
+
+        self._set_main_rng(seed)
+
+        if reconfigure:
+            self._set_episode_rng(seed if seed is not None else self._batched_main_rng.randint(2**31), env_idx=torch.arange(self.num_envs, device="cpu"))
+            with torch.random.fork_rng():
+                torch.manual_seed(seed=self._episode_seed[0])
+                self._reconfigure(options)
+                self._after_reconfigure(options)
+            # Set the episode rng again after reconfiguration to guarantee seed reproducibility
+            self._set_episode_rng(self._episode_seed, env_idx=torch.arange(self.num_envs, device="cpu"))
+
         if "env_idx" in options:
             env_idx = options["env_idx"]
             if len(env_idx) != self.num_envs and reconfigure:
                 raise RuntimeError("Cannot do a partial reset and reconfigure the environment. You must do one or the other.")
         else:
             env_idx = torch.arange(0, self.num_envs, device=self.device)
-
-        self._set_main_rng(seed)
-
-        if reconfigure:
-            self._set_episode_rng(seed if seed is not None else self._batched_main_rng.randint(2**31), env_idx)
-            with torch.random.fork_rng():
-                torch.manual_seed(seed=self._episode_seed[0])
-                self._reconfigure(options)
-                self._after_reconfigure(options)
-            # Set the episode rng again after reconfiguration to guarantee seed reproducibility
-            self._set_episode_rng(self._episode_seed, env_idx)
-        else:
+        if not reconfigure:
             self._set_episode_rng(seed, env_idx)
 
         # TODO (stao): Reconfiguration when there is partial reset might not make sense and certainly broken here now.
@@ -1102,7 +1096,7 @@ class BaseEnv(gym.Env):
             if self.num_envs == 1 and action_is_unbatched:
                 action_tensor = common.batch(action_tensor)  # pyright: ignore[reportArgumentType, reportAssignmentType]
             self.agent.set_action(action_tensor)
-            if self._sim_device.is_cuda():
+            if self.scene.physics_sim.gpu_sim_enabled:
                 if isinstance(self.agent.controller, dict):
                     # TODO: a small optimization is to cache whether the dict of controllers has any that set qpos/qvel values
                     # in the BaseAgent/MultiAgent class. Code below just avoids iterating over the dict of controllers each time
@@ -1177,6 +1171,10 @@ class BaseEnv(gym.Env):
             # TODO (stao): figure out how to insert custom configs depending on sim backend
             cfg=self.sim_config,
         )
+        self.device = sim_object.sim_device_torch
+        self._elapsed_steps = (
+            torch.zeros(self.num_envs, device=self.device, dtype=torch.int32)
+        )
         self.scene = ManiSkillScene(
             physics_sim=sim_object,
             render_sim=sim_object,
@@ -1185,9 +1183,20 @@ class BaseEnv(gym.Env):
             parallel_in_single_scene=self._parallel_in_single_scene,
             backend=self.backend
         )
+
+        # determine sim specific classes
+        self._camera_cls: type[Camera] = Camera
+        if self.scene.render_sim.id == "sapien":
+            from mani_skill.sim.sapien.sensors.camera import SapienCamera
+            self._camera_cls = SapienCamera
         if not self.scene.can_render():
             if self.render_mode is not None:
-                logger.warning(f'The chosen render mode is "{self.render_mode}", but selected rendering device "{self.scene.backend.render_device}" does not support rendering')
+                logger.warning(
+                    f'The chosen render mode is "{self.render_mode}", '
+                    f'but selected render backend "{self.backend.render_backend}" '
+                    "does not work or does not support rendering"
+                )
+
 
     def _clear(self):
         """Clear the simulation scene instance and other buffers.

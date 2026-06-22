@@ -8,7 +8,6 @@ import sapien.physx as physx
 import sapien.render
 import torch
 
-import mani_skill.render.utils as render_utils
 from mani_skill.envs.utils.system.backend import BackendInfo
 from mani_skill.sim.sensors.base_sensor import BaseSensor
 from mani_skill.sim.sensors.camera import Camera
@@ -114,7 +113,7 @@ class ManiSkillScene:
         selected
         """
 
-        return render_utils.can_render(self.backend.render_device)
+        return self.render_sim.can_render()
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Scene

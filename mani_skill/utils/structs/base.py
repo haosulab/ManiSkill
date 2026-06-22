@@ -51,7 +51,7 @@ class BaseStruct:
         """The device that simulation data is returned on."""
         # TODO (stao): split between sim and render device? One can check more accurately via
         # which render and physics sim is used.
-        return self.sim.physics_device_torch
+        return self.sim.sim_device_torch
 
     @property
     def _num_objs(self):
