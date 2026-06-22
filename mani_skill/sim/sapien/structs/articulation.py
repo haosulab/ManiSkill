@@ -37,7 +37,7 @@ class SapienArticulation(Articulation, SapienBaseStruct[physx.PhysxArticulation]
     """list of Link objects"""
     links_map: dict[str, SapienLink] = field(default_factory=dict)
     """Maps link name to the Link object"""
-    root: SapienLink = field(default_factory=None)
+    root: SapienLink = field(default_factory=lambda: None)
     """The root Link object"""
     joints: list[SapienArticulationJoint] = field(default_factory=list)
     """list of Joint objects"""
@@ -48,7 +48,7 @@ class SapienArticulation(Articulation, SapienBaseStruct[physx.PhysxArticulation]
     active_joints_map: dict[str, SapienArticulationJoint] = field(default_factory=dict)
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
-    initial_pose: Pose = None
+    initial_pose: Pose = field(default_factory=lambda: Pose.create_from_pq())
     """The initial pose of this articulation"""
 
     _cached_joint_target_indices: dict[int, torch.Tensor] = field(default_factory=dict)
