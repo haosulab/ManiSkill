@@ -137,13 +137,13 @@ class SapienArticulationBuilder(
         if name is not None:
             self.set_name(name)
         # TODO (stao): move this check to scene level, not in builder...
-        # assert (
-        #     self.name is not None
-        #     and self.name != ""
-        #     and self.name not in self.scene.articulations
-        # ), (
-        #     "built actors in ManiSkill must have unique names and cannot be None or empty strings"
-        # )
+        assert (
+            self.name is not None
+            and self.name != ""
+            and self.name not in self.sim.articulations
+        ), (
+            "built actors in ManiSkill must have unique names and cannot be None or empty strings"
+        )
 
         if self.scene_idxs is not None:
             pass

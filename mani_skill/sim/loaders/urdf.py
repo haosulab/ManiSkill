@@ -48,6 +48,66 @@ class BaseURDFLoader:
         self.__sim_builders[sim.id].sim = sim
         return self
 
+    @property
+    def fix_root_link(self) -> bool:
+        """Whether to fix the root link of the URDF."""
+        return self.__sim_builders[next(iter(self.__sims.values())).id].fix_root_link
+
+    @fix_root_link.setter
+    def fix_root_link(self, fix_root_link: bool):
+        """Whether to fix the root link of the URDF."""
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
+                self.__sim_builders[sim.id].fix_root_link = fix_root_link
+
+    @property
+    def load_multiple_collisions_from_file(self) -> bool:
+        """Whether to load multiple collisions from the file."""
+        return self.__sim_builders[
+            next(iter(self.__sims.values())).id
+        ].load_multiple_collisions_from_file
+
+    @load_multiple_collisions_from_file.setter
+    def load_multiple_collisions_from_file(
+        self, load_multiple_collisions_from_file: bool
+    ):
+        """Whether to load multiple collisions from the file."""
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
+                self.__sim_builders[
+                    sim.id
+                ].load_multiple_collisions_from_file = (
+                    load_multiple_collisions_from_file
+                )
+
+    @property
+    def disable_self_collisions(self) -> bool:
+        """Whether to disable self collisions of the URDF."""
+        return self.__sim_builders[
+            next(iter(self.__sims.values())).id
+        ].disable_self_collisions
+
+    @disable_self_collisions.setter
+    def disable_self_collisions(self, disable_self_collisions: bool):
+        """Whether to disable self collisions of the URDF."""
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
+                self.__sim_builders[
+                    sim.id
+                ].disable_self_collisions = disable_self_collisions
+
+    @property
+    def name(self) -> str:
+        """The name of the URDF."""
+        return self.__sim_builders[next(iter(self.__sims.values())).id].name
+
+    @name.setter
+    def name(self, name: str):
+        """The name of the URDF."""
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
+                self.__sim_builders[sim.id].name = name
+
     def parse(
         self,
         urdf_file: str,

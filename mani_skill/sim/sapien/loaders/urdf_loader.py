@@ -25,6 +25,8 @@ class SapienURDFLoader(OriginalSapienURDFLoader, BaseURDFLoader):
     sim: SapienSim
     name: str = ""
     disable_self_collisions: bool = False
+    fix_root_link: bool = True
+    load_multiple_collisions_from_file: bool = False
 
     @property
     def scene(self):
