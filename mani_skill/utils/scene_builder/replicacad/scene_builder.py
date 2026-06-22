@@ -271,20 +271,20 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             self.scene.render_sim.set_ambient_light([0.3] * 3)
         color = np.array([1.0, 0.8, 0.5]) * 2
         # entrance
-        self.scene.add_point_light([-1.1, 2.775, 2.3], color=color)
+        self.scene.render_sim.add_point_light([-1.1, 2.775, 2.3], color=color)
         # dining area
-        self.scene.add_point_light([-0.5, -1.44, 2.3], color=color)
+        self.scene.render_sim.add_point_light([-0.5, -1.44, 2.3], color=color)
         # dining back
-        self.scene.add_point_light([2.4, -1.6, 2.3], color=color)
+        self.scene.render_sim.add_point_light([2.4, -1.6, 2.3], color=color)
         # living room
-        self.scene.add_point_light([2.5, -6.1, 2.3], color=color)
+        self.scene.render_sim.add_point_light([2.5, -6.1, 2.3], color=color)
         # stair
-        self.scene.add_point_light([3.14, 3.24, 3], color=color)
+        self.scene.render_sim.add_point_light([3.14, 3.24, 3], color=color)
 
         # merge actors into one
         self.bg = Actor.create_from_entities(
             bgs,
-            scene=self.scene,
+            sim=self.scene.physics_sim,
             scene_idxs=torch.arange(self.env.num_envs, dtype=int),
             shared_name="scene_background",
         )

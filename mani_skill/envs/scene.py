@@ -338,66 +338,6 @@ class ManiSkillScene:
     #     # TODO
     #     return
 
-    def add_point_light(
-        self,
-        position,
-        color,
-        shadow=False,
-        shadow_near=0.1,
-        shadow_far=10.0,
-        shadow_map_size=2048,
-        scene_idxs: Optional[list[int]] = None,
-    ):
-        if scene_idxs is None:
-            scene_idxs = list(range(len(self.sub_scenes)))
-        for scene_idx in scene_idxs:
-            if self.parallel_in_single_scene:
-                scene = self.sub_scenes[0]
-            else:
-                scene = self.sub_scenes[scene_idx]
-            entity = sapien.Entity()
-            entity.name = "point_light"
-            light = sapien.render.RenderPointLightComponent()
-            entity.add_component(light)
-            light.color = color
-            light.shadow = shadow
-            light.shadow_near = shadow_near
-            light.shadow_far = shadow_far
-            light.shadow_map_size = shadow_map_size
-            if self.parallel_in_single_scene:
-                light.pose = sapien.Pose(position + self.scene_offsets_np[scene_idx])
-            else:
-                light.pose = sapien.Pose(position)
-
-            scene.add_entity(entity)
-        return light
-
-    def add_area_light_for_ray_tracing(
-        self,
-        pose: sapien.Pose,
-        color,
-        half_width: float,
-        half_height: float,
-        scene_idxs=None,
-    ):
-        lighting_scenes = (
-            self.sub_scenes
-            if scene_idxs is None
-            else [self.sub_scenes[i] for i in scene_idxs]
-        )
-        for scene in lighting_scenes:
-            entity = sapien.Entity()
-            light = sapien.render.RenderParallelogramLightComponent()
-            entity.add_component(light)
-            light.set_shape(half_width, half_height)
-            light.color = color
-            light.pose = pose
-            scene.add_entity(entity)
-        return
-
-    # def remove_light(self, light):
-    #     self.remove_entity(light.entity)
-
     # def set_environment_map(self, cubemap: str):
     #     if isinstance(cubemap, str):
     #         self.render_system.cubemap = sapien.render.RenderCubemap(cubemap)

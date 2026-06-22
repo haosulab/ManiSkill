@@ -463,6 +463,29 @@ class SapienSim(BaseSim):
             scene.add_entity(entity)
         return
 
+    def add_area_light_for_ray_tracing(
+        self,
+        pose: sapien.Pose,
+        color,
+        half_width: float,
+        half_height: float,
+        scene_idxs=None,
+    ):
+        lighting_scenes = (
+            self.sub_scenes
+            if scene_idxs is None
+            else [self.sub_scenes[i] for i in scene_idxs]
+        )
+        for scene in lighting_scenes:
+            entity = sapien.Entity()
+            light = sapien.render.RenderParallelogramLightComponent()
+            entity.add_component(light)
+            light.set_shape(half_width, half_height)
+            light.color = color
+            light.pose = pose
+            scene.add_entity(entity)
+        return
+
     def compile_render_scene(self):
         pass
 
