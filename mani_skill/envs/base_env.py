@@ -225,8 +225,6 @@ class BaseEnv(gym.Env):
         self.backend = parse_sim_and_render_backend(sim_backend, render_backend)
         # determine the sim and render devices
         self.device = self.backend.device
-        self._sim_device = self.backend.sim_device
-        self._render_device = self.backend.render_device
         if self.device.type == "cuda":
             if not physx.is_gpu_enabled():
                 physx.enable_gpu()
