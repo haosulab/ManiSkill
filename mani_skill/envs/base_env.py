@@ -316,7 +316,7 @@ class BaseEnv(gym.Env):
         .. code-block:: python
 
             import gymnasium as gym
-            from mani_skill.envs.sapien_env import BaseEnv
+            from mani_skill.envs.base_env import BaseEnv
             class YourObservationWrapper(gym.ObservationWrapper):
                 def __init__(self, env):
                     super().__init__(env)
@@ -360,7 +360,7 @@ class BaseEnv(gym.Env):
 
         Args:
             options (dict): The options for the environment.
-            initial_agent_poses (Optional[Union[sapien.Pose, Pose]]): The initial poses of the agent/robot. Providing these poses and ensuring they are picked such that
+            initial_agent_poses Pose | None: The initial poses of the agent/robot. Providing these poses and ensuring they are picked such that
                 they do not collide with objects if spawned there is highly recommended to ensure more stable simulation (the agent pose can be changed later during episode initialization).
             build_separate (bool): Whether to build the agent/robot separately. If True, the agent/robot will be built separately for each parallel environment and then merged
                 together to be accessible under one view/object. This is useful for randomizing physical and visual properties of the agent/robot which is only permitted for
