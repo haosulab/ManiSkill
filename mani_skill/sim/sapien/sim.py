@@ -358,6 +358,16 @@ class SapienSim(BaseSim):
             for e in entities:
                 self.sub_scenes[0].remove_entity(e)
             self.articulations.pop(articulation.name)
+    
+    @property
+    def ambient_light(self):
+        return self.sub_scenes[0].ambient_light
+    @ambient_light.setter
+    def ambient_light(self, color):
+        for scene in self.sub_scenes:
+            scene.render_system.ambient_light = color
+    def set_ambient_light(self, color):
+        self.ambient_light = color
 
     def add_directional_light(
         self,
@@ -404,6 +414,51 @@ class SapienSim(BaseSim):
             scene.add_entity(entity)
             if self.scene.parallel_in_single_scene:
                 break
+        return
+
+    def add_point_light(
+        self,
+        position,
+        direction,
+        inner_fov: float,
+        outer_fov: float,
+        color,
+        shadow=False,
+        shadow_near=0.1,
+        shadow_far=10.0,
+        shadow_map_size=2048,
+        scene_idxs: list[int] | None = None,
+    ):
+        if scene_idxs is None:
+            scene_idxs = list(range(len(self.sub_scenes)))
+        for scene_idx in scene_idxs:
+            if self.scene.parallel_in_single_scene:
+                scene = self.sub_scenes[0]
+            else:
+                scene = self.sub_scenes[scene_idx]
+            entity = sapien.Entity()
+            entity.name = "spot_light"
+            light = sapien.render.RenderSpotLightComponent()
+            entity.add_component(light)
+            light.color = color
+            light.shadow = shadow
+            light.shadow_near = shadow_near
+            light.shadow_far = shadow_far
+            light.shadow_map_size = shadow_map_size
+            light.inner_fov = inner_fov
+            light.outer_fov = outer_fov
+            if self.scene.parallel_in_single_scene:
+                light_position = position + self.scene_offsets_np[scene_idx]
+            else:
+                light_position = position
+            light.pose = sapien.Pose(
+                light_position,
+                sapien.math.shortest_rotation(
+                    [1, 0, 0],  # type: ignore
+                    direction,
+                ),
+            )
+            scene.add_entity(entity)
         return
 
     def compile_render_scene(self):

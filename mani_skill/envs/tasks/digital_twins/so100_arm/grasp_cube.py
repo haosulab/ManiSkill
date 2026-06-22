@@ -18,7 +18,7 @@ from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.types import SimConfig
 
 
 # there are many ways to parameterize an environment's domain randomization. This is a simple way to do it
@@ -239,7 +239,9 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
                 restitution=0,
             )
             builder.add_box_collision(
-                half_size=[half_sizes[i]] * 3, material=material, density=200  # 25
+                half_size=[half_sizes[i]] * 3,
+                material=material,
+                density=200,  # 25
             )
             builder.add_box_visual(
                 half_size=[half_sizes[i]] * 3,

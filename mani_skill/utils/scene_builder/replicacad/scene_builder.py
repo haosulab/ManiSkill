@@ -13,7 +13,6 @@ from typing import Tuple, Union
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 import transforms3d
 import trimesh
@@ -34,7 +33,6 @@ IGNORE_FETCH_COLLISION_STRS = ["mat", "rug", "carpet"]
 
 @register_scene_builder("ReplicaCAD")
 class ReplicaCADSceneBuilder(SceneBuilder):
-
     robot_initial_pose = sapien.Pose(
         p=[-1, 0, 0.02]
     )  # generally a safe initial spawn pose for the Fetch robot
@@ -139,7 +137,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             # In the case of ReplicaCAD there are only dynamic and static objects. Since dynamic objects can be moved during simulation
             # we need to keep track of the initial poses of each dynamic actor we create.
             for obj_num, obj_meta in enumerate(build_config_json["object_instances"]):
-
                 # Again, for any dataset you will have to figure out how they reference object files
                 # Note that ASSET_DIR will always refer to the ~/.maniskill/data folder or whatever MS_ASSET_DIR is set to
                 obj_config_path = osp.join(
@@ -162,7 +159,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                 # left multiplying by the offset quaternion we used for the stage/scene background as all assets in ReplicaCAD are rotated by 90 degrees
                 pose = sapien.Pose(q=q) * sapien.Pose(pos, rot)
 
-                actor_name = f'{obj_meta["template_name"]}-{obj_num}'
+                actor_name = f"{obj_meta['template_name']}-{obj_num}"
                 # Neatly for simulation, ReplicaCAD specifies if an object is meant to be simulated as dynamic (can be moved like pots) or static (must stay still, like kitchen counters)
                 if obj_meta["motion_type"] == "DYNAMIC":
                     builder.add_visual_from_file(visual_file)
@@ -207,7 +204,6 @@ class ReplicaCADSceneBuilder(SceneBuilder):
             for i, articulated_meta in enumerate(
                 build_config_json["articulated_object_instances"]
             ):
-
                 template_name = articulated_meta["template_name"]
                 if "door" in template_name:
                     continue
@@ -235,12 +231,12 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
                 # for now classify articulated objects as "movable" object
                 for env_num in env_idx:
-                    self.articulations[
-                        f"env-{env_num}_{articulation_name}"
-                    ] = articulation
-                    self.scene_objects[
-                        f"env-{env_num}_{articulation_name}"
-                    ] = articulation
+                    self.articulations[f"env-{env_num}_{articulation_name}"] = (
+                        articulation
+                    )
+                    self.scene_objects[f"env-{env_num}_{articulation_name}"] = (
+                        articulation
+                    )
 
                 for link in articulation.links:
                     link.set_collision_group_bit(

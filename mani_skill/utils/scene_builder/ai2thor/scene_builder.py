@@ -11,7 +11,6 @@ from typing import Tuple, Union
 import numpy as np
 import sapien
 import sapien.core as sapien
-import sapien.physx as physx
 import torch
 import transforms3d
 from tqdm import tqdm
@@ -22,7 +21,6 @@ from mani_skill.agents.robots.fetch import (
     FETCH_WHEELS_COLLISION_BIT,
     Fetch,
 )
-from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.scene_builder import SceneBuilder
 from mani_skill.utils.structs import Actor, Articulation, Pose
 
@@ -73,7 +71,10 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
 
     def __init__(self, env, robot_init_qpos_noise=0.02):
         super().__init__(env, robot_init_qpos_noise=robot_init_qpos_noise)
-        global OBJECT_SEMANTIC_ID_MAPPING, SEMANTIC_ID_OBJECT_MAPPING, MOVEABLE_OBJECT_IDS
+        global \
+            OBJECT_SEMANTIC_ID_MAPPING, \
+            SEMANTIC_ID_OBJECT_MAPPING, \
+            MOVEABLE_OBJECT_IDS
         (
             OBJECT_SEMANTIC_ID_MAPPING,
             SEMANTIC_ID_OBJECT_MAPPING,
@@ -131,7 +132,6 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         bgs = [None] * self.env.num_envs
 
         for bci in np.unique(build_config_idxs):
-
             env_idx = [i for i, v in enumerate(build_config_idxs) if v == bci]
             unique_id = "scs-" + str(env_idx).replace(" ", "")
             build_config: AI2BuildConfig = self.build_configs[bci]

@@ -220,6 +220,21 @@ class BaseSim(ABC):
     ):
         raise NotImplementedError()
 
+    def add_point_light(
+        self,
+        position,
+        direction,
+        inner_fov: float,
+        outer_fov: float,
+        color,
+        shadow=False,
+        shadow_near=0.1,
+        shadow_far=10.0,
+        shadow_map_size=2048,
+        scene_idxs: list[int] | None = None,
+    ):
+        raise NotImplementedError()
+
     ### Code for compiling simulator scene for rendering ###
     @abstractmethod
     def compile_render_scene(self):
