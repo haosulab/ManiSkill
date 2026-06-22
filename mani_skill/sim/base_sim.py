@@ -8,6 +8,7 @@ import torch
 
 from mani_skill.sim.builders.actor import BaseActorBuilder
 from mani_skill.sim.builders.articulation import BaseArticulationBuilder
+from mani_skill.sim.loaders.urdf import BaseURDFLoader
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.link import Link
@@ -154,6 +155,12 @@ class BaseSim(ABC):
         Creates an ArticulationBuilder object that can be used to build articulations in
         this scene.
         """
+
+    def create_urdf_loader(self) -> BaseURDFLoader:
+        """
+        Creates a URDFLoader object that can be used to load URDF files into this scene.
+        """
+        raise NotImplementedError()
 
     def remove_actor(self, actor: Actor):
         """
