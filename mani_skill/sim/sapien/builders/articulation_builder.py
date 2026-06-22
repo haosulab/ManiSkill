@@ -12,7 +12,7 @@ from sapien.wrapper.articulation_builder import (
 from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill import logger
-from mani_skill.sim.builders.articulation import ArticulationBuilder
+from mani_skill.sim.builders.articulation import BaseArticulationBuilder
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 from mani_skill.utils import common
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
@@ -21,10 +21,12 @@ if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
 
 
-class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationBuilder):
+class SapienArticulationBuilder(
+    OriginalSapienArticulationBuilder, BaseArticulationBuilder
+):
     """Articulation builder for working with SAPIEN"""
 
-    scene: SapienSim
+    sim: SapienSim
     disable_self_collisions: bool = False
 
     def __init__(self):
@@ -32,10 +34,6 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
         self.name = None
         self.scene_idxs = None
         self.initial_pose = None
-
-    def set_scene(self, scene: SapienSim):
-        self.scene = scene
-        return self
 
     def set_name(self, name: str):
         self.name = name
@@ -126,7 +124,7 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
     def build(
         self, name=None, fix_root_link=None, build_mimic_joints=True
     ) -> SapienArticulation:
-        assert self.scene is not None
+        assert self.sim is not None
         if name is not None:
             self.set_name(name)
         # TODO (stao): move this check to scene level, not in builder...
@@ -141,7 +139,7 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
         if self.scene_idxs is not None:
             pass
         else:
-            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
+            self.scene_idxs = torch.arange((self.sim.num_envs), dtype=int)
         num_arts = len(self.scene_idxs)
 
         if self.initial_pose is None:
@@ -152,18 +150,19 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
                 "poses."
             )
 
-            self.initial_pose = sapien.Pose()
-        self.initial_pose = Pose.create(self.initial_pose)
+            self.initial_pose = Pose.create(sapien.Pose())
+        else:
+            self.initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_arts
         initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)
 
         articulations = []
         for i, scene_idx in enumerate(self.scene_idxs):
-            # if self.scene.parallel_in_single_scene:
-            #     sub_scene = self.scene.sub_scenes[0]
-            # else:
-            sub_scene = self.scene.sub_scenes[scene_idx]
+            if self.sim.parallel_in_single_scene:
+                sub_scene = self.sim.sub_scenes[0]
+            else:
+                sub_scene = self.sim.sub_scenes[scene_idx]
             if initial_pose_b == 1:
                 articulation_pose = to_sapien_pose(initial_pose_np)
             else:
@@ -223,8 +222,10 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-        articulation: SapienArticulation = SapienArticulation.create_from_physx_articulations(
-            articulations, self.scene, self.scene_idxs
+        articulation: SapienArticulation = (
+            SapienArticulation.create_from_physx_articulations(
+                articulations, self.scene, self.scene_idxs
+            )
         )
         articulation.initial_pose = self.initial_pose
         self.scene.scene.articulations[self.name] = articulation

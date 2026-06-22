@@ -136,9 +136,9 @@ class ManiSkillScene:
         """Creates an ArticulationBuilder object that can be used to build articulations in this
         scene."""
 
-        from mani_skill.sim.builders.articulation import ArticulationBuilder
+        from mani_skill.sim.builders.articulation import BaseArticulationBuilder
 
-        builder = ArticulationBuilder()
+        builder = BaseArticulationBuilder()
         if self._shared_sim_packages:
             builder._add_sim(self.physics_sim)
         else:

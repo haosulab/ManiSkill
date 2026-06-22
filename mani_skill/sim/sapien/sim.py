@@ -337,7 +337,7 @@ class SapienSim(BaseSim):
             SapienArticulationBuilder,
         )
 
-        return SapienArticulationBuilder().set_scene(self)
+        return SapienArticulationBuilder()
 
     def remove_actor(self, actor: SapienActor):
         if self.gpu_sim_enabled:
