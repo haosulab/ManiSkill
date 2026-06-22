@@ -27,8 +27,8 @@ if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
 
 
-@dataclass
-class SapienArticulation(Articulation, SapienBaseStruct[physx.PhysxArticulation]):
+@dataclass(kw_only=True)
+class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation):
     """
     Wrapper around physx.PhysxArticulation objects
     """

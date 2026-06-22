@@ -8,7 +8,7 @@ from mani_skill.utils.structs.base import BaseStruct
 T = TypeVar("T", bound=BaseStruct)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Articulation(Generic[T]):
     merged: bool = False
     """
