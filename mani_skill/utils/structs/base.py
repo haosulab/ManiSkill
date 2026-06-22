@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BaseStruct:
     """
     Base class of all structs that manage objects in simulation across sub-scenes.
