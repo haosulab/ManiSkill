@@ -177,12 +177,6 @@ class BaseEnv(gym.Env):
     _parallel_in_single_scene: bool = False
     """whether all objects are placed in one scene for the purpose of rendering all objects together instead of in parallel"""
 
-    _sim_device: sapien.Device
-    """the sapien device object the simulation runs on"""
-
-    _render_device: Optional[sapien.Device]
-    """the sapien device object the renderer runs on"""
-
     _viewer: Union[sapien.utils.Viewer, None] = None
 
     _sample_video_link: Optional[str] = None
