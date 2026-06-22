@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
 
 import numpy as np
 import sapien
@@ -28,42 +28,28 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation):
+class SapienArticulation(Articulation, SapienBaseStruct[physx.PhysxArticulation]):
     """
     Wrapper around physx.PhysxArticulation objects
     """
 
-    links: list[SapienLink]
+    links: list[SapienLink] = field(default_factory=list)
     """list of Link objects"""
-    links_map: dict[str, SapienLink]
+    links_map: dict[str, SapienLink] = field(default_factory=dict)
     """Maps link name to the Link object"""
-    root: SapienLink
+    root: SapienLink = field(default_factory=lambda: None)
     """The root Link object"""
-    joints: list[SapienArticulationJoint]
+    joints: list[SapienArticulationJoint] = field(default_factory=list)
     """list of Joint objects"""
-    joints_map: dict[str, SapienArticulationJoint]
+    joints_map: dict[str, SapienArticulationJoint] = field(default_factory=dict)
     """Maps joint name to the Joint object"""
-    active_joints: list[SapienArticulationJoint]
+    active_joints: list[SapienArticulationJoint] = field(default_factory=list)
     """list of active Joint objects, referencing elements in self.joints"""
-    active_joints_map: dict[str, SapienArticulationJoint]
+    active_joints_map: dict[str, SapienArticulationJoint] = field(default_factory=dict)
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
-    name: str = None
-    """Name of this articulation"""
-    initial_pose: Pose = None
+    initial_pose: Pose = field(default_factory=lambda: Pose.create_from_pq())
     """The initial pose of this articulation"""
-
-    merged: bool = False
-    """
-    Whether or not this articulation object is a merged articulation where it is managing many
-    articulations with different DOFs.
-
-    There are a number of caveats when it comes to merged articulations. While merging
-    articulations means you can easily fetch padded qpos, qvel, etc. type data, a number of
-    attributes and functions will make little sense and you should avoid using them unless you
-    are an advanced user. In particular, the list of Links, Joints, their corresponding maps,
-    net contact forces of multiple links, no longer make "sense"
-    """
 
     _cached_joint_target_indices: dict[int, torch.Tensor] = field(default_factory=dict)
     """
@@ -297,7 +283,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
         Returns a boolean tensor of whether the root link is fixed for each parallel articulation
         """
         return torch.tensor(
-            [x.links[0].entity.components[0].joint.type == "fixed" for x in self._objs],
+            [x.links[0].entity.components[0].joint.type == "fixed" for x in self._objs],  # type: ignore
             device=self.device,
             dtype=torch.bool,
         )
@@ -440,6 +426,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
                 rb_comp = link.entity.find_component_by_type(
                     sapien.render.RenderBodyComponent
                 )
+                rb_comp = cast(sapien.render.RenderBodyComponent, rb_comp)
                 if rb_comp is not None:
                     for render_shape in rb_comp.render_shapes:
                         render_shapes += get_render_shape_meshes(render_shape)
@@ -476,7 +463,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
                     self.px.gpu_create_contact_body_impulse_query(bodies)
                 )
             query = self._net_contact_force_queries[tuple(link_names)]
-            self.px.gpu_query_contact_body_impulses(query)
+            self.px.gpu_query_contact_body_impulses(query)  # type: ignore
             return (
                 query.cuda_impulses.torch()
                 .clone()
@@ -485,7 +472,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             )
         else:
             included_links = [self.links_map[k]._objs[0].entity for k in link_names]
-            contacts = self.px.get_contacts()
+            contacts = self.px.get_contacts()  # type: ignore
             articulation_contacts = defaultdict(list)
             for contact in contacts:
                 if contact.bodies[0].entity in included_links:
@@ -563,7 +550,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
         """
 
         if self.sim.gpu_sim_enabled:
-            return self.px.cuda_articulation_target_qpos.torch()[
+            return self.px.cuda_articulation_target_qpos.torch()[  # type: ignore
                 self.get_joint_target_indices(self.active_joints)
             ]
         else:
@@ -577,7 +564,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
         the number of active joints.
         """
         if self.sim.gpu_sim_enabled:
-            return self.px.cuda_articulation_target_qvel.torch()[
+            return self.px.cuda_articulation_target_qvel.torch()[  # type: ignore
                 self.get_joint_target_indices(self.active_joints)
             ]
         else:
@@ -650,7 +637,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             # TODO (stao): we should lazy call the GPU data fetching functions in the future if
             # necessarily. Since most users don't use this at the moment we just fetch it live here
             # instead of with all the other fetch functions
-            return self.px.cuda_articulation_link_incoming_joint_forces.torch()[
+            return self.px.cuda_articulation_link_incoming_joint_forces.torch()[  # type: ignore
                 self._data_index, :
             ]
         else:
@@ -763,7 +750,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     @property
     def qacc(self):
         if self.sim.gpu_sim_enabled:
-            return self.px.cuda_articulation_qacc.torch()[
+            return self.px.cuda_articulation_qacc.torch()[  # type: ignore
                 self._data_index, : self.max_dof
             ]
         else:
@@ -775,7 +762,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     @property
     def qf(self):
         if self.sim.gpu_sim_enabled:
-            return self.px.cuda_articulation_qf.torch()[
+            return self.px.cuda_articulation_qf.torch()[  # type: ignore
                 self._data_index, : self.max_dof
             ]
         else:
@@ -785,7 +772,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def qf(self, arg1: torch.Tensor):
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
-            self.px.cuda_articulation_qf.torch()[
+            self.px.cuda_articulation_qf.torch()[  # type: ignore
                 self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 : self.max_dof,
             ] = arg1
@@ -862,7 +849,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
     def root_angular_velocity(self, arg1: Array) -> None:
         if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
-            self.px.cuda_rigid_body_data.torch()[
+            self.px.cuda_rigid_body_data.torch()[  # type: ignore
                 self.root._body_data_index[
                     self.sim.scene._reset_mask[self._scene_idxs]
                 ],
@@ -872,7 +859,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._objs[0].set_root_angular_velocity(arg1)
+            self._objs[0].set_root_angular_velocity(arg1)  # type: ignore
 
     @property
     def root_linear_velocity(self) -> torch.Tensor:
@@ -892,7 +879,7 @@ class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation
             arg1 = common.to_numpy(arg1)
             if len(arg1.shape) == 2:
                 arg1 = arg1[0]
-            self._objs[0].set_root_linear_velocity(arg1)
+            self._objs[0].set_root_linear_velocity(arg1)  # type: ignore
 
     @property
     def root_pose(self):

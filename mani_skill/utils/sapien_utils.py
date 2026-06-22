@@ -1,10 +1,11 @@
 """
 Utilities that work with the simulation / SAPIEN
 """
+
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Tuple, TypeVar
 
 import numpy as np
 import sapien
@@ -19,8 +20,8 @@ from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
     from mani_skill.sensors.camera import CameraConfig
+    from mani_skill.sim.loaders.urdf import BaseURDFLoader
     from mani_skill.utils.building.mjcf_loader import MJCFLoader
-    from mani_skill.utils.building.urdf_loader import URDFLoader
     from mani_skill.utils.structs.actor import Actor
 
 T = TypeVar("T")
@@ -143,7 +144,7 @@ def parse_urdf_config(config_dict: dict) -> dict:
     return urdf_config
 
 
-def apply_urdf_config(loader: Union[URDFLoader, MJCFLoader], urdf_config: dict):
+def apply_urdf_config(loader: BaseURDFLoader | MJCFLoader, urdf_config: dict):
     if "link" in urdf_config:
         for name, link_config in urdf_config["link"].items():
             if "material" in link_config:

@@ -12,7 +12,7 @@ from sapien.wrapper.articulation_builder import (
 from sapien.wrapper.articulation_builder import LinkBuilder
 
 from mani_skill import logger
-from mani_skill.sim.builders.articulation import ArticulationBuilder
+from mani_skill.sim.builders.articulation import BaseArticulationBuilder
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 from mani_skill.utils import common
 from mani_skill.utils.structs.pose import Pose, to_sapien_pose
@@ -21,21 +21,28 @@ if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
 
 
-class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationBuilder):
+class SapienArticulationBuilder(
+    OriginalSapienArticulationBuilder, BaseArticulationBuilder
+):
     """Articulation builder for working with SAPIEN"""
 
-    scene: SapienSim
+    sim: SapienSim
     disable_self_collisions: bool = False
 
     def __init__(self):
         super().__init__()
-        self.name = None
+        self.name = ""
         self.scene_idxs = None
-        self.initial_pose = None
+        self._initial_pose: sapien.Pose = sapien.Pose()
 
-    def set_scene(self, scene: SapienSim):
-        self.scene = scene
-        return self
+    @property
+    def initial_pose(self) -> Pose | None:
+        """The initial pose of the actor when it gets built and spawned into the simulation."""
+        return Pose.create(self._initial_pose)
+
+    @initial_pose.setter
+    def initial_pose(self, initial_pose: Pose):
+        self._initial_pose = to_sapien_pose(initial_pose)
 
     def set_name(self, name: str):
         self.name = name
@@ -90,7 +97,7 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
             )
 
             entity.add_component(link_component)
-            if self.scene.can_render():
+            if self.sim.can_render():
                 if b.visual_records:
                     entity.add_component(b.build_render_component())
             entity.name = b.name
@@ -126,22 +133,22 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
     def build(
         self, name=None, fix_root_link=None, build_mimic_joints=True
     ) -> SapienArticulation:
-        assert self.scene is not None
+        assert self.sim is not None
         if name is not None:
             self.set_name(name)
         # TODO (stao): move this check to scene level, not in builder...
-        # assert (
-        #     self.name is not None
-        #     and self.name != ""
-        #     and self.name not in self.scene.articulations
-        # ), (
-        #     "built actors in ManiSkill must have unique names and cannot be None or empty strings"
-        # )
+        assert (
+            self.name is not None
+            and self.name != ""
+            and self.name not in self.sim.articulations
+        ), (
+            "built actors in ManiSkill must have unique names and cannot be None or empty strings"
+        )
 
         if self.scene_idxs is not None:
             pass
         else:
-            self.scene_idxs = torch.arange((self.scene.num_envs), dtype=int)
+            self.scene_idxs = torch.arange((self.sim.num_envs), dtype=int)
         num_arts = len(self.scene_idxs)
 
         if self.initial_pose is None:
@@ -152,18 +159,19 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
                 "poses."
             )
 
-            self.initial_pose = sapien.Pose()
-        self.initial_pose = Pose.create(self.initial_pose)
+            self.initial_pose = Pose.create(sapien.Pose())
+        else:
+            self.initial_pose = Pose.create(self.initial_pose)
         initial_pose_b = self.initial_pose.raw_pose.shape[0]
         assert initial_pose_b == 1 or initial_pose_b == num_arts
         initial_pose_np = common.to_numpy(self.initial_pose.raw_pose)
 
         articulations = []
         for i, scene_idx in enumerate(self.scene_idxs):
-            # if self.scene.parallel_in_single_scene:
-            #     sub_scene = self.scene.sub_scenes[0]
-            # else:
-            sub_scene = self.scene.sub_scenes[scene_idx]
+            if self.sim.scene.parallel_in_single_scene:
+                sub_scene = self.sim.sub_scenes[0]
+            else:
+                sub_scene = self.sim.sub_scenes[scene_idx]
             if initial_pose_b == 1:
                 articulation_pose = to_sapien_pose(initial_pose_np)
             else:
@@ -191,7 +199,7 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
                     # joint mimics parent
                     if joint.parent_link == mimic_joint.child_link:
                         if joint.parent_link.parent is None:
-                            logger.warn(
+                            logger.warning(
                                 f"Skipping adding fixed tendon for {joint.name}"
                             )
                             # tendon must be attached to grandparent
@@ -223,10 +231,12 @@ class SapienArticulationBuilder(OriginalSapienArticulationBuilder, ArticulationB
             articulation.name = f"scene-{scene_idx}_{self.name}"
             articulations.append(articulation)
 
-        articulation: SapienArticulation = SapienArticulation.create_from_physx_articulations(
-            articulations, self.scene, self.scene_idxs
+        articulation: SapienArticulation = (
+            SapienArticulation.create_from_physx_articulations(
+                articulations, self.sim, self.scene_idxs
+            )
         )
         articulation.initial_pose = self.initial_pose
-        self.scene.scene.articulations[self.name] = articulation
-        self.scene.scene.add_to_state_dict_registry(articulation)
+        self.sim.articulations[self.name] = articulation
+        self.sim.scene.add_to_state_dict_registry(articulation)
         return articulation

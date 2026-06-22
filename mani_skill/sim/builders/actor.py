@@ -69,7 +69,6 @@ class BaseActorBuilder(BaseBuilder):
         """
         self.__sims[sim.id] = sim
         self.__sim_builders[sim.id] = sim.create_actor_builder()
-        self.__sim_builders[sim.id].sim = sim
         return self
 
     @property
