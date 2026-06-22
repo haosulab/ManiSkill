@@ -238,7 +238,7 @@ class BaseSim(ABC):
 
     def get_pairwise_contact_impulses(
         self, obj1: Actor | Link, obj2: Actor | Link
-    ):
+    ) -> torch.Tensor:
         """
         Get the impulse vectors between two actors/links. Returns impulse vector of shape
         (N, 3), where N is the number of environments and 3 is the dimension of the impulse
@@ -253,6 +253,7 @@ class BaseSim(ABC):
             obj1: Actor | Link
             obj2: Actor | Link
         """
+        raise NotImplementedError()
 
     ### Accelerator data management code ###
     def _gpu_apply_all(self):
