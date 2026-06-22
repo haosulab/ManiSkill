@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import sapien
 
@@ -456,83 +456,127 @@ class BaseActorBuilder(BaseBuilder):
             )
         return self
 
-    # def add_convex_collision_from_file(
-    #     self,
-    #     filename,
-    #     pose: sapien.Pose = sapien.Pose(),
-    #     scale: Vec3 = (1, 1, 1),
-    #     material: Union[sapien.physx.PhysxMaterial, None] = None,
-    #     density: float = 1000,
-    #     patch_radius: float = 0,
-    #     min_patch_radius: float = 0,
-    #     is_trigger: bool = False,
-    # ):
-    #     """
-    #     Add a convex collision from a file to the actor.
-    #     """
-    #     raise NotImplementedError("")
+    def add_convex_collision_from_file(
+        self,
+        filename,
+        pose: sapien.Pose = sapien.Pose(),
+        scale: Vec3 = (1, 1, 1),
+        material: Any | None = None,
+        density: float = 1000,
+    ):
+        """
+        Add a convex collision from a file to the actor.
 
-    # def add_multiple_convex_collisions_from_file(
-    #     self,
-    #     filename,
-    #     pose: sapien.Pose = sapien.Pose(),
-    #     scale: Vec3 = (1, 1, 1),
-    #     material: Union[sapien.physx.PhysxMaterial, None] = None,
-    #     density: float = 1000,
-    #     patch_radius: float = 0,
-    #     min_patch_radius: float = 0,
-    #     is_trigger: bool = False,
-    #     decomposition: typing.Literal["none", "coacd"] = "none",
-    #     decomposition_params=dict(),
-    # ):
-    #     if material is None:
-    #         material = sapien.physx.get_default_material()
+        Args:
+            filename: The path to the file containing the convex collision mesh.
+            pose: The pose of the convex collision mesh relative to actor's local frame.
+            scale: The scale of the convex collision mesh.
+            material: The material of the convex collision mesh. This is dependent on simulator
+                backend used.
+            For SAPIEN this is a `sapien.physx.PhysxMaterial` object.
+            For Newton based backends this is a ShapeCfg object.
+            density: The density of the convex collision mesh.
 
-    #     self.collision_records.append(
-    #         CollisionShapeRecord(
-    #             type="multiple_convex_meshes",
-    #             filename=filename,
-    #             pose=pose,
-    #             scale=scale,
-    #             material=material,
-    #             density=density,
-    #             patch_radius=patch_radius,
-    #             min_patch_radius=min_patch_radius,
-    #             is_trigger=is_trigger,
-    #             decomposition=decomposition,
-    #             decomposition_params=decomposition_params,
-    #         )
-    #     )
-    #     return self
+        Returns:
+            The actor builder.
+        """
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not support "
+                    "add_convex_collision_from_file."
+                )
+            self.__sim_builders[sim.id].add_convex_collision_from_file(
+                filename=filename,
+                pose=pose if pose is not None else sapien.Pose(),
+                scale=scale,
+                material=material,
+                density=density,
+            )
+        return self
 
-    # def add_nonconvex_collision_from_file(
-    #     self,
-    #     filename: str,
-    #     pose: sapien.Pose = sapien.Pose(),
-    #     scale: Vec3 = (1, 1, 1),
-    #     material: Union[sapien.physx.PhysxMaterial, None] = None,
-    #     density: float = 1000,
-    #     patch_radius: float = 0,
-    #     min_patch_radius: float = 0,
-    #     is_trigger: bool = False,
-    # ):
-    #     if material is None:
-    #         material = sapien.physx.get_default_material()
+    def add_multiple_convex_collisions_from_file(
+        self,
+        filename,
+        pose: sapien.Pose = sapien.Pose(),
+        scale: Vec3 = (1, 1, 1),
+        material: Any | None = None,
+        density: float = 1000,
+        decomposition: Literal["none", "coacd"] = "none",
+        decomposition_params: dict | None = None,
+    ):
+        """
+        Add a multiple convex collisions from a file to the actor.
 
-    #     self.collision_records.append(
-    #         CollisionShapeRecord(
-    #             type="nonconvex_mesh",
-    #             filename=filename,
-    #             pose=pose,
-    #             scale=scale,
-    #             material=material,
-    #             density=density,
-    #             patch_radius=patch_radius,
-    #             min_patch_radius=min_patch_radius,
-    #             is_trigger=is_trigger,
-    #         )
-    #     )
-    #     return self
+        Args:
+            filename: The path to the file containing the multiple convex collisions mesh.
+            pose: The pose of the multiple convex collisions mesh relative to actor's local frame.
+            scale: The scale of the multiple convex collisions mesh.
+            material: The material of the multiple convex collisions mesh. This is dependent on
+                simulator backend used.
+            For SAPIEN this is a `sapien.physx.PhysxMaterial` object.
+            For Newton based backends this is a ShapeCfg object.
+            density: The density of the multiple convex collisions mesh.
+            decomposition: The decomposition method to use for the multiple convex collisions mesh.
+            decomposition_params: The parameters for the decomposition method.
+
+        Returns:
+            The actor builder.
+        """
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not support "
+                    "add_multiple_convex_collisions_from_file."
+                )
+            self.__sim_builders[sim.id].add_multiple_convex_collisions_from_file(
+                filename=filename,
+                pose=pose if pose is not None else sapien.Pose(),
+                scale=scale,
+                material=material,
+                density=density,
+                decomposition=decomposition,
+                decomposition_params=decomposition_params,
+            )
+
+    def add_nonconvex_collision_from_file(
+        self,
+        filename: str,
+        pose: Pose | None = None,
+        scale: Vec3 = (1, 1, 1),
+        material: Any | None = None,
+        density: float = 1000.0,
+    ):
+        """
+        Add a nonconvex collision from a file to the actor.
+
+        Args:
+            filename: The path to the file containing the nonconvex collision mesh.
+            pose: The pose of the nonconvex collision mesh relative to actor's local frame.
+            scale: The scale of the nonconvex collision mesh.
+            material: The material of the nonconvex collision mesh. This is dependent on simulator
+                backend used.
+            For SAPIEN this is a `sapien.physx.PhysxMaterial` object.
+            For Newton based backends this is a ShapeCfg object.
+            density: The density of the nonconvex collision mesh.
+
+        Returns:
+            The actor builder.
+        """
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is BaseActorBuilder:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not support "
+                    "add_nonconvex_collision_from_file."
+                )
+            self.__sim_builders[sim.id].add_nonconvex_collision_from_file(
+                filename=filename,
+                pose=pose if pose is not None else sapien.Pose(),
+                scale=scale,
+                material=material,
+                density=density,
+            )
+        return self
 
     def add_visual_from_file(
         self,
@@ -563,7 +607,7 @@ class BaseActorBuilder(BaseBuilder):
                 )
             self.__sim_builders[sim.id].add_visual_from_file(
                 filename=filename,
-                pose=pose,
+                pose=pose if pose is not None else sapien.Pose(),
                 scale=scale,
                 material=material,
                 name=name,

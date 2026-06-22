@@ -22,6 +22,7 @@ from mani_skill.agents.robots.fetch import (
     FETCH_BASE_COLLISION_BIT,
     FETCH_WHEELS_COLLISION_BIT,
 )
+from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.utils.scene_builder import SceneBuilder
 from mani_skill.utils.scene_builder.registration import register_scene_builder
 from mani_skill.utils.structs import Actor, Articulation
@@ -282,7 +283,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         self.scene.render_sim.add_point_light([3.14, 3.24, 3], color=color)
 
         # merge actors into one
-        self.bg = Actor.create_from_entities(
+        self.bg = SapienActor.create_from_entities(
             bgs,
             sim=self.scene.physics_sim,
             scene_idxs=torch.arange(self.env.num_envs, dtype=int),
@@ -306,8 +307,8 @@ class ReplicaCADSceneBuilder(SceneBuilder):
 
         if self.scene.gpu_sim_enabled and len(env_idx) == self.env.num_envs:
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()
-            self.scene.px.step()
+            self.scene.physics_sim._gpu_update_articulation_kinematics()
+            self.scene.physics_sim.physics_step()
             self.scene._gpu_fetch_all()
 
         # teleport robot back to correct location

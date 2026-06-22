@@ -223,9 +223,6 @@ class BaseSim(ABC):
     def add_point_light(
         self,
         position,
-        direction,
-        inner_fov: float,
-        outer_fov: float,
         color,
         shadow=False,
         shadow_near=0.1,

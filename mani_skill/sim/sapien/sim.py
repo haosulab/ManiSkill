@@ -421,9 +421,6 @@ class SapienSim(BaseSim):
     def add_point_light(
         self,
         position,
-        direction,
-        inner_fov: float,
-        outer_fov: float,
         color,
         shadow=False,
         shadow_near=0.1,
@@ -439,29 +436,21 @@ class SapienSim(BaseSim):
             else:
                 scene = self.sub_scenes[scene_idx]
             entity = sapien.Entity()
-            entity.name = "spot_light"
-            light = sapien.render.RenderSpotLightComponent()
+            entity.name = "point_light"
+            light = sapien.render.RenderPointLightComponent()
             entity.add_component(light)
             light.color = color
             light.shadow = shadow
             light.shadow_near = shadow_near
             light.shadow_far = shadow_far
             light.shadow_map_size = shadow_map_size
-            light.inner_fov = inner_fov
-            light.outer_fov = outer_fov
             if self.scene.parallel_in_single_scene:
-                light_position = position + self.scene_offsets_np[scene_idx]
+                light.pose = sapien.Pose(position + self.scene_offsets_np[scene_idx])
             else:
-                light_position = position
-            light.pose = sapien.Pose(
-                light_position,
-                sapien.math.shortest_rotation(
-                    [1, 0, 0],  # type: ignore
-                    direction,
-                ),
-            )
+                light.pose = sapien.Pose(position)
+
             scene.add_entity(entity)
-        return
+        return light
 
     def add_area_light_for_ray_tracing(
         self,
