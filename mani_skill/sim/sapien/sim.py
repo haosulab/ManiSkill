@@ -358,14 +358,16 @@ class SapienSim(BaseSim):
             for e in entities:
                 self.sub_scenes[0].remove_entity(e)
             self.articulations.pop(articulation.name)
-    
+
     @property
     def ambient_light(self):
         return self.sub_scenes[0].ambient_light
+
     @ambient_light.setter
     def ambient_light(self, color):
         for scene in self.sub_scenes:
             scene.render_system.ambient_light = color
+
     def set_ambient_light(self, color):
         self.ambient_light = color
 
