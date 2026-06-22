@@ -1,6 +1,5 @@
 import copy
 import gc
-import os
 from functools import cached_property
 from typing import Any, Optional, Sequence, Tuple, Union, cast
 
@@ -8,8 +7,6 @@ import dacite
 import gymnasium as gym
 import numpy as np
 import sapien
-import sapien.physx as physx
-import sapien.render
 import sapien.utils.viewer.control_window
 import torch
 from gymnasium.vector.utils import batch_space

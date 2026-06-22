@@ -243,7 +243,7 @@ class SapienSim(BaseSim):
         if self.sim_device_torch.type == "cuda":
             if not physx.is_gpu_enabled():
                 physx.enable_gpu()
-        
+
         gpu_mem_config = self.cfg.gpu_memory_config.dict()
 
         # NOTE (stao): there isn't a easy way to check of collision_stack_size is supported for the installed sapien3 version
