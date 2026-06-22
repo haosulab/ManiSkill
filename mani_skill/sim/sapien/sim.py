@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import platform
 from dataclasses import asdict, dataclass, field
 from functools import cached_property
@@ -242,6 +243,18 @@ class SapienSim(BaseSim):
         if self.sim_device_torch.type == "cuda":
             if not physx.is_gpu_enabled():
                 physx.enable_gpu()
+        
+        gpu_mem_config = self.cfg.gpu_memory_config.dict()
+
+        # NOTE (stao): there isn't a easy way to check of collision_stack_size is supported for the installed sapien3 version
+        # to get around that we just try and except. To be removed once mac/windows platforms can upgrade to latest sapien versions
+        try:
+            physx.set_gpu_memory_config(**gpu_mem_config)
+        except TypeError:
+            gpu_mem_config.pop("collision_stack_size")
+            physx.set_gpu_memory_config(**gpu_mem_config)
+
+        sapien.render.set_log_level(os.getenv("MS_RENDERER_LOG_LEVEL", "warn"))
         self._set_scene_config()
         self._build_sub_scenes()
 
