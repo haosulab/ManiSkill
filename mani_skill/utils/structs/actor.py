@@ -60,3 +60,15 @@ class Actor(Generic[T]):
         """
         actor_cls: "Actor" = actors[0].__class__  # type: ignore
         return actor_cls.merge(actors, name)
+
+    def hide_visual(self):
+        """
+        Hide the visuals of the actor.
+        """
+        raise NotImplementedError()
+
+    def show_visual(self):
+        """
+        Show the visuals of the actor.
+        """
+        raise NotImplementedError()
