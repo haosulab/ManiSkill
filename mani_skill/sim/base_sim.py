@@ -214,6 +214,21 @@ class BaseSim(ABC):
         Whether the simulation backend can render.
         """
 
+    def update_render(
+        self, update_sensors: bool = True, update_human_render_cameras: bool = True
+    ):
+        """
+        Updates the render, specifically any camera sensors, of the simulation scene.
+        ManiSkill splits cameras into three categories: sensors for actual observations to be fed
+        into policies, human_render_cameras for (high-quality) video capture for qualitative
+        review, and viewer_camera for any GUI based applications.
+
+        Args:
+            update_sensors: Whether to update the sensors.
+            update_human_render_cameras: Whether to update the human render cameras.
+        """
+        raise NotImplementedError()
+
     ### Code for compiling simulator scene for physical simulation ###
     @abstractmethod
     def compile_physical_scene(self):

@@ -22,11 +22,10 @@ from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 from mani_skill.sim.sapien.structs.link import SapienLink
 from mani_skill.sim.sapien.structs.render_camera import RenderCamera
-from mani_skill.utils import common
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
-from mani_skill.utils import sapien_utils
 
 if SAPIEN_RENDER_SYSTEM == "3.1":
     from sapien.wrapper.scene import (
@@ -226,6 +225,8 @@ class SapienSim(BaseSim):
                 render_backend = "sapien_cpu"
             else:
                 raise e
+        self._sensors_initialized = False
+        self._human_render_cameras_initialized = False
         self._needs_fetch = False
         """
         Used internally to raise some errors ahead of time of when there may be
@@ -585,6 +586,71 @@ class SapienSim(BaseSim):
     def can_render(self):
         return True
 
+    def update_render(
+        self, update_sensors: bool = True, update_human_render_cameras: bool = True
+    ):
+        if SAPIEN_RENDER_SYSTEM == "3.1":
+            self._sapien_31_update_render(
+                update_sensors=update_sensors,
+                update_human_render_cameras=update_human_render_cameras,
+            )
+        else:
+            self._sapien_update_render(
+                update_sensors=update_sensors,
+                update_human_render_cameras=update_human_render_cameras,
+            )
+
+    def _sapien_update_render(
+        self, update_sensors: bool = True, update_human_render_cameras: bool = True
+    ):
+        # note that this design is such that no GPU memory is allocated for memory unless requested for, which can occur
+        # after the e.g. physx GPU simulation is initialized.
+        if self.gpu_sim_enabled:
+            if not self.scene.parallel_in_single_scene:
+                if self.render_system_group is None:
+                    self._setup_gpu_rendering()
+                if not self._sensors_initialized and update_sensors:
+                    self._gpu_setup_sensors(self.scene.sensors)
+                    self._sensors_initialized = True
+                if (
+                    not self._human_render_cameras_initialized
+                    and update_human_render_cameras
+                ):
+                    self._gpu_setup_sensors(self.scene.human_render_cameras)
+                    self._human_render_cameras_initialized = True
+                self.render_system_group.update_render()
+            else:
+                assert isinstance(self.px, physx.PhysxGpuSystem)
+                self.px.sync_poses_gpu_to_cpu()
+                self.sub_scenes[0].update_render()
+        else:
+            self.sub_scenes[0].update_render()
+
+    def _sapien_31_update_render(
+        self, update_sensors: bool = True, update_human_render_cameras: bool = True
+    ):
+        if self.gpu_sim_enabled:
+            if self.render_system_group is None:
+                for scene in self.sub_scenes:
+                    scene.update_render()
+                self._setup_gpu_rendering()
+            if not self._sensors_initialized and update_sensors:
+                self._gpu_setup_sensors(self.sensors)
+                self._sensors_initialized = True
+            if (
+                not self._human_render_cameras_initialized
+                and update_human_render_cameras
+            ):
+                self._gpu_setup_sensors(self.human_render_cameras)
+                self._human_render_cameras_initialized = True
+
+            manager: sapien.render.GpuSyncManager = (  # pyright: ignore[reportAttributeAccessIssue]
+                self.render_system_group
+            )
+            manager.sync()
+        else:
+            self.sub_scenes[0].update_render()
+
     def compile_physical_scene(self):
         enable_gpu = self.gpu_sim_enabled
         if enable_gpu:
@@ -691,7 +757,9 @@ class SapienSim(BaseSim):
     def can_physics(self):
         return True
 
-    def get_pairwise_contact_impulses(self, obj1: SapienActor | SapienLink, obj2: SapienActor | SapienLink):
+    def get_pairwise_contact_impulses(
+        self, obj1: SapienActor | SapienLink, obj2: SapienActor | SapienLink
+    ):
         if self.gpu_sim_enabled:
             assert isinstance(self.px, physx.PhysxGpuSystem)
             query_hash = hash((obj1, obj2))

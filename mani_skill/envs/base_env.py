@@ -597,7 +597,7 @@ class BaseEnv(gym.Env):
         """
         for obj in self._hidden_objects:
             obj.hide_visual()
-        self.scene.update_render(update_sensors=True, update_human_render_cameras=False)
+        self.scene.render_sim.update_render(update_sensors=True, update_human_render_cameras=False)
         self.capture_sensor_data()
         sensor_obs = dict()
         for name, sensor in self.scene.sensors.items():
@@ -1339,7 +1339,7 @@ class BaseEnv(gym.Env):
         Otherwise all camera data is captured and returned as a single batched image. Any objects registered in the _hidden_objects list will be shown"""
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.scene.update_render(update_sensors=False, update_human_render_cameras=True)
+        self.scene.render_sim.update_render(update_sensors=False, update_human_render_cameras=True)
         images = []
         render_images = self.scene.get_human_render_camera_images(camera_name)
         for image in render_images.values():

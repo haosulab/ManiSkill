@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import sapien
 import sapien.physx as physx
@@ -12,7 +12,6 @@ import mani_skill.render.utils as render_utils
 from mani_skill.envs.utils.system.backend import BackendInfo
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
-from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.link import Link
@@ -38,7 +37,6 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        # sub_scenes: Optional[list[sapien.Scene]] = None,
         physics_sim: BaseSim,
         render_sim: BaseSim,
         sim_config: SimConfig | None = None,
@@ -499,9 +497,7 @@ class ManiSkillScene:
     def num_envs(self):
         return self.physics_sim.num_envs
 
-    def get_pairwise_contact_impulses(
-        self, obj1: Actor | Link, obj2: Actor | Link
-    ):
+    def get_pairwise_contact_impulses(self, obj1: Actor | Link, obj2: Actor | Link):
         """
         Get the impulse vectors between two actors/links. Returns impulse vector of shape
         (N, 3), where N is the number of environments and 3 is the dimension of the impulse
@@ -517,7 +513,6 @@ class ManiSkillScene:
             obj2: Actor | Link
         """
         return self.physics_sim.get_pairwise_contact_impulses(obj1, obj2)
-        
 
     def get_pairwise_contact_forces(
         self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
@@ -531,7 +526,9 @@ class ManiSkillScene:
             obj1: Actor | Link
             obj2: Actor | Link
         """
-        return self.get_pairwise_contact_impulses(obj1, obj2) / self.physics_sim.timestep
+        return (
+            self.get_pairwise_contact_impulses(obj1, obj2) / self.physics_sim.timestep
+        )
 
     # -------------------------------------------------------------------------- #
     # Simulation state (required for MPC)
