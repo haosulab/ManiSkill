@@ -25,8 +25,8 @@ from .controllers.base_controller import (
 
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.loaders.urdf import BaseURDFLoader
     from mani_skill.utils.building.mjcf_loader import MJCFLoader
-    from mani_skill.utils.building.urdf_loader import URDFLoader
 DictControllerConfig = dict[str, ControllerConfig]
 
 
@@ -155,16 +155,16 @@ class BaseAgent:
         """
 
         def build_articulation(scene_idxs: Optional[list[int]] = None):
-            loader: Union[URDFLoader, MJCFLoader, None] = None
+            loader: BaseURDFLoader | MJCFLoader | None = None
             if self.urdf_path is not None:
                 loader = self.scene.create_urdf_loader()
                 asset_path = format_path(str(self.urdf_path))
             elif self.mjcf_path is not None:
                 loader = self.scene.create_mjcf_loader()
                 asset_path = format_path(str(self.mjcf_path))
-            assert (
-                loader is not None
-            ), "No loader found. Provide either path in either urdf_path or mjcf_path"
+            assert loader is not None, (
+                "No loader found. Provide either path in either urdf_path or mjcf_path"
+            )
             loader.name = self.uid
             if self._agent_idx is not None:
                 loader.name = f"{self.uid}-agent-{self._agent_idx}"
@@ -248,10 +248,10 @@ class BaseAgent:
         This does not reset the controller. If given control mode is None, will set to the default control mode."""
         if control_mode is None:
             control_mode = self._default_control_mode
-        assert (
-            control_mode in self.supported_control_modes
-        ), "{} not in supported modes: {}".format(
-            control_mode, self.supported_control_modes
+        assert control_mode in self.supported_control_modes, (
+            "{} not in supported modes: {}".format(
+                control_mode, self.supported_control_modes
+            )
         )
         self._control_mode = control_mode
         # create controller on the fly here

@@ -1,1 +1,1 @@
-from .urdf_loader import URDFLoader as URDFLoader
+from .urdf_loader import SapienURDFLoader as SapienURDFLoader

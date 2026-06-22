@@ -330,14 +330,25 @@ class SapienSim(BaseSim):
     def create_actor_builder(self):
         from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
 
-        return SapienActorBuilder()
+        builder = SapienActorBuilder()
+        builder.sim = self
+        return builder
 
     def create_articulation_builder(self):
         from mani_skill.sim.sapien.builders.articulation_builder import (
             SapienArticulationBuilder,
         )
 
-        return SapienArticulationBuilder()
+        builder = SapienArticulationBuilder()
+        builder.sim = self
+        return builder
+
+    def create_urdf_loader(self):
+        from mani_skill.sim.sapien.loaders.urdf_loader import SapienURDFLoader
+
+        builder = SapienURDFLoader()
+        builder.sim = self
+        return builder
 
     def remove_actor(self, actor: SapienActor):
         if self.gpu_sim_enabled:
@@ -672,8 +683,8 @@ class SapienSim(BaseSim):
     def _sapien_update_render(
         self, update_sensors: bool = True, update_human_render_cameras: bool = True
     ):
-        # note that this design is such that no GPU memory is allocated for memory unless requested for, which can occur
-        # after the e.g. physx GPU simulation is initialized.
+        # note that this design is such that no GPU memory is allocated for memory unless
+        # requested for, which can occur after the e.g. physx GPU simulation is initialized.
         if self.gpu_sim_enabled:
             if not self.scene.parallel_in_single_scene:
                 if self.render_system_group is None:

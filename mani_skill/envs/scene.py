@@ -148,14 +148,14 @@ class ManiSkillScene:
 
     def create_urdf_loader(self):
         """Creates a URDFLoader object that can be used to load URDF files into this scene"""
-        from ..utils.building.urdf_loader import URDFLoader
+        from mani_skill.sim.loaders.urdf import BaseURDFLoader
 
-        loader = URDFLoader()
+        loader = BaseURDFLoader()
         if self._shared_sim_packages:
-            loader.set_scene(self.physics_sim)
+            loader._add_sim(self.physics_sim)
         else:
-            loader.set_scene(self.physics_sim)
-            loader.set_scene(self.render_sim)
+            loader._add_sim(self.physics_sim)
+            loader._add_sim(self.render_sim)
         return loader
 
     def create_mjcf_loader(self):

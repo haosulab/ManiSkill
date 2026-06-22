@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, TypedDict
 
 from sapien.render import RenderCameraComponent
-from sapien.wrapper.urdf_loader import URDFLoader as SapienURDFLoader
+from sapien.wrapper.urdf_loader import URDFLoader as OriginalSapienURDFLoader
 
+from mani_skill.sim.loaders.urdf import BaseURDFLoader
 from mani_skill.sim.sapien.builders.actor_builder import SapienActorBuilder
 from mani_skill.sim.sapien.builders.articulation_builder import (
     SapienArticulationBuilder,
 )
+from mani_skill.sim.sapien.sim import SapienSim
 from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
-
-if TYPE_CHECKING:
-    pass
-
-from mani_skill.sim.sapien.sim import SapienSim
 
 
 class ParsedURDFData(TypedDict):
@@ -24,10 +21,14 @@ class ParsedURDFData(TypedDict):
     cameras: list[Any]
 
 
-class URDFLoader(SapienURDFLoader):
+class SapienURDFLoader(OriginalSapienURDFLoader, BaseURDFLoader):
     sim: SapienSim
     name: str = ""
     disable_self_collisions: bool = False
+
+    @property
+    def scene(self):
+        return self.sim
 
     def parse(self, urdf_file, srdf_file=None, package_dir=None) -> ParsedURDFData:
         articulation_builders, actor_builders, cameras = super().parse(

@@ -47,7 +47,6 @@ class BaseArticulationBuilder(BaseBuilder):
         """
         self.__sims[sim.id] = sim
         self.__sim_builders[sim.id] = sim.create_articulation_builder()
-        self.__sim_builders[sim.id].sim = sim
         return self
 
     def _remove_sim(self, sim: BaseSim):
