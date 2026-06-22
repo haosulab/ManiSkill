@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, cast
 
 import torch
 
-from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.render import PREBUILT_SHADER_CONFIGS, ShaderConfig, set_shader_pack
 from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
@@ -15,7 +14,7 @@ from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+    from mani_skill.sim.sapien.sim import SapienSim
 
 
 @dataclass
@@ -24,6 +23,7 @@ class SapienCameraConfig(CameraConfig):
     """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also ``default`` and ``rt``."""
     shader_config: ShaderConfig | None = None
     """The shader config to use for rendering. If None, the shader_pack will be used to search amongst prebuilt shader configs to create a ShaderConfig."""
+    mount: SapienActor | SapienLink | None = None
 
     def __post_init__(self):
         self.pose = Pose.create(self.pose)
@@ -36,17 +36,17 @@ class SapienCameraConfig(CameraConfig):
 class SapienCamera(Camera):
     def __init__(
         self,
-        camera_config: CameraConfig,
-        scene: ManiSkillScene,
+        camera_config: SapienCameraConfig,
+        sim: SapienSim,
         articulation: SapienArticulation | None = None,
     ):
-        super().__init__(camera_config, scene, articulation)
+        super().__init__(camera_config, sim, articulation)
         self._shader_config = cast(ShaderConfig, camera_config.shader_config)
         entity_uid = camera_config.entity_uid
         if camera_config.mount is not None:
             self.entity = camera_config.mount
         elif entity_uid is None:
-            self.entity = None
+            self.entity = cast(SapienActor | SapienLink, None)
         else:
             if articulation is None:
                 pass
@@ -68,7 +68,7 @@ class SapienCamera(Camera):
         # Add camera to scene. Add mounted one if a entity is given
         set_shader_pack(self._shader_config)
         if self.entity is None:
-            self.camera = scene.add_camera(
+            self.camera = sim.add_camera(
                 name=camera_config.uid,
                 pose=camera_config.pose,
                 width=camera_config.width,
@@ -79,7 +79,7 @@ class SapienCamera(Camera):
                 far=camera_config.far,
             )
         else:
-            self.camera = scene.add_camera(
+            self.camera = sim.add_camera(
                 name=camera_config.uid,
                 mount=self.entity,
                 pose=camera_config.pose,

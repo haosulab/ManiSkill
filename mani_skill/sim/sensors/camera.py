@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Sequence, TypedDict, TypeVar
+from typing import Sequence, TypedDict, TypeVar
 
 import sapien
 import torch
 
 from mani_skill.render import PREBUILT_SHADER_CONFIGS, ShaderConfig
+from mani_skill.sim.base_sim import BaseSim
 from mani_skill.sim.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
@@ -15,8 +16,7 @@ from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 
-if TYPE_CHECKING:
-    from mani_skill.envs.scene import ManiSkillScene
+# if TYPE_CHECKING:
 
 
 class CameraParams(TypedDict):
@@ -29,7 +29,7 @@ class CameraParams(TypedDict):
 class CameraConfig(BaseSensorConfig):
     uid: str
     """uid (str): unique id of the camera"""
-    pose: Pose | sapien.Pose
+    pose: Pose
     """Pose of the camera"""
     width: int
     """width of the camera"""
@@ -123,14 +123,17 @@ class Camera(BaseSensor):
     """Implementation of the Camera sensor which uses the sapien Camera."""
 
     config: CameraConfig
+    sim: BaseSim
 
     def __init__(
         self,
         camera_config: CameraConfig,
-        scene: ManiSkillScene,
+        sim: BaseSim,
         articulation: Articulation | None = None,
-    ):
+    ) -> None:
         super().__init__(config=camera_config)
+        self.sim = sim
+        self.articulation = articulation
 
     def capture(self):
         """

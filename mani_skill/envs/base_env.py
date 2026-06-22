@@ -180,6 +180,8 @@ class BaseEnv(gym.Env):
 
     _sample_video_link: Optional[str] = None
     """a link to a sample video of the task. This is mostly used for automatic documentation generation"""
+    _camera_cls: type[Camera] = Camera
+    """the class to use for creating cameras. Changed at runtime depending on render_backend"""
 
     def __init__(
         self,
@@ -803,10 +805,9 @@ class BaseEnv(gym.Env):
             else:
                 articulation = None
             if isinstance(sensor_config, CameraConfig):
-                sensor_cls = self._camera_cls
-                self._sensors[uid] = sensor_cls(
+                self._sensors[uid] = self._camera_cls(
                     sensor_config,
-                    self.scene,
+                    self.scene.render_sim,
                     articulation=articulation,
                 )
             else:
@@ -818,7 +819,7 @@ class BaseEnv(gym.Env):
         for uid, camera_config in self._human_render_camera_configs.items():
             self._human_render_cameras[uid] = self._camera_cls(
                 camera_config,
-                self.scene,
+                self.scene.render_sim,
             )
 
         self.scene.sensors = self._sensors
@@ -1185,7 +1186,6 @@ class BaseEnv(gym.Env):
         )
 
         # determine sim specific classes
-        self._camera_cls: type[Camera] = Camera
         if self.scene.render_sim.id == "sapien":
             from mani_skill.sim.sapien.sensors.camera import SapienCamera
             self._camera_cls = SapienCamera
