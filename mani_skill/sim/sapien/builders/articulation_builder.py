@@ -199,7 +199,7 @@ class SapienArticulationBuilder(
                     # joint mimics parent
                     if joint.parent_link == mimic_joint.child_link:
                         if joint.parent_link.parent is None:
-                            logger.warn(
+                            logger.warning(
                                 f"Skipping adding fixed tendon for {joint.name}"
                             )
                             # tendon must be attached to grandparent
