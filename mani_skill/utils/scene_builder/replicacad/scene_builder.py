@@ -272,7 +272,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
                     )
                 )
         else:
-            self.scene.set_ambient_light([0.3] * 3)
+            self.scene.render_sim.set_ambient_light([0.3] * 3)
         color = np.array([1.0, 0.8, 0.5]) * 2
         # entrance
         self.scene.add_point_light([-1.1, 2.775, 2.3], color=color)

@@ -128,7 +128,7 @@ class CartPoleBalanceBenchmarkEnv(CartpoleBalanceEnv):
 
     def _load_lighting(self, options: dict):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
-        self.scene.set_ambient_light(np.array([1, 1, 1]) * 0.3)
+        self.scene.render_sim.set_ambient_light(np.array([1, 1, 1]) * 0.3)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(
                 os.path.join(

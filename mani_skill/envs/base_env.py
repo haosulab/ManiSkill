@@ -846,11 +846,11 @@ class BaseEnv(gym.Env):
         """Loads lighting into the scene. Called by `self._reconfigure`. If not overriden will set some simple default lighting"""
 
         shadow = self.enable_shadow
-        self.scene.set_ambient_light([0.3, 0.3, 0.3])
-        self.scene.add_directional_light(
+        self.scene.render_sim.set_ambient_light([0.3, 0.3, 0.3])
+        self.scene.render_sim.add_directional_light(
             [1, 1, -1], [1, 1, 1], shadow=shadow, shadow_scale=5, shadow_map_size=2048
         )
-        self.scene.add_directional_light([0, 0, -1], [1, 1, 1])
+        self.scene.render_sim.add_directional_light([0, 0, -1], [1, 1, 1])
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #

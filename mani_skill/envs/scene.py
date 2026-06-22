@@ -338,18 +338,6 @@ class ManiSkillScene:
     #     # TODO
     #     return
 
-    @property
-    def ambient_light(self):
-        return self.sub_scenes[0].ambient_light
-
-    @ambient_light.setter
-    def ambient_light(self, color):
-        for scene in self.physics_sim.sub_scenes:
-            scene.render_system.ambient_light = color
-
-    def set_ambient_light(self, color):
-        self.ambient_light = color
-
     def add_point_light(
         self,
         position,
@@ -383,30 +371,6 @@ class ManiSkillScene:
 
             scene.add_entity(entity)
         return light
-
-    def add_directional_light(
-        self,
-        direction,
-        color,
-        shadow=False,
-        position=None,
-        shadow_scale=10.0,
-        shadow_near=-10.0,
-        shadow_far=10.0,
-        shadow_map_size=2048,
-        scene_idxs: Optional[list[int]] = None,
-    ):
-        self.render_sim.add_directional_light(
-            direction,
-            color,
-            shadow,
-            position,
-            shadow_scale,
-            shadow_near,
-            shadow_far,
-            shadow_map_size,
-            scene_idxs,
-        )
 
     def add_spot_light(
         self,

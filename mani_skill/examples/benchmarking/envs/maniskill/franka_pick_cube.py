@@ -80,10 +80,9 @@ class FrankaPickCubeBenchmarkEnv(BaseEnv):
             self.agent.robot.set_qpos(qpos)
             self.cube.set_pose(sapien.Pose(p=[0.6, 0, 0.02]))
     def _load_lighting(self, options: dict):
-        # self.scene.set_ambient_light(np.array([1,1,1])*0.05)
         for i in range(self.num_envs):
             self.scene.sub_scenes[i].set_environment_map(os.path.join(os.path.dirname(__file__), "kloofendal_28d_misty_puresky_1k.hdr"))
-        self.scene.add_directional_light(
+        self.scene.render_sim.add_directional_light(
             [0.3, 0.3, -1], [1, 1, 1], shadow=True, shadow_scale=5, shadow_map_size=2048
         )
     def evaluate(self):

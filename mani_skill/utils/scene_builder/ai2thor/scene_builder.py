@@ -241,7 +241,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
                 if npy_fp.exists():
                     self._navigable_positions[bci] = np.load(npy_fp)
 
-        self.scene.set_ambient_light([0.3, 0.3, 0.3])
+        self.scene.render_sim.set_ambient_light([0.3, 0.3, 0.3])
 
         # merge actors into one
         self.bg = Actor.create_from_entities(

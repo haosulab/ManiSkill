@@ -186,6 +186,26 @@ class BaseSim(ABC):
         raise NotImplementedError()
 
     ### Code for lighting ###
+    @property
+    def ambient_light(self):
+        """
+        The ambient light of the simulation scene.
+        """
+        raise NotImplementedError()
+
+    @ambient_light.setter
+    def ambient_light(self, color):
+        """
+        Sets the ambient light of the simulation scene.
+        """
+        raise NotImplementedError()
+
+    def set_ambient_light(self, color):
+        """
+        Sets the ambient light of the simulation scene.
+        """
+        raise NotImplementedError()
+
     def add_directional_light(
         self,
         direction,

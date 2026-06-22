@@ -178,11 +178,11 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
                 for i, scene in enumerate(self.scene.sub_scenes):
                     scene.render_system.ambient_light = ambient_colors[i]
         else:
-            self.scene.set_ambient_light([0.3, 0.3, 0.3])
-        self.scene.add_directional_light(
+            self.scene.render_sim.set_ambient_light([0.3, 0.3, 0.3])
+        self.scene.render_sim.add_directional_light(
             [1, 1, -1], [1, 1, 1], shadow=False, shadow_scale=5, shadow_map_size=2048
         )
-        self.scene.add_directional_light([0, 0, -1], [1, 1, 1])
+        self.scene.render_sim.add_directional_light([0, 0, -1], [1, 1, 1])
 
     def _load_scene(self, options: dict):
         # we use a predefined table scene builder which simply adds a table and floor to the scene
