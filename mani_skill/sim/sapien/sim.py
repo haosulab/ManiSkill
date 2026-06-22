@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 from dataclasses import asdict, dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Mapping, cast
+from typing import Mapping, cast
 
 import numpy as np
 import sapien
@@ -18,6 +18,9 @@ from mani_skill.render import SAPIEN_RENDER_SYSTEM
 from mani_skill.sensors.base_sensor import BaseSensor
 from mani_skill.sensors.camera import Camera
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
+from mani_skill.sim.sapien.structs.actor import SapienActor
+from mani_skill.sim.sapien.structs.articulation import SapienArticulation
+from mani_skill.sim.sapien.structs.link import SapienLink
 from mani_skill.sim.sapien.structs.render_camera import RenderCamera
 from mani_skill.utils import common
 from mani_skill.utils.logging_utils import logger
@@ -31,11 +34,6 @@ if SAPIEN_RENDER_SYSTEM == "3.1":
 
     GlobalShaderPack = None
     sapien.render.RenderCameraGroup = "oldtype"
-
-if TYPE_CHECKING:
-    from mani_skill.sim.sapien.structs.actor import SapienActor
-    from mani_skill.sim.sapien.structs.articulation import SapienArticulation
-    from mani_skill.sim.sapien.structs.link import SapienLink
 
 
 @dataclass

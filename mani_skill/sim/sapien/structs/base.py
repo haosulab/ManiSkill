@@ -1,16 +1,20 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 import numpy as np
 import sapien.physx as physx
 import torch
 
-from mani_skill.sim.sapien.sim import SapienSim
 from mani_skill.sim.sapien.structs.decorators import before_gpu_init
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs import Array, Pose
 from mani_skill.utils.structs.base import BaseStruct
+
+if TYPE_CHECKING:
+    from mani_skill.sim.sapien.sim import SapienSim
 
 T = TypeVar("T")
 
