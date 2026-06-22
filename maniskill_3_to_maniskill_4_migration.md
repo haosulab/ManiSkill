@@ -10,6 +10,8 @@ A guide for migrating code from ManiSkill 3 to ManiSkill 4, in addition to (stro
 
 - Simulation and rendering backends are not limited to those provided by [Sapien](https://github.com/haosulab/sapien). Going forward, all backends are named with the following format: `<package_name:backend_name>`. So `physx_cuda` is now `sapien.physx_cuda` and the rendering backend `cuda` is now `sapien.cuda`. With the newton support since mujoco warp is used via newton, the mujoco warp backend is named `newton.mujoco_warp`. For a full list of possible backends and their details see TODO(stao). We will still provide backwards compatability however. Device IDs can still be specified as before e.g. `physx_cuda:0` becomes `sapien.physx_cuda:0` to run physx simulation on the `cuda:0` device.
 
+- `mani_skill.sensors` module has been moved to `mani_skill.sim.sensors` instead. Moreover the StereoDepthSensor class is deprecated.
+
 ## Strong recommendations
 
 - `SimConfig`, `DefaultMaterialsConfig` configs moved from `mani_skill/utils/structs/types.py` to `mani_skill/sim/base_sim.py`. They are now also frozen dataclasses meaning once created, you generally can't edit it (and shouldn't) unless you know what you are doing.
