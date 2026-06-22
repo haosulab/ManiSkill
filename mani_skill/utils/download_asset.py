@@ -11,9 +11,7 @@ from urllib.error import URLError
 from huggingface_hub import snapshot_download
 from tqdm.auto import tqdm
 
-import mani_skill.envs  # import all environments to register them which auto registers data groups to allow asset download by environment ID.
 from mani_skill.utils import assets
-from mani_skill.utils.assets.data import DATA_GROUPS, DATA_SOURCES
 
 
 def prompt_yes_no(message):
