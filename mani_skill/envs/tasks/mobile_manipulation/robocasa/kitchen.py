@@ -5,7 +5,7 @@ import sapien
 import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.robocasa.objects.kitchen_object_utils import (
@@ -18,7 +18,7 @@ from mani_skill.utils.scene_builder.robocasa.utils.placement_samplers import (
     RandomizationError,
 )
 from mani_skill.utils.structs.pose import Pose
-from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
+from mani_skill.utils.structs.types import SimConfig
 
 
 @register_env(
@@ -208,9 +208,9 @@ class RoboCasaKitchenEnv(BaseEnv):
         self.obj_instance_split = obj_instance_split
 
         if layout_and_style_ids is not None:
-            assert (
-                layout_ids is None and style_ids is None
-            ), "layout_ids and style_ids must both be set to None if layout_and_style_ids is set"
+            assert layout_ids is None and style_ids is None, (
+                "layout_ids and style_ids must both be set to None if layout_and_style_ids is set"
+            )
             self.layout_and_style_ids = layout_and_style_ids
         else:
             layout_ids = scene_registry.unpack_layout_ids(layout_ids)

@@ -10,10 +10,9 @@ import torch
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils import randomization, rewards
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
-from mani_skill.utils.geometry import rotation_conversions
+from mani_skill.envs.utils import rewards
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.control.planar.scene_builder import (
     PlanarSceneBuilder,

@@ -10,7 +10,7 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.robots import PandaWristCam
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
 from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env

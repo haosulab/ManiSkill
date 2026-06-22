@@ -19,8 +19,8 @@ from mani_skill.utils.geometry.rotation_conversions import matrix_to_quaternion
 from mani_skill.utils.structs.pose import Pose
 
 if TYPE_CHECKING:
-    from mani_skill.sensors.camera import CameraConfig
     from mani_skill.sim.loaders.urdf import BaseURDFLoader
+    from mani_skill.sim.sensors.camera import CameraConfig
     from mani_skill.utils.building.mjcf_loader import MJCFLoader
     from mani_skill.utils.structs.actor import Actor
 

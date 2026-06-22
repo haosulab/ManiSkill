@@ -8,7 +8,7 @@ from transforms3d.euler import euler2quat
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.utils.registration import register_env
@@ -244,9 +244,7 @@ class DrawTriangleEnv(BaseEnv):
             if hasattr(self, "vertices"):
                 self.vertices[env_idx] = torch.from_numpy(
                     np.tile(self.original_verts, (b, 1, 1))
-                ).to(
-                    self.device
-                )  # b, 3, 3
+                ).to(self.device)  # b, 3, 3
             else:
                 self.vertices = torch.from_numpy(
                     np.tile(self.original_verts, (b, 1, 1))
@@ -254,9 +252,7 @@ class DrawTriangleEnv(BaseEnv):
 
             self.vertices[env_idx] = (
                 mats.double() @ self.vertices[env_idx].transpose(-1, -2).double()
-            ).transpose(
-                -1, -2
-            )  # apply rotation matrix
+            ).transpose(-1, -2)  # apply rotation matrix
             self.vertices[env_idx] += target_pos.unsqueeze(1)
 
             self.triangles = self.generate_triangle_with_points(

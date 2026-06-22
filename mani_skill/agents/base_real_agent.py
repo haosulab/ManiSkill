@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from mani_skill.agents.base_agent import BaseAgent
-from mani_skill.sensors.base_sensor import BaseSensorConfig
+from mani_skill.sim.sensors.base_sensor import BaseSensorConfig
 from mani_skill.utils.structs.types import Array
 
 

@@ -3,16 +3,14 @@
 from typing import Any, Union
 
 import numpy as np
-import sapien
 import torch
 
 from mani_skill.agents.robots.humanoid import Humanoid
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils import randomization, rewards
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.envs.utils import rewards
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.ground import build_ground
-from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SceneConfig, SimConfig
@@ -237,7 +235,7 @@ class HumanoidEnvStandard(HumanoidEnvBase):
         self.ground.set_collision_group_bit(group=2, bit_idx=30, bit=1)
 
         for link in self.active_links:
-            if not "foot" in link.name:
+            if "foot" not in link.name:
                 link.set_collision_group_bit(group=2, bit_idx=30, bit=1)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
@@ -276,9 +274,7 @@ class HumanoidEnvStandard(HumanoidEnvBase):
             margin=move_speed,
             value_at_margin=0,
             sigmoid="linear",
-        ).view(
-            -1
-        )  # (b,3) -> (b)
+        ).view(-1)  # (b,3) -> (b)
 
 
 @register_env("MS-HumanoidStand-v1", max_episode_steps=1000)

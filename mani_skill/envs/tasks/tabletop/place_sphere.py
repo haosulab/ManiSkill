@@ -1,18 +1,14 @@
 from typing import Any, Union
 
-import gymnasium as gym
-import matplotlib.pyplot as plt
 import numpy as np
 import sapien
 import torch
 import torch.random
-from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils import randomization
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.building import actors
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
@@ -235,9 +231,9 @@ class PlaceSphereEnv(BaseEnv):
         ungrasp_reward = (
             torch.sum(self.agent.robot.get_qpos()[:, -2:], axis=1) / gripper_width
         )
-        ungrasp_reward[
-            ~is_obj_grasped
-        ] = 16.0  # give ungrasp a bigger reward, so that it exceeds the robot static reward and the gripper can close
+        ungrasp_reward[~is_obj_grasped] = (
+            16.0  # give ungrasp a bigger reward, so that it exceeds the robot static reward and the gripper can close
+        )
         v = torch.linalg.norm(self.obj.linear_velocity, axis=1)
         av = torch.linalg.norm(self.obj.angular_velocity, axis=1)
         static_reward = 1 - torch.tanh(v * 10 + av)

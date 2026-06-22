@@ -6,7 +6,7 @@ from transforms3d.euler import euler2quat
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots.panda.panda_stick import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 from mani_skill.utils.registration import register_env
@@ -171,7 +171,6 @@ class DrawSVGEnv(BaseEnv):
         )  # calculate transform to be in range of arm
         lines = lines - center
         if not parsed_svg.iscontinuous():
-
             disconts = lines[1:, 0] - lines[:-1, 1]
             self.disconts = list(
                 np.nonzero(np.logical_or(disconts[:, 0], disconts[:, 1]))[0]
@@ -277,9 +276,7 @@ class DrawSVGEnv(BaseEnv):
             if hasattr(self, "vertices"):
                 self.points[env_idx] = torch.from_numpy(
                     np.tile(self.original_points, (b, 1, 1))
-                ).to(
-                    self.device
-                )  # b, 3, 3
+                ).to(self.device)  # b, 3, 3
             else:
                 self.points = torch.from_numpy(
                     np.tile(self.original_points, (b, 1, 1))
@@ -287,9 +284,7 @@ class DrawSVGEnv(BaseEnv):
 
             self.points[env_idx] = (
                 rot_mat.double() @ self.points[env_idx].transpose(-1, -2).double()
-            ).transpose(
-                -1, -2
-            )  # rotation matrix
+            ).transpose(-1, -2)  # rotation matrix
             self.points[env_idx] += target_pos.unsqueeze(1)
             self.dots_dist[env_idx] = torch.ones((self.num_envs, 500)) * -1
             self.ref_dist[env_idx] = torch.zeros(

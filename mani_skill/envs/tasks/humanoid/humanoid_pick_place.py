@@ -12,8 +12,8 @@ from mani_skill.agents.robots.unitree_g1.g1_upper_body import (
 )
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.kitchen_counter import KitchenCounterSceneBuilder
 from mani_skill.utils.structs.pose import Pose
@@ -239,7 +239,7 @@ class UnitreeG1PlaceAppleInBowlEnv(HumanoidPlaceAppleInBowl):
         super().__init__(
             *args,
             robot_uids="unitree_g1_simplified_upper_body_with_head_camera",
-            **kwargs
+            **kwargs,
         )
 
     @property

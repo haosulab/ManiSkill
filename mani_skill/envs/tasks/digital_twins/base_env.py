@@ -5,7 +5,7 @@ import cv2
 import torch
 
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
@@ -160,9 +160,9 @@ class BaseDigitalTwinEnv(BaseEnv):
             # get the actor ids of objects to manipulate; note that objects here are not articulated
             for camera_name in self._rgb_overlay_images.keys():
                 # obtain overlay mask based on segmentation info
-                assert (
-                    "segmentation" in obs[camera_name].keys()
-                ), "Image overlay requires segment info in the observation!"
+                assert "segmentation" in obs[camera_name].keys(), (
+                    "Image overlay requires segment info in the observation!"
+                )
                 if (
                     self._rgb_overlay_images[camera_name].device
                     != obs[camera_name]["rgb"].device

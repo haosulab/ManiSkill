@@ -10,8 +10,8 @@ import torch
 
 import mani_skill.render.utils as render_utils
 from mani_skill.envs.utils.system.backend import BackendInfo
-from mani_skill.sensors.base_sensor import BaseSensor
-from mani_skill.sensors.camera import Camera
+from mani_skill.sim.sensors.base_sensor import BaseSensor
+from mani_skill.sim.sensors.camera import Camera
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.link import Link

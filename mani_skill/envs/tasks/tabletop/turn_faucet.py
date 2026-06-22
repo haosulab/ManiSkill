@@ -2,16 +2,15 @@ from typing import Union
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
-from mani_skill.utils.building import actors, articulations
+from mani_skill.utils.building import articulations
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table.scene_builder import TableSceneBuilder
 from mani_skill.utils.structs.articulation import Articulation
@@ -174,9 +173,7 @@ class TurnFaucetEnv(BaseEnv):
                 self.target_switch_link.pose * self.target_switch_link.cmass_local_pose
             )
             self.target_link_pos = cmass_pose.p
-            joint_pose = (
-                self.target_switch_link.joint.get_global_pose().to_transformation_matrix()
-            )
+            joint_pose = self.target_switch_link.joint.get_global_pose().to_transformation_matrix()
             self.target_joint_axis[env_idx] = joint_pose[env_idx, :3, 0]
             # self.handle_link_goal.set_pose(cmass_pose)
 

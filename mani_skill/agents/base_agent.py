@@ -11,7 +11,7 @@ from gymnasium import spaces
 
 from mani_skill import format_path
 from mani_skill.agents.controllers.pd_joint_pos import PDJointPosControllerConfig
-from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
+from mani_skill.sim.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import assets, download_asset, sapien_utils
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs import Actor, Array, Articulation

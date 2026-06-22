@@ -9,11 +9,10 @@ from transforms3d.euler import euler2quat
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.envs.utils import randomization, rewards
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
+from mani_skill.envs.utils import rewards
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.building.ground import build_ground
-from mani_skill.utils.geometry import rotation_conversions
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SceneConfig, SimConfig

@@ -2,7 +2,6 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 import trimesh
 
@@ -10,7 +9,7 @@ from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.robots import Fetch
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.utils import randomization
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.building import actors, articulations
 from mani_skill.utils.building.ground import build_ground
@@ -164,8 +163,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
                     # save the first mesh in the link object that correspond with a handle
                     handle_links_meshes[-1].append(
                         link.generate_mesh(
-                            filter=lambda _, render_shape: "handle"
-                            in render_shape.name,
+                            filter=lambda _, render_shape: (
+                                "handle" in render_shape.name
+                            ),
                             mesh_name="handle",
                         )[0]
                     )
@@ -342,9 +342,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.target_qpos - self.handle_link.joint.qpos, self.target_qpos
         )
         open_reward = 2 * (1 - amount_to_open_left)
-        reaching_reward[
-            amount_to_open_left < 0.999
-        ] = 2  # if joint opens even a tiny bit, we don't need reach reward anymore
+        reaching_reward[amount_to_open_left < 0.999] = (
+            2  # if joint opens even a tiny bit, we don't need reach reward anymore
+        )
         # print(open_reward.shape)
         open_reward[info["open_enough"]] = 3  # give max reward here
         reward = reaching_reward + open_reward

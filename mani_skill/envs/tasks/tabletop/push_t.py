@@ -8,9 +8,8 @@ from transforms3d.euler import euler2quat
 
 from mani_skill.agents.robots import PandaStick
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils
-from mani_skill.utils.building import actors
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.scene_builder.table import TableSceneBuilder
 from mani_skill.utils.structs import Pose
@@ -373,9 +372,7 @@ class PushTEnv(BaseEnv):
         # convert from homogenious coords to normal coords
         tees_in_goal_frame = tees_in_goal_frame[:, 0:2, :, :] / tees_in_goal_frame[
             :, -1, :, :
-        ].unsqueeze(
-            1
-        )  #  now (b,2,res,res)
+        ].unsqueeze(1)  #  now (b,2,res,res)
 
         # we now have a collection of coordinates xy that are the coordinates of the tees in the goal frame
         # we just extract the indices in the uv map where the egocentic T is, to get the transformed T coords

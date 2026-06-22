@@ -7,7 +7,7 @@ import torch
 
 from mani_skill.agents.base_real_agent import BaseRealAgent
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import Camera, CameraConfig
+from mani_skill.sim.sensors.camera import Camera, CameraConfig
 from mani_skill.utils import common
 from mani_skill.utils.logging_utils import logger
 
@@ -65,9 +65,9 @@ class Sim2RealEnv(gym.Env):
     ):
         self.sim_env = sim_env
         self.num_envs = 1
-        assert (
-            self.base_sim_env.backend.sim_backend == "physx_cpu"
-        ), "For the Sim2RealEnv we expect the simulation to be using the physx_cpu simulation backend currently in order to correctly align the robot"
+        assert self.base_sim_env.backend.sim_backend == "physx_cpu", (
+            "For the Sim2RealEnv we expect the simulation to be using the physx_cpu simulation backend currently in order to correctly align the robot"
+        )
 
         # copy over some sim parameters/settings
         self.device = self.base_sim_env.backend.device
@@ -148,8 +148,8 @@ class Sim2RealEnv(gym.Env):
         self.agent._sim_agent.controller.qpos
 
         if sensor_data_preprocessing_function is not None:
-            self.preprocess_sensor_data = lambda sensor_data, sensor_names=None: sensor_data_preprocessing_function(
-                sensor_data, sensor_names
+            self.preprocess_sensor_data = lambda sensor_data, sensor_names=None: (
+                sensor_data_preprocessing_function(sensor_data, sensor_names)
             )
 
         if not skip_data_checks:
@@ -340,18 +340,18 @@ class Sim2RealEnv(gym.Env):
                 for key in sim_obs.keys():
                     if key not in real_obs:
                         raise KeyError(
-                            f"Key obs[\"{'.'.join(path + [key])}]\"] found in simulation observation but not in real observation"
+                            f'Key obs["{".".join(path + [key])}]"] found in simulation observation but not in real observation'
                         )
                     check_observation_match(
                         sim_obs[key], real_obs[key], path=path + [key]
                     )
             else:
-                assert (
-                    sim_obs.shape == real_obs.shape
-                ), f"Shape mismatch: obs[\"{'.'.join(path)}\"]: {sim_obs.shape} vs {real_obs.shape}"
-                assert (
-                    sim_obs.dtype == real_obs.dtype
-                ), f"Dtype mismatch: obs[\"{'.'.join(path)}\"]: {sim_obs.dtype} vs {real_obs.dtype}"
+                assert sim_obs.shape == real_obs.shape, (
+                    f'Shape mismatch: obs["{".".join(path)}"]: {sim_obs.shape} vs {real_obs.shape}'
+                )
+                assert sim_obs.dtype == real_obs.dtype, (
+                    f'Dtype mismatch: obs["{".".join(path)}"]: {sim_obs.dtype} vs {real_obs.dtype}'
+                )
 
         # Call the recursive function to check observations
         check_observation_match(sample_sim_obs, sample_real_obs)

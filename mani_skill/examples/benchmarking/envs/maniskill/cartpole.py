@@ -9,7 +9,7 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers.passive_controller import PassiveControllerConfig
 from mani_skill.agents.controllers.pd_joint_pos import PDJointPosControllerConfig
 from mani_skill.envs.tasks.control.cartpole import CartpoleBalanceEnv
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose

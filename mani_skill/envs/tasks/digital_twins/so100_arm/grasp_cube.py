@@ -11,7 +11,7 @@ from transforms3d.euler import euler2quat
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots.so100.so_100 import SO100
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.registration import register_env

@@ -3,7 +3,7 @@ import sapien
 
 from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.registration import register_agent
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 
 from .panda import Panda
 

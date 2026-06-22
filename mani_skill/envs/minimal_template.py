@@ -6,15 +6,14 @@ import torch
 
 from mani_skill.agents.robots import Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.sensors.camera import CameraConfig
-from mani_skill.utils import common, sapien_utils  # pyright: ignore[reportUnusedImport]
+from mani_skill.sim.sensors.camera import CameraConfig
+from mani_skill.utils import sapien_utils  # pyright: ignore[reportUnusedImport]
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.types import SimConfig
 
 
 @register_env("CustomEnv-v1", max_episode_steps=200)
 class CustomEnv(BaseEnv):
-
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     agent: Union[Panda, Fetch]
 

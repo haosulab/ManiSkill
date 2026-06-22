@@ -26,15 +26,14 @@ from mani_skill.envs.utils.system.backend import (
     CPU_SIM_BACKENDS,
     parse_sim_and_render_backend,
 )
-from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
-from mani_skill.sensors.camera import (
+from mani_skill.sim.sapien import SapienSim
+from mani_skill.sim.sensors.base_sensor import BaseSensor, BaseSensorConfig
+from mani_skill.sim.sensors.camera import (
     Camera,
     CameraConfig,
     parse_sensor_configs,
     update_sensor_configs_from_dict,
 )
-from mani_skill.sensors.depth_camera import StereoDepthCameraConfig
-from mani_skill.sim.sapien import SapienSim
 from mani_skill.utils import common, gym_utils, sapien_utils, tree
 from mani_skill.utils.structs import Actor, Articulation
 from mani_skill.utils.structs.pose import Pose
@@ -812,9 +811,7 @@ class BaseEnv(gym.Env):
                     articulation = self.agent.robot
             else:
                 articulation = None
-            if isinstance(sensor_config, StereoDepthCameraConfig):
-                raise NotImplementedError("StereoDepthCamera is not implemented in this version at the moment.")
-            elif isinstance(sensor_config, CameraConfig):
+            if isinstance(sensor_config, CameraConfig):
                 sensor_cls = Camera
                 self._sensors[uid] = sensor_cls(
                     sensor_config,

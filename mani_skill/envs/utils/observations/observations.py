@@ -2,14 +2,10 @@
 Functions that map a observation to a particular format, e.g. mapping the raw images to rgbd or pointcloud formats
 """
 
-
-import numpy as np
-import sapien.physx as physx
 import torch
 
-from mani_skill.render import SAPIEN_RENDER_SYSTEM
-from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
-from mani_skill.sensors.camera import Camera
+from mani_skill.sim.sensors.base_sensor import BaseSensor
+from mani_skill.sim.sensors.camera import Camera
 from mani_skill.utils import common
 
 

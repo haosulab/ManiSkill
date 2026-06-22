@@ -4,7 +4,7 @@ import torch
 from gymnasium import spaces
 
 from mani_skill.agents.base_agent import BaseAgent
-from mani_skill.sensors.base_sensor import BaseSensorConfig
+from mani_skill.sim.sensors.base_sensor import BaseSensorConfig
 
 T = TypeVar("T", bound=Sequence[BaseAgent])
 
@@ -47,9 +47,9 @@ class MultiAgent(BaseAgent, Generic[T]):
             for agent in self.agents:
                 agent.set_control_mode()
         else:
-            assert len(control_mode) == len(
-                self.agents
-            ), "For task with multiple agents, setting control mode on the MultiAgent object requires a control mode for each agent"
+            assert len(control_mode) == len(self.agents), (
+                "For task with multiple agents, setting control mode on the MultiAgent object requires a control mode for each agent"
+            )
             for cm, agent in zip(control_mode, self.agents):
                 agent.set_control_mode(cm)
 

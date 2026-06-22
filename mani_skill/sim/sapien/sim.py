@@ -15,13 +15,13 @@ import mani_skill.render.utils as render_utils
 
 # try and determine which render system is used by the installed sapien package
 from mani_skill.render import SAPIEN_RENDER_SYSTEM
-from mani_skill.sensors.base_sensor import BaseSensor
-from mani_skill.sensors.camera import Camera
 from mani_skill.sim.base_sim import BaseSim, BaseSimConfig
 from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 from mani_skill.sim.sapien.structs.link import SapienLink
 from mani_skill.sim.sapien.structs.render_camera import RenderCamera
+from mani_skill.sim.sensors.base_sensor import BaseSensor
+from mani_skill.sim.sensors.camera import Camera
 from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose

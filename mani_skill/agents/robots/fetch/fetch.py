@@ -8,7 +8,7 @@ from mani_skill import PACKAGE_ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.sensors.camera import CameraConfig
+from mani_skill.sim.sensors.camera import CameraConfig
 from mani_skill.utils import common
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
@@ -42,7 +42,25 @@ class Fetch(BaseAgent):
     keyframes = dict(
         rest=Keyframe(
             pose=sapien.Pose(),
-            qpos=np.array([0, 0, 0, 0.386, 0, -0.370, 0.562, -1.032, 0.695, 0.955, -0.1, 2.077, 0, 0.015, 0.015]),  # fmt: skip
+            qpos=np.array(
+                [
+                    0,
+                    0,
+                    0,
+                    0.386,
+                    0,
+                    -0.370,
+                    0.562,
+                    -1.032,
+                    0.695,
+                    0.955,
+                    -0.1,
+                    2.077,
+                    0,
+                    0.015,
+                    0.015,
+                ]
+            ),  # fmt: skip
         )
     )
 
