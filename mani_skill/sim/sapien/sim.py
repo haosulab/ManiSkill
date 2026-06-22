@@ -26,6 +26,7 @@ from mani_skill.utils import common
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
+from mani_skill.utils import sapien_utils
 
 if SAPIEN_RENDER_SYSTEM == "3.1":
     from sapien.wrapper.scene import (
@@ -689,6 +690,45 @@ class SapienSim(BaseSim):
 
     def can_physics(self):
         return True
+
+    def get_pairwise_contact_impulses(self, obj1: SapienActor | SapienLink, obj2: SapienActor | SapienLink):
+        if self.gpu_sim_enabled:
+            assert isinstance(self.px, physx.PhysxGpuSystem)
+            query_hash = hash((obj1, obj2))
+            query_key = obj1.name + obj2.name
+
+            # we rebuild the potentially expensive contact query if it has not existed previously
+            # or if it has, the managed objects are a different set
+            rebuild_query = (query_key not in self._pairwise_contact_queries) or (
+                query_key in self._pairwise_contact_query_unique_hashes
+                and self._pairwise_contact_query_unique_hashes[query_key] != query_hash
+            )
+            if rebuild_query:
+                body_pairs = cast(
+                    list[
+                        tuple[
+                            physx.PhysxRigidBaseComponent, physx.PhysxRigidBaseComponent
+                        ]
+                    ],
+                    list(zip(obj1._bodies, obj2._bodies)),
+                )
+                self._pairwise_contact_queries[query_key] = (
+                    self.px.gpu_create_contact_pair_impulse_query(body_pairs)
+                )
+                self._pairwise_contact_query_unique_hashes[query_key] = query_hash
+
+            query = self._pairwise_contact_queries[query_key]
+            self.px.gpu_query_contact_pair_impulses(query)
+            # query.cuda_impulses is shape (num_unique_pairs * num_envs, 3)
+            pairwise_contact_impulses = query.cuda_impulses.torch().clone()
+            return pairwise_contact_impulses
+        else:
+            assert isinstance(self.px, physx.PhysxCpuSystem)
+            contacts = cast(physx.PhysxCpuSystem, self.px).get_contacts()
+            pairwise_contact_impulses = sapien_utils.get_pairwise_contact_impulse(
+                contacts, obj1._bodies[0].entity, obj2._bodies[0].entity
+            )
+            return common.to_tensor(pairwise_contact_impulses)[None, :]
 
     ### GPU Simulation Management ###
 

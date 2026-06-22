@@ -236,8 +236,25 @@ class BaseSim(ABC):
         Whether the simulation backend can run physical simulation.
         """
 
-    ### Accelerate data management code ###
+    def get_pairwise_contact_impulses(
+        self, obj1: Actor | Link, obj2: Actor | Link
+    ):
+        """
+        Get the impulse vectors between two actors/links. Returns impulse vector of shape
+        (N, 3), where N is the number of environments and 3 is the dimension of the impulse
+        vector itself, representing x, y, and z direction of impulse.
 
+        Note that dividing the impulse value by self.px.timestep yields the pairwise contact
+        force in Newtons. The equivalent API for that is self.get_pairwise_contact_force(obj1,
+        obj2). It is generally recommended to use the force values since they are independent of
+        the timestep (dt = 1 / sim_freq) of the simulation.
+
+        Args:
+            obj1: Actor | Link
+            obj2: Actor | Link
+        """
+
+    ### Accelerator data management code ###
     def _gpu_apply_all(self):
         """
         Calls gpu_apply to update all body data, qpos, qvel, qf, and root poses
