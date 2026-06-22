@@ -138,7 +138,7 @@ class PushCubeEnv(BaseEnv):
         # are generated or env.render_sensors() is called or env.render() is called with render_mode="sensors", the actor will not show up.
         # This is useful if you intend to add some visual goal sites as e.g. done in PickCube that aren't actually part of the task
         # and are there just for generating evaluation videos.
-        # self._hidden_objects.append(self.goal_region)
+        self._hidden_objects.append(self.goal_region)
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # use the torch.device context manager to automatically create tensors on CPU or CUDA depending on self.device, the device the environment runs on
