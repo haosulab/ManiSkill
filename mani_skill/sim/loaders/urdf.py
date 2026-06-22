@@ -25,20 +25,22 @@ class BaseURDFLoader:
     built in all scenes."""
 
     __sims: dict[str, BaseSim] = {}
-    """dictionary of simulators that will be tracking this builder. There can be multiple simulators
-    that track this builder in order to support using different simulators for physics and
-    rendering."""
+    """dictionary of simulators that will be tracking this builder. There can be multiple
+    simulators that track this builder in order to support using different simulators for
+    physics and rendering."""
 
     __sim_builders: dict[str, "BaseURDFLoader"] = {}
-    """dictionary mapping sim id to the corresponding articulation builder for that simulator."""
+    """dictionary mapping sim id to the corresponding articulation builder for that simulator.
+    """
 
     sim: BaseSim
     """The simulation backend this loader loads in"""
 
     def _add_sim(self, sim: BaseSim):
         """
-        Add a simulation backend that should track this loader. Whenever this URDF is loaded,
-        the simulator backend will include this URDF in its state and compile it in the scene.
+        Add a simulation backend that should track this loader. Whenever this URDF is
+        loaded, the simulator backend will include this URDF in its state and compile
+        it in the scene.
 
         Args:
             sim: The simulation backend to add.
@@ -57,8 +59,12 @@ class BaseURDFLoader:
     def fix_root_link(self, fix_root_link: bool):
         """Whether to fix the root link of the URDF."""
         for sim in self.__sims.values():
-            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
-                self.__sim_builders[sim.id].fix_root_link = fix_root_link
+            if type(self.__sim_builders[sim.id]) is BaseURDFLoader:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not have "
+                    "a fix_root_link attribute."
+                )
+            self.__sim_builders[sim.id].fix_root_link = fix_root_link
 
     @property
     def load_multiple_collisions_from_file(self) -> bool:
@@ -73,12 +79,14 @@ class BaseURDFLoader:
     ):
         """Whether to load multiple collisions from the file."""
         for sim in self.__sims.values():
-            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
-                self.__sim_builders[
-                    sim.id
-                ].load_multiple_collisions_from_file = (
-                    load_multiple_collisions_from_file
+            if type(self.__sim_builders[sim.id]) is BaseURDFLoader:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not have "
+                    "a load_multiple_collisions_from_file attribute."
                 )
+            self.__sim_builders[
+                sim.id
+            ].load_multiple_collisions_from_file = load_multiple_collisions_from_file
 
     @property
     def disable_self_collisions(self) -> bool:
@@ -91,7 +99,11 @@ class BaseURDFLoader:
     def disable_self_collisions(self, disable_self_collisions: bool):
         """Whether to disable self collisions of the URDF."""
         for sim in self.__sims.values():
-            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
+            if type(self.__sim_builders[sim.id]) is BaseURDFLoader:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not have "
+                    "a disable_self_collisions attribute."
+                )
                 self.__sim_builders[
                     sim.id
                 ].disable_self_collisions = disable_self_collisions
@@ -105,8 +117,28 @@ class BaseURDFLoader:
     def name(self, name: str):
         """The name of the URDF."""
         for sim in self.__sims.values():
-            if type(self.__sim_builders[sim.id]) is not BaseURDFLoader:
-                self.__sim_builders[sim.id].name = name
+            if type(self.__sim_builders[sim.id]) is BaseURDFLoader:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not have "
+                    "a name attribute."
+                )
+            self.__sim_builders[sim.id].name = name
+
+    @property
+    def scale(self) -> float:
+        """The scale of the URDF."""
+        return self.__sim_builders[next(iter(self.__sims.values())).id].scale
+
+    @scale.setter
+    def scale(self, scale: float):
+        """The scale of the URDF."""
+        for sim in self.__sims.values():
+            if type(self.__sim_builders[sim.id]) is BaseURDFLoader:
+                raise NotImplementedError(
+                    f"{self.__sim_builders[sim.id].__class__.__name__} does not have "
+                    "a scale attribute."
+                )
+            self.__sim_builders[sim.id].scale = scale
 
     def parse(
         self,
@@ -115,14 +147,15 @@ class BaseURDFLoader:
         package_dir: str | None = None,
     ) -> ParsedURDFData:
         """
-        Parses a given URDF and optionally SRDF file and returns a dictionary of all found
-        articulation and actor builders
+        Parses a given URDF and optionally SRDF file and returns a dictionary of all
+        found articulation and actor builders
 
         Args:
             urdf_file: The path to the URDF file to parse.
-            srdf_file: The path to the SRDF file to parse. If None, no SRDF will be parsed.
-            package_dir: The directory to resolve package paths in the URDF file. If None, no
-                package paths will be resolved.
+            srdf_file: The path to the SRDF file to parse. If None, no SRDF will be
+                parsed.
+            package_dir: The directory to resolve package paths in the URDF file. If
+                None, no package paths will be resolved.
 
         Returns:
             A dictionary of all found articulation and actor builders
@@ -143,14 +176,15 @@ class BaseURDFLoader:
         package_dir: str | None = None,
     ) -> Articulation:
         """
-        Loads a given URDF and optionally SRDF file and returns the first articulation found and
-        builds it.
+        Loads a given URDF and optionally SRDF file and returns the first articulation
+        found and builds it.
 
         Args:
             urdf_file: The path to the URDF file to load.
-            srdf_file: The path to the SRDF file to load. If None, no SRDF will be loaded.
-            package_dir: The directory to resolve package paths in the URDF file. If None, no
-                package paths will be resolved.
+            srdf_file: The path to the SRDF file to load. If None, no SRDF will be
+                loaded.
+            package_dir: The directory to resolve package paths in the URDF file. If
+                None, no package paths will be resolved.
 
         Returns:
             A single articulation loaded from the URDF file

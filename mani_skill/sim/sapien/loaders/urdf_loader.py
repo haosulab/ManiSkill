@@ -27,6 +27,7 @@ class SapienURDFLoader(OriginalSapienURDFLoader, BaseURDFLoader):
     disable_self_collisions: bool = False
     fix_root_link: bool = True
     load_multiple_collisions_from_file: bool = False
+    scale: float = 1.0
 
     @property
     def scene(self):
