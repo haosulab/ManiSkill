@@ -28,42 +28,28 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class SapienArticulation(SapienBaseStruct[physx.PhysxArticulation], Articulation):
+class SapienArticulation(Articulation, SapienBaseStruct[physx.PhysxArticulation]):
     """
     Wrapper around physx.PhysxArticulation objects
     """
 
-    links: list[SapienLink]
+    links: list[SapienLink] = field(default_factory=list)
     """list of Link objects"""
-    links_map: dict[str, SapienLink]
+    links_map: dict[str, SapienLink] = field(default_factory=dict)
     """Maps link name to the Link object"""
-    root: SapienLink
+    root: SapienLink = field(default_factory=None)
     """The root Link object"""
-    joints: list[SapienArticulationJoint]
+    joints: list[SapienArticulationJoint] = field(default_factory=list)
     """list of Joint objects"""
-    joints_map: dict[str, SapienArticulationJoint]
+    joints_map: dict[str, SapienArticulationJoint] = field(default_factory=dict)
     """Maps joint name to the Joint object"""
-    active_joints: list[SapienArticulationJoint]
+    active_joints: list[SapienArticulationJoint] = field(default_factory=list)
     """list of active Joint objects, referencing elements in self.joints"""
-    active_joints_map: dict[str, SapienArticulationJoint]
+    active_joints_map: dict[str, SapienArticulationJoint] = field(default_factory=dict)
     """Maps active joint name to the Joint object, referencing elements in self.joints"""
 
-    name: str = None
-    """Name of this articulation"""
     initial_pose: Pose = None
     """The initial pose of this articulation"""
-
-    merged: bool = False
-    """
-    Whether or not this articulation object is a merged articulation where it is managing many
-    articulations with different DOFs.
-
-    There are a number of caveats when it comes to merged articulations. While merging
-    articulations means you can easily fetch padded qpos, qvel, etc. type data, a number of
-    attributes and functions will make little sense and you should avoid using them unless you
-    are an advanced user. In particular, the list of Links, Joints, their corresponding maps,
-    net contact forces of multiple links, no longer make "sense"
-    """
 
     _cached_joint_target_indices: dict[int, torch.Tensor] = field(default_factory=dict)
     """
