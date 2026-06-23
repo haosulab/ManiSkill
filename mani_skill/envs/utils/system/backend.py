@@ -9,16 +9,10 @@ from mani_skill.utils.logging_utils import logger
 
 @dataclass
 class BackendInfo:
-    # device: torch.device
-    # """the device in which to return all simulation data on"""
-    # sim_device: sapien.Device
-    # """the device on which the physics simulation is running"""
     sim_backend_package: str
     """the package name of the physics simulation backend"""
     sim_backend: str
     """the full backend name of the physics simulation"""
-    # render_device: Union[sapien.Device, None]
-    # """the device on which the renderer is running. If none then we disable rendering."""
     render_backend_package: str
     """the package name of the renderer"""
     render_backend: str
