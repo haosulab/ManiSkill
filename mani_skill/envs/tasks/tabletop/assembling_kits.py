@@ -167,8 +167,8 @@ class AssemblingKitsEnv(BaseEnv):
                 # save the goal position and z-axis rotation of the object to place
                 self.goal_pos[i] = object_goal_pos[episode["obj_to_place"]]
                 self.goal_rot[i] = object_goal_rot[episode["obj_to_place"]]
-            self.obj = Actor.merge(objs_to_place)
-            self.object_ids = torch.tensor(self.object_ids, dtype=int)
+            self.obj = Actor.merge(objs_to_place, name="obj")
+            self.object_ids = torch.tensor(self.object_ids, dtype=torch.int32)
             self.goal_pos = common.to_tensor(self.goal_pos)
             self.goal_rot = common.to_tensor(self.goal_rot)
 

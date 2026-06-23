@@ -165,8 +165,8 @@ class TurnFaucetEnv(BaseEnv):
             # apply pose changes and update kinematics to get updated link poses.
             if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
-                self.scene.px.gpu_update_articulation_kinematics()
-                self.scene.px.step()
+                self.scene.physics_sim._gpu_update_articulation_kinematics()
+                self.scene.physics_sim.physics_step()
                 self.scene._gpu_fetch_all()
 
             cmass_pose = (

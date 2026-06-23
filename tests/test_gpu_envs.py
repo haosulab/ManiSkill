@@ -275,9 +275,9 @@ def test_timelimits():
         num_envs=16,
         env_kwargs=dict(sim_config=LOW_MEM_SIM_CONFIG),
     )
-    obs, _ = env.reset()
+    env.reset()
     for _ in range(50):
-        obs, _, terminated, truncated, _ = env.step(None)
+        _, _, _, truncated, _ = env.step(None)
     assert (truncated == torch.ones(16, dtype=bool, device=env.device)).all()
     env.close()
     del env
@@ -290,7 +290,7 @@ def test_hidden_objs(env_id):
         env_id,
         num_envs=16,
     )
-    obs, _ = env.reset()
+    env.reset()
     hide_obj = env.unwrapped._hidden_objects[0]
 
     def test_fn():
@@ -322,7 +322,7 @@ def test_hidden_objs(env_id):
             < 1e6
         ).all()
 
-        if hide_obj.px_body_type == "dynamic":
+        if hide_obj.body_type == "dynamic":
             # 3. check that linvel and angvel same as before
             assert (hide_obj.linear_velocity == linvel).all()
             assert (hide_obj.angular_velocity == angvel).all()

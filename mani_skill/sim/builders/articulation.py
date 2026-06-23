@@ -97,7 +97,7 @@ class BaseArticulationBuilder(BaseBuilder):
                 )
             self.__sim_builders[sim.id].set_scene_idxs(scene_idxs)
 
-    def build(self, name: str) -> Articulation:
+    def build(self, name: str | None = None) -> Articulation:
         """
         Build the articulation.
 

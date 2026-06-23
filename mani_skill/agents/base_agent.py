@@ -204,7 +204,8 @@ class BaseAgent:
                     )
                     exit()
             builder = loader.parse(asset_path)["articulation_builders"][0]
-            builder.initial_pose = initial_pose
+            if initial_pose is not None:
+                builder.initial_pose = initial_pose
             if scene_idxs is not None:
                 builder.set_scene_idxs(scene_idxs)
                 builder.set_name(f"{self.uid}-agent-{self._agent_idx}-{scene_idxs}")

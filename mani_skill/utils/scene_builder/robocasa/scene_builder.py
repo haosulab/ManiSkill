@@ -115,7 +115,7 @@ def check_syntax(fixture):
     if "align_to" in fixture or "side" in fixture or "alignment" in fixture:
         if not ("align_to" in fixture and "side" in fixture):
             raise ValueError(
-                'Both or neither of "align_to" and ' '"side" need to be specified.'
+                'Both or neither of "align_to" and "side" need to be specified.'
             )
         if "pos" in fixture:
             raise ValueError("Cannot specify both relative and absolute positions.")
@@ -454,7 +454,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
                             )
 
                     else:
-                        if built.actor.px_body_type == "static":
+                        if built.actor.body_type == "static":
                             collision_bit = collision_start_bit + fixture_idx % 5
                             if "stack" in v.name:
                                 for stack_group in stack_collision_bits.keys():
@@ -584,7 +584,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
             list: list of fixture configurations
         """
         fixture_cfgs = []
-        for (name, fxtr) in fixtures.items():
+        for name, fxtr in fixtures.items():
             cfg = {}
             cfg["name"] = name
             cfg["model"] = fxtr
@@ -768,7 +768,6 @@ class RoboCasaSceneBuilder(SceneBuilder):
         z_offset=0.01,
         rng: np.random.RandomState = None,
     ):
-
         """
         Creates a placement initializer for the objects/fixtures based on the specifications in the configurations list
 
@@ -784,7 +783,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
 
         placement_initializer = SequentialCompositeSampler(name="SceneSampler", rng=rng)
 
-        for (obj_i, cfg) in enumerate(cfg_list):
+        for obj_i, cfg in enumerate(cfg_list):
             # determine which object is being placed
             if cfg["type"] == "fixture":
                 mj_obj = fixtures[cfg["name"]]
