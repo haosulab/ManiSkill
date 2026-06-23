@@ -9,6 +9,7 @@ import sapien.physx as physx
 import torch
 import trimesh
 
+from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 from mani_skill.sim.sapien.structs.base import PhysxRigidBodyComponentStruct
 from mani_skill.utils.geometry.trimesh_utils import (
     get_render_shape_meshes,
@@ -21,7 +22,6 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.sim.sapien import SapienSim
     from mani_skill.sim.sapien.structs.articulation import SapienArticulation
-    from mani_skill.sim.sapien.structs.articulation_joint import SapienArticulationJoint
 
 
 @dataclass
@@ -107,7 +107,7 @@ class SapienLink(
                 merged_joint_indexes.append(link.joint.index)
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = SapienLink.create(
-            objs, scene=links[0].scene, scene_idxs=merged_scene_idxs
+            objs, sim=links[0].sim, scene_idxs=merged_scene_idxs
         )
         if not has_one_root_link:
             merged_active_joint_indexes = torch.concat(merged_active_joint_indexes)
@@ -115,7 +115,7 @@ class SapienLink(
             merged_joint = SapienArticulationJoint.create(
                 joint_objs,
                 physx_articulations=articulation_objs,
-                scene=links[0].scene,
+                sim=links[0].sim,
                 scene_idxs=merged_scene_idxs,
                 joint_index=merged_joint_indexes,
                 active_joint_index=merged_active_joint_indexes,

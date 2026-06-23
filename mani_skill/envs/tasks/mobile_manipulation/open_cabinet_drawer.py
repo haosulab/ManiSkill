@@ -125,8 +125,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
         )
 
     def _load_cabinets(self, joint_types: list[str]):
-        # we sample random cabinet model_ids with numpy as numpy is always deterministic based on seed, regardless of
-        # GPU/CPU simulation backends. This is useful for replaying demonstrations.
+        # we sample random cabinet model_ids with numpy as numpy is always deterministic
+        # based on seed, regardless of GPU/CPU simulation backends. This is useful for
+        # replaying demonstrations.
         model_ids = self._batched_episode_rng.choice(self.all_model_ids)
         link_ids = self._batched_episode_rng.randint(0, 2**31)
 
@@ -144,8 +145,9 @@ class OpenCabinetDrawerEnv(BaseEnv):
             cabinet_builder.initial_pose = sapien.Pose(p=[0, 0, 0], q=[1, 0, 0, 0])
             cabinet = cabinet_builder.build(name=f"{model_id}-{i}")
             self.remove_from_state_dict_registry(cabinet)
-            # this disables self collisions by setting the group 2 bit at CABINET_COLLISION_BIT all the same
-            # that bit is also used to disable collision with the ground plane
+            # disables self collisions by setting group 2 bit at CABINET_COLLISION_BIT for all;
+            # this bit is also used to disable collisions with the ground plane
+   
             for link in cabinet.links:
                 link.set_collision_group_bit(
                     group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
@@ -170,9 +172,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
                         )[0]
                     )
 
-        # we can merge different articulations/links with different degrees of freedoms into a single view/object
-        # allowing you to manage all of them under one object and retrieve data like qpos, pose, etc. all together
-        # and with high performance. Note that some properties such as qpos and qlimits are now padded.
+        # we can merge different articulations or links with various degrees of freedom into a single
+        # view or object, letting you manage all of them together. This enables retrieving data such as
+        # qpos and pose efficiently for all at once. Some properties, like qpos and qlimits, will be
+        # padded in the merged view.
         self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
         self.add_to_state_dict_registry(self.cabinet)
         self.handle_link = Link.merge(
@@ -202,11 +205,13 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     def _after_reconfigure(self, options):
         # To spawn cabinets in the right place, we need to change their z position such that
-        # the bottom of the cabinet sits at z=0 (the floor). Luckily the partnet mobility dataset is made such that
-        # the negative of the lower z-bound of the collision mesh bounding box is the right value
+        # the bottom of the cabinet sits at z=0 (the floor). Luckily the partnet mobility dataset
+        # is made such that the negative of the lower z-bound of the collision mesh bounding box
+        # is the right value
 
-        # this code is in _after_reconfigure since retrieving collision meshes requires the GPU to be initialized
-        # which occurs after the initial reconfigure call (after self._load_scene() is called)
+        # this code is in _after_reconfigure since retrieving collision meshes requires the GPU to 
+        # be initialized which occurs after the initial reconfigure call 
+        # (after self._load_scene() is called)
         self.cabinet_zs = []
         for cabinet in self._cabinets:
             collision_mesh = cabinet.get_first_collision_mesh()
@@ -272,19 +277,20 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 qpos[:, 2] = ori
                 self.agent.robot.set_qpos(qpos)
                 self.agent.robot.set_pose(sapien.Pose())
-            # close all the cabinets. We know beforehand that lower qlimit means "closed" for these assets.
+            # close all the cabinets. We know beforehand that lower qlimit means "closed" for 
+            # these assets.
             qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
             self.cabinet.set_qpos(qlimits[env_idx, :, 0])
             self.cabinet.set_qvel(self.cabinet.qpos[env_idx] * 0)
 
             # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
-            # themselves on the first step. It's unclear why this happens on GPU sim only atm.
-            # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own a little bit.
-            # this may be due to oblong meshes.
+            # themselves on the first step. It's unclear why this happens on physx_cuda atm.
+            # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own 
+            # a little bit. this may be due to oblong meshes.
             if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
-                self.scene.px.gpu_update_articulation_kinematics()
-                self.scene.px.step()
+                self.scene.physics_sim._gpu_update_articulation_kinematics()
+                self.scene.physics_sim.physics_step()
                 self.scene._gpu_fetch_all()
 
             self.handle_link_goal.set_pose(
@@ -293,10 +299,11 @@ class OpenCabinetDrawerEnv(BaseEnv):
 
     def _after_control_step(self):
         # after each control step, we update the goal position of the handle link
-        # for GPU sim we need to update the kinematics data to get latest pose information for up to date link poses
-        # and fetch it, followed by an apply call to ensure the GPU sim is up to date
+        # for GPU sim we need to update the kinematics data to get latest pose information for up
+        # to date link poses and fetch it, followed by an apply call to ensure the GPU sim is up
+        # to date
         if self.gpu_sim_enabled:
-            self.scene.px.gpu_update_articulation_kinematics()
+            self.scene.physics_sim._gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
         self.handle_link_goal.set_pose(
             Pose.create_from_pq(p=self.handle_link_positions())

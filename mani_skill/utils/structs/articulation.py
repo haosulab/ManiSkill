@@ -25,6 +25,25 @@ class Articulation(Generic[T]):
     name: str = ""
     """The name of the articulation. Must be unique within the scene."""
 
+    @classmethod
+    def merge(
+        cls, articulations: list["Articulation"], name: str, merge_links: bool = False
+    ):
+        """
+        Merge a list of articulations into a single articulation for easy access of data across
+        multiple possibly different articulations.
+
+        Args:
+            articulations: A list of articulations objects to merge.
+            name: The name of the merged articulation.
+            merge_links: Whether to merge the links of the articulations. This is by default False
+                as often times you merge articulations that have different number of links. Set
+                this true if you want to try and merge articulations that have the same number of
+                links.
+        """
+        articulation_cls: "Articulation" = articulations[0].__class__  # type: ignore
+        return articulation_cls.merge(articulations, name, merge_links)
+
     def set_qpos(self, qpos: torch.Tensor):
         """
         Set the qpos of the articulation.

@@ -12,6 +12,8 @@ A guide for migrating code from ManiSkill 3 to ManiSkill 4, in addition to (stro
 
 - `mani_skill.sensors` module has been moved to `mani_skill.sim.sensors` instead. Moreover the StereoDepthSensor class is deprecated.
 
+- There is no `px` field anymore in `self.scene`, a ManiSkillScene object. Calls to `self.scene.px.gpu_update_articulation_kinematics()` should change to `self.scene.physics_sim._gpu_update_articulation_kinematics()`
+
 ## Strong recommendations
 
 - `SimConfig`, `DefaultMaterialsConfig` configs moved from `mani_skill/utils/structs/types.py` to `mani_skill/sim/base_sim.py`. They are now also frozen dataclasses meaning once created, you generally can't edit it (and shouldn't) unless you know what you are doing.

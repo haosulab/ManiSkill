@@ -102,8 +102,8 @@ class SapienArticulationJoint(
         assert self.active_index is not None, (
             "Inactive joints do not have qpos/qvel values"
         )
-        if self.scene.gpu_sim_enabled:
-            return self.px.cuda_articulation_qpos.torch()[
+        if self.sim.gpu_sim_enabled:
+            return self.px.cuda_articulation_qpos.torch()[  # type: ignore
                 self._data_index, self.active_index
             ]
         else:
@@ -111,10 +111,10 @@ class SapienArticulationJoint(
 
     @qpos.setter
     def qpos(self, arg1: torch.Tensor):
-        if self.scene.gpu_sim_enabled:
+        if self.sim.gpu_sim_enabled:
             arg1 = common.to_tensor(arg1, device=self.device)
-            self.px.cuda_articulation_qpos.torch()[
-                self._data_index[self.scene._reset_mask[self._scene_idxs]],
+            self.px.cuda_articulation_qpos.torch()[  # type: ignore
+                self._data_index[self.sim.scene._reset_mask[self._scene_idxs]],
                 self.active_index,
             ] = arg1
         else:
@@ -131,8 +131,8 @@ class SapienArticulationJoint(
         assert self.active_index is not None, (
             "Inactive joints do not have qpos/qvel values"
         )
-        if self.scene.gpu_sim_enabled:
-            return self.px.cuda_articulation_qvel.torch()[
+        if self.sim.gpu_sim_enabled:
+            return self.px.cuda_articulation_qvel.torch()[  # type: ignore
                 self._data_index, self.active_index
             ]
         else:
