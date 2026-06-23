@@ -44,7 +44,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
     - The drawer is open at least 90% of the way, and the angular/linear velocities of the drawer link are small
 
     **Goal Specification:**
-    - 3D goal position centered at the center of mass of the handle mesh on the drawer to open (also visualized in human renders with a sphere).
+    - 3D goal position is defined as the center of mass of the handle mesh on the drawer
+      to open. In human renders, this goal is visualized with a sphere.
     """
 
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/OpenCabinetDrawer-v1_rt.mp4"
@@ -147,7 +148,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
             self.remove_from_state_dict_registry(cabinet)
             # disables self collisions by setting group 2 bit at CABINET_COLLISION_BIT for all;
             # this bit is also used to disable collisions with the ground plane
-   
+
             for link in cabinet.links:
                 link.set_collision_group_bit(
                     group=2, bit_idx=CABINET_COLLISION_BIT, bit=1
@@ -172,10 +173,10 @@ class OpenCabinetDrawerEnv(BaseEnv):
                         )[0]
                     )
 
-        # we can merge different articulations or links with various degrees of freedom into a single
-        # view or object, letting you manage all of them together. This enables retrieving data such as
-        # qpos and pose efficiently for all at once. Some properties, like qpos and qlimits, will be
-        # padded in the merged view.
+        # we can merge different articulations or links, even with varying degrees of freedom,
+        # into a single view or object. This lets you efficiently manage and retrieve properties
+        # (like qpos and pose) for all at once. Note: padded values may appear in the merged view,
+        # e.g. for qpos and qlimits.
         self.cabinet = Articulation.merge(self._cabinets, name="cabinet")
         self.add_to_state_dict_registry(self.cabinet)
         self.handle_link = Link.merge(
@@ -209,8 +210,8 @@ class OpenCabinetDrawerEnv(BaseEnv):
         # is made such that the negative of the lower z-bound of the collision mesh bounding box
         # is the right value
 
-        # this code is in _after_reconfigure since retrieving collision meshes requires the GPU to 
-        # be initialized which occurs after the initial reconfigure call 
+        # this code is in _after_reconfigure since retrieving collision meshes requires the GPU to
+        # be initialized which occurs after the initial reconfigure call
         # (after self._load_scene() is called)
         self.cabinet_zs = []
         for cabinet in self._cabinets:
@@ -277,16 +278,16 @@ class OpenCabinetDrawerEnv(BaseEnv):
                 qpos[:, 2] = ori
                 self.agent.robot.set_qpos(qpos)
                 self.agent.robot.set_pose(sapien.Pose())
-            # close all the cabinets. We know beforehand that lower qlimit means "closed" for 
+            # close all the cabinets. We know beforehand that lower qlimit means "closed" for
             # these assets.
             qlimits = self.cabinet.get_qlimits()  # [b, self.cabinet.max_dof, 2])
             self.cabinet.set_qpos(qlimits[env_idx, :, 0])
             self.cabinet.set_qvel(self.cabinet.qpos[env_idx] * 0)
 
-            # NOTE (stao): This is a temporary work around for the issue where the cabinet drawers/doors might open
-            # themselves on the first step. It's unclear why this happens on physx_cuda atm.
-            # moreover despite setting qpos/qvel to 0, the cabinets might still move on their own 
-            # a little bit. this may be due to oblong meshes.
+            # NOTE (stao): Temporary workaround—cabinet drawers/doors may open themselves
+            # on the first step. Cause on physx_cuda is unclear. Even after setting
+            # qpos/qvel to zero, cabinets could still move a little, possibly due to
+            # oblong meshes.
             if self.gpu_sim_enabled:
                 self.scene._gpu_apply_all()
                 self.scene.physics_sim._gpu_update_articulation_kinematics()
