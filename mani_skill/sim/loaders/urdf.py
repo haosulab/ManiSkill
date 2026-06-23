@@ -223,6 +223,15 @@ class BaseURDFLoader:
                 static_friction, dynamic_friction, restitution
             )
 
+    def set_density(self, density: float):
+        """
+        Sets the density for the URDF.
+        """
+        for sim in self.__sims.values():
+            self.__sim_builders[sim.id].set_density(density)
+
+    # TODO (stao): patch radius might not be supported by all simulator backends
+
     def set_link_patch_radius(self, link_name: str, patch_radius: float):
         """
         Sets the patch radius for a link.

@@ -76,6 +76,13 @@ class Actor(Generic[T]):
         """
         raise NotImplementedError()
 
+    @property
+    def linear_velocity(self) -> torch.Tensor:
+        """
+        Get the linear velocity of the actor.
+        """
+        raise NotImplementedError()
+
     def set_linear_velocity(self, velocity: torch.Tensor):
         """
         Set the linear velocity of the actor.

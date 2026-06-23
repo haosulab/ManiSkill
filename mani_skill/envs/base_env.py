@@ -1254,7 +1254,7 @@ class BaseEnv(gym.Env):
         self.scene.set_sim_state(state, env_idx)
         if self.gpu_sim_enabled:
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
+            self.scene.physics_sim._gpu_update_articulation_kinematics()
             self.scene._gpu_fetch_all()
 
     def set_state(self, state: torch.Tensor, env_idx: Optional[torch.Tensor] = None):
@@ -1364,7 +1364,7 @@ class BaseEnv(gym.Env):
         images = []
         for obj in self._hidden_objects:
             obj.show_visual()
-        self.scene.update_render(update_sensors=True, update_human_render_cameras=True)
+        self.scene.render_sim.update_render(update_sensors=True, update_human_render_cameras=True)
         render_images = self.scene.get_human_render_camera_images()
         # note that get_sensor_images function will update the render and hide objects itself
         sensor_images = self.get_sensor_images()
