@@ -358,7 +358,7 @@ def test_hidden_objs(env_id):
         # 1. check relevant hidden properties are active
         assert not hide_obj.hidden
 
-        if hide_obj.px_body_type == "dynamic":
+        if hide_obj.body_type == "dynamic":
             # 2. check that qvel, linvel, angvel same as before
             assert (hide_obj.linear_velocity == linvel).all()
             assert (hide_obj.angular_velocity == angvel).all()
