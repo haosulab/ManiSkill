@@ -110,7 +110,8 @@ class BaseActorBuilder(BaseBuilder):
                     f"{self.__sim_builders[sim.id].__class__.__name__} does not support "
                     "set_scene_idxs."
                 )
-            self.__sim_builders[sim.id].set_scene_idxs(scene_idxs)
+            builder = self.__sim_builders[sim.id].set_scene_idxs(scene_idxs)
+        return builder
 
     def build(self, name: str) -> Actor:
         """
@@ -422,7 +423,7 @@ class BaseActorBuilder(BaseBuilder):
 
     def add_sphere_visual(
         self,
-        pose: Pose,
+        pose: Pose | None = None,
         radius: float = 1.0,
         material: Any | Vec3 | None = None,
         name: str = "",
@@ -458,7 +459,7 @@ class BaseActorBuilder(BaseBuilder):
     def add_convex_collision_from_file(
         self,
         filename,
-        pose: sapien.Pose = sapien.Pose(),
+        pose: Pose | None = None,
         scale: Vec3 = (1, 1, 1),
         material: Any | None = None,
         density: float = 1000,
@@ -497,7 +498,7 @@ class BaseActorBuilder(BaseBuilder):
     def add_multiple_convex_collisions_from_file(
         self,
         filename,
-        pose: sapien.Pose = sapien.Pose(),
+        pose: Pose | None = None,
         scale: Vec3 = (1, 1, 1),
         material: Any | None = None,
         density: float = 1000,

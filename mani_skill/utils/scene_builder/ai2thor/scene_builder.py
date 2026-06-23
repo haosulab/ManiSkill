@@ -21,6 +21,7 @@ from mani_skill.agents.robots.fetch import (
     FETCH_WHEELS_COLLISION_BIT,
     Fetch,
 )
+from mani_skill.sim.sapien.structs.actor import SapienActor
 from mani_skill.utils.scene_builder import SceneBuilder
 from mani_skill.utils.structs import Actor, Articulation, Pose
 
@@ -244,9 +245,9 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
         self.scene.render_sim.set_ambient_light([0.3, 0.3, 0.3])
 
         # merge actors into one
-        self.bg = Actor.create_from_entities(
+        self.bg = SapienActor.create_from_entities(
             bgs,
-            scene=self.scene,
+            sim=self.scene.physics_sim,
             scene_idxs=torch.arange(self.env.num_envs, dtype=int),
             shared_name="scene_background",
         )

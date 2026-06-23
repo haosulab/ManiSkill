@@ -212,6 +212,17 @@ class BaseURDFLoader:
                 link_name, static_friction, dynamic_friction, restitution
             )
 
+    def set_material(
+        self, static_friction: float, dynamic_friction: float, restitution: float
+    ):
+        """
+        Sets the material for the URDF.
+        """
+        for sim in self.__sims.values():
+            self.__sim_builders[sim.id].set_material(
+                static_friction, dynamic_friction, restitution
+            )
+
     def set_link_patch_radius(self, link_name: str, patch_radius: float):
         """
         Sets the patch radius for a link.

@@ -10,7 +10,6 @@ from typing import Optional, Tuple
 
 import numpy as np
 import sapien
-import sapien.physx as physx
 import torch
 import transforms3d
 
@@ -24,7 +23,6 @@ DEFAULT_HIDDEN_POS = [-10_000] * 3
 
 
 class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
-
     task_names: list[str] = ["set_table:train"]
 
     # init configs for Rearrange stasks are default_object_poses for each object type
@@ -91,12 +89,12 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
     ):
         if isinstance(build_config_idxs, int):
             build_config_idxs = [build_config_idxs] * self.env.num_envs
-        assert all(
-            [bci in self.used_build_config_idxs for bci in build_config_idxs]
-        ), f"got one or more unused build_config_idxs in {build_config_idxs}; This RCAD Rearrange task only uses the following build_config_idxs: {self.used_build_config_idxs}"
-        assert (
-            len(build_config_idxs) == self.env.num_envs
-        ), f"Got {len(build_config_idxs)} build_config_idxs but only have {self.env.num_envs} envs"
+        assert all([bci in self.used_build_config_idxs for bci in build_config_idxs]), (
+            f"got one or more unused build_config_idxs in {build_config_idxs}; This RCAD Rearrange task only uses the following build_config_idxs: {self.used_build_config_idxs}"
+        )
+        assert len(build_config_idxs) == self.env.num_envs, (
+            f"Got {len(build_config_idxs)} build_config_idxs but only have {self.env.num_envs} envs"
+        )
 
         # delete cached properties which are dependent on values recomputed at build time
         self.__dict__.pop("init_config_names_to_idxs", None)
@@ -257,9 +255,9 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
     # TODO (arth): fix this to work with partial resets
     def initialize(self, env_idx: torch.Tensor, init_config_idxs: list[int]):
-        assert all(
-            [isinstance(ici, int) for ici in init_config_idxs]
-        ), f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
+        assert all([isinstance(ici, int) for ici in init_config_idxs]), (
+            f"init_config_idxs should be list of ints, instead got {init_config_idxs}"
+        )
 
         init_config_idxs: torch.Tensor = common.to_tensor(
             init_config_idxs, device=self.env.device
@@ -335,8 +333,8 @@ class ReplicaCADRearrangeSceneBuilder(ReplicaCADSceneBuilder):
 
         if self.scene.gpu_sim_enabled and len(env_idx) == self.env.num_envs:
             self.scene._gpu_apply_all()
-            self.scene.px.gpu_update_articulation_kinematics()
-            self.scene.px.step()
+            self.scene.physics_sim._gpu_update_articulation_kinematics()
+            self.scene.physics_sim.physics_step()
             self.scene._gpu_fetch_all()
 
         # teleport robot back to correct location
