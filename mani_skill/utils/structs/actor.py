@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 import torch
 
 from mani_skill.utils.structs.base import BaseStruct
+from mani_skill.utils.structs.pose import Pose
 
 T = TypeVar("T", bound=BaseStruct)
 
@@ -83,9 +84,30 @@ class Actor(Generic[T]):
         """
         raise NotImplementedError()
 
+    @linear_velocity.setter
+    def linear_velocity(self, velocity: torch.Tensor):
+        """
+        Set the linear velocity of the actor.
+        """
+        raise NotImplementedError()
+
     def set_linear_velocity(self, velocity: torch.Tensor):
         """
         Set the linear velocity of the actor.
+        """
+        self.linear_velocity = velocity
+
+    @property
+    def angular_velocity(self) -> torch.Tensor:
+        """
+        Get the angular velocity of the actor.
+        """
+        raise NotImplementedError()
+
+    @angular_velocity.setter
+    def angular_velocity(self, velocity: torch.Tensor):
+        """
+        Set the angular velocity of the actor.
         """
         raise NotImplementedError()
 
@@ -93,4 +115,23 @@ class Actor(Generic[T]):
         """
         Set the angular velocity of the actor.
         """
+        self.angular_velocity = velocity
+
+    @property
+    def pose(self) -> Pose:
+        """
+        Get the pose of the actor.
+        """
         raise NotImplementedError()
+
+    @pose.setter
+    def pose(self, pose: Pose):
+        """
+        Set the pose of the actor.
+        """
+
+    def set_pose(self, pose: Pose):
+        """
+        Set the pose of the actor.
+        """
+        self.pose = pose
