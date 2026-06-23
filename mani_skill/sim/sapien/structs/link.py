@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from mani_skill.sim.sapien.structs.articulation import SapienArticulation
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SapienLink(
     PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent], Link
 ):
@@ -32,16 +32,16 @@ class SapienLink(
     Wrapper around physx.PhysxArticulationLinkComponent objects
     """
 
-    articulation: SapienArticulation = None
+    articulation: SapienArticulation | None = None
     """
     the articulation that this link is a part of. If this is None, most likely this link
     object is a view/merged link object in which case there is no one articulation that can
     be referenced easily
     """
 
-    name: str = None
+    name: str | None = None
 
-    joint: SapienArticulationJoint = None
+    joint: SapienArticulationJoint | None = None
     """
     the joint of which this link is a child of. If this is a view/merged link then this joint
     is also a view/merged joint
@@ -88,7 +88,7 @@ class SapienLink(
         )
 
     @classmethod
-    def merge(cls, links: list["SapienLink"], name: str = None):
+    def merge(cls, links: list["SapienLink"], name: str):
         objs = []
         joint_objs = []
         merged_joint_indexes = []
@@ -101,10 +101,10 @@ class SapienLink(
             merged_scene_idxs.append(link._scene_idxs)
             # if all links are not root links, then there are joints we can merge automatically
             if not has_one_root_link:
-                joint_objs += link.joint._objs
-                articulation_objs += link.articulation._objs
-                merged_active_joint_indexes.append(link.joint.active_index)
-                merged_joint_indexes.append(link.joint.index)
+                joint_objs += link.joint._objs  # type: ignore
+                articulation_objs += link.articulation._objs  # type: ignore
+                merged_active_joint_indexes.append(link.joint.active_index)  # type: ignore
+                merged_joint_indexes.append(link.joint.index)  # type: ignore
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = SapienLink.create(
             objs, sim=links[0].sim, scene_idxs=merged_scene_idxs
@@ -145,7 +145,7 @@ class SapienLink(
                 sapien.render.RenderBodyComponent
             )
             if rb_comp is not None:
-                all_render_shapes.append(rb_comp.render_shapes)
+                all_render_shapes.append(rb_comp.render_shapes)  # type: ignore
         return all_render_shapes
 
     def get_visual_meshes(
@@ -159,7 +159,7 @@ class SapienLink(
         for link, link_render_shapes in zip(self._objs, self.render_shapes):
             meshes = []
             for render_shape in link_render_shapes:
-                if filter(link, render_shape):
+                if filter(link, render_shape):  # type: ignore
                     meshes.extend(get_render_shape_meshes(render_shape))
             merged_meshes.append(merge_meshes(meshes))
         return merged_meshes
