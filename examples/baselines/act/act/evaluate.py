@@ -5,6 +5,31 @@ import torch
 
 from mani_skill.utils import common
 
+
+def _append_episode_metrics(eval_metrics, episode):
+    for k, v in episode.items():
+        if k.startswith("_"):
+            continue
+        if isinstance(v, torch.Tensor):
+            v = v.float().cpu().numpy()
+        eval_metrics[k].append(v)
+
+
+def _append_eval_metrics(eval_metrics, info):
+    if "final_info" in info:
+        final_info = info["final_info"]
+        if isinstance(final_info, dict):
+            _append_episode_metrics(eval_metrics, final_info["episode"])
+        else:
+            for final_info in final_info:
+                _append_episode_metrics(eval_metrics, final_info["episode"])
+        return
+    if "episode" in info:
+        _append_episode_metrics(eval_metrics, info["episode"])
+        return
+    raise KeyError("expected info['final_info'] or info['episode'] with episode metrics")
+
+
 def evaluate(n: int, agent, eval_envs, eval_kwargs):
     stats, num_queries, temporal_agg, max_timesteps, device, sim_backend = eval_kwargs.values()
 
@@ -80,13 +105,7 @@ def evaluate(n: int, agent, eval_envs, eval_kwargs):
             # collect episode info
             if truncated.any():
                 assert truncated.all() == truncated.any(), "all episodes should truncate at the same time for fair evaluation with other algorithms"
-                if isinstance(info["final_info"], dict):
-                    for k, v in info["final_info"]["episode"].items():
-                        eval_metrics[k].append(v.float().cpu().numpy())
-                else:
-                    for final_info in info["final_info"]:
-                        for k, v in final_info["episode"].items():
-                            eval_metrics[k].append(v)
+                _append_eval_metrics(eval_metrics, info)
                 # new episodes begin
                 eps_count += num_envs
                 ts = 0
