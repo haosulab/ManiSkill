@@ -245,7 +245,7 @@ class PDEEPoseController(PDEEPosController):
         rot_action[rot_norm > 1] = torch.mul(rot_action, 1 / rot_norm[:, None])[
             rot_norm > 1
         ]
-        rot_action = rot_action * self.config.rot_lower
+        rot_action = rot_action * self.config.rot_upper
         return torch.hstack([pos_action, rot_action])
 
     def compute_target_pose(self, prev_ee_pose_at_base: Pose, action):
