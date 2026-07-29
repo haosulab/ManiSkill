@@ -67,6 +67,13 @@ class PegInsertionSideEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["panda_wristcam"]
     agent: Union[PandaWristCam]
     _clearance = 0.003
+    HAND_CAMERA_TILT_DEG = -40.0
+    """Pitch applied to the wrist camera about its own Y axis, in degrees. The stock
+    PandaWristCam hand_camera looks straight down the gripper axis, so once the peg is
+    grasped its shaft fills the frame and the hole is never visible. Tilting the optical
+    axis outward keeps the box face and the hole in view through approach, alignment and
+    insertion. -25 deg was not enough clearance from the peg; -55 deg starts clipping the
+    peg and lets the background into the top of the frame."""
 
     def __init__(
         self,
@@ -74,6 +81,7 @@ class PegInsertionSideEnv(BaseEnv):
         robot_uids="panda_wristcam",
         num_envs=1,
         reconfiguration_freq=None,
+        sensor_configs=dict(),
         **kwargs,
     ):
         if reconfiguration_freq is None:
@@ -81,12 +89,28 @@ class PegInsertionSideEnv(BaseEnv):
                 reconfiguration_freq = 1
             else:
                 reconfiguration_freq = 0
+        # hand_camera belongs to the agent, and agent sensor configs are applied after
+        # the task's _default_sensor_configs, so the tilt is injected here as a default
+        # override instead. An explicit caller-supplied pose still wins.
+        sensor_configs = dict(sensor_configs)
+        hand_camera_config = dict(sensor_configs.get("hand_camera", dict()))
+        hand_camera_config.setdefault("pose", self._hand_camera_pose())
+        sensor_configs["hand_camera"] = hand_camera_config
         super().__init__(
             *args,
             robot_uids=robot_uids,
             num_envs=num_envs,
             reconfiguration_freq=reconfiguration_freq,
+            sensor_configs=sensor_configs,
             **kwargs,
+        )
+
+    @classmethod
+    def _hand_camera_pose(cls):
+        """Wrist camera pose relative to its mount: a pitch about the camera's local Y."""
+        half_angle = np.deg2rad(cls.HAND_CAMERA_TILT_DEG) / 2
+        return sapien.Pose(
+            p=[0, 0, 0], q=[np.cos(half_angle), 0.0, np.sin(half_angle), 0.0]
         )
 
     @property
