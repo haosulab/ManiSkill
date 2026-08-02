@@ -230,11 +230,13 @@ def flatten_state_dict(
 
     for key, value in state_dict.items():
         if isinstance(value, dict):
-            state = flatten_state_dict(value, use_torch=use_torch)
-            if state.nelement() == 0:
+            state = flatten_state_dict(
+                value,
+                use_torch=use_torch,
+                device=device,
+            )
+            if (state.nelement() if use_torch else state.size) == 0:
                 state = None
-            elif use_torch:
-                state = to_tensor(state, device=device)
         elif isinstance(value, (tuple, list)):
             state = None if len(value) == 0 else value
             if use_torch:
