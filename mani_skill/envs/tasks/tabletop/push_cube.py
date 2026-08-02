@@ -109,17 +109,20 @@ class PushCubeEnv(BaseEnv):
         )
         self.table_scene.build()
 
-        # we then add the cube that we want to push and give it a color and size using a convenience build_cube function
-        # we specify the body_type to be "dynamic" as it should be able to move when touched by other objects / the robot
-        # finally we specify an initial pose for the cube so that it doesn't collide with other objects initially
-        self.obj = actors.build_cube(
-            self.scene,
-            half_size=self.cube_half_size,
-            color=np.array([12, 42, 160, 255]) / 255,
-            name="cube",
-            body_type="dynamic",
-            initial_pose=sapien.Pose(p=[0, 0, self.cube_half_size]),
+        # we then add the cube that we want to push using the actor builder API
+        # convenience functions like actors.build_cube can also build common primitive shapes
+        builder = self.scene.create_actor_builder()
+        builder.add_box_collision(half_size=[self.cube_half_size] * 3)
+        builder.add_box_visual(
+            half_size=[self.cube_half_size] * 3,
+            material=sapien.render.RenderMaterial(
+                base_color=np.array([12, 42, 160, 255]) / 255
+            ),
         )
+        # specify an initial pose so the cube does not collide with other objects while the scene is loading
+        builder.set_initial_pose(sapien.Pose(p=[0, 0, self.cube_half_size]))
+        # build a dynamic actor so the cube can move when touched by the robot
+        self.obj = builder.build(name="cube")
 
         # we also add in red/white target to visualize where we want the cube to be pushed to
         # we specify add_collisions=False as we only use this as a visual for videos and do not want it to affect the actual physics
