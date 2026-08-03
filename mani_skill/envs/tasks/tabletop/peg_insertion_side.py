@@ -270,7 +270,7 @@ class PegInsertionSideEnv(BaseEnv):
         # Only head position is used in fact
         peg_head_pos_at_hole = (self.box_hole_pose.inv() * self.peg_head_pose).p
         # x-axis is hole direction
-        x_flag = -0.015 <= peg_head_pos_at_hole[:, 0]
+        x_flag = (-0.015 <= peg_head_pos_at_hole[:, 0]) & (peg_head_pos_at_hole[:, 0] <= 0.015)
         y_flag = (-self.box_hole_radii <= peg_head_pos_at_hole[:, 1]) & (
             peg_head_pos_at_hole[:, 1] <= self.box_hole_radii
         )
