@@ -94,6 +94,25 @@ class ReplayResult:
 
 def sanity_check_and_format_seed(episode):
     """sanity checks the trajectory seed aligns with the episode seed. reformats the reset kwargs seed if missing or formatted wrong"""
+    # normalize episode_seed to a scalar int (may be stored as numpy array or list)
+    episode_seed = episode["episode_seed"]
+    if isinstance(episode_seed, np.ndarray):
+        if episode_seed.ndim == 0:
+            episode_seed = episode_seed.item()
+        else:
+            assert episode_seed.size == 1, (
+                f"found multiple seeds for one trajectory (id={episode['episode_id']}) "
+                "in episode_seed which means it is ambiguous which seed to use"
+            )
+            episode_seed = episode_seed.reshape(-1)[0]
+    elif isinstance(episode_seed, (list, tuple)):
+        assert len(episode_seed) == 1, (
+            f"found multiple seeds for one trajectory (id={episode['episode_id']}) "
+            "in episode_seed which means it is ambiguous which seed to use"
+        )
+        episode_seed = episode_seed[0]
+    episode["episode_seed"] = int(episode_seed)
+
     if "seed" in episode["reset_kwargs"]:
         if isinstance(episode["reset_kwargs"]["seed"], list):
 
