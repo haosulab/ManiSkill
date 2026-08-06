@@ -21,8 +21,12 @@ def _append_eval_metrics(eval_metrics, info):
         if isinstance(final_info, dict):
             _append_episode_metrics(eval_metrics, final_info["episode"])
         else:
-            for final_info in final_info:
-                _append_episode_metrics(eval_metrics, final_info["episode"])
+            # Gymnasium leaves None in final_info for envs that did not terminate, and the
+            # companion _final_info mask says which entries are real. Neither is checked
+            # here because the caller asserts every env truncates on the same step, so this
+            # branch only ever sees a fully populated array.
+            for env_info in final_info:
+                _append_episode_metrics(eval_metrics, env_info["episode"])
         return
     if "episode" in info:
         _append_episode_metrics(eval_metrics, info["episode"])
