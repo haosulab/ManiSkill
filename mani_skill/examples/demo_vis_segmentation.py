@@ -63,6 +63,7 @@ from mani_skill.utils.structs import Actor, Link
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
+    parser.add_argument("-v", "--visualizer-backend", type=str, default="sapien", help="Which visualizer to use. Can be 'sapien' or 'viser'")
     parser.add_argument("--id", type=str, help="The ID or name of actor you want to segment and render")
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run. Used for some basic testing and not visualized")
     parser.add_argument("--cam-width", type=int, help="Override the width of every camera in the environment")
@@ -90,7 +91,8 @@ def main(args):
         args.env_id,
         obs_mode="rgb+depth+segmentation",
         num_envs=args.num_envs,
-        sensor_configs=sensor_configs
+        sensor_configs=sensor_configs,
+        visualizer_backend=args.visualizer_backend,
     )
 
     obs, _ = env.reset(seed=args.seed)

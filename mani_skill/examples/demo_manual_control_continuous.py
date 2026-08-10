@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
     parser.add_argument("--render-mode", type=str, default="sensors")
+    parser.add_argument("-v", "--visualizer-backend", type=str, default="sapien", help="Which visualizer to use. Can be 'sapien' or 'viser'")
     parser.add_argument("--enable-sapien-viewer", action="store_true")
     parser.add_argument("--record-dir", type=str)
     args, opts = parser.parse_known_args()
@@ -42,6 +43,7 @@ def main():
         reward_mode=args.reward_mode,
         control_mode=args.control_mode,
         render_mode=args.render_mode,
+        visualizer_backend=args.visualizer_backend,
         **args.env_kwargs
     )
 

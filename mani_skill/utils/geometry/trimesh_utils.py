@@ -1,10 +1,13 @@
 ## TODO clean up the code here, too many functions that are plurals of one or the other and confusing naming
+from typing import cast
+
 import numpy as np
 import sapien
 import sapien.physx as physx
 import sapien.render
 import trimesh
 import trimesh.creation
+import trimesh.visual
 
 
 def get_component_meshes(component: physx.PhysxRigidBaseComponent):
@@ -50,6 +53,15 @@ def get_render_body_meshes(visual_body: sapien.render.RenderBodyComponent):
     return meshes
 
 
+def _set_mesh_color(mesh: trimesh.Trimesh, material: sapien.render.RenderMaterial):
+    """Colors a mesh with a render material's base_color. Ignores textures for now, so
+    texture-mapped materials (e.g. wood grain) will just show up as their flat base_color."""
+    color = np.clip(np.array(material.base_color) * 255, 0, 255).astype(np.uint8)
+    mesh.visual = trimesh.visual.ColorVisuals(
+        mesh, face_colors=np.tile(color, (len(mesh.faces), 1))
+    )
+
+
 def get_render_shape_meshes(render_shape: sapien.render.RenderShape):
     meshes = []
     if type(render_shape) == sapien.render.RenderShapeBox:
@@ -71,11 +83,30 @@ def get_render_shape_meshes(render_shape: sapien.render.RenderShape):
     elif type(render_shape) == sapien.render.RenderShapePlane:
         pass
     elif type(render_shape) == sapien.render.RenderShapeTriangleMesh:
-        for part in render_shape.parts:
-            vertices = part.vertices * render_shape.scale  # [n, 3]
-            faces = part.triangles
-            mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        # render_shape.material is not read here as it raises if the mesh's parts have different
+        # materials. If a source file is available we load it directly instead, which preserves
+        # the mesh's original per-part materials/textures (e.g. a table's wood texture) instead of
+        # flattening everything to a single part's base_color.
+        if render_shape.filename:
+            mesh = cast(
+                trimesh.Trimesh, trimesh.load(render_shape.filename, force="mesh")
+            )
+            mesh.vertices = mesh.vertices * np.asarray(render_shape.scale)
             meshes.append(mesh)
+        else:
+            for part in render_shape.parts:
+                vertices = part.vertices * render_shape.scale  # [n, 3]
+                faces = part.triangles
+                mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+                if part.material is not None:
+                    _set_mesh_color(mesh, part.material)
+                meshes.append(mesh)
+    if (
+        type(render_shape) != sapien.render.RenderShapeTriangleMesh
+        and render_shape.material is not None
+    ):
+        for mesh in meshes:
+            _set_mesh_color(mesh, render_shape.material)
     for mesh in meshes:
         mesh.apply_transform(render_shape.local_pose.to_transformation_matrix())
     return meshes

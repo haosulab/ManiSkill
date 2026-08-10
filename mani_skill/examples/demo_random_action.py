@@ -9,7 +9,7 @@ from mani_skill.utils.wrappers import RecordEpisode
 
 import tyro
 from dataclasses import dataclass
-from typing import List, Optional, Annotated, Union
+from typing import Optional, Annotated, Union, cast
 
 @dataclass
 class Args:
@@ -27,6 +27,9 @@ class Args:
 
     render_backend: Annotated[str, tyro.conf.arg(aliases=["-rb"])] = "gpu"
     """Which render backend to use. Can be 'gpu', 'cpu', 'none'"""
+
+    visualizer_backend: Annotated[str, tyro.conf.arg(aliases=["-v"])] = "sapien"
+    """Which visualizer to use. Can be 'sapien' or 'viser'"""
 
     reward_mode: Optional[str] = None
     """Reward mode"""
@@ -47,7 +50,7 @@ class Args:
     """Directory to save recordings"""
 
     pause: Annotated[bool, tyro.conf.arg(aliases=["-p"])] = False
-    """If using human render mode, auto pauses the simulation upon loading"""
+    """If using human render mode or the Viser visualizer, auto pauses the simulation upon loading"""
 
     quiet: bool = False
     """Disable verbose output."""
@@ -81,6 +84,7 @@ def main(args: Args):
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
         render_backend=args.render_backend,
+        visualizer_backend=args.visualizer_backend,
         enable_shadow=True,
         parallel_in_single_scene=parallel_in_single_scene,
     )
@@ -107,6 +111,11 @@ def main(args: Args):
     obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
     if args.seed is not None and env.action_space is not None:
             env.action_space.seed(args.seed[0])
+    base_env = cast(BaseEnv, env.unwrapped)
+    viser_visualizer = base_env.scene.viser_visualizer
+    if viser_visualizer is not None:
+        viser_visualizer.paused = args.pause
+        viser_visualizer.pause_checkbox.value = args.pause
     if args.render_mode == "human":
         viewer = env.render()
         if isinstance(viewer, sapien.utils.Viewer):

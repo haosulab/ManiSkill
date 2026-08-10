@@ -28,6 +28,8 @@ def parse_args(args=None):
     parser.add_argument("--shader", default="default", type=str, help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
     parser.add_argument("--record-dir", type=str, default="demos", help="where to save the recorded trajectories")
     parser.add_argument("--num-procs", type=int, default=1, help="Number of processes to use to help parallelize the trajectory replay process. This uses CPU multiprocessing and only works with the CPU simulation backend at the moment.")
+    parser.add_argument("--render-backend", type=str, default="gpu", help="Which render backend to use. Can be 'gpu', 'cpu', 'none'")
+    parser.add_argument("-v", "--visualizer-backend", type=str, default="sapien", help="Which visualizer to use. Can be 'sapien' or 'viser'")
     return parser.parse_args()
 
 def _main(args, proc_id: int = 0, start_seed: int = 9) -> str:
@@ -40,7 +42,9 @@ def _main(args, proc_id: int = 0, start_seed: int = 9) -> str:
         sensor_configs=dict(shader_pack=args.shader),
         human_render_camera_configs=dict(shader_pack=args.shader),
         viewer_camera_configs=dict(shader_pack=args.shader),
-        sim_backend=args.sim_backend
+        sim_backend=args.sim_backend,
+        render_backend=args.render_backend,
+        visualizer_backend=args.visualizer_backend,
     )
     if env_id not in MP_SOLUTIONS:
         raise RuntimeError(f"No already written motion planning solutions for {env_id}. Available options are {list(MP_SOLUTIONS.keys())}")
@@ -114,6 +118,9 @@ def _main(args, proc_id: int = 0, start_seed: int = 9) -> str:
     return output_h5_path
 
 def main(args):
+    if args.visualizer_backend == "viser":
+        assert args.num_procs == 1, "Viser visualizer backend only supports single process"
+
     if args.num_procs > 1 and args.num_procs < args.num_traj:
         if args.num_traj < args.num_procs:
             raise ValueError("Number of trajectories should be greater than or equal to number of processes")

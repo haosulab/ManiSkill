@@ -108,6 +108,11 @@ class BaseEnv(gym.Env):
             rendering you can first try to double check your NVIDIA drivers / Vulkan drivers are setup correctly. If you don't need to do rendering
             you can simply disable it by setting render_backend to "none" or None.
 
+        visualizer_backend (str): By default this is "sapien". Selects the interactive visualizer used for human viewing.
+            This is independent of ``render_backend`` (the render engine/device for cameras and sensors).
+            "sapien" opens the default SAPIEN GUI viewer. "viser" uses the browser-based Viser visualizer instead.
+            Viser currently only supports CPU simulation with a single environment (num_envs == 1).
+
         parallel_in_single_scene (bool): By default this is False. If True, rendered images and the GUI will show all objects in one view.
             This is only really useful for generating cool videos showing all environments at once but it is not recommended
             otherwise as it slows down simulation and rendering.
@@ -205,6 +210,7 @@ class BaseEnv(gym.Env):
         reconfiguration_freq: Optional[int] = None,
         sim_backend: str = "auto",
         render_backend: str = "gpu",
+        visualizer_backend: str = "sapien",
         parallel_in_single_scene: bool = False,
         enhanced_determinism: bool = False,
     ):
@@ -229,6 +235,12 @@ class BaseEnv(gym.Env):
             if self.robot_uids not in self.SUPPORTED_ROBOTS:
                 logger.warning(f"{self.robot_uids} is not in the task's list of supported robots. Code may not run as intended")
 
+        if visualizer_backend not in ("sapien", "viser"):
+            raise ValueError(
+                f"Invalid visualizer_backend: {visualizer_backend}. Must be one of ('sapien', 'viser')"
+            )
+        self.visualizer_backend = visualizer_backend
+        self._viser_server = None
         if sim_backend == "auto":
             if num_envs > 1:
                 sim_backend = "physx_cuda"
@@ -746,8 +758,15 @@ class BaseEnv(gym.Env):
 
         self.scene._setup(enable_gpu=self.gpu_sim_enabled)
         # for GPU sim, we have to setup sensors after we call setup gpu in order to enable loading mounted sensors as they depend on GPU buffer data
-        if self.scene.can_render(): self._setup_sensors(options)
-        if self.render_mode == "human" and self._viewer is None:
+        # sensors/human-render cameras are still set up under viser (unlike lighting) so that obs_mode/render_mode
+        # relying on them still work; they just aren't shown in the viser 3D view itself
+        if self.scene.can_render():
+            self._setup_sensors(options)
+        if (
+            self.render_mode == "human"
+            and self._viewer is None
+            and self.visualizer_backend == "sapien"
+        ):
             self._viewer = sapien_utils.create_viewer(self._viewer_camera_config)
         if self._viewer is not None:
             self._setup_viewer()
@@ -962,6 +981,11 @@ class BaseEnv(gym.Env):
             self.scene._gpu_apply_all()
             self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
             self.scene._gpu_fetch_all()
+
+        # Viser loads meshes at construction-time poses; sync after episode init so markers
+        # like PickCube's goal_site appear at their randomized positions immediately.
+        if self.scene.viser_visualizer is not None:
+            self.scene.viser_visualizer.sync()
 
         # we reset controllers here because some controllers depend on the agent/articulation qpos/poses
         if self.agent is not None:
@@ -1231,8 +1255,12 @@ class BaseEnv(gym.Env):
             sim_config=self.sim_config,
             device=self.device,
             parallel_in_single_scene=self._parallel_in_single_scene,
-            backend=self.backend
+            backend=self.backend,
+            visualizer_backend=self.visualizer_backend,
+            viser_server=self._viser_server,
         )
+        if self.scene.viser_visualizer is not None:
+            self._viser_server = self.scene.viser_visualizer.server
         self.scene.px.timestep = 1.0 / self._sim_freq
         if not self.scene.can_render():
             if self.render_mode is not None:
@@ -1253,6 +1281,9 @@ class BaseEnv(gym.Env):
 
     def close(self):
         self._clear()
+        if self._viser_server is not None:
+            self._viser_server.stop()
+            self._viser_server = None
 
     def _close_viewer(self):
         if self._viewer is None:
@@ -1364,6 +1395,10 @@ class BaseEnv(gym.Env):
 
     def render_human(self):
         """render the environment by opening a GUI viewer. This also returns the viewer object. Any objects registered in the _hidden_objects list will be shown"""
+        if self.scene.viser_enabled:
+            assert self.scene.viser_visualizer is not None
+            self.scene.viser_visualizer.sync()
+            return self.scene.viser_visualizer
         for obj in self._hidden_objects:
             obj.show_visual()
         if self._viewer is None:

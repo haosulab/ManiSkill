@@ -10,6 +10,7 @@ import trimesh.scene
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
+    parser.add_argument("-v", "--visualizer-backend", type=str, default="sapien", help="Which visualizer to use. Can be 'sapien' or 'viser'")
     parser.add_argument("--cam-width", type=int, help="Override the width of every camera in the environment")
     parser.add_argument("--cam-height", type=int, help="Override the height of every camera in the environment")
     parser.add_argument(
@@ -35,6 +36,7 @@ def main(args):
         obs_mode="pointcloud",
         reward_mode="none",
         sensor_configs=sensor_configs,
+        visualizer_backend=args.visualizer_backend,
     )
 
     obs, _ = env.reset(seed=args.seed)

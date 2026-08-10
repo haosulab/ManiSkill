@@ -13,6 +13,8 @@ from mani_skill.envs.sapien_env import BaseEnv
 class Args:
     robot_uid: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "panda"
     sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
+    visualizer_backend: Annotated[str, tyro.conf.arg(aliases=["-v"])] = "sapien"
+    """Which visualizer to use. Can be 'sapien' or 'viser'"""
     control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_pos"
     keyframe: Annotated[Optional[str], tyro.conf.arg(aliases=["-k"])] = None
     shader: str = "default"
@@ -38,6 +40,7 @@ def main(args: Args):
         render_mode="human",
         sim_config=dict(sim_freq=args.sim_freq, control_freq=args.control_freq),
         sim_backend=args.sim_backend,
+        visualizer_backend=args.visualizer_backend,
     )
     env.reset(seed=0)
     env: BaseEnv = env.unwrapped
@@ -69,6 +72,10 @@ def main(args: Args):
         env.scene._gpu_fetch_all()
     viewer = env.render()
     viewer.paused = True
+    viser_visualizer = env.scene.viser_visualizer
+    if viser_visualizer is not None:
+        viser_visualizer.paused = True
+        viser_visualizer.pause_checkbox.value = True
     viewer = env.render()
     while True:
         if args.random_actions:
