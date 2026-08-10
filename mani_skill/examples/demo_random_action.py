@@ -49,6 +49,9 @@ class Args:
     pause: Annotated[bool, tyro.conf.arg(aliases=["-p"])] = False
     """If using human render mode, auto pauses the simulation upon loading"""
 
+    edit_camera_poses: bool = False
+    """Enable in-viewer camera pose editing when using the human render mode"""
+
     quiet: bool = False
     """Disable verbose output."""
 
@@ -83,6 +86,7 @@ def main(args: Args):
         render_backend=args.render_backend,
         enable_shadow=True,
         parallel_in_single_scene=parallel_in_single_scene,
+        enable_camera_pose_editing=args.edit_camera_poses,
     )
     if args.robot_uids is not None:
         env_kwargs["robot_uids"] = tuple(args.robot_uids.split(","))
@@ -107,12 +111,19 @@ def main(args: Args):
     obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
     if args.seed is not None and env.action_space is not None:
             env.action_space.seed(args.seed[0])
+    pause_after_viewer_boot = False
     if args.render_mode == "human":
         viewer = env.render()
-        if isinstance(viewer, sapien.utils.Viewer):
-            viewer.paused = args.pause
-        env.render()
+        pause_after_viewer_boot = args.pause and isinstance(viewer, sapien.utils.Viewer)
+        if args.edit_camera_poses:
+            print("Camera pose editing enabled: click a camera frustum in the viewer and drag the gizmo in the Camera Editor window.")
     while True:
+        if args.render_mode == "human":
+            viewer = env.render()
+            if isinstance(viewer, sapien.utils.Viewer) and pause_after_viewer_boot:
+                viewer.paused = True
+                pause_after_viewer_boot = False
+                continue
         action = env.action_space.sample() if env.action_space is not None else None
         obs, reward, terminated, truncated, info = env.step(action)
         if verbose:
@@ -120,8 +131,6 @@ def main(args: Args):
             print("terminated", terminated)
             print("truncated", truncated)
             print("info", info)
-        if args.render_mode == "human":
-            env.render()
         if args.render_mode is None or args.render_mode != "human":
             if (terminated | truncated).any():
                 break
