@@ -1,5 +1,4 @@
-# TODO (stao): reimplement this
-
+import warnings
 
 import numpy as np
 import sapien
@@ -15,9 +14,22 @@ from mani_skill.utils import sapien_utils
 
 from .camera import Camera, CameraConfig
 
+_STEREO_DEPTH_CAMERA_DEPRECATION_MESSAGE = (
+    "StereoDepthCamera and StereoDepthCameraConfig are deprecated and will be "
+    "removed in a future release. Use Camera and CameraConfig with depth "
+    'observations (for example, obs_mode="depth" or obs_mode="rgbd") instead.'
+)
+
 
 class StereoDepthCameraConfig(CameraConfig):
+    """Deprecated configuration for the legacy SAPIEN stereo depth sensor."""
+
     def __init__(self, *args, min_depth: float = 0.05, **kwargs):
+        warnings.warn(
+            _STEREO_DEPTH_CAMERA_DEPRECATION_MESSAGE,
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(*args, **kwargs)
         self.min_depth = min_depth
 
@@ -36,6 +48,8 @@ class StereoDepthCameraConfig(CameraConfig):
 
 
 class StereoDepthCamera(Camera):
+    """Deprecated wrapper for the legacy SAPIEN stereo depth sensor."""
+
     def __init__(
         self,
         camera_cfg: StereoDepthCameraConfig,

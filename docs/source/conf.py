@@ -100,7 +100,7 @@ autoapi_ignore = [
     "*/mani_skill/agents/robots/*.py",
     "*/mani_skill/examples/*.py",
     "*/mani_skill/render/*.py",
-    # depth_camera is outdated and needs to be upgraded
+    # depth_camera contains the deprecated legacy SAPIEN stereo depth sensor
     "*/mani_skill/sensors/depth_camera.py",
 ]
 autoapi_keep_files = True
