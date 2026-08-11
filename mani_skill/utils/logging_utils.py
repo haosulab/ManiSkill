@@ -53,12 +53,17 @@ class CustomFormatter(logging.Formatter):
         return s
 
 
-logger = logging.getLogger("mani_skill ")
-logger.setLevel(logging.INFO)
-logger.propagate = False
-if not logger.hasHandlers():
-    ch = logging.StreamHandler()
-    ch.setFormatter(
-        CustomFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    logger.addHandler(ch)
+def _configure_logger(name: str) -> logging.Logger:
+    package_logger = logging.getLogger(name)
+    package_logger.setLevel(logging.INFO)
+    package_logger.propagate = False
+    if not package_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            CustomFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+        package_logger.addHandler(handler)
+    return package_logger
+
+
+logger = _configure_logger("mani_skill")
