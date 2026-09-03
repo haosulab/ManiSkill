@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from diffusion_policy.evaluate import evaluate
@@ -18,6 +17,7 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import RandomSampler, BatchSampler
 from torch.utils.data.dataloader import DataLoader
 from diffusion_policy.utils import IterationBasedBatchSampler, worker_init_fn
+from diffusion_policy.losses import action_window_mask, masked_mse_loss
 from diffusion_policy.make_env import make_eval_envs
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.training_utils import EMAModel
@@ -145,6 +145,17 @@ class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memo
         traj_idx, start, end = self.slices[index]
         L, act_dim = self.trajectories['actions'][traj_idx].shape
 
+        # Keep track of which positions in the fixed-size action window come
+        # from the demonstration.  Actions repeated before an episode and
+        # zero-padded after it are useful for shaping the returned tensor, but
+        # they must not become artificial supervision for the denoising model.
+        action_mask = action_window_mask(
+            start,
+            end,
+            L,
+            device=self.trajectories['actions'][traj_idx].device,
+        )
+
         obs_seq = self.trajectories['observations'][traj_idx][max(0, start):start+self.obs_horizon]
         # start+self.obs_horizon is at least 1
         act_seq = self.trajectories['actions'][traj_idx][max(0, start):end]
@@ -160,6 +171,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset): # Load everything into GPU memo
         return {
             'observations': obs_seq,
             'actions': act_seq,
+            'action_mask': action_mask,
         }
 
     def __len__(self):
@@ -193,19 +205,21 @@ class Agent(nn.Module):
             prediction_type='epsilon' # predict noise (instead of denoised action)
         )
 
-    def compute_loss(self, obs_seq, action_seq):
+    def compute_loss(self, obs_seq, action_seq, action_mask=None):
         B = obs_seq.shape[0]
 
         # observation as FiLM conditioning
         obs_cond = obs_seq.flatten(start_dim=1) # (B, obs_horizon * obs_dim)
 
         # sample noise to add to actions
-        noise = torch.randn((B, self.pred_horizon, self.act_dim), device=device)
+        noise = torch.randn(
+            (B, self.pred_horizon, self.act_dim), device=action_seq.device
+        )
 
         # sample a diffusion iteration for each data point
         timesteps = torch.randint(
             0, self.noise_scheduler.config.num_train_timesteps,
-            (B,), device=device
+            (B,), device=action_seq.device
         ).long()
 
         # add noise to the clean images(actions) according to the noise magnitude at each diffusion iteration
@@ -217,7 +231,7 @@ class Agent(nn.Module):
         noise_pred = self.noise_pred_net(
             noisy_action_seq, timesteps, global_cond=obs_cond)
 
-        return F.mse_loss(noise_pred, noise)
+        return masked_mse_loss(noise_pred, noise, action_mask)
 
     def get_action(self, obs_seq):
         # init scheduler
@@ -403,6 +417,7 @@ if __name__ == "__main__":
         total_loss = agent.compute_loss(
             obs_seq=data_batch["observations"],  # obs_batch_dict['state'] is (B, L, obs_dim)
             action_seq=data_batch["actions"],  # (B, L, act_dim)
+            action_mask=data_batch["action_mask"],  # (B, L), true for demo actions
         )
         timings["forward"] += time.time() - last_tick
 
