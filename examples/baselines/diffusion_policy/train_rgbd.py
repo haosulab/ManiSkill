@@ -13,7 +13,6 @@ from gymnasium.vector.vector_env import VectorEnv
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
 import tyro
@@ -29,6 +28,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from diffusion_policy.conditional_unet1d import ConditionalUnet1D
 from diffusion_policy.evaluate import evaluate
+from diffusion_policy.losses import action_window_mask, masked_mse_loss
 from diffusion_policy.make_env import make_eval_envs
 from diffusion_policy.plain_conv import PlainConv
 from diffusion_policy.utils import (IterationBasedBatchSampler,
@@ -211,6 +211,17 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
         traj_idx, start, end = self.slices[index]
         L, act_dim = self.trajectories["actions"][traj_idx].shape
 
+        # Mark only actions that actually occurred in the demonstration.  The
+        # fixed-size windows at episode boundaries contain repeated/zero
+        # padding; treating those values as labels biases the diffusion model
+        # toward an artificial terminal action, especially for RGB-D data.
+        action_mask = action_window_mask(
+            start,
+            end,
+            L,
+            device=self.trajectories["actions"][traj_idx].device,
+        )
+
         obs_traj = self.trajectories["observations"][traj_idx]
         obs_seq = {}
         for k, v in obs_traj.items():
@@ -237,6 +248,7 @@ class SmallDemoDataset_DiffusionPolicy(Dataset):  # Load everything into memory
         return {
             "observations": obs_seq,
             "actions": act_seq,
+            "action_mask": action_mask,
         }
 
     def __len__(self):
@@ -309,7 +321,7 @@ class Agent(nn.Module):
         )  # (B, obs_horizon, D+obs_state_dim)
         return feature.flatten(start_dim=1)  # (B, obs_horizon * (D+obs_state_dim))
 
-    def compute_loss(self, obs_seq, action_seq):
+    def compute_loss(self, obs_seq, action_seq, action_mask=None):
         B = obs_seq["state"].shape[0]
 
         # observation as FiLM conditioning
@@ -318,11 +330,16 @@ class Agent(nn.Module):
         )  # (B, obs_horizon * obs_dim)
 
         # sample noise to add to actions
-        noise = torch.randn((B, self.pred_horizon, self.act_dim), device=device)
+        noise = torch.randn(
+            (B, self.pred_horizon, self.act_dim), device=action_seq.device
+        )
 
         # sample a diffusion iteration for each data point
         timesteps = torch.randint(
-            0, self.noise_scheduler.config.num_train_timesteps, (B,), device=device
+            0,
+            self.noise_scheduler.config.num_train_timesteps,
+            (B,),
+            device=action_seq.device,
         ).long()
 
         # add noise to the clean images(actions) according to the noise magnitude at each diffusion iteration
@@ -334,7 +351,7 @@ class Agent(nn.Module):
             noisy_action_seq, timesteps, global_cond=obs_cond
         )
 
-        return F.mse_loss(noise_pred, noise)
+        return masked_mse_loss(noise_pred, noise, action_mask)
 
     def get_action(self, obs_seq):
         # init scheduler
@@ -577,6 +594,7 @@ if __name__ == "__main__":
         total_loss = agent.compute_loss(
             obs_seq=data_batch["observations"],  # obs_batch_dict['state'] is (B, L, obs_dim)
             action_seq=data_batch["actions"],  # (B, L, act_dim)
+            action_mask=data_batch["action_mask"],  # (B, L), true for demo actions
         )
         timings["forward"] += time.time() - last_tick
 
