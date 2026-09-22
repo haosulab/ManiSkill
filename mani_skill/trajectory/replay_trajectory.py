@@ -134,10 +134,7 @@ def replay_parallelized_sim(
             [episode["control_mode"] == ori_control_mode for episode in episode_batch]
         ), "Replay trajectory with parallelized environments is only supported for trajectories with the same control mode"
         episode_batch_max_len = max(episode_lens)
-        seeds = torch.tensor(
-            [episode["episode_seed"] for episode in episode_batch],
-            device=env.base_env.device,
-        )
+        seeds = [episode["episode_seed"] for episode in episode_batch]
         env.reset(seed=seeds)
 
         # generate batched env states and actions
@@ -229,15 +226,25 @@ def replay_parallelized_sim(
                     flushed_trajectories |= envs_to_flush
                     if envs_to_flush.sum() > 0:
                         pbar.update(n=envs_to_flush.sum())
+                        envs_to_save = envs_to_flush.copy()
                         if not args.allow_failure:
                             if "success" in info:
-                                envs_to_flush &= (info["success"] == True).cpu().numpy()
+                                envs_to_save &= (info["success"] == True).cpu().numpy()
                         if args.discard_timeout:
-                            envs_to_flush &= (truncated == False).cpu().numpy()
-                        successful_replays += envs_to_flush.sum()
-                        env.flush_trajectory(
-                            env_idxs_to_flush=np.where(envs_to_flush)[0]
-                        )
+                            envs_to_save &= (truncated == False).cpu().numpy()
+                        successful_replays += envs_to_save.sum()
+                        # discard trajectories that are not saved, otherwise they stay in
+                        # the recording buffer and contaminate the next saved trajectory
+                        envs_to_discard = envs_to_flush & (~envs_to_save)
+                        if envs_to_save.sum() > 0:
+                            env.flush_trajectory(
+                                env_idxs_to_flush=np.where(envs_to_save)[0]
+                            )
+                        if envs_to_discard.sum() > 0:
+                            env.flush_trajectory(
+                                env_idxs_to_flush=np.where(envs_to_discard)[0],
+                                save=False,
+                            )
         else:
             raise NotImplementedError(
                 "Replay with different control modes are not supported when replaying on GPU parallelized environments"
@@ -365,6 +372,12 @@ def replay_cpu_sim(
                     env.flush_video(ignore_empty_transition=False)
                 break
             else:
+                # discard the failed attempt's recorded data, otherwise it stays in
+                # the recording buffer and contaminates the next saved trajectory/video
+                if args.save_traj:
+                    env.flush_trajectory(save=False)
+                if args.save_video:
+                    env.flush_video(save=False)
                 if args.verbose:
                     print("info", info)
         else:
