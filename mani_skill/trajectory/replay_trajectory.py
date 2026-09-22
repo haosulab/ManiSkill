@@ -134,10 +134,7 @@ def replay_parallelized_sim(
             [episode["control_mode"] == ori_control_mode for episode in episode_batch]
         ), "Replay trajectory with parallelized environments is only supported for trajectories with the same control mode"
         episode_batch_max_len = max(episode_lens)
-        seeds = torch.tensor(
-            [episode["episode_seed"] for episode in episode_batch],
-            device=env.base_env.device,
-        )
+        seeds = [episode["episode_seed"] for episode in episode_batch]
         env.reset(seed=seeds)
 
         # generate batched env states and actions
