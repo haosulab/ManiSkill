@@ -10,11 +10,22 @@ import torch
 from termcolor import colored
 
 from common.parser import parse_cfg
+from mani_skill.utils import common as ms_common
 from common.seed import set_seed
 from envs import make_envs
 from tdmpc2 import TDMPC2
 
 torch.backends.cudnn.benchmark = True
+
+
+def _final_info_mean(info, key):
+	"""Mean of a per-env metric over the final step, supporting both the batched dict
+	(GPU sim / gymnasium >= 1.0 same-step autoreset) and the per-env list (gymnasium < 1.0)
+	final_info formats."""
+	final_info = info["final_info"]
+	if isinstance(final_info, dict):
+		return float(np.mean(ms_common.to_numpy(final_info[key])))
+	return float(np.mean([fi[key] for fi in final_info]))
 
 
 @hydra.main(config_name='config', config_path='.')
@@ -29,7 +40,7 @@ def evaluate(cfg: dict):
 		`eval_episodes`: number of episodes to evaluate on per task (default: 10)
 		`save_video_local`: whether to save a video of the evaluation (default: True)
 		`seed`: random seed (default: 1)
-	
+
 	See config.yaml for a full list of args.
 
 	Example usage:
@@ -55,7 +66,7 @@ def evaluate(cfg: dict):
 	agent = TDMPC2(cfg)
 	assert os.path.exists(cfg.checkpoint), f'Checkpoint {cfg.checkpoint} not found! Must be a valid filepath.'
 	agent.load(cfg.checkpoint)
-	
+
 	# Evaluate
 	if cfg.multitask:
 		print(colored(f'Evaluating agent on {len(cfg.tasks)} tasks:', 'yellow', attrs=['bold']))
@@ -87,12 +98,12 @@ def evaluate(cfg: dict):
 				if cfg.save_video_local:
 					frames.append(env.render().cpu())
 			ep_rewards.append(ep_reward.mean().item())
-			if 'success' in info: 
+			if 'success' in info:
 				has_success = True
-				ep_successes.append(info['final_info']['success'].float().mean().item())
+				ep_successes.append(_final_info_mean(info, 'success'))
 			if 'fail' in info:
 				has_fail = True
-				ep_fails.append(info['final_info']['fail'].float().mean().item())
+				ep_fails.append(_final_info_mean(info, 'fail'))
 			if cfg.save_video_local:
 				videos = np.array(frames).transpose([1,0,2,3,4])
 				for video in videos:
@@ -117,7 +128,7 @@ def evaluate(cfg: dict):
 			print(colored(f'  {task:<22}' \
 				f'\tR: {ep_rewards:.01f}  ' \
 				f'\tF: {ep_fails:.02f}', 'yellow'))
-		
+
 	if cfg.multitask:
 		print(colored(f'Normalized score: {np.mean(scores):.02f}', 'yellow', attrs=['bold']))
 

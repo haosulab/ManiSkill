@@ -2,6 +2,7 @@ from typing import Optional
 import gymnasium as gym
 import mani_skill.envs
 from mani_skill.utils import gym_utils
+from mani_skill.utils.gym_utils import IS_GYMNASIUM_1
 from mani_skill.utils.wrappers import CPUGymWrapper, FrameStack, RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
@@ -52,23 +53,26 @@ def make_eval_envs(
 
             return thunk
 
-        vector_cls = (
-            gym.vector.SyncVectorEnv
-            if num_envs == 1
-            else lambda x: gym.vector.AsyncVectorEnv(x, context="forkserver")
+        # gymnasium >= 1.0 autoresets vector envs on the step after termination/truncation, which
+        # drops info["final_info"] and leaks the previous episode's final observation into the next
+        # episode. Use same-step autoreset to keep the behavior the evaluation loop expects.
+        vector_env_kwargs = (
+            dict(autoreset_mode=gym.vector.AutoresetMode.SAME_STEP) if IS_GYMNASIUM_1 else dict()
         )
-        env = vector_cls(
-            [
-                cpu_make_env(
-                    env_id,
-                    seed,
-                    video_dir if seed == 0 else None,
-                    env_kwargs,
-                    other_kwargs,
-                )
-                for seed in range(num_envs)
-            ]
-        )
+        make_env_fns = [
+            cpu_make_env(
+                env_id,
+                seed,
+                video_dir if seed == 0 else None,
+                env_kwargs,
+                other_kwargs,
+            )
+            for seed in range(num_envs)
+        ]
+        if num_envs == 1:
+            env = gym.vector.SyncVectorEnv(make_env_fns, **vector_env_kwargs)
+        else:
+            env = gym.vector.AsyncVectorEnv(make_env_fns, context="forkserver", **vector_env_kwargs)
     else:
         env = gym.make(
             env_id,

@@ -2,7 +2,7 @@ import gymnasium as gym
 import torch
 import numpy as np
 
-class TensorWrapper(gym.Wrapper):
+class TensorWrapper(gym.vector.VectorWrapper):
     """
     Wrapper for converting numpy arrays to torch tensors.
     """
