@@ -41,11 +41,11 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 
 	# Set up env make fn for consistency
 	env_make_fn = partial(
-		gym.make, 
+		gym.make,
 		disable_env_checker=True,
-		id=cfg.env_id, 
-		obs_mode=cfg.obs, 
-		render_mode=cfg.render_mode, 
+		id=cfg.env_id,
+		obs_mode=cfg.obs,
+		render_mode=cfg.render_mode,
 		sensor_configs=dict(width=cfg.render_size, height=cfg.render_size)
 		)
 	if cfg.control_mode != 'default':
@@ -56,14 +56,20 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 	if cfg.env_type == 'cpu':
 		# Get default control_mode and max_episode_steps values
 		dummy_env = env_make_fn()
-		control_mode = dummy_env.control_mode
+		control_mode = dummy_env.unwrapped.control_mode
 		max_episode_steps = gym_utils.find_max_episode_steps_value(dummy_env)
 		dummy_env.close()
 		del dummy_env
 		# Create cpu async vectorized env
-		vector_env_cls = partial(AsyncVectorEnv, context="forkserver")
+		# gymnasium >= 1.0 autoresets vector envs on the step after termination/truncation, which
+		# drops info["final_info"]/info["final_obs"] and leaks the previous episode's final
+		# observation into the next one. Use same-step autoreset to keep the expected behavior.
+		vector_env_kwargs = dict()
+		if gym_utils.IS_GYMNASIUM_1:
+			vector_env_kwargs["autoreset_mode"] = gym.vector.AutoresetMode.SAME_STEP
+		vector_env_cls = partial(AsyncVectorEnv, context="forkserver", **vector_env_kwargs)
 		if num_envs == 1:
-			vector_env_cls = SyncVectorEnv
+			vector_env_cls = partial(SyncVectorEnv, **vector_env_kwargs)
 		wrappers = []
 		if cfg['obs'] == 'rgb':
 			wrappers.append(partial(PixelWrapper(cfg=cfg, num_envs=num_envs)))
@@ -96,5 +102,5 @@ def make_envs(cfg, num_envs, record_video_path, is_eval, logger):
 		raise Exception('env_type must be cpu or gpu')
 	cfg.env_cfg.control_mode = cfg.eval_env_cfg.control_mode = control_mode
 	cfg.env_cfg.env_horizon = cfg.eval_env_cfg.env_horizon = env.max_episode_steps = max_episode_steps
-	
+
 	return env

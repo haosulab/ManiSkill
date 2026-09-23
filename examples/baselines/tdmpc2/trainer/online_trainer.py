@@ -7,6 +7,8 @@ from tensordict.tensordict import TensorDict
 
 from trainer.base import Trainer
 
+from mani_skill.utils import common
+
 
 class OnlineTrainer(Trainer):
 	"""Trainer class for single-task online TD-MPC2 training."""
@@ -19,10 +21,14 @@ class OnlineTrainer(Trainer):
 
 	def final_info_metrics(self, info):
 		metrics = dict()
-		if self.cfg.env_type == 'gpu':
+		if isinstance(info["final_info"], dict):
+			# batched final info (GPU sim, or CPU vector envs on gymnasium >= 1.0 same-step
+			# autoreset); the underscore-prefixed keys are autobatching masks, not metrics
 			for k, v in info["final_info"]["episode"].items():
-				metrics[k]=v.float().mean().item()
-		else: # cpu
+				if k.startswith("_"):
+					continue
+				metrics[k]=np.mean(common.to_numpy(v)).item()
+		else: # per-env list of final infos (CPU vector envs on gymnasium < 1.0)
 			temp = defaultdict(list)
 			for final_info in info["final_info"]:
 				for k, v in final_info["episode"].items():
@@ -59,13 +65,13 @@ class OnlineTrainer(Trainer):
 	def to_td(self, obs, num_envs, action=None, reward=None):
 		"""Before: Creates a TensorDict for a new episode. Return a td with batch (1, ), with obs, action, reward
 		After vectorization: added 1 argument: num_envs, now have batch size (num_envs, 1)"""
-		if isinstance(obs, dict): 
+		if isinstance(obs, dict):
 			obs = {k: v.unsqueeze(1) for k,v in obs.items()}
 			obs = TensorDict(obs, batch_size=(), device='cpu') # before vectorization, obs must have its first dimension=1
 		else:
 			obs = obs.unsqueeze(1).cpu()
 		if action is None:
-			action = torch.full((num_envs, self.cfg.action_dim), float('nan')) 
+			action = torch.full((num_envs, self.cfg.action_dim), float('nan'))
 		if reward is None:
 			reward = torch.full((num_envs,), float('nan'))
 		td = TensorDict(dict(
@@ -114,7 +120,7 @@ class OnlineTrainer(Trainer):
 					self.logger.log(train_metrics, 'train')
 
 					assert len(self._tds) == self.env.max_episode_steps + 1, f"{len(self._tds)} instead" # ManiSkillVectorEnv wrapper required
-					self._ep_idx = self.buffer.add(tds) 
+					self._ep_idx = self.buffer.add(tds)
 
 				obs, _ = self.env.reset()
 				self._tds = [self.to_td(obs, self.cfg.num_envs)]
@@ -130,16 +136,17 @@ class OnlineTrainer(Trainer):
 
 			vec_done = vec_terminated | vec_truncated
 
-			if vec_done[0]: # use actual final_observation
-				if self.cfg.obs == 'rgb' and isinstance(vec_info["final_observation"], dict):
-					obs = vec_info["final_observation"].copy()
+			if vec_done[0]: # use actual final observation (named final_obs on gymnasium >= 1.0)
+				final_obs = vec_info["final_observation"] if "final_observation" in vec_info else vec_info["final_obs"]
+				if self.cfg.obs == 'rgb' and isinstance(final_obs, dict):
+					obs = final_obs.copy()
 				else:
-					obs = vec_info["final_observation"]
-			
+					obs = final_obs
+
 			self._tds.append(self.to_td(obs, self.cfg.num_envs, action, reward))
 			rollout_time = time() - rollout_time
 			rollout_times.append(rollout_time)
-			
+
 			# Update agent
 			if self._step >= self.cfg.seed_steps:
 				update_time = time()
@@ -155,5 +162,5 @@ class OnlineTrainer(Trainer):
 				update_time = time() - update_time
 
 			self._step += self.cfg.num_envs
-	
+
 		self.logger.finish(self.agent)

@@ -3,6 +3,8 @@ from typing import Callable
 import numpy as np
 import torch
 
+from mani_skill.utils import common
+
 def evaluate(n: int, sample_fn: Callable, eval_envs):
     """
     Evaluate the agent on the evaluation environments for at least n episodes.
@@ -27,7 +29,9 @@ def evaluate(n: int, sample_fn: Callable, eval_envs):
             if truncated.any():
                 if isinstance(info["final_info"], dict):
                     for k, v in info["final_info"]["episode"].items():
-                        eval_metrics[k].append(v.float().cpu().numpy())
+                        if k.startswith("_"):
+                            continue
+                        eval_metrics[k].append(common.to_numpy(v))
                 else:
                     for final_info in info["final_info"]:
                         for k, v in final_info["episode"].items():

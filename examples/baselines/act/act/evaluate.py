@@ -82,7 +82,9 @@ def evaluate(n: int, agent, eval_envs, eval_kwargs):
                 assert truncated.all() == truncated.any(), "all episodes should truncate at the same time for fair evaluation with other algorithms"
                 if isinstance(info["final_info"], dict):
                     for k, v in info["final_info"]["episode"].items():
-                        eval_metrics[k].append(v.float().cpu().numpy())
+                        if k.startswith("_"):
+                            continue
+                        eval_metrics[k].append(common.to_numpy(v))
                 else:
                     for final_info in info["final_info"]:
                         for k, v in final_info["episode"].items():
