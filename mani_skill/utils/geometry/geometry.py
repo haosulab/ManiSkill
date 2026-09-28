@@ -35,16 +35,29 @@ def rotation_between_vec(a, b):  # from a to b
     a = a / np.linalg.norm(a)
     b = b / np.linalg.norm(b)
     axis = np.cross(a, b)
-    axis = axis / np.linalg.norm(axis)  # norm might be 0
-    angle = np.arccos(a @ b)
-    R = Rotation.from_rotvec(axis * angle)
-    return R
+    axis_norm = np.linalg.norm(axis)
+    # Parallel vectors have a zero cross product. Dividing by that, or taking
+    # arccos of a dot product just outside [-1, 1], returns a NaN rotation.
+    dot = float(np.clip(a @ b, -1.0, 1.0))
+    if axis_norm < 1e-8:
+        if dot > 0.0:
+            return Rotation.identity()
+        if abs(a[0]) < 0.9:
+            helper = np.array([1.0, 0.0, 0.0])
+        else:
+            helper = np.array([0.0, 1.0, 0.0])
+        axis = np.cross(a, helper)
+        axis = axis / np.linalg.norm(axis)
+        return Rotation.from_rotvec(axis * np.pi)
+    return Rotation.from_rotvec(axis / axis_norm * np.arccos(dot))
 
 
 def angle_between_vec(a, b):  # from a to b
     a = a / np.linalg.norm(a)
     b = b / np.linalg.norm(b)
-    angle = np.arccos(a @ b)
+    # Normalizing can push the dot product just outside [-1, 1].
+    # arccos of that is NaN, so a vector and itself comes back as NaN.
+    angle = np.arccos(np.clip(a @ b, -1.0, 1.0))
     return angle
 
 
