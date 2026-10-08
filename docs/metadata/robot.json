@@ -71,6 +71,10 @@
     "quality": "A",
     "name": "Standard Open Arm 100 (SO100)"
   },
+  "so100_wristcam": {
+    "quality": "A",
+    "name": "Standard Open Arm 100 (SO100) with Wrist Camera"
+  },
   "humanoid": {
     "quality": "A",
     "name": "Mujoco Humanoid"
