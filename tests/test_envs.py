@@ -223,6 +223,10 @@ def test_robots(env_id, robot_uids):
         "MoveBucket-v1",
     ]:
         pytest.skip(reason=f"Env {env_id} does not support robots other than panda")
+    if env_id == "PickSingleYCB-v1" and robot_uids not in ["panda", "panda_wristcam"]:
+        pytest.skip(reason=f"Env {env_id} does not support the {robot_uids} robot")
+    if env_id == "StackCube-v1" and robot_uids == "so100_wristcam":
+        pytest.skip(reason=f"Env {env_id} does not support the {robot_uids} robot")
     env = gym.make(env_id, robot_uids=robot_uids)
     env.reset()
     action_space = env.action_space

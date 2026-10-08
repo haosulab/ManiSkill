@@ -215,6 +215,16 @@ Robots that are cannot be stably simulated are not included in ManiSkill at all.
 </div>
 
 <div class="gallery-item">
+    <a href="so100_wristcam">
+        <img src="../_static/robot_images/so100_wristcam/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Standard Open Arm 100 (SO100) with Wrist Camera">
+    </a>
+    <div class="gallery-item-caption">
+        <a href="so100_wristcam"><p style="margin-bottom: 0px; word-wrap: break-word; max-width: 200px; color: inherit;">Standard Open Arm 100 (SO100) with Wrist Camera</p></a>
+        <p style="margin-top: 0px;">Quality: A</p>
+    </div>
+</div>
+
+<div class="gallery-item">
     <a href="stompy">
         <img src="../_static/robot_images/stompy/thumbnail.png" style='min-width:min(50%, 100px);max-width:200px;height:auto' alt="Stompy">
     </a>
@@ -399,6 +409,7 @@ panda/index
 panda_stick/index
 panda_wristcam/index
 so100/index
+so100_wristcam/index
 stompy/index
 trifingerpro/index
 ur_10e/index

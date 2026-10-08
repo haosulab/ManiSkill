@@ -279,7 +279,7 @@ class TableSceneBuilder(SceneBuilder):
         elif self.env.robot_uids in ["widowxai", "widowxai_wristcam"]:
             qpos = self.env.agent.keyframes["ready_to_grasp"].qpos
             self.env.agent.reset(qpos)
-        elif self.env.robot_uids == "so100":
+        elif self.env.robot_uids in ["so100", "so100_wristcam"]:
             qpos = np.array([0, 0, 0, np.pi / 2, np.pi / 2, 0])
             qpos = (
                 self.env._episode_rng.normal(

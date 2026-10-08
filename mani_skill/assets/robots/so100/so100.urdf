@@ -553,4 +553,25 @@
       </material>
     </visual> -->
   </link>
+
+  <!-- wrist camera mount, following the same pattern as panda_v3.urdf: camera_mount_link
+       is a bracket fixed to the Wrist_Pitch_Roll link and camera_link is the optical frame
+       of a centered wrist camera that looks down past the gripper at the workspace (usable
+       for RL, see the so100_wristcam agent). Both links are massless with no collision
+       geometry so the arm's dynamics and behavior are unchanged. The camera_link_joint rpy
+       includes the fixed rotation SAPIEN applies when mounting a camera on a link so that
+       mounting a CameraConfig with an identity local pose on camera_link yields the
+       intended downward-facing view. -->
+  <joint name="camera_mount_joint" type="fixed">
+    <origin rpy="-1.5708 0 0" xyz="0.02 -0.02 0.035"/>
+    <parent link="Wrist_Pitch_Roll"/>
+    <child link="camera_mount_link"/>
+  </joint>
+  <link name="camera_mount_link"/>
+  <joint name="camera_link_joint" type="fixed">
+    <origin rpy="0 1.309 1.5708" xyz="0 0 0.015"/>
+    <parent link="camera_mount_link"/>
+    <child link="camera_link"/>
+  </joint>
+  <link name="camera_link"/>
 </robot>
