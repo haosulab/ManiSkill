@@ -84,7 +84,15 @@ def inverse_delta_to_pd_ee_euler(
         raise ValueError(
             "rotation_action_scale must contain three finite nonzero values"
         )
-    return euler / scale
+    normalized_action = euler / scale
+    # PDEEPoseController normalizes rotation actions with Euclidean norm > 1
+    # before applying this scale. Returning such an action would silently
+    # replay a smaller rotation rather than the requested target delta.
+    if np.linalg.norm(normalized_action) > 1.0 + 1e-6:
+        raise ValueError(
+            "requested rotation exceeds the controller's unit-norm action limit"
+        )
+    return normalized_action
 
 
 def _get_controller_rotation_action_scale(controller: PDEEPoseController) -> np.ndarray:
