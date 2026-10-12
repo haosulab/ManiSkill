@@ -161,6 +161,31 @@ def test_delta_pose_conversion_tracks_anisotropic_rotation_scales():
     torch.testing.assert_close(actual_rotation, expected_rotation, atol=1e-6, rtol=1e-6)
 
 
+def test_delta_pose_conversion_rejects_unrepresentable_rotation_norm():
+    # The live controller renormalizes actions with ||rotation|| > 1.
+    # Without this guard a converted trajectory silently replays a smaller
+    # rotation, even though each Euler component is within the axis bounds.
+    expected_euler = torch.tensor([0.31, -0.27, 0.42])
+    quaternion = rotation_conversions.matrix_to_quaternion(
+        rotation_conversions.euler_angles_to_matrix(expected_euler, "XYZ")
+    )
+    controller = object.__new__(PDEEPoseController)
+    controller.config = SimpleNamespace(
+        use_delta=True, normalize_action=True, rot_lower=-0.5, rot_upper=0.5
+    )
+    controller.action_space_low = torch.tensor([-0.1] * 3 + [-0.5] * 3)
+    controller.action_space_high = torch.tensor([0.1] * 3 + [0.5] * 3)
+    inverse_delta = rotation_conversions.quaternion_invert(quaternion)
+    delta_pose = sapien.Pose(np.zeros(3), inverse_delta.numpy())
+
+    # All coordinates lie within [-1, 1], but their Euclidean norm is > 1.
+    candidate = expected_euler.numpy() / -0.5
+    assert np.all(np.abs(candidate) <= 1)
+    assert np.linalg.norm(candidate) > 1
+    with pytest.raises(ValueError, match="unit-norm action limit"):
+        delta_pose_to_pd_ee_delta(controller, delta_pose)
+
+
 @pytest.mark.parametrize(
     ("scales", "message"),
     [
