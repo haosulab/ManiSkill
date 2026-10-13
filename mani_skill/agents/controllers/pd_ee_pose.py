@@ -13,6 +13,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     quaternion_apply,
     quaternion_multiply,
 )
+from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs import Link, Pose
 from mani_skill.utils.structs.types import DriveMode
 
@@ -47,6 +48,9 @@ class PDEEPosController(PDJointPosController):
 
         self.ee_link = self.kinematics.end_link
 
+        # Count of IK failures since the last reset; makes silent target holds debuggable
+        self.ik_failure_count = 0
+
         if self.config.root_link_name is not None:
             root_link = sapien_utils.get_obj_by_name(
                 self.articulation.get_links(), self.config.root_link_name
@@ -78,6 +82,7 @@ class PDEEPosController(PDJointPosController):
 
     def reset(self):
         super().reset()
+        self.ik_failure_count = 0
         if self.config.use_target:
             if self._target_pose is None:
                 self._target_pose = self.ee_pose_at_base
@@ -134,7 +139,15 @@ class PDEEPosController(PDJointPosController):
             solver_config=self.config.delta_solver_config,
         )
         if _target_qpos is None:
+            # Hold previous targets; count the failure so the stall is observable
             self._target_qpos = self._start_qpos
+            self.ik_failure_count += 1
+            if self.config.warn_on_ik_failure and (
+                self.ik_failure_count == 1 or self.ik_failure_count % 100 == 0
+            ):
+                logger.warning(
+                    f"IK failed to converge; holding previous joint targets (failure #{self.ik_failure_count})"
+                )
         else:
             self._target_qpos = _target_qpos
         if self.config.interpolate:
@@ -198,6 +211,8 @@ class PDEEPosControllerConfig(ControllerConfig):
     interpolate: bool = False
     normalize_action: bool = True
     """Whether to normalize each action dimension into a range of [-1, 1]. Normally for most machine learning workflows this is recommended to be kept true."""
+    warn_on_ik_failure: bool = False
+    """Whether to log a rate-limited warning when IK fails and previous joint targets are held."""
     delta_solver_config: dict = field(
         default_factory=lambda: dict(type="levenberg_marquardt", alpha=1.0)
     )
