@@ -67,7 +67,7 @@ class ManiSkillTrajectoryDataset(Dataset):
 
             # exclude the final observation as most learning workflows do not use it
             obs = common.index_dict_array(trajectory["obs"], slice(eps_len))
-            if eps_id == 0:
+            if self.obs is None:
                 self.obs = obs
             else:
                 self.obs = common.append_dict_array(self.obs, obs)
