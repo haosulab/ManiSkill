@@ -238,9 +238,9 @@ class ManiSkillTrajectoryDataset(Dataset):
             if self.rewards is not None:
                 self.rewards = sapien_utils.to_tensor(self.rewards, device=device)
             if self.success is not None:
-                self.success = sapien_utils.to_tensor(self.terminated, device=device)
+                self.success = sapien_utils.to_tensor(self.success, device=device)
             if self.fail is not None:
-                self.fail = sapien_utils.to_tensor(self.truncated, device=device)
+                self.fail = sapien_utils.to_tensor(self.fail, device=device)
     def __len__(self):
         return len(self.actions)
 
