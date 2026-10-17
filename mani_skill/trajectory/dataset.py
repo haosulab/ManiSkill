@@ -128,9 +128,9 @@ class ManiSkillTrajectoryDataset(Dataset):
             if self.rewards is not None:
                 self.rewards = common.to_tensor(self.rewards, device=device)
             if self.success is not None:
-                self.success = common.to_tensor(self.terminated, device=device)
+                self.success = common.to_tensor(self.success, device=device)
             if self.fail is not None:
-                self.fail = common.to_tensor(self.truncated, device=device)
+                self.fail = common.to_tensor(self.fail, device=device)
 
     def __len__(self):
         return len(self.actions)
