@@ -10,7 +10,22 @@ import torch
 from mani_skill.trajectory.dataset import ManiSkillTrajectoryDataset
 
 
-@pytest.mark.parametrize("device", [None, "cpu"])
+@pytest.mark.parametrize(
+    "device",
+    [
+        None,
+        "cpu",
+        pytest.param(
+            "cuda",
+            marks=[
+                pytest.mark.gpu_sim,
+                pytest.mark.skipif(
+                    not torch.cuda.is_available(), reason="CUDA storage requires a GPU"
+                ),
+            ],
+        ),
+    ],
+)
 @pytest.mark.parametrize("nested_obs", [False, True])
 @pytest.mark.parametrize("success_only", [False, True])
 @pytest.mark.parametrize("first_success", [False, True])
@@ -53,6 +68,13 @@ def test_first_retained_trajectory_and_appending(
     try:
         assert len(dataset) == len(expected_actions)
         rows = [dataset[i] for i in range(len(dataset))]
+        if device is not None:
+            assert all(row["action"].device.type == device for row in rows)
+            leaves = [
+                row["obs"]["agent"]["qpos"] if nested_obs else row["obs"]
+                for row in rows
+            ]
+            assert all(leaf.device.type == device for leaf in leaves)
         assert [row["action"].tolist() for row in rows] == expected_actions
         if nested_obs:
             assert [
