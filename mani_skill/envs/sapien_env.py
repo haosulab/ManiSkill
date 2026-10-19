@@ -41,6 +41,35 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, SimConfig
 from mani_skill.utils.visualization.misc import tile_images
 
+_RENDER_SYSTEM_KEEPALIVE: dict[str, "sapien.render.RenderSystem"] = {}
+"""Process-global keep-alive references to RenderSystem instances, keyed by render device name.
+
+SAPIEN only keeps a weak reference to its render engine (the svulkan2 Vulkan
+context), held alive by the live RenderSystem instances that use it. If every
+environment is closed, the engine - including the whole Vulkan instance - is
+destroyed, and the next created environment builds a brand new Vulkan context.
+On some drivers each create/destroy cycle leaks driver-level resources until
+vkCreateInstance fails with ``ErrorIncompatibleDriver``, which reproduces
+deterministically after ~27 sequential gym.make/close cycles in one process
+(https://github.com/haosulab/ManiSkill/issues/1474). Keeping one RenderSystem
+per device alive for the lifetime of the process makes the Vulkan render engine
+be created exactly once per process; each scene still gets its own RenderSystem
+on top of that shared engine.
+"""
+
+
+def _create_render_system(render_device: sapien.Device) -> "sapien.render.RenderSystem":
+    """Create a RenderSystem on the given device.
+
+    The first RenderSystem created per device is kept alive process-globally so
+    the underlying SAPIEN render engine (Vulkan context) is not destroyed and
+    recreated between environment close/create cycles.
+    """
+    key = render_device.name if render_device is not None else "none"
+    if key not in _RENDER_SYSTEM_KEEPALIVE:
+        _RENDER_SYSTEM_KEEPALIVE[key] = sapien.render.RenderSystem(render_device)
+    return sapien.render.RenderSystem(render_device)
+
 
 class BaseEnv(gym.Env):
     """Superclass for ManiSkill environments.
@@ -1204,7 +1233,7 @@ class BaseEnv(gym.Env):
                 )
                 systems: list[sapien.System] = [physx_system]
                 if render_utils.can_render(self._render_device):
-                    systems.append(sapien.render.RenderSystem(self._render_device))
+                    systems.append(_create_render_system(self._render_device))
                 scene = sapien.Scene(
                     systems=systems
                 )
@@ -1221,7 +1250,7 @@ class BaseEnv(gym.Env):
             physx_system = physx.PhysxCpuSystem()
             systems = [physx_system]
             if render_utils.can_render(self._render_device):
-                systems.append(sapien.render.RenderSystem(self._render_device))
+                systems.append(_create_render_system(self._render_device))
             sub_scenes = [
                 sapien.Scene(systems)
             ]

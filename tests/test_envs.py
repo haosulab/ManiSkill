@@ -246,6 +246,27 @@ def test_multi_agent(env_id):
     del env
 
 
+def test_sequential_env_creation_reuses_render_engine():
+    """Regression test for https://github.com/haosulab/ManiSkill/issues/1474.
+
+    Many sequential gym.make/close cycles in one process used to destroy and
+    recreate SAPIEN's Vulkan render engine every cycle, which on some drivers
+    leaks driver-level resources until vkCreateInstance fails with
+    ErrorIncompatibleDriver at exactly the 28th environment.
+    """
+    import mani_skill.envs  # noqa: F401 - register envs
+    from mani_skill.envs.sapien_env import _RENDER_SYSTEM_KEEPALIVE
+
+    for _ in range(30):
+        env = gym.make("PickCube-v1", max_episode_steps=5)
+        env.reset()
+        env.close()
+        del env
+    # the first render system (and therefore the Vulkan render engine) is kept
+    # alive for the lifetime of the process and reused by every environment
+    assert len(_RENDER_SYSTEM_KEEPALIVE) == 1
+
+
 def test_envs_time_limit_typing():
     env = gym.make("PickCube-v1", max_episode_steps=5)
     env.reset()
