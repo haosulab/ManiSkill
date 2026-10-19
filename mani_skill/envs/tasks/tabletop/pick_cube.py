@@ -199,6 +199,11 @@ class PickCubeSO100Env(PickCubeEnv):
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/PickCubeSO100-v1_rt.mp4"
 
     def __init__(self, *args, **kwargs):
+        # pd_joint_pos is the default control mode for this task because the
+        # delta variants keep winding up gripper drive force while the close
+        # action is held, which ejects the cube instead of grasping it
+        # (https://github.com/mani-skill/ManiSkill/issues/1427)
+        kwargs.setdefault("control_mode", "pd_joint_pos")
         super().__init__(*args, robot_uids="so100", **kwargs)
 
 

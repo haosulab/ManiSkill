@@ -56,7 +56,11 @@ class SO100(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             lower=None,
             upper=None,
-            stiffness=[1e3] * 6,
+            # the gripper joint uses a much softer drive than the arm joints so
+            # that a sustained close command stalls at a gentle grasp pressure
+            # instead of accumulating force until the grasped object is ejected
+            # (https://github.com/mani-skill/ManiSkill/issues/1427)
+            stiffness=[1e3, 1e3, 1e3, 1e3, 1e3, 150],
             damping=[1e2] * 6,
             force_limit=100,
             normalize_action=False,
@@ -68,7 +72,7 @@ class SO100(BaseAgent):
             [joint.name for joint in self.robot.active_joints],
             [-0.05, -0.05, -0.05, -0.05, -0.05, -0.2],
             [0.05, 0.05, 0.05, 0.05, 0.05, 0.2],
-            stiffness=[1e3] * 6,
+            stiffness=[1e3, 1e3, 1e3, 1e3, 1e3, 150],
             damping=[1e2] * 6,
             force_limit=100,
             use_delta=True,
