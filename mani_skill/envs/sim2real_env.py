@@ -64,6 +64,11 @@ class Sim2RealEnv(gym.Env):
         control_freq: Optional[int] = None,
     ):
         self.sim_env = sim_env
+        # resolve the underlying BaseEnv once. Re-resolving self.sim_env.unwrapped on every
+        # property access breaks during reset()/step() while the last wrapper's .env is
+        # swapped with a stand-in whose unwrapped points back at this Sim2RealEnv,
+        # causing infinite recursion (see issue #1498).
+        self._base_sim_env = cast(BaseEnv, self.sim_env.unwrapped)
         self.num_envs = 1
         assert (
             self.base_sim_env.backend.sim_backend == "physx_cpu"
@@ -161,7 +166,7 @@ class Sim2RealEnv(gym.Env):
 
     @property
     def base_sim_env(self) -> BaseEnv:
-        return cast(BaseEnv, self.sim_env.unwrapped)
+        return self._base_sim_env
 
     @property
     def elapsed_steps(self):
