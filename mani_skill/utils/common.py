@@ -3,7 +3,7 @@ Common utilities often reused for internal code and task building for users.
 """
 
 from collections import defaultdict
-from typing import Any, Optional, Sequence, Tuple, Union, cast, overload
+from typing import Any, Sequence, Tuple, cast, overload
 
 import gymnasium as gym
 import numpy as np
@@ -36,7 +36,7 @@ def torch_clone_dict(data: dict) -> dict:
     return output_dict
 
 
-def _batch(array: Union[Array, Sequence]):
+def _batch(array: Array | Sequence):
     if isinstance(array, (dict)):
         return {k: _batch(v) for k, v in array.items()}
     if isinstance(array, str):
@@ -60,7 +60,7 @@ def _batch(array: Union[Array, Sequence]):
     return array
 
 
-def batch(*args: Tuple[Union[Array, Sequence]]):
+def batch(*args: Tuple[Array | Sequence]):
     """Adds one dimension in front of everything. If given a dictionary, every leaf in the dictionary
     has a new dimension. If given a tuple, returns the same tuple with each element batched"""
     x = [_batch(x) for x in args]
@@ -100,7 +100,7 @@ def merge_dicts(ds: Sequence[dict], asarray=False):
 
 
 def append_dict_array(
-    x1: Union[dict, Sequence, Array], x2: Union[dict, Sequence, Array]
+    x1: dict | Sequence | Array, x2: dict | Sequence | Array
 ):
     """Append `x2` in front of `x1` and returns the result. Tries to do this in place if possible.
     Assumes both `x1, x2` have the same dictionary structure if they are dictionaries.
@@ -122,7 +122,7 @@ def append_dict_array(
     return x1
 
 
-def index_dict_array(x1, idx: Union[int, slice], inplace=True):
+def index_dict_array(x1, idx: int | slice, inplace=True):
     """Indexes every array in x1 with slice and returns result."""
     if (
         isinstance(x1, np.ndarray)
@@ -143,23 +143,23 @@ def index_dict_array(x1, idx: Union[int, slice], inplace=True):
 
 
 @overload
-def to_tensor(array: dict, device: Optional[Device] = None) -> dict:
+def to_tensor(array: dict, device: Device | None = None) -> dict:
     ...
 
 
 @overload
 def to_tensor(
-    array: dict[str, Array], device: Optional[Device] = None
+    array: dict[str, Array], device: Device | None = None
 ) -> dict[str, torch.Tensor]:
     ...
 
 
 @overload
-def to_tensor(array: Array, device: Optional[Device] = None) -> torch.Tensor:
+def to_tensor(array: Array, device: Device | None = None) -> torch.Tensor:
     ...
 
 
-def to_tensor(array: Union[Array, dict], device: Optional[Device] = None):
+def to_tensor(array: Array | dict, device: Device | None = None):
     """
     Maps any given sequence to a torch tensor on the CPU/GPU. If physx gpu is not enabled then we use CPU, otherwise GPU, unless specified
     by the device argument
@@ -208,7 +208,7 @@ def to_cpu_tensor(array: Array):
 
 # TODO (stao): Clean up this code
 def flatten_state_dict(
-    state_dict: dict, use_torch=False, device: Optional[Device] = None
+    state_dict: dict, use_torch=False, device: Device | None = None
 ) -> Array:
     """Flatten a dictionary containing states recursively. Expects all data to be either torch or numpy
 
@@ -346,7 +346,7 @@ def quat_diff_rad(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return angle_diff
 
 
-def _unbatch(array: Union[Array, Sequence]):
+def _unbatch(array: Array | Sequence):
     if isinstance(array, (dict)):
         return {k: _unbatch(v) for k, v in array.items()}
     if isinstance(array, str):
@@ -364,7 +364,7 @@ def _unbatch(array: Union[Array, Sequence]):
     return array
 
 
-def unbatch(*args: Tuple[Union[Array, Sequence]]):
+def unbatch(*args: Tuple[Array | Sequence]):
     x = [_unbatch(x) for x in args]
     if len(args) == 1:
         return x[0]
@@ -372,8 +372,8 @@ def unbatch(*args: Tuple[Union[Array, Sequence]]):
 
 
 def _to_numpy(
-    array: Union[Array, bool, str, float, int, dict]
-) -> Union[np.ndarray, dict, bool, str, float, int]:
+    array: Array | bool | str | float | int | dict
+) -> np.ndarray | dict | bool | str | float | int:
     if isinstance(array, dict):
         return {k: _to_numpy(v) for k, v in array.items()}
     if isinstance(array, torch.Tensor):
@@ -405,7 +405,7 @@ def to_numpy(array: dict[str, Array], dtype=None) -> dict[str, np.ndarray]:
     ...
 
 
-def to_numpy(array: Union[Array, dict], dtype=None) -> Union[np.ndarray, dict]:
+def to_numpy(array: Array | dict, dtype=None) -> np.ndarray | dict:
     array = cast(np.ndarray, _to_numpy(array))
     if dtype is not None:
         return array.astype(dtype)

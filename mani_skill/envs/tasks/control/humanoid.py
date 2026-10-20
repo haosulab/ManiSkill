@@ -1,6 +1,6 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/humanoid.py"""
 
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -25,7 +25,7 @@ _RUN_SPEED = 10
 
 
 class HumanoidEnvBase(BaseEnv):
-    agent: Union[Humanoid]
+    agent: Humanoid
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -200,7 +200,7 @@ class HumanoidEnvBase(BaseEnv):
 ###
 class HumanoidEnvStandard(HumanoidEnvBase):
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "none")
-    agent: Union[Humanoid]
+    agent: Humanoid
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -295,7 +295,7 @@ class HumanoidStand(HumanoidEnvStandard):
     - Humanoid robot torso link leaves z range [0.7, 1.0]
     """
 
-    agent: Union[Humanoid]
+    agent: Humanoid
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -364,7 +364,7 @@ class HumanoidWalk(HumanoidEnvStandard):
     - Humanoid robot torso link leaves z range [0.7, 1.0]
     """
 
-    agent: Union[Humanoid]
+    agent: Humanoid
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -396,7 +396,7 @@ class HumanoidRun(HumanoidEnvStandard):
     - Humanoid robot torso link leaves z range [0.7, 1.0]
     """
 
-    agent: Union[Humanoid]
+    agent: Humanoid
 
     def __init__(self, *args, robot_uids="humanoid", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -416,7 +416,7 @@ class HumanoidRun(HumanoidEnvStandard):
 # TODO (xhin): more sac testing of hard version of environments
 
 # class HumanoidEnvHard(HumanoidEnvBase):
-#     agent: Union[Humanoid]
+#     agent: Humanoid
 
 #     def __init__(self, *args, robot_uids="humanoid", **kwargs):
 #         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -460,7 +460,7 @@ class HumanoidRun(HumanoidEnvStandard):
 
 # @register_env("MS-HumanoidStandHard-v1", max_episode_steps=1000)
 # class HumanoidStandHard(HumanoidEnvHard):
-#     agent: Union[Humanoid]
+#     agent: Humanoid
 
 #     def __init__(self, *args, robot_uids="humanoid", **kwargs):
 #         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -482,7 +482,7 @@ class HumanoidRun(HumanoidEnvStandard):
 
 # @register_env("MS-HumanoidWalkHard-v1", max_episode_steps=1000)
 # class HumanoidWalkHard(HumanoidEnvHard):
-#     agent: Union[Humanoid]
+#     agent: Humanoid
 
 #     def __init__(self, *args, robot_uids="humanoid", **kwargs):
 #         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -504,7 +504,7 @@ class HumanoidRun(HumanoidEnvStandard):
 
 # @register_env("MS-HumanoidRunHard-v1", max_episode_steps=1000)
 # class HumanoidRunHard(HumanoidEnvHard):
-#     agent: Union[Humanoid]
+#     agent: Humanoid
 
 #     def __init__(self, *args, robot_uids="humanoid", **kwargs):
 #         super().__init__(*args, robot_uids=robot_uids, **kwargs)

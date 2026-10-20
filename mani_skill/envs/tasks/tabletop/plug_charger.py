@@ -1,4 +1,4 @@
-from typing import Union
+
 
 import numpy as np
 import sapien
@@ -41,7 +41,7 @@ class PlugChargerEnv(BaseEnv):
     _receptacle_size = [1e-2, 5e-2, 5e-2]  # receptacle half size
 
     SUPPORTED_ROBOTS = ["panda_wristcam"]
-    agent: Union[PandaWristCam]
+    agent: PandaWristCam
     SUPPORTED_REWARD_MODES = ["none", "sparse"]
 
     def __init__(

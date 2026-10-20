@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Tuple
 
 import numpy as np
 import sapien
@@ -288,7 +288,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         qvel = self.get_qvel()
         return torch.hstack([pose.p, pose.q, vel, ang_vel, qpos, qvel])
 
-    def set_state(self, state: Array, env_idx: Optional[torch.Tensor] = None):
+    def set_state(self, state: Array, env_idx: torch.Tensor | None = None):
         if self.scene.gpu_sim_enabled:
             if env_idx is not None:
                 prev_reset_mask = self.scene._reset_mask.clone()
@@ -328,7 +328,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def get_first_collision_mesh(
         self, to_world_frame: bool = True
-    ) -> Union[trimesh.Trimesh, None]:
+    ) -> trimesh.Trimesh | None:
         """
         Returns the collision mesh of the first managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often. Some articulations have no collision meshes, in which case this function returns None
@@ -343,7 +343,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> Union[list[trimesh.Trimesh], trimesh.Trimesh]:
+    ) -> list[trimesh.Trimesh] | trimesh.Trimesh:
         """
         Returns the collision mesh of each managed articulation object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often
@@ -438,7 +438,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
             return meshes[0]
         return meshes
 
-    def get_net_contact_impulses(self, link_names: Union[list[str], Tuple[str]]):
+    def get_net_contact_impulses(self, link_names: list[str] | Tuple[str]):
         """Get net contact impulses for several links together. This should be faster compared to using
         link.get_net_contact_impulses on each link.
 
@@ -487,7 +487,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
                     net_impulse[i] = common.to_tensor(total_impulse)
             return net_impulse[None, :]
 
-    def get_net_contact_forces(self, link_names: Union[list[str], Tuple[str]]):
+    def get_net_contact_forces(self, link_names: list[str] | Tuple[str]):
         """Get net contact forces for several links together. This should be faster compared to using
         link.get_net_contact_forces on each link.
 
@@ -497,7 +497,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self.get_net_contact_impulses(link_names) / self.scene.timestep
 
     def get_joint_target_indices(
-        self, joint_indices: Union[Array, list[int], list[ArticulationJoint]]
+        self, joint_indices: Array | list[int] | list[ArticulationJoint]
     ):
         """
         Gets the meshgrid indexes for indexing px.cuda_articulation_target_* values given a 1D list of joint indexes or a 1D list of ArticulationJoint objects.
@@ -660,7 +660,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self.root_pose
 
     # def set_name(self, arg0: str) -> None: ...
-    def set_pose(self, arg0: Union[Pose, sapien.Pose]) -> None:
+    def set_pose(self, arg0: Pose | sapien.Pose) -> None:
         self.pose = arg0
 
     # def set_qacc(self, qacc: numpy.ndarray[numpy.float32, _Shape[m, 1]]) -> None: ...
@@ -717,7 +717,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self.root_pose
 
     @pose.setter
-    def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
+    def pose(self, arg1: Pose | sapien.Pose) -> None:
         self.root_pose = arg1
 
     @property
@@ -855,7 +855,7 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
         return self.root.pose
 
     @root_pose.setter
-    def root_pose(self, arg1: Union[Pose, sapien.Pose]):
+    def root_pose(self, arg1: Pose | sapien.Pose):
         self.root.pose = arg1
 
     # -------------------------------------------------------------------------- #
@@ -873,8 +873,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_targets(
         self,
         targets: Array,
-        joints: Optional[list[ArticulationJoint]] = None,
-        joint_indices: Optional[torch.Tensor] = None,
+        joints: list[ArticulationJoint] | None = None,
+        joint_indices: torch.Tensor | None = None,
     ):
         """
         Set drive targets on active joints given joints. For GPU simulation only joint_indices argument is supported, which should be a 1D list of the active joint indices in the articulation.
@@ -898,8 +898,8 @@ class Articulation(BaseStruct[physx.PhysxArticulation]):
     def set_joint_drive_velocity_targets(
         self,
         targets: Array,
-        joints: Optional[list[ArticulationJoint]] = None,
-        joint_indices: Optional[torch.Tensor] = None,
+        joints: list[ArticulationJoint] | None = None,
+        joint_indices: torch.Tensor | None = None,
     ):
         """
         Set drive velocity targets on active joints given joints. For GPU simulation only joint_indices argument is supported, which should be a 1D list of the active joint indices in the articulation.

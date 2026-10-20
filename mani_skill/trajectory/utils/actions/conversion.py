@@ -1,5 +1,5 @@
 """Utilities to convert actions between different control modes. Note that this code is specifically designed for the Franka Panda robot arm, it is not guaranteed to work for other robots."""
-from typing import Union
+
 
 import numpy as np
 import sapien
@@ -58,7 +58,7 @@ def compact_axis_angle_from_quaternion(quat: np.ndarray) -> np.ndarray:
 
 
 def delta_pose_to_pd_ee_delta(
-    controller: Union[PDEEPoseController, PDEEPosController],
+    controller: PDEEPoseController | PDEEPosController,
     delta_pose: sapien.Pose,
     pos_only=False,
 ):

@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -51,7 +51,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/OpenCabinetDrawer-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = ["fetch"]
-    agent: Union[Fetch]
+    agent: Fetch
     handle_types = ["prismatic"]
     TRAIN_JSON = (
         PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_cabinet_drawer_train.json"
@@ -218,7 +218,7 @@ class OpenCabinetDrawerEnv(BaseEnv):
         qmin, qmax = target_qlimits[..., 0], target_qlimits[..., 1]
         self.target_qpos = qmin + (qmax - qmin) * self.min_open_frac
 
-    def handle_link_positions(self, env_idx: Optional[torch.Tensor] = None):
+    def handle_link_positions(self, env_idx: torch.Tensor | None = None):
         if env_idx is None:
             return transform_points(
                 self.handle_link.pose.to_transformation_matrix().clone(),

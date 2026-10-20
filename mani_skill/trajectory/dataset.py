@@ -1,4 +1,4 @@
-from typing import Union
+
 
 import h5py
 import numpy as np
@@ -104,7 +104,7 @@ class ManiSkillTrajectoryDataset(Dataset):
         if self.fail is not None:
             self.fail = np.concatenate(self.fail)
 
-        def remove_np_uint16(x: Union[np.ndarray, dict]):
+        def remove_np_uint16(x: np.ndarray | dict):
             if isinstance(x, dict):
                 for k in x.keys():
                     x[k] = remove_np_uint16(x[k])

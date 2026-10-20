@@ -3,7 +3,7 @@ Code implementation for a batched random number generator. The goal is to enable
 in CPU simulators and GPU simulators are the same
 """
 
-from typing import Union
+
 
 import numpy as np
 
@@ -17,7 +17,7 @@ class BatchedRNG(np.random.RandomState):
 
     @classmethod
     def from_seeds(
-        cls, seeds: Union[list[int], np.ndarray], backend: str = "numpy:random_state"
+        cls, seeds: list[int] | np.ndarray, backend: str = "numpy:random_state"
     ):
         if backend == "numpy:random_state":
             return cls(rngs=[np.random.RandomState(seed) for seed in seeds])
@@ -27,7 +27,7 @@ class BatchedRNG(np.random.RandomState):
     def from_rngs(cls, rngs: list):
         return cls(rngs=rngs)
 
-    def __getitem__(self, idx: Union[int, list[int], np.ndarray]):
+    def __getitem__(self, idx: int | list[int] | np.ndarray):
         idx = common.to_numpy(idx)
         if np.iterable(idx):
             return BatchedRNG.from_rngs([self.rngs[i] for i in idx])
@@ -35,8 +35,8 @@ class BatchedRNG(np.random.RandomState):
 
     def __setitem__(
         self,
-        idx: Union[int, list[int], np.ndarray],
-        value: Union[np.random.RandomState, list[np.random.RandomState]],
+        idx: int | list[int] | np.ndarray,
+        value: np.random.RandomState | list[np.random.RandomState],
     ):
         idx = common.to_numpy(idx)
         if np.iterable(idx):

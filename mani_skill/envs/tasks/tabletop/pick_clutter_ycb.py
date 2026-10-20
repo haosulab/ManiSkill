@@ -1,5 +1,5 @@
 import os
-from typing import Union
+
 
 import numpy as np
 import sapien
@@ -25,7 +25,7 @@ class PickClutterEnv(BaseEnv):
 
     SUPPORTED_REWARD_MODES = ["none"]
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     DEFAULT_EPISODE_JSON: str
     DEFAULT_ASSET_ROOT: str

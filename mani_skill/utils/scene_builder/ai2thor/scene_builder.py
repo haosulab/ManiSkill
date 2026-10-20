@@ -6,7 +6,7 @@ SceneBuilder for the AI2Thor scenes, using configurations and assets stored in h
 import json
 import os.path as osp
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -110,7 +110,7 @@ class AI2THORBaseSceneBuilder(SceneBuilder):
     # TODO (arth): figure out coacd building issues (currenlty fails on > 80% objs)
     def build(
         self,
-        build_config_idxs: Union[int, list[int]],
+        build_config_idxs: int | list[int],
         convex_decomposition="none",
     ):
         # build_config_idxs is a list of integers, where the ith value is the scene idx for the ith parallel env

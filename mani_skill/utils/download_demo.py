@@ -4,7 +4,7 @@ import os.path as osp
 import urllib.request
 import zipfile
 from dataclasses import dataclass
-from typing import Optional
+
 from urllib.parse import urlparse
 
 from tqdm import tqdm
@@ -16,7 +16,7 @@ from mani_skill import DEMO_DIR
 class DemoDatasetSource:
     raw_dataset_url: str
     """URL pointing to the raw dataset which does not contain any observations, just env states, actions, and reset kwargs"""
-    pre_processed_dataset_url: Optional[str] = None
+    pre_processed_dataset_url: str | None = None
     """URL pointing to preprocessed versions if any"""
     env_type: str = "rigid_body"  # or soft_body
 

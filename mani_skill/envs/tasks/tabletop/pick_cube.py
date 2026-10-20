@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -41,7 +41,7 @@ class PickCubeEnv(BaseEnv):
         "so100",
         "widowxai",
     ]
-    agent: Union[Panda, Fetch, XArm6Robotiq, SO100, WidowXAI]
+    agent: Panda | Fetch | XArm6Robotiq | SO100 | WidowXAI
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence, Union
+from typing import Sequence
 
 import numpy as np
 import torch
@@ -67,5 +67,5 @@ class PDJointPosVelController(PDJointPosController):
 @dataclass
 class PDJointPosVelControllerConfig(PDJointPosControllerConfig):
     controller_cls = PDJointPosVelController
-    vel_lower: Union[float, Sequence[float]] = -1.0
-    vel_upper: Union[float, Sequence[float]] = 1.0
+    vel_lower: float | Sequence[float] = -1.0
+    vel_upper: float | Sequence[float] = 1.0

@@ -1,4 +1,4 @@
-from typing import Union
+
 
 import numpy as np
 import sapien
@@ -28,7 +28,7 @@ from mani_skill.utils.structs.types import SimConfig
 class TurnFaucetEnv(BaseEnv):
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
     TRAIN_JSON = PACKAGE_ASSET_DIR / "partnet_mobility/meta/info_faucet_train.json"
 
     def __init__(

@@ -15,7 +15,7 @@ import pandas as pd
 import cv2
 import h5py
 from pathlib import Path
-from typing import Tuple, List, Dict, Any, Optional, Annotated
+from typing import Tuple, List, Dict, Any, Annotated
 from dataclasses import dataclass
 import tyro
 from tqdm import tqdm
@@ -42,7 +42,7 @@ class Args:
     fps: int = DEFAULT_FPS
     """Video FPS (default: 30)"""
     
-    task_name: Optional[str] = None
+    task_name: str | None = None
     """Task description (default: auto-detected from metadata)"""
     
     chunks_size: int = DEFAULT_CHUNKS_SIZE
@@ -51,7 +51,7 @@ class Args:
     image_size: str = DEFAULT_IMAGE_SIZE
     """Output image size as WIDTHxHEIGHT or single value for square (default: 640x480)"""
     
-    robot_type: Optional[str] = None
+    robot_type: str | None = None
     """Robot type (default: auto-detected, e.g., "panda", "ur5")"""
 
 
@@ -310,7 +310,7 @@ def create_meta_files(
     episode_lengths: List[int], 
     total_frames: int,
     action_dim: int, 
-    state_dim: Optional[int], 
+    state_dim: int | None, 
     rgb_cameras: List[str], 
     metadata: Dict[str, Any], 
     task_name: str, 
@@ -320,7 +320,7 @@ def create_meta_files(
     image_height: int, 
     all_dataframes: List[pd.DataFrame],
     all_rgb_data_by_camera: Dict[str, List[np.ndarray]],
-    robot_type_override: Optional[str] = None
+    robot_type_override: str | None = None
 ) -> None:
     num_chunks = (len(episode_lengths) + chunks_size - 1) // chunks_size
     

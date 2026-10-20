@@ -9,7 +9,7 @@ from mani_skill.utils.wrappers import RecordEpisode
 
 import tyro
 from dataclasses import dataclass
-from typing import List, Optional, Annotated, Union
+from typing import List, Annotated
 
 @dataclass
 class Args:
@@ -19,7 +19,7 @@ class Args:
     obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "none"
     """Observation mode"""
 
-    robot_uids: Annotated[Optional[str], tyro.conf.arg(aliases=["-r"])] = None
+    robot_uids: Annotated[str | None, tyro.conf.arg(aliases=["-r"])] = None
     """Robot UID(s) to use. Can be a comma separated list of UIDs or empty string to have no agents. If not given then defaults to the environments default robot"""
 
     sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
@@ -28,13 +28,13 @@ class Args:
     render_backend: Annotated[str, tyro.conf.arg(aliases=["-rb"])] = "gpu"
     """Which render backend to use. Can be 'gpu', 'cpu', 'none'"""
 
-    reward_mode: Optional[str] = None
+    reward_mode: str | None = None
     """Reward mode"""
 
     num_envs: Annotated[int, tyro.conf.arg(aliases=["-n"])] = 1
     """Number of environments to run."""
 
-    control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
+    control_mode: Annotated[str | None, tyro.conf.arg(aliases=["-c"])] = None
     """Control mode"""
 
     render_mode: str = "rgb_array"
@@ -43,7 +43,7 @@ class Args:
     shader: str = "default"
     """Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"""
 
-    record_dir: Optional[str] = None
+    record_dir: str | None = None
     """Directory to save recordings"""
 
     pause: Annotated[bool, tyro.conf.arg(aliases=["-p"])] = False
@@ -52,7 +52,7 @@ class Args:
     quiet: bool = False
     """Disable verbose output."""
 
-    seed: Annotated[Optional[Union[int, list[int]]], tyro.conf.arg(aliases=["-s"])] = None
+    seed: Annotated[int | list[int] | None, tyro.conf.arg(aliases=["-s"])] = None
     """Seed(s) for random actions and simulator. Can be a single integer or a list of integers. Default is None (no seeds)"""
 
 def main(args: Args):

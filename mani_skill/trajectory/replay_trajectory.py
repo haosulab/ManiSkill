@@ -11,7 +11,7 @@ import copy
 import multiprocessing as mp
 import os
 from dataclasses import dataclass
-from typing import Annotated, Optional
+from typing import Annotated
 
 import gymnasium as gym
 import h5py
@@ -35,12 +35,12 @@ from mani_skill.utils.wrappers.record import RecordEpisode
 class Args:
     traj_path: str
     """Path to the trajectory .h5 file to replay"""
-    sim_backend: Annotated[Optional[str], tyro.conf.arg(aliases=["-b"])] = None
+    sim_backend: Annotated[str | None, tyro.conf.arg(aliases=["-b"])] = None
     """Which simulation backend to use. Can be 'physx_cpu', 'physx_gpu'. If not specified the backend used is the same as the one used to collect the trajectory data."""
-    obs_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-o"])] = None
+    obs_mode: Annotated[str | None, tyro.conf.arg(aliases=["-o"])] = None
     """Target observation mode to record in the trajectory. See
     https://maniskill.readthedocs.io/en/latest/user_guide/concepts/observation.html for a full list of supported observation modes."""
-    target_control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
+    target_control_mode: Annotated[str | None, tyro.conf.arg(aliases=["-c"])] = None
     """Target control mode to convert the demonstration actions to.
     Note that not all control modes can be converted to others successfully and not all robots have easy to convert control modes.
     Currently the Panda robots are the best supported when it comes to control mode conversion. Furthermore control mode conversion is not supported in GPU parallelized environments.
@@ -66,17 +66,17 @@ class Args:
     """Use the first env state in the trajectory to set initial state. This can be useful for trying to replay
     demonstrations collected in the CPU simulation in the GPU simulation by first starting with the same initial
     state as GPU simulated tasks will randomize initial states differently despite given the same seed compared to CPU sim."""
-    count: Optional[int] = None
+    count: int | None = None
     """Number of demonstrations to replay before exiting. By default will replay all demonstrations"""
-    reward_mode: Optional[str] = None
+    reward_mode: str | None = None
     """Specifies the reward type that the env should use. By default it will pick the first supported reward mode. Most environments
     support 'sparse', 'none', and some further support 'normalized_dense' and 'dense' reward modes"""
     record_rewards: bool = False
     """Whether the replayed trajectory should include rewards"""
-    shader: Optional[str] = None
+    shader: str | None = None
     """Change shader used for rendering for all cameras. Default is none meaning it will use whatever was used in the original data collection or the environment default.
     Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"""
-    video_fps: Optional[int] = None
+    video_fps: int | None = None
     """The FPS of saved videos. Defaults to the control frequency"""
     render_mode: str = "rgb_array"
     """The render mode used for saving videos. Typically there is also 'sensors' and 'all' render modes which further render all sensor outputs like cameras."""

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Sequence, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Sequence, TypeVar, cast
 
 import sapien
 import torch
@@ -25,27 +25,27 @@ class CameraConfig(BaseSensorConfig):
 
     uid: str
     """uid (str): unique id of the camera"""
-    pose: Union[Pose, sapien.Pose]
+    pose: Pose | sapien.Pose
     """Pose of the camera"""
     width: int
     """width of the camera"""
     height: int
     """height of the camera"""
-    fov: Optional[float] = None
+    fov: float | None = None
     """The field of view of the camera. Either fov or intrinsic must be given"""
     near: float = 0.01
     """near plane of the camera"""
     far: float = 100
     """far plane of the camera"""
-    intrinsic: Optional[Array] = None
+    intrinsic: Array | None = None
     """intrinsics matrix of the camera. Either fov or intrinsic must be given"""
-    entity_uid: Optional[str] = None
+    entity_uid: str | None = None
     """unique id of the entity to mount the camera. Defaults to None. Only used by agent classes that want to define mounted cameras."""
-    mount: Optional[Union[Actor, Link]] = None
+    mount: Actor | Link | None = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
     shader_pack: str = "minimal"
     """The shader to use for rendering. Defaults to "minimal" which is the fastest rendering system with minimal GPU memory usage. There is also ``default`` and ``rt``."""
-    shader_config: Optional[ShaderConfig] = None
+    shader_config: ShaderConfig | None = None
     """The shader config to use for rendering. If None, the shader_pack will be used to search amongst prebuilt shader configs to create a ShaderConfig."""
 
     def __post_init__(self):
@@ -115,7 +115,7 @@ def update_sensor_configs_from_dict(
 
 
 def parse_sensor_configs(
-    sensor_configs: Union[Sequence[T], dict[str, T], T]
+    sensor_configs: Sequence[T] | dict[str, T] | T
 ) -> dict[str, T]:
     if isinstance(sensor_configs, (tuple, list)):
         return dict([(config.uid, config) for config in sensor_configs])
@@ -136,7 +136,7 @@ class Camera(BaseSensor):
         self,
         camera_config: CameraConfig,
         scene: ManiSkillScene,
-        articulation: Optional[Articulation] = None,
+        articulation: Articulation | None = None,
     ):
         super().__init__(config=camera_config)
         self._shader_config = cast(ShaderConfig, camera_config.shader_config)
@@ -152,7 +152,7 @@ class Camera(BaseSensor):
                 # if given an articulation and entity_uid (as a string), find the correct link to mount on
                 # this is just for convenience so robot configurations can pick link to mount to by string/id
                 self.entity = cast(
-                    Union[Actor, Link],
+                    Actor | Link,
                     sapien_utils.get_obj_by_name(articulation.get_links(), entity_uid),
                 )
             if self.entity is None:

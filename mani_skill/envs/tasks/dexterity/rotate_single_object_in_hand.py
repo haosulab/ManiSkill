@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -22,7 +22,7 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 
 
 class RotateSingleObjectInHand(BaseEnv):
-    agent: Union[AllegroHandRightTouch]
+    agent: AllegroHandRightTouch
     _clearance = 0.003
     hand_init_height = 0.25
 

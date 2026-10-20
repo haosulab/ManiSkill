@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien as sapien
@@ -38,13 +38,13 @@ class SceneManipulationEnv(BaseEnv):
     """
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     def __init__(
         self,
         *args,
         robot_uids="fetch",
-        scene_builder_cls: Union[str, SceneBuilder] = "ReplicaCAD",
+        scene_builder_cls: str | SceneBuilder = "ReplicaCAD",
         build_config_idxs=None,
         init_config_idxs=None,
         num_envs=1,

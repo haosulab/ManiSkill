@@ -1,7 +1,7 @@
 import gzip
 import json
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Sequence
 
 import numpy as np
 
@@ -23,7 +23,7 @@ class CustomJsonEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def load_json(filename: Union[str, Path]):
+def load_json(filename: str | Path):
     filename = str(filename)
     if filename.endswith(".gz"):
         f = gzip.open(filename, "rt")
@@ -36,7 +36,7 @@ def load_json(filename: Union[str, Path]):
     return ret
 
 
-def dump_json(filename: Union[str, Path], obj, encoder_cls=CustomJsonEncoder, **kwargs):
+def dump_json(filename: str | Path, obj, encoder_cls=CustomJsonEncoder, **kwargs):
     filename = str(filename)
     if filename.endswith(".gz"):
         f = gzip.open(filename, "wt")
@@ -48,7 +48,7 @@ def dump_json(filename: Union[str, Path], obj, encoder_cls=CustomJsonEncoder, **
     f.close()
 
 
-def write_txt(filename: Union[str, Path], content: Union[str, Sequence[str]]):
+def write_txt(filename: str | Path, content: str | Sequence[str]):
     with open(filename, "w") as f:
         if not isinstance(content, str):
             content = "\n".join(content)

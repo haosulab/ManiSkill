@@ -1,4 +1,4 @@
-from typing import Generic, Optional, Sequence, TypeVar
+from typing import Generic, Sequence, TypeVar
 
 import torch
 from gymnasium import spaces
@@ -41,7 +41,7 @@ class MultiAgent(BaseAgent, Generic[T]):
         """Get the currently activated controller uid of each robot"""
         return {uid: agent.control_mode for uid, agent in self.agents_dict.items()}
 
-    def set_control_mode(self, control_mode: Optional[list[str]] = None):
+    def set_control_mode(self, control_mode: (list[str] | None) = None):
         """Set the controller, drive properties, and reset for each agent. If given control mode is None, will set defaults"""
         if control_mode is None:
             for agent in self.agents:
@@ -95,7 +95,7 @@ class MultiAgent(BaseAgent, Generic[T]):
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #
-    def reset(self, init_qpos: Optional[dict[str, torch.Tensor]] = None):
+    def reset(self, init_qpos: (dict[str, torch.Tensor] | None) = None):
         """
         Reset the robot to a rest position or a given q-position
         """

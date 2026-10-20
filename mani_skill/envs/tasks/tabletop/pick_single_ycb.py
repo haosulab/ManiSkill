@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -48,7 +48,7 @@ class PickSingleYCBEnv(BaseEnv):
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/PickSingleYCB-v1_rt.mp4"
 
     SUPPORTED_ROBOTS = ["panda", "panda_wristcam", "fetch"]
-    agent: Union[Panda, PandaWristCam, Fetch]
+    agent: Panda | PandaWristCam | Fetch
     goal_thresh = 0.025
 
     def __init__(

@@ -1,7 +1,7 @@
 """Adapted from https://github.com/google-deepmind/dm_control/blob/main/dm_control/suite/cartpole.py"""
 
 import os
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -51,7 +51,7 @@ class CartPoleRobot(BaseAgent):
         )
 
     def _load_articulation(
-        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+        self, initial_pose: sapien.Pose | Pose | None = None
     ):
         """
         Load the robot articulation
@@ -76,7 +76,7 @@ class CartPoleRobot(BaseAgent):
 #     SUPPORTED_REWARD_MODES = ["sparse", "none"]
 
 #     SUPPORTED_ROBOTS = [CartPoleRobot]
-#     agent: Union[CartPoleRobot]
+#     agent: CartPoleRobot
 
 #     CART_RANGE = [-0.25, 0.25]
 #     ANGLE_COSINE_RANGE = [0.995, 1]
@@ -87,7 +87,7 @@ class CartPoleRobot(BaseAgent):
 
 class CartpoleEnv(BaseEnv):
 
-    agent: Union[CartPoleRobot]
+    agent: CartPoleRobot
 
     def __init__(self, *args, robot_uids=CartPoleRobot, **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

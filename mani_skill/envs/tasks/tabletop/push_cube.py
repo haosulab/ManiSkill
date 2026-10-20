@@ -15,7 +15,7 @@ in addition to initializing any task relevant data like a goal
 See comments for how to make your own environment and what each required function should do
 """
 
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -53,7 +53,7 @@ class PushCubeEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     # set some commonly used values
     goal_radius = 0.1

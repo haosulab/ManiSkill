@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable
 
 import sapien
 import sapien.physx as physx
@@ -195,7 +195,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             bboxes.append(merged_mesh.bounding_box)
         return bboxes
 
-    def set_collision_group_bit(self, group: int, bit_idx: int, bit: Union[int, bool]):
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int | bool):
         """
         Set's a specific collision group bit for all collision shapes in all parallel actors
         Args:
@@ -249,7 +249,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             )
 
     @pose.setter
-    def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
+    def pose(self, arg1: Pose | sapien.Pose | Array) -> None:
         if self.scene.gpu_sim_enabled:
             if not isinstance(arg1, torch.Tensor):
                 arg1 = vectorize_pose(arg1, device=self.device)
@@ -280,7 +280,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
                     for i, obj in enumerate(self._objs):
                         obj.pose = arg1
 
-    def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
+    def set_pose(self, arg1: Pose | sapien.Pose) -> None:
         self.pose = arg1
 
     # -------------------------------------------------------------------------- #

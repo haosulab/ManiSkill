@@ -2,7 +2,7 @@ import copy
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable
 
 import gymnasium as gym
 import h5py
@@ -124,8 +124,8 @@ class RecordEpisode(gym.Wrapper):
     - `max_episode_steps` (int)
     - `env_kwargs` (dict): keyword arguments to initialize the task. **Essential to recreate the environment.**
     - `episodes` (list[dict]): episode information
-    - `source_type` (Optional[str]): a simple category string describing what process generated the trajectory data. ManiSkill official datasets will usually write one of "human", "motionplanning", or "rl" at the moment.
-    - `source_desc` (Optional[str]): a longer explanation of how the data was generated.
+    - `source_type` (str | None): a simple category string describing what process generated the trajectory data. ManiSkill official datasets will usually write one of "human", "motionplanning", or "rl" at the moment.
+    - `source_desc` (str | None): a longer explanation of how the data was generated.
 
     The episode information (the element of `episodes`) includes:
 
@@ -209,8 +209,8 @@ class RecordEpisode(gym.Wrapper):
         render_substeps (bool): Whether to render substeps for video. This is captures an image of the environment after each physics step. This runs slower but generates more image frames
             per environment step which when coupled with a higher video FPS can yield a smoother video.
         avoid_overwriting_video (bool): If true, the wrapper will iterate over possible video names to avoid overwriting existing videos in the output directory. Useful for resuming training runs.
-        source_type (Optional[str]): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
-        source_desc (Optional[str]): A longer description describing how the demonstrations are collected
+        source_type (str | None): a word to describe the source of the actions used to record episodes (e.g. RL, motionplanning, teleoperation)
+        source_desc (str | None): A longer description describing how the demonstrations are collected
     """
 
     def __init__(
@@ -218,20 +218,20 @@ class RecordEpisode(gym.Wrapper):
         env: BaseEnv,
         output_dir: str,
         save_trajectory: bool = True,
-        trajectory_name: Optional[str] = None,
+        trajectory_name: str | None = None,
         save_video: bool = True,
         info_on_video: bool = False,
         save_on_reset: bool = True,
-        save_video_trigger: Optional[Callable[[int], bool]] = None,
-        max_steps_per_video: Optional[int] = None,
+        save_video_trigger: Callable[[int], bool] | None = None,
+        max_steps_per_video: int | None = None,
         clean_on_close: bool = True,
         record_reward: bool = True,
         record_env_state: bool = True,
         video_fps: int = 30,
         render_substeps: bool = False,
         avoid_overwriting_video: bool = False,
-        source_type: Optional[str] = None,
-        source_desc: Optional[str] = None,
+        source_type: str | None = None,
+        source_desc: str | None = None,
     ) -> None:
         super().__init__(env)
 
@@ -356,8 +356,8 @@ class RecordEpisode(gym.Wrapper):
     def reset(
         self,
         *args,
-        seed: Optional[Union[int, list[int]]] = None,
-        options: Optional[dict] = None,
+        seed: int | list[int] | None = None,
+        options: dict | None = None,
         save=True,
         **kwargs,
     ):
@@ -574,7 +574,7 @@ class RecordEpisode(gym.Wrapper):
                 group = self._h5_file.create_group(traj_id, track_order=True)
 
                 def recursive_add_to_h5py(
-                    group: h5py.Group, data: Union[dict, Array], key
+                    group: h5py.Group, data: dict | Array, key
                 ):
                     """simple recursive data insertion for nested data structures into h5py, optimizing for visual data as well"""
                     if isinstance(data, dict):

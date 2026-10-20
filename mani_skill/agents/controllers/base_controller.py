@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import torch
@@ -50,7 +50,7 @@ class BaseController:
         articulation: Articulation,
         scene: ManiSkillScene,
         control_freq: int,
-        sim_freq: Optional[int] = None,
+        sim_freq: int | None = None,
     ):
         self.config = config
         self.articulation = articulation
@@ -199,7 +199,7 @@ class DictController(BaseController):
         articulation: Articulation,
         scene: ManiSkillScene,
         control_freq: int,
-        sim_freq: Optional[int] = None,
+        sim_freq: int | None = None,
     ):
         self.scene = scene
         self.configs = configs

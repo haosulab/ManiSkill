@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -36,7 +36,7 @@ class PullCubeToolEnv(BaseEnv):
 
     SUPPORTED_ROBOTS = ["panda", "fetch"]
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "sparse", "none")
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     goal_radius = 0.3
     cube_half_size = 0.02

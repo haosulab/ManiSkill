@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from mani_skill.utils.geometry.rotation_conversions import quaternion_to_matrix
 
@@ -35,7 +35,7 @@ class RenderCamera:
     # NOTE (stao): I cannot seem to use ManiSkillScene as a type here, it complains it is undefined despite using TYPE_CHECKING variable. Without typchecking there is a ciruclar import error
     scene: Any
     camera_group: sapien.render.RenderCameraGroup = None
-    mount: Union[Actor, Link] = None
+    mount: Actor | Link = None
 
     # we cache model and extrinsic matrices since the code here supports computing these when the camera is mounted and these are always changing
     _cached_model_matrix: torch.Tensor = None
@@ -49,7 +49,7 @@ class RenderCamera:
         cls,
         render_cameras: list[sapien.render.RenderCameraComponent],
         scene: Any,
-        mount: Optional[Union[Actor, Link]] = None,
+        mount: Actor | Link | None = None,
     ):
         w, h = (
             render_cameras[0].width,
@@ -157,7 +157,7 @@ class RenderCamera:
     def get_near(self) -> float:
         return self._render_cameras[0].get_near()
 
-    def get_picture(self, names: Union[str, list[str]]) -> list[torch.Tensor]:
+    def get_picture(self, names: str | list[str]) -> list[torch.Tensor]:
         if isinstance(names, str):
             names = [names]
         if self.scene.gpu_sim_enabled and not self.scene.parallel_in_single_scene:

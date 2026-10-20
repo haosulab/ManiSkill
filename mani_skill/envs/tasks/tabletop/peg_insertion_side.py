@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -65,7 +65,7 @@ class PegInsertionSideEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/mani-skillll/ManiSkill/raw/main/figures/environment_demos/PegInsertionSide-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_wristcam"]
-    agent: Union[PandaWristCam]
+    agent: PandaWristCam
     _clearance = 0.003
 
     def __init__(

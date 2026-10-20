@@ -1,5 +1,5 @@
 import os
-from typing import Union
+
 
 import cv2
 import torch
@@ -47,7 +47,7 @@ class BaseDigitalTwinEnv(BaseEnv):
     """which RGB overlay mode to use during the greenscreen process. The default is 'background' which enables greenscreening like normal. The other option is 'debug' mode which
     will make the opacity of the original render and greenscreen overlay both 50%. The third option is "none" which will not perform any greenscreening."""
 
-    _objects_to_remove_from_greenscreen: list[Union[Actor, Link]] = []
+    _objects_to_remove_from_greenscreen: list[Actor | Link] = []
     """list of articulations/actors/links that should be removed from the greenscreen process"""
     _segmentation_ids_to_keep: torch.Tensor = None
     """torch tensor of segmentation ids that reference the objects that should not be greenscreened"""
@@ -82,7 +82,7 @@ class BaseDigitalTwinEnv(BaseEnv):
         Load assets for a digital twin scene in
         """
 
-    def remove_object_from_greenscreen(self, object: Union[Articulation, Actor, Link]):
+    def remove_object_from_greenscreen(self, object: Articulation | Actor | Link):
         """remove an actor/articulation/link from the greenscreen process"""
         if isinstance(object, Articulation):
             for link in object.get_links():

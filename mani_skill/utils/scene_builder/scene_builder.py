@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import sapien
 import torch
@@ -24,25 +24,25 @@ class SceneBuilder:
 
     robot_init_qpos_noise: float = 0.02
     """Robot init qpos noise"""
-    robot_initial_pose: Union[sapien.Pose, Pose] = sapien.Pose()
+    robot_initial_pose: sapien.Pose | Pose = sapien.Pose()
     """Initial pose of the robot (passed to load_agent)"""
 
     builds_lighting: bool = False
     """Whether this scene builder will add its own lighting when build is called. If False, ManiSkill will add some default lighting"""
 
-    build_configs: Optional[list[Any]] = None
+    build_configs: list[Any] | None = None
     """list of scene configuration information that can be used to **build** scenes during reconfiguration (i.e. `env.reset(seed=seed, options=dict(reconfigure=True))`). Can be a dictionary, a path to a json file, or some other data. If a scene needs to load build config data, it will index/sample such build configs from this list."""
-    init_configs: Optional[list[Any]] = None
+    init_configs: list[Any] | None = None
     """list of scene configuration information that can be used to **init** scenes during reconfiguration (i.e. `env.reset()`). Can be a dictionary, a path to a json file, or some other data. If a scene needs to load init config data, it will index/sample such init configs from this list."""
 
-    scene_objects: Optional[dict[str, Actor]] = None
+    scene_objects: dict[str, Actor] | None = None
     """Scene objects are any dynamic, kinematic, or static Actor built by the scene builder. Useful for accessing objects in the scene directly."""
-    movable_objects: Optional[dict[str, Actor]] = None
+    movable_objects: dict[str, Actor] | None = None
     """Movable objects are any **dynamic** Actor built by the scene builder. movable_objects is a subset of scene_objects. Can be used to query dynamic objects for e.g. task initialization."""
-    articulations: Optional[dict[str, Articulation]] = None
+    articulations: dict[str, Articulation] | None = None
     """Articulations are any articulation loaded in by the scene builder."""
 
-    navigable_positions: Optional[list[Union[Array, spaces.Box]]] = None
+    navigable_positions: list[Array | spaces.Box] | None = None
     """Some scenes allow for mobile robots to move through these scene. In this case, a list of navigable positions per env_idx (e.g. loaded from a navmesh) should be provided for easy initialization. Can be a discretized list, range, spaces.Box, etc."""
 
     def __init__(self, env, robot_init_qpos_noise=0.02):

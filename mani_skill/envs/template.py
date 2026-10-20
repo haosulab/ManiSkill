@@ -22,7 +22,7 @@ mani_skill /envs/tasks/push_cube.py which is annotated with comments to explain 
 """
 
 
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -66,10 +66,10 @@ class CustomEnv(BaseEnv):
 
     # to help with programming, you can assert what type of agents are supported like below, and any shared properties of self.agent
     # become available to typecheckers and auto-completion. E.g. Panda and Fetch both share a property called .tcp (tool center point).
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
     # if you want to do typing for multi-agent setups, use this below and specify what possible tuples of robots are permitted by typing
     # this will then populate agent.agents (list of the instantiated agents) with the right typing
-    # agent: MultiAgent[Union[Tuple[Panda, Panda], Tuple[Panda, Panda, Panda]]]
+    # agent: MultiAgent[Tuple[Panda, Panda] | Tuple[Panda, Panda, Panda]]
 
     # in the __init__ function you can pick a default robot your task should use e.g. the panda robot by setting a default for robot_uids argument
     # note that if robot_uids is a list of robot uids, then we treat it as a multi-agent setup and load each robot separately.

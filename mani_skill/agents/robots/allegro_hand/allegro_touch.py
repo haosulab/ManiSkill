@@ -1,5 +1,5 @@
 import itertools
-from typing import Optional, Tuple, cast
+from typing import Tuple, cast
 
 import numpy as np
 import torch
@@ -47,9 +47,7 @@ class AllegroHandRightTouch(AllegroHandRight):
         self.pair_query: dict[
             str, Tuple[physx.PhysxGpuContactPairImpulseQuery, Tuple[int, int, int]]
         ] = dict()
-        self.body_query: Optional[
-            Tuple[physx.PhysxGpuContactBodyImpulseQuery, Tuple[int, int, int]]
-        ] = None
+        self.body_query: Tuple[physx.PhysxGpuContactBodyImpulseQuery, Tuple[int, int, int]] | None = None
 
     def _after_init(self):
         super()._after_init()
