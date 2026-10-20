@@ -13,7 +13,12 @@ from tqdm.auto import tqdm
 
 import mani_skill.envs  # import all environments to register them which auto registers data groups to allow asset download by environment ID.
 from mani_skill.utils import assets
-from mani_skill.utils.assets.data import DATA_GROUPS, DATA_SOURCES
+from mani_skill.utils.assets.data import (
+    DATA_GROUPS,
+    DATA_SOURCES,
+    check_version_manifest,
+    write_version_manifest,
+)
 
 
 def prompt_yes_no(message):
@@ -94,6 +99,13 @@ def download(
                 print(f"Skip existing: {output_path}")
                 return output_path
     output_path.mkdir(parents=True, exist_ok=True)
+    # Warn if the asset already exists on disk but was downloaded by a
+    # different ManiSkill version / git commit.
+    check_version_manifest(output_path)
+    if data_source.hf_repo_id is not None:
+        download_from_hf_datasets(data_source)
+        write_version_manifest(output_path)
+        return
     if data_source.hf_repo_id is not None:
         download_from_hf_datasets(data_source)
         return
@@ -161,6 +173,9 @@ def download(
     # Explicitly delete the temporary file
     if Path(tmp_filename).exists():
         Path(tmp_filename).unlink()
+
+    # Record the ManiSkill version / git commit used to download these assets.
+    write_version_manifest(output_path)
 
     return output_path
 

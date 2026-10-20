@@ -4,10 +4,18 @@ Asset sources and tooling for managing the assets
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
-from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
+from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR, __version__, get_commit_info
 from mani_skill.utils import io_utils
+from mani_skill.utils.logging_utils import logger
+
+MANIFEST_FILENAME = ".mani_skill_version.json"
+"""Name of the manifest file written next to downloaded assets recording the ManiSkill version / git commit used to download them."""
+
+_skipped_version_checks: set = set()
+"""Asset paths whose version mismatch warning was already emitted, to avoid warning repeatedly on every load."""
 
 
 @dataclass
@@ -36,6 +44,74 @@ DATA_GROUPS: dict[str, list[str]] = {}
 def is_data_source_downloaded(data_source_id: str):
     data_source = DATA_SOURCES[data_source_id]
     return os.path.exists(data_source.output_dir / data_source.target_path)
+
+
+def get_version_fingerprint() -> dict:
+    """Return a fingerprint of the currently running ManiSkill code.
+
+    For editable (git) installs this includes the current git commit id; for
+    regular installs only the package version is available.
+    """
+    fingerprint = {"version": __version__, "commit_id": None}
+    commit_info = get_commit_info()
+    if commit_info is not None:
+        fingerprint["commit_id"] = commit_info.get("commit_id")
+    return fingerprint
+
+
+def write_version_manifest(output_path):
+    """Write a version manifest recording the ManiSkill version / git commit used at download time."""
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+    io_utils.dump_json(output_path / MANIFEST_FILENAME, get_version_fingerprint())
+
+
+def check_version_manifest(output_path, strict=False):
+    """Check the version manifest of a downloaded asset against the running ManiSkill code.
+
+    Warns (or raises, if ``strict`` is True) when the asset was downloaded with a
+    different ManiSkill version or git commit. Set the environment variable
+    ``MS_SKIP_ASSET_VERSION_CHECK=1`` to skip the check entirely. Missing
+    manifests (assets downloaded before this feature existed) are ignored.
+    """
+    if os.getenv("MS_SKIP_ASSET_VERSION_CHECK") == "1":
+        return
+    manifest_path = Path(output_path) / MANIFEST_FILENAME
+    if not manifest_path.exists():
+        return
+    try:
+        stored = io_utils.load_json(manifest_path)
+    except Exception as err:  # pragma: no cover - corrupted manifest
+        logger.warn(f"Failed to read asset version manifest {manifest_path}: {err}")
+        return
+    current = get_version_fingerprint()
+    mismatches = []
+    if stored.get("version") != current["version"]:
+        mismatches.append(
+            f"asset downloaded with ManiSkill {stored.get('version')}, running {current['version']}"
+        )
+    if (
+        stored.get("commit_id")
+        and current["commit_id"]
+        and stored["commit_id"] != current["commit_id"]
+    ):
+        mismatches.append(
+            f"asset downloaded with git commit {stored['commit_id'][:8]}, running {current['commit_id'][:8]}"
+        )
+    if not mismatches:
+        return
+    message = (
+        f"Version mismatch for assets in {output_path}: {'; '.join(mismatches)}. "
+        "The assets may not be compatible with this version of ManiSkill. "
+        "Re-download them (python -m mani_skill.utils.download_asset <uid> -y) or "
+        "set MS_SKIP_ASSET_VERSION_CHECK=1 to suppress this warning."
+    )
+    if strict:
+        raise IOError(message)
+    key = str(output_path)
+    if key not in _skipped_version_checks:
+        _skipped_version_checks.add(key)
+        logger.warn(message)
 
 
 def initialize_data_sources():
