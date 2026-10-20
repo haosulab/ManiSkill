@@ -3,9 +3,9 @@ name: Publish nightly pypi distributions
 # based on https://github.com/pytorch/rl/blob/main/.github/workflows/nightly_build.yml
 
 on:
-  # schedule:
-  #   # runs at 23:59 PST every day
-  #   - cron:  '59 7 * * *'
+  schedule:
+    # runs at 23:59 PST every day (also cleans up old nightly releases)
+    - cron:  '59 7 * * *'
   # or manually trigger it
   workflow_dispatch:
   push:
@@ -20,8 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python      
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Build a binary wheel and a source tarball
@@ -52,3 +52,26 @@ jobs:
         with:
           password: ${{ secrets.PYPI_NIGHTLY_API_TOKEN }}
           packages-dir: dist/
+
+  cleanup-old-nightly-releases:
+    # Delete old nightly releases from PyPI so the project's storage quota
+    # is not exhausted (see issue #1463). Keeps the 10 most recent releases
+    # and everything uploaded within the last 30 days.
+    if: github.repository_owner == 'mani-skill'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Delete old nightly releases
+        run: |
+          python3 .github/scripts/cleanup_nightly.py \
+            --package mani_skill-nightly \
+            --token "$PYPI_NIGHTLY_API_TOKEN" \
+            --keep-most-recent 10 \
+            --max-age-days 30
+        env:
+          PYPI_NIGHTLY_API_TOKEN: ${{ secrets.PYPI_NIGHTLY_API_TOKEN }}
