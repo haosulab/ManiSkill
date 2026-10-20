@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Mapping, Optional, Tuple, Union, cast
+from typing import Any, Mapping, Tuple, cast
 
 import numpy as np
 import sapien
@@ -50,11 +50,11 @@ class ManiSkillScene:
 
     def __init__(
         self,
-        sub_scenes: Optional[list[sapien.Scene]] = None,
+        sub_scenes: list[sapien.Scene] | None = None,
         sim_config: SimConfig = SimConfig(),
-        device: Optional[Device] = None,
+        device: Device | None = None,
         parallel_in_single_scene: bool = False,
-        backend: Optional[BackendInfo] = None,
+        backend: BackendInfo | None = None,
     ):
         assert device is not None, "device argument is required"
         assert backend is not None, "backend argument is required"
@@ -209,9 +209,9 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: Union[float, list, None] = None,
-        intrinsic: Union[Array, None] = None,
-        mount: Union[Actor, Link, None] = None,
+        fovy: float | list | None = None,
+        intrinsic: Array | None = None,
+        mount: Actor | Link | None = None,
     ) -> RenderCamera:
         """Add's a (mounted) camera to the scene"""
         if SAPIEN_RENDER_SYSTEM == "3.1":
@@ -231,9 +231,9 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: Union[float, list, None] = None,
-        intrinsic: Union[Array, None] = None,
-        mount: Union[Actor, Link, None] = None,
+        fovy: float | list | None = None,
+        intrinsic: Array | None = None,
+        mount: Actor | Link | None = None,
     ) -> RenderCamera:
         """internal helper function to add (mounted) cameras"""
         cameras = []
@@ -313,9 +313,9 @@ class ManiSkillScene:
         height,
         near,
         far,
-        fovy: Union[float, list, None] = None,
-        intrinsic: Union[Array, None] = None,
-        mount: Union[Actor, Link, None] = None,
+        fovy: float | list | None = None,
+        intrinsic: Array | None = None,
+        mount: Actor | Link | None = None,
     ) -> RenderCamera:
         """internal helper function to add (mounted) cameras"""
         cameras = []
@@ -490,10 +490,10 @@ class ManiSkillScene:
 
     def create_drive(
         self,
-        body0: Union[Actor, Link],
-        pose0: Union[sapien.Pose, Pose],
-        body1: Union[Actor, Link],
-        pose1: Union[sapien.Pose, Pose],
+        body0: Actor | Link,
+        pose0: sapien.Pose | Pose,
+        body1: Actor | Link,
+        pose1: sapien.Pose | Pose,
     ):
         # body0 and body1 should be in parallel.
         return Drive.create_from_actors_or_links(
@@ -502,9 +502,9 @@ class ManiSkillScene:
 
     # def create_connection(
     #     self,
-    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
+    #     body0: sapien.Entity | physx.PhysxRigidBaseComponent | None,
     #     pose0: sapien.Pose,
-    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
+    #     body1: sapien.Entity | physx.PhysxRigidBaseComponent,
     #     pose1: sapien.Pose,
     # ):
     #     if body0 is None:
@@ -540,9 +540,9 @@ class ManiSkillScene:
 
     # def create_gear(
     #     self,
-    #     body0: Optional[Union[sapien.Entity, physx.PhysxRigidBaseComponent]],
+    #     body0: sapien.Entity | physx.PhysxRigidBaseComponent | None,
     #     pose0: sapien.Pose,
-    #     body1: Union[sapien.Entity, physx.PhysxRigidBaseComponent],
+    #     body1: sapien.Entity | physx.PhysxRigidBaseComponent,
     #     pose1: sapien.Pose,
     # ):
     #     if body0 is None:
@@ -600,7 +600,7 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs: Optional[list[int]] = None,
+        scene_idxs: list[int] | None = None,
     ):
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
@@ -636,7 +636,7 @@ class ManiSkillScene:
         shadow_near=-10.0,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs: Optional[list[int]] = None,
+        scene_idxs: list[int] | None = None,
     ):
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
@@ -684,7 +684,7 @@ class ManiSkillScene:
         shadow_near=0.1,
         shadow_far=10.0,
         shadow_map_size=2048,
-        scene_idxs: Optional[list[int]] = None,
+        scene_idxs: list[int] | None = None,
     ):
         if scene_idxs is None:
             scene_idxs = list(range(len(self.sub_scenes)))
@@ -762,7 +762,7 @@ class ManiSkillScene:
         return len(self.sub_scenes)
 
     def get_pairwise_contact_impulses(
-        self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
+        self, obj1: Actor | Link, obj2: Actor | Link
     ):
         """
         Get the impulse vectors between two actors/links. Returns impulse vector of shape (N, 3)
@@ -819,7 +819,7 @@ class ManiSkillScene:
             return common.to_tensor(pairwise_contact_impulses)[None, :]
 
     def get_pairwise_contact_forces(
-        self, obj1: Union[Actor, Link], obj2: Union[Actor, Link]
+        self, obj1: Actor | Link, obj2: Actor | Link
     ):
         """
         Get the force vectors between two actors/links. Returns force vector of shape (N, 3)
@@ -868,7 +868,7 @@ class ManiSkillScene:
     # Simulation state (required for MPC)
     # -------------------------------------------------------------------------- #
 
-    def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
+    def add_to_state_dict_registry(self, object: Actor | Articulation):
         if isinstance(object, Actor):
             assert (
                 object.name not in self.state_dict_registry.actors
@@ -882,7 +882,7 @@ class ManiSkillScene:
         else:
             raise ValueError(f"Expected Actor or Articulation, got {object}")
 
-    def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
+    def remove_from_state_dict_registry(self, object: Actor | Articulation):
         if isinstance(object, Actor):
             assert (
                 object.name in self.state_dict_registry.actors
@@ -920,7 +920,7 @@ class ManiSkillScene:
             del state_dict["articulations"]
         return state_dict
 
-    def set_sim_state(self, state: dict, env_idx: Optional[torch.Tensor] = None):
+    def set_sim_state(self, state: dict, env_idx: torch.Tensor | None = None):
         if env_idx is not None:
             prev_reset_mask = self._reset_mask.clone()
             # safe guard against setting the wrong states
@@ -1196,7 +1196,7 @@ class ManiSkillScene:
         return sensor_data
 
     def get_human_render_camera_images(
-        self, camera_name: Optional[str] = None
+        self, camera_name: str | None = None
     ) -> dict[str, torch.Tensor]:
         image_data = dict()
         if self.gpu_sim_enabled:

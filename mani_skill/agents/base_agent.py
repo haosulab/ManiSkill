@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import sapien
@@ -34,9 +34,9 @@ DictControllerConfig = dict[str, ControllerConfig]
 class Keyframe:
     pose: sapien.Pose
     """sapien Pose object describe this keyframe's pose"""
-    qpos: Optional[Array] = None
+    qpos: Array | None = None
     """the qpos of the robot at this keyframe"""
-    qvel: Optional[Array] = None
+    qvel: Array | None = None
     """the qvel of the robot at this keyframe"""
 
 
@@ -57,11 +57,11 @@ class BaseAgent:
 
     uid: str
     """unique identifier string of this"""
-    urdf_path: Union[str, None] = None
+    urdf_path: str | None = None
     """path to the .urdf file describe the agent's geometry and visuals. One of urdf_path or mjcf_path must be provided."""
-    urdf_config: Union[dict, None] = None
+    urdf_config: dict | None = None
     """Optional provide a urdf_config to further modify the created articulation"""
-    mjcf_path: Union[str, None] = None
+    mjcf_path: str | None = None
     """path to a MJCF .xml file defining a robot. This will only load the articulation defined in the XML and nothing else.
     One of urdf_path or mjcf_path must be provided."""
 
@@ -84,9 +84,9 @@ class BaseAgent:
         self,
         scene: ManiSkillScene,
         control_freq: int,
-        control_mode: Optional[str] = None,
-        agent_idx: Optional[int] = None,
-        initial_pose: Optional[Union[sapien.Pose, Pose]] = None,
+        control_mode: str | None = None,
+        agent_idx: int | None = None,
+        initial_pose: ((sapien.Pose | Pose) | None) = None,
         build_separate: bool = False,
     ):
         self.scene = scene
@@ -121,7 +121,7 @@ class BaseAgent:
     @property
     def _controller_configs(
         self,
-    ) -> dict[str, Union[ControllerConfig, DictControllerConfig]]:
+    ) -> dict[str, (ControllerConfig | DictControllerConfig)]:
         """Returns a dict of controller configs for this agent. By default this is a PDJointPos (delta and non delta) controller for all active joints."""
         return dict(
             pd_joint_pos=PDJointPosControllerConfig(
@@ -148,14 +148,14 @@ class BaseAgent:
         return self.scene.device
 
     def _load_articulation(
-        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+        self, initial_pose: ((sapien.Pose | Pose) | None) = None
     ):
         """
         Loads the robot articulation
         """
 
-        def build_articulation(scene_idxs: Optional[list[int]] = None):
-            loader: Union[URDFLoader, MJCFLoader, None] = None
+        def build_articulation(scene_idxs: (list[int] | None) = None):
+            loader: URDFLoader | MJCFLoader | None = None
             if self.urdf_path is not None:
                 loader = self.scene.create_urdf_loader()
                 asset_path = format_path(str(self.urdf_path))
@@ -243,7 +243,7 @@ class BaseAgent:
         """Get the currently activated controller uid."""
         return self._control_mode
 
-    def set_control_mode(self, control_mode: Optional[str] = None):
+    def set_control_mode(self, control_mode: str | None = None):
         """Sets the controller to an pre-existing controller of this agent.
         This does not reset the controller. If given control mode is None, will set to the default control mode."""
         if control_mode is None:
@@ -395,7 +395,7 @@ class BaseAgent:
     # -------------------------------------------------------------------------- #
     # Other
     # -------------------------------------------------------------------------- #
-    def reset(self, init_qpos: Optional[torch.Tensor] = None):
+    def reset(self, init_qpos: torch.Tensor | None = None):
         """
         Reset the robot to a clean state with zero velocity and forces.
 
@@ -410,7 +410,7 @@ class BaseAgent:
     # -------------------------------------------------------------------------- #
     # Optional per-agent APIs, implemented depending on agent affordances
     # -------------------------------------------------------------------------- #
-    def is_grasping(self, object: Union[Actor, None] = None):
+    def is_grasping(self, object: Actor | None = None):
         """
         Check if this agent is grasping an object or grasping anything at all
 

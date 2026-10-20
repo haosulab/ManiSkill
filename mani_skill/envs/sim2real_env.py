@@ -1,5 +1,5 @@
 import time
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, cast
 
 import gymnasium as gym
 import numpy as np
@@ -26,7 +26,7 @@ class Sim2RealEnv(gym.Env):
     Args:
         sim_env (BaseEnv): The simulation environment that the real environment should be aligned with.
         agent (BaseRealAgent): The real robot agent to control. This must be an object that inherits from BaseRealAgent.
-        real_reset_function (Optional[Callable[[Sim2RealEnv, Optional[int], Optional[dict]], None]]): The function to call to reset the real robot. By default this is None and we use a default reset function which
+        real_reset_function (Callable[[Sim2RealEnv, int | None, dict | None], None] | None): The function to call to reset the real robot. By default this is None and we use a default reset function which
             calls the simulation reset function and resets the agent/robot qpos to whatever the simulation reset function sampled, then prompts the user to press enter before continuing running.
             This function is given access to the Sim2RealEnv instance, the given seed and options dictionary similar to a standard gym reset function. The default function and example is shown below:
 
@@ -37,13 +37,13 @@ class Sim2RealEnv(gym.Env):
                     self.agent.reset(qpos=self.base_sim_env.agent.robot.qpos.cpu().flatten())
                     input("Press enter if the environment is reset")
 
-        sensor_data_preprocessing_function (Optional[Callable[[dict, Optional[list[str]]], dict]]): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function. The two arguments are a dictionary mapping sensor names to its data, then a optional list of sensor names to process.
+        sensor_data_preprocessing_function (Callable[[dict, list[str] | None], dict] | None): The function to call to process the sensor data returned by the BaseRealAgent.get_sensor_data function. The two arguments are a dictionary mapping sensor names to its data, then a optional list of sensor names to process.
             By default this is None and we use a default processing function which does the following for each sensor type:
             - Camera: Perform a center crop of the real sensor image (rgb or depth) to have the same aspect ratio as the simulation sensor image. Then resize the image to the simulation sensor image shape using cv2.resize
 
         skip_data_checks (bool): If False, this will reset the sim and real environments once to check if observations are aligned. It is recommended
             to keep this False.
-        control_freq (Optional[int]): The control frequency of the real robot. By default this is None and we use the same control frequency as the simulation environment.
+        control_freq (int | None): The control frequency of the real robot. By default this is None and we use the same control frequency as the simulation environment.
 
     """
 
@@ -53,15 +53,11 @@ class Sim2RealEnv(gym.Env):
         self,
         sim_env: gym.Env,
         agent: BaseRealAgent,
-        real_reset_function: Optional[
-            Callable[["Sim2RealEnv", Optional[int], Optional[dict]], None]
-        ] = None,
-        sensor_data_preprocessing_function: Optional[
-            Callable[[dict, Optional[list[str]]], dict]
-        ] = None,
-        render_mode: Optional[str] = "sensors",
+        real_reset_function: Callable[["Sim2RealEnv", int | None, dict | None], None] | None = None,
+        sensor_data_preprocessing_function: Callable[[dict, list[str] | None], dict] | None = None,
+        render_mode: str | None = "sensors",
         skip_data_checks: bool = False,
-        control_freq: Optional[int] = None,
+        control_freq: int | None = None,
     ):
         self.sim_env = sim_env
         self.num_envs = 1
@@ -76,7 +72,7 @@ class Sim2RealEnv(gym.Env):
 
         # control timing
         self.control_dt = 1 / self.control_freq
-        self.last_control_time: Optional[float] = None
+        self.last_control_time: float | None = None
 
         obs_mode = self.base_sim_env.obs_mode
         reward_mode = self.base_sim_env.reward_mode
@@ -360,7 +356,7 @@ class Sim2RealEnv(gym.Env):
         self.agent.stop()
 
     def preprocess_sensor_data(
-        self, sensor_data: dict, sensor_names: Optional[list[str]] = None
+        self, sensor_data: dict, sensor_names: list[str] | None = None
     ):
         import cv2
 

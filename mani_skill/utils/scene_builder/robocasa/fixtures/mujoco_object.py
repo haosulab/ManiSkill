@@ -1,4 +1,4 @@
-from typing import Optional
+
 
 import numpy as np
 import sapien
@@ -25,7 +25,7 @@ class MujocoObject:
     def __init__(
         self,
         scene: ManiSkillScene,
-        xml: Optional[str],
+        xml: str | None,
         name: str,
         pos: np.ndarray = None,
         scale: float = 1,

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence, Union
+from typing import Sequence
 
 import numpy as np
 from gymnasium import spaces
@@ -40,7 +40,7 @@ class PassiveController(BaseController):
 
 @dataclass
 class PassiveControllerConfig(ControllerConfig):
-    damping: Union[float, Sequence[float]]
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    damping: float | Sequence[float]
+    force_limit: float | Sequence[float] = 1e10
+    friction: float | Sequence[float] = 0.0
     controller_cls = PassiveController

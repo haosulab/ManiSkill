@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -33,7 +33,7 @@ class PullCubeEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/PullCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
     goal_radius = 0.1
     cube_half_size = 0.02
 

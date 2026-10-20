@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -38,7 +38,7 @@ class PlaceSphereEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["panda", "fetch"]
 
     # Specify some supported robot types
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     # set some commonly used values
     radius = 0.02  # radius of the sphere

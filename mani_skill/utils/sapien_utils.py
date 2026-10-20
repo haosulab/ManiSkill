@@ -4,7 +4,7 @@ Utilities that work with the simulation / SAPIEN
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Tuple, TypeVar
 
 import numpy as np
 import sapien
@@ -143,7 +143,7 @@ def parse_urdf_config(config_dict: dict) -> dict:
     return urdf_config
 
 
-def apply_urdf_config(loader: Union[URDFLoader, MJCFLoader], urdf_config: dict):
+def apply_urdf_config(loader: URDFLoader | MJCFLoader, urdf_config: dict):
     if "link" in urdf_config:
         for name, link_config in urdf_config["link"].items():
             if "material" in link_config:

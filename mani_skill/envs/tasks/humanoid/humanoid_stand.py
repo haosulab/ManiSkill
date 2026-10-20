@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -66,7 +66,7 @@ class HumanoidStandEnv(BaseEnv):
 @register_env("UnitreeH1Stand-v1", max_episode_steps=1000)
 class UnitreeH1StandEnv(HumanoidStandEnv):
     SUPPORTED_ROBOTS = ["unitree_h1_simplified"]
-    agent: Union[UnitreeH1Simplified]
+    agent: UnitreeH1Simplified
 
     def __init__(self, *args, robot_uids="unitree_h1_simplified", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -99,7 +99,7 @@ class UnitreeH1StandEnv(HumanoidStandEnv):
 @register_env("UnitreeG1Stand-v1", max_episode_steps=1000)
 class UnitreeG1StandEnv(HumanoidStandEnv):
     SUPPORTED_ROBOTS = ["unitree_g1_simplified_legs"]
-    agent: Union[UnitreeG1Simplified]
+    agent: UnitreeG1Simplified
 
     def __init__(self, *args, robot_uids="unitree_g1_simplified_legs", **kwargs):
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

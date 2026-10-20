@@ -3,7 +3,7 @@ Utilities for determining the simulation backend and devices
 """
 import platform
 from dataclasses import dataclass
-from typing import Union
+
 
 import sapien
 import torch
@@ -19,7 +19,7 @@ class BackendInfo:
     """the device on which the physics simulation is running"""
     sim_backend: str
     """the backend name of the physics simulation"""
-    render_device: Union[sapien.Device, None]
+    render_device: sapien.Device | None
     """the device on which the renderer is running. If none then we disable rendering."""
     render_backend: str
     """the backend name of the renderer"""

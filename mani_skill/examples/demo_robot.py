@@ -3,7 +3,7 @@ Instantiates a empty environment with a floor, and attempts to place any given r
 """
 
 from dataclasses import dataclass
-from typing import Annotated, Optional
+from typing import Annotated
 import tyro
 import gymnasium as gym
 import mani_skill
@@ -14,7 +14,7 @@ class Args:
     robot_uid: Annotated[str, tyro.conf.arg(aliases=["-r"])] = "panda"
     sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
     control_mode: Annotated[str, tyro.conf.arg(aliases=["-c"])] = "pd_joint_pos"
-    keyframe: Annotated[Optional[str], tyro.conf.arg(aliases=["-k"])] = None
+    keyframe: Annotated[str | None, tyro.conf.arg(aliases=["-k"])] = None
     shader: str = "default"
     keyframe_actions: bool = False
     random_actions: bool = False
@@ -22,7 +22,7 @@ class Args:
     zero_actions: bool = False
     sim_freq: int = 100
     control_freq: int = 20
-    seed: Annotated[Optional[int], tyro.conf.arg(aliases=["-s"])] = None
+    seed: Annotated[int | None, tyro.conf.arg(aliases=["-s"])] = None
 
 def main(args: Args):
     env = gym.make(

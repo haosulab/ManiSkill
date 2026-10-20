@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+
 
 import imageio
 import numpy as np
@@ -15,7 +15,7 @@ def images_to_video(
     output_dir: str,
     video_name: str,
     fps: int = 10,
-    quality: Optional[float] = 5,
+    quality: float | None = 5,
     verbose: bool = True,
     **kwargs,
 ):

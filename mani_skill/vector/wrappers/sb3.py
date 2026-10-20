@@ -1,5 +1,5 @@
 import time
-from typing import Any, Optional, Type, Union
+from typing import Any, Type
 
 import gymnasium as gym
 import numpy as np
@@ -14,7 +14,7 @@ from stable_baselines3.common.vec_env.base_vec_env import (
 from mani_skill.envs.sapien_env import BaseEnv
 
 
-def select_index_from_dict(data: Union[dict, np.ndarray], i: int):
+def select_index_from_dict(data: dict | np.ndarray, i: int):
     if isinstance(data, np.ndarray):
         return data[i]
     elif isinstance(data, dict):
@@ -52,7 +52,7 @@ class ManiSkillSB3VectorEnv(SB3VecEnv):
     def base_env(self) -> BaseEnv:
         return self._env.unwrapped
 
-    def seed(self, seed: Optional[int] = None) -> list[Union[None, int]]:
+    def seed(self, seed: int | None = None) -> list[None | int]:
         self._last_seed = seed
 
     def reset(self) -> VecEnvObs:

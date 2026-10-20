@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Sequence, Union
+from typing import TYPE_CHECKING, Sequence
 
 import sapien
 import sapien.physx as physx
@@ -32,10 +32,10 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
     def create_from_entities(
         cls,
         scene: ManiSkillScene,
-        bodies0: Sequence[Union[sapien.Entity, physx.PhysxRigidBaseComponent]] = None,
-        pose0: Union[sapien.Pose, Pose] = None,
-        bodies1: Sequence[Union[sapien.Entity, physx.PhysxRigidBaseComponent]] = None,
-        pose1: Union[sapien.Pose, Pose] = None,
+        bodies0: Sequence[sapien.Entity | physx.PhysxRigidBaseComponent] = None,
+        pose0: sapien.Pose | Pose = None,
+        bodies1: Sequence[sapien.Entity | physx.PhysxRigidBaseComponent] = None,
+        pose1: sapien.Pose | Pose = None,
         scene_idxs: torch.Tensor = None,
     ):
         physx_drives: list[physx.PhysxDriveComponent] = []
@@ -65,10 +65,10 @@ class Drive(PhysxJointComponentStruct[physx.PhysxDriveComponent]):
     @staticmethod
     def create_from_actors_or_links(
         scene: ManiSkillScene,
-        entities0: Union[Actor, Link] = None,
-        pose0: Union[sapien.Pose, Pose] = None,
-        entities1: Union[Actor, Link] = None,
-        pose1: Union[sapien.Pose, Pose] = None,
+        entities0: Actor | Link = None,
+        pose0: sapien.Pose | Pose = None,
+        entities1: Actor | Link = None,
+        pose1: sapien.Pose | Pose = None,
         scene_idxs: torch.Tensor = None,
     ) -> "Drive":
         """create a batched drive between two Actors/Links"""

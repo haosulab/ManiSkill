@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from typing import Optional, Union
+
 
 import dacite
 import gymnasium as gym
@@ -12,11 +12,11 @@ from mani_skill.utils.structs.types import Device
 
 @dataclass
 class CachedResetsConfig:
-    num_resets: Optional[int] = None
+    num_resets: int | None = None
     """The number of reset states to cache. If none it will cache `num_envs` number of reset states."""
-    device: Optional[Device] = None
+    device: Device | None = None
     """The device to cache the reset states on. If none it will use the base environment's device."""
-    seed: Optional[int] = None
+    seed: int | None = None
     """The seed to use for generating the cached reset states."""
 
 
@@ -35,8 +35,8 @@ class CachedResetWrapper(gym.Wrapper):
     def __init__(
         self,
         env: gym.Env,
-        reset_to_env_states: Optional[dict] = None,
-        config: Union[CachedResetsConfig, dict] = CachedResetsConfig(),
+        reset_to_env_states: dict | None = None,
+        config: CachedResetsConfig | dict = CachedResetsConfig(),
     ):
         super().__init__(env)
 
@@ -127,8 +127,8 @@ class CachedResetWrapper(gym.Wrapper):
     def reset(
         self,
         *args,
-        seed: Optional[Union[int, list[int]]] = None,
-        options: Optional[dict] = None,
+        seed: int | list[int] | None = None,
+        options: dict | None = None,
         **kwargs
     ):
         env_idx = None

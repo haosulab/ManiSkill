@@ -1,11 +1,11 @@
 from dataclasses import asdict, dataclass, field
-from typing import Any, Literal, Sequence, TypeAlias, Union
+from typing import Any, Literal, Sequence, TypeAlias
 
 import numpy as np
 import torch
 
-Array: TypeAlias = Union[torch.Tensor, np.ndarray[Any], Sequence]
-Device: TypeAlias = Union[str, torch.device]
+Array: TypeAlias = torch.Tensor | np.ndarray[Any] | Sequence
+Device: TypeAlias = str | torch.device
 
 
 @dataclass
@@ -35,7 +35,7 @@ class GPUMemoryConfig:
 
 @dataclass
 class SceneConfig:
-    gravity: Union[np.ndarray, list[float]] = field(
+    gravity: np.ndarray | list[float] = field(
         default_factory=lambda: np.array([0, 0, -9.81])
     )
     bounce_threshold: float = 2.0

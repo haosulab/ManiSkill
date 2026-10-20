@@ -4,12 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional, Union
+
 
 import torch
 import torch.nn.functional as F
 
-Device = Union[str, torch.device]
+Device = str | torch.device
 
 # -------------------------------------------------------------------------- #
 # Functions pulled out from pytorch3d to avoid having to install the whole package
@@ -312,7 +312,7 @@ def matrix_to_euler_angles(matrix: torch.Tensor, convention: str) -> torch.Tenso
 
 
 def random_quaternions(
-    n: int, dtype: Optional[torch.dtype] = None, device: Optional[Device] = None
+    n: int, dtype: torch.dtype | None = None, device: Device | None = None
 ) -> torch.Tensor:
     """
     Generate random quaternions representing rotations,
@@ -336,7 +336,7 @@ def random_quaternions(
 
 
 def random_rotations(
-    n: int, dtype: Optional[torch.dtype] = None, device: Optional[Device] = None
+    n: int, dtype: torch.dtype | None = None, device: Device | None = None
 ) -> torch.Tensor:
     """
     Generate random rotations as 3x3 rotation matrices.
@@ -355,7 +355,7 @@ def random_rotations(
 
 
 def random_rotation(
-    dtype: Optional[torch.dtype] = None, device: Optional[Device] = None
+    dtype: torch.dtype | None = None, device: Device | None = None
 ) -> torch.Tensor:
     """
     Generate a single random 3x3 rotation matrix.

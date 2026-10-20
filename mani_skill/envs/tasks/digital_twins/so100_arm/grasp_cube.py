@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Sequence
 
 import dacite
 import numpy as np
@@ -27,7 +27,7 @@ from mani_skill.utils.structs.types import GPUMemoryConfig, SimConfig
 class SO100GraspCubeDomainRandomizationConfig:
     ### task agnostic domain randomizations, many of which you can copy over to your own tasks ###
     initial_qpos_noise_scale: float = 0.02
-    robot_color: Optional[Union[str, Sequence[float]]] = None
+    robot_color: str | Sequence[float] | None = None
     """Color of the robot in RGB format in scale of 0 to 1 mapping to 0 to 255.
     If you want to randomize it just set this value to "random". If left as None which is
     the default, it will set the robot parts to white and motors to black. For more fine-grained choices on robot colors you need to modify
@@ -78,9 +78,7 @@ class SO100GraspCubeEnv(BaseDigitalTwinEnv):
         robot_uids="so100",
         control_mode="pd_joint_target_delta_pos",
         greenscreen_overlay_path=None,
-        domain_randomization_config: Union[
-            SO100GraspCubeDomainRandomizationConfig, dict
-        ] = SO100GraspCubeDomainRandomizationConfig(),
+        domain_randomization_config: SO100GraspCubeDomainRandomizationConfig | dict = SO100GraspCubeDomainRandomizationConfig(),
         domain_randomization=True,
         base_camera_settings=dict(
             fov=52 * np.pi / 180,

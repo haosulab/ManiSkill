@@ -4,7 +4,7 @@ import json
 import sys
 from copy import deepcopy
 from functools import partial
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Type
 
 import gymnasium as gym
 import torch
@@ -25,7 +25,7 @@ class EnvSpec:
         uid: str,
         cls: Type[BaseEnv],
         max_episode_steps=None,
-        asset_download_ids: Optional[list[str]] = [],
+        asset_download_ids: list[str] | None = [],
         default_kwargs: dict = None,
     ):
         """A specification for a ManiSkill environment."""

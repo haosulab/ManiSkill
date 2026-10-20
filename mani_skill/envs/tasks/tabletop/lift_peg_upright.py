@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -33,7 +33,7 @@ class LiftPegUprightEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/mani-skillll/ManiSkill/raw/main/figures/environment_demos/LiftPegUpright-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     peg_half_width = 0.025
     peg_half_length = 0.12

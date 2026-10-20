@@ -3,7 +3,7 @@ Code based on https://github.com/huggingface/lerobot for supporting real robot c
 """
 
 import time
-from typing import Optional
+
 
 import numpy as np
 import torch
@@ -78,7 +78,7 @@ class LeRobotRealAgent(BaseRealAgent):
             dt_s = time.perf_counter() - start_loop_t
             busy_wait(1 / freq - dt_s)
 
-    def capture_sensor_data(self, sensor_names: Optional[list[str]] = None):
+    def capture_sensor_data(self, sensor_names: list[str] | None = None):
         sensor_obs = dict()
         cameras: dict[str, Camera] = self.real_robot.cameras
         if sensor_names is None:
@@ -90,7 +90,7 @@ class LeRobotRealAgent(BaseRealAgent):
             sensor_obs[name] = dict(rgb=(common.to_tensor(data)).unsqueeze(0))
         self._captured_sensor_data = sensor_obs
 
-    def get_sensor_data(self, sensor_names: Optional[list[str]] = None):
+    def get_sensor_data(self, sensor_names: list[str] | None = None):
         if self._captured_sensor_data is None:
             raise RuntimeError(
                 "No sensor data captured yet. Please call capture_sensor_data() first."

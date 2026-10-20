@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -19,7 +19,7 @@ from mani_skill.utils.structs.types import Array
 
 
 class RotateValveEnv(BaseEnv):
-    agent: Union[DClaw]
+    agent: DClaw
     _clearance = 0.003
 
     def __init__(

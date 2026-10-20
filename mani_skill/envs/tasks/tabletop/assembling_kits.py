@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+
 
 import numpy as np
 import sapien.core as sapien
@@ -40,7 +40,7 @@ class AssemblingKitsEnv(BaseEnv):
 
     SUPPORTED_REWARD_MODES = ["sparse", "none"]
     SUPPORTED_ROBOTS = ["panda_wristcam"]
-    agent: Union[PandaWristCam]
+    agent: PandaWristCam
 
     def __init__(
         self,

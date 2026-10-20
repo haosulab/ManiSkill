@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence, Union
+from typing import Sequence
 
 import numpy as np
 import torch
@@ -46,11 +46,11 @@ class PDJointVelController(BaseController):
 
 @dataclass
 class PDJointVelControllerConfig(ControllerConfig):
-    lower: Union[float, Sequence[float]]
-    upper: Union[float, Sequence[float]]
-    damping: Union[float, Sequence[float]]
-    force_limit: Union[float, Sequence[float]] = 1e10
-    friction: Union[float, Sequence[float]] = 0.0
+    lower: float | Sequence[float]
+    upper: float | Sequence[float]
+    damping: float | Sequence[float]
+    force_limit: float | Sequence[float] = 1e10
+    friction: float | Sequence[float] = 0.0
     normalize_action: bool = True
-    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
+    drive_mode: (Sequence[DriveMode] | DriveMode) = "force"
     controller_cls = PDJointVelController

@@ -12,7 +12,7 @@ from mani_skill.utils.building.ground import build_ground
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SceneConfig, SimConfig
-from typing import Optional, Union
+
 MJCF_FILE = f"{os.path.join(os.path.dirname(__file__), 'assets/cartpole.xml')}"
 
 
@@ -40,7 +40,7 @@ class CartPoleRobot(BaseAgent):
             )
         )
 
-    def _load_articulation(self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None):
+    def _load_articulation(self, initial_pose: sapien.Pose | Pose | None = None):
         """
         Load the robot articulation
         """

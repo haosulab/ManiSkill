@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
 import sapien
@@ -41,9 +41,7 @@ class ActorBuilder(SAPIENActorBuilder):
 
     def set_scene_idxs(
         self,
-        scene_idxs: Optional[
-            Union[list[int], Sequence[int], torch.Tensor, np.ndarray]
-        ] = None,
+        scene_idxs: list[int] | Sequence[int] | torch.Tensor | np.ndarray | None = None,
     ):
         """
         Set a list of scene indices to build this object in. Cannot be used in conjunction with scene mask

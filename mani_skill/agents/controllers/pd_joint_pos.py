@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Sequence, TypedDict, Union
+from typing import Sequence, TypedDict
 
 import numpy as np
 import torch
@@ -117,19 +117,19 @@ class PDJointPosController(BaseController):
 
 @dataclass
 class PDJointPosControllerConfig(ControllerConfig):
-    lower: Union[None, float, Sequence[float], np.ndarray]
+    lower: None | float | Sequence[float] | np.ndarray
     """The lower bound for the joint position. If none, the lower bound defaults to the lower joint limit."""
-    upper: Union[None, float, Sequence[float], np.ndarray]
+    upper: None | float | Sequence[float] | np.ndarray
     """The upper bound for the joint position. If none, the upper bound defaults to the upper joint limit."""
-    stiffness: Union[float, Sequence[float], np.ndarray]
-    damping: Union[float, Sequence[float], np.ndarray]
-    force_limit: Union[float, Sequence[float], np.ndarray] = 1e10
-    friction: Union[float, Sequence[float], np.ndarray] = 0.0
+    stiffness: float | Sequence[float] | np.ndarray
+    damping: float | Sequence[float] | np.ndarray
+    force_limit: float | Sequence[float] | np.ndarray = 1e10
+    friction: float | Sequence[float] | np.ndarray = 0.0
     use_delta: bool = False
     use_target: bool = False
     interpolate: bool = False
     normalize_action: bool = True
-    drive_mode: Union[Sequence[DriveMode], DriveMode] = "force"
+    drive_mode: (Sequence[DriveMode] | DriveMode) = "force"
     controller_cls = PDJointPosController
 
 

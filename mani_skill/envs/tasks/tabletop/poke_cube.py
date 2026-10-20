@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -36,7 +36,7 @@ class PokeCubeEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/PokeCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     cube_half_size = 0.02
     peg_half_width = 0.025

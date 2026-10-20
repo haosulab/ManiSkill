@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -33,7 +33,7 @@ class StackCubeEnv(BaseEnv):
 
     _sample_video_link = "https://github.com/mani-skill/ManiSkill/raw/main/figures/environment_demos/StackCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     def __init__(
         self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0.02, **kwargs

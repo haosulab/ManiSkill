@@ -1,4 +1,4 @@
-from typing import Union
+
 
 import numpy as np
 import sapien
@@ -42,7 +42,7 @@ class StackPyramidEnv(BaseEnv):
     SUPPORTED_ROBOTS = ["panda_wristcam", "panda", "fetch"]
     SUPPORTED_REWARD_MODES = ["none", "sparse"]
 
-    agent: Union[Panda, Fetch]
+    agent: Panda | Fetch
 
     def __init__(
         self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0.02, **kwargs

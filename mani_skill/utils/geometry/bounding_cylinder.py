@@ -6,14 +6,14 @@ https://www.nayuki.io/page/smallest-enclosing-circle
 """
 
 import math
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 
 
 def _compute_smallest_circle(
     points: list[Tuple[float, float]]
-) -> Optional[Tuple[float, float, float]]:
+) -> Tuple[float, float, float] | None:
     points = [(float(x), float(y)) for x, y in points]
     np.random.shuffle(points)
 
@@ -93,7 +93,7 @@ def _get_circle_from_diameter(
 
 def _compute_circumcircle(
     a: Tuple[float, float], b: Tuple[float, float], c: Tuple[float, float]
-) -> Optional[Tuple[float, float, float]]:
+) -> Tuple[float, float, float] | None:
     # Center point
     mid_x = (min(a[0], b[0], c[0]) + max(a[0], b[0], c[0])) / 2
     mid_y = (min(a[1], b[1], c[1]) + max(a[1], b[1], c[1])) / 2
@@ -130,7 +130,7 @@ def _compute_circumcircle(
 
 
 def _point_in_circle(
-    circle: Optional[Tuple[float, float, float]], point: Tuple[float, float]
+    circle: Tuple[float, float, float] | None, point: Tuple[float, float]
 ) -> bool:
     if circle is None:
         return False

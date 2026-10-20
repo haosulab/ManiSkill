@@ -1,5 +1,5 @@
 import os
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import sapien.physx as physx
@@ -20,7 +20,7 @@ from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
     "InsertFlower-v1", max_episode_steps=300, asset_download_ids=["oakink-v2"]
 )
 class InsertFlowerEnv(BaseEnv):
-    agent: Union[FloatingAbilityHandRight]
+    agent: FloatingAbilityHandRight
     _clearance = 0.003
     hand_init_height = 0.25
     flower_spawn_half_size = 0.05

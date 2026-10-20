@@ -4,7 +4,7 @@ Asset sources and tooling for managing the assets
 
 import os
 from dataclasses import dataclass
-from typing import Optional
+
 
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.utils import io_utils
@@ -14,15 +14,15 @@ from mani_skill.utils import io_utils
 class DataSource:
     source_type: str
     """what kind of data is this"""
-    url: Optional[str] = None
-    hf_repo_id: Optional[str] = None
-    github_url: Optional[str] = None
-    target_path: Optional[str] = None
+    url: str | None = None
+    hf_repo_id: str | None = None
+    github_url: str | None = None
+    target_path: str | None = None
     """the folder where the file will be downloaded to"""
-    checksum: Optional[str] = None
-    zip_dirname: Optional[str] = None
+    checksum: str | None = None
+    zip_dirname: str | None = None
     """what to rename a zip files generated directory to"""
-    filename: Optional[str] = None
+    filename: str | None = None
     """name to change the downloaded file to. If None, will not change the name"""
     output_dir: str = ASSET_DIR
 

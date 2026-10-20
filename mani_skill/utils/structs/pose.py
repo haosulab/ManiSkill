@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Union, cast, overload
+from typing import cast, overload
 
 import sapien
 import torch
@@ -20,16 +20,16 @@ def add_batch_dim(x):
 
 
 @overload
-def to_batched_tensor(x: None, device: Optional[Device] = None) -> None:
+def to_batched_tensor(x: None, device: Device | None = None) -> None:
     ...
 
 
 @overload
-def to_batched_tensor(x: Array, device: Optional[Device] = None) -> torch.Tensor:
+def to_batched_tensor(x: Array, device: Device | None = None) -> torch.Tensor:
     ...
 
 
-def to_batched_tensor(x: Optional[Array], device: Optional[Device] = None):
+def to_batched_tensor(x: Array | None, device: Device | None = None):
     if x is None:
         return None
     return add_batch_dim(common.to_tensor(x, device=device))
@@ -95,9 +95,9 @@ class Pose:
     @classmethod
     def create_from_pq(
         cls,
-        p: Optional[Array] = None,
-        q: Optional[Array] = None,
-        device: Optional[Device] = None,
+        p: Array | None = None,
+        q: Array | None = None,
+        device: Device | None = None,
     ):
         """Creates a Pose object from a given position ``p`` and/or quaternion ``q``"""
         if device is None:
@@ -129,8 +129,8 @@ class Pose:
     @classmethod
     def create(
         cls,
-        pose: Union[Array, sapien.Pose, list[sapien.Pose], "Pose"],
-        device: Optional[Device] = None,
+        pose: Array | sapien.Pose | list[sapien.Pose] | "Pose",
+        device: Device | None = None,
     ) -> "Pose":
         """Creates a Pose object from a given ``pose``, which can be a torch tensor, sapien.Pose, list of sapien.Pose, or Pose"""
         if isinstance(pose, sapien.Pose):
@@ -192,7 +192,7 @@ class Pose:
     # def __init__(self, p: numpy.ndarray[numpy.float32, _Shape, _Shape[3]] = array([0., 0., 0.], dtype=float32), q: numpy.ndarray[numpy.float32, _Shape, _Shape[4]] = array([1., 0., 0., 0.], dtype=float32)) -> None: ...
     # @typing.overload
     # def __init__(self, arg0: numpy.ndarray[numpy.float32, _Shape[4, 4]]) -> None: ...
-    def __mul__(self, arg0: Union["Pose", sapien.Pose]) -> "Pose":
+    def __mul__(self, arg0: "Pose" | sapien.Pose) -> "Pose":
         """
         Multiply two poses. Supports multiplying singular poses like sapien.Pose or Pose object with batch size of 1 with Pose objects with batch size > 1.
         """
@@ -281,7 +281,7 @@ class Pose:
 
 
 def vectorize_pose(
-    pose: Union[sapien.Pose, Pose, Array], device: Optional[Device] = None
+    pose: sapien.Pose | Pose | Array, device: Device | None = None
 ) -> torch.Tensor:
     """
     Maps several formats of Pose representation to the appropriate tensor representation
@@ -299,7 +299,7 @@ def vectorize_pose(
         return common.to_tensor(pose, device=device)
 
 
-def to_sapien_pose(pose: Union[torch.Tensor, sapien.Pose, Pose]) -> sapien.Pose:
+def to_sapien_pose(pose: torch.Tensor | sapien.Pose | Pose) -> sapien.Pose:
     """
     Maps several formats to a sapien Pose
     """

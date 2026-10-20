@@ -2,7 +2,7 @@
 Common utilities for adding primitive prebuilt shapes to a scene
 """
 
-from typing import Optional, Union
+
 
 import numpy as np
 import sapien
@@ -48,8 +48,8 @@ def _build_by_type(
     builder: ActorBuilder,
     name,
     body_type,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     if scene_idxs is not None:
         builder.set_scene_idxs(scene_idxs)
@@ -74,8 +74,8 @@ def build_cube(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -98,8 +98,8 @@ def build_box(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -123,8 +123,8 @@ def build_cylinder(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -149,8 +149,8 @@ def build_sphere(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -173,8 +173,8 @@ def build_red_white_target(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     TARGET_RED = np.array([194, 19, 22, 255]) / 255
     builder = scene.create_actor_builder()
@@ -236,8 +236,8 @@ def build_twocolor_peg(
     name: str,
     body_type="dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     builder = scene.create_actor_builder()
     if add_collision:
@@ -277,8 +277,8 @@ def build_fourcolor_peg(
     color_4=[1, 1, 1, 1],
     body_type="dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     """
     A peg with four sections and four different colors. Useful for visualizing every possible rotation without any symmetries
@@ -326,8 +326,8 @@ def build_colorful_cube(
     name: str,
     body_type: str = "dynamic",
     add_collision: bool = True,
-    scene_idxs: Optional[Array] = None,
-    initial_pose: Optional[Union[Pose, sapien.Pose]] = None,
+    scene_idxs: Array | None = None,
+    initial_pose: Pose | sapien.Pose | None = None,
 ):
     builder = scene.create_actor_builder()
 

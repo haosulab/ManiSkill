@@ -9,7 +9,7 @@ import os.path as osp
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import sapien
@@ -62,7 +62,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         self._navigable_positions = [None] * len(self.build_configs)
         self.build_config_idxs: list[int] = None
 
-    def build(self, build_config_idxs: Union[int, list[int]]):
+    def build(self, build_config_idxs: int | list[int]):
         # build_config_idxs is a list of integers, where the ith value is the scene idx for the ith parallel env
         if isinstance(build_config_idxs, int):
             build_config_idxs = [build_config_idxs] * self.env.num_envs

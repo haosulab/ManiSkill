@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import sapien
@@ -60,7 +60,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
         entities: list[sapien.Entity],
         scene: ManiSkillScene,
         scene_idxs: torch.Tensor,
-        shared_name: Optional[str] = None,
+        shared_name: str | None = None,
     ):
 
         if shared_name is None:
@@ -139,7 +139,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             ang_vel = self.get_angular_velocity()  # [N, 3]
         return torch.hstack([pose.p, pose.q, vel, ang_vel])
 
-    def set_state(self, state: Array, env_idx: Optional[torch.Tensor] = None):
+    def set_state(self, state: Array, env_idx: torch.Tensor | None = None):
         if self.scene.gpu_sim_enabled:
             if env_idx is not None:
                 prev_reset_mask = self.scene._reset_mask.clone()
@@ -226,7 +226,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             torch.linalg.norm(self.angular_velocity, axis=1) <= ang_thresh,
         )
 
-    def set_collision_group_bit(self, group: int, bit_idx: int, bit: Union[int, bool]):
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int | bool):
         """Set's a specific collision group bit for all collision shapes in all parallel actors"""
         bit = int(bit)
         for body in self._bodies:
@@ -244,7 +244,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     def get_first_collision_mesh(
         self, to_world_frame: bool = True
-    ) -> Union[trimesh.Trimesh, None]:
+    ) -> trimesh.Trimesh | None:
         """
         Returns the collision mesh of the first managed actor object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often. Some actors have no collision meshes, in which case this function returns None
@@ -259,7 +259,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
 
     def get_collision_meshes(
         self, to_world_frame: bool = True, first_only: bool = False
-    ) -> Union[list[trimesh.Trimesh], trimesh.Trimesh]:
+    ) -> list[trimesh.Trimesh] | trimesh.Trimesh:
         """
         Returns the collision mesh of each managed actor object. Note results of this are not cached or optimized at the moment
         so this function can be slow if called too often. Some actors have no collision meshes, in which case this function returns an empty list.
@@ -365,7 +365,7 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
             return Pose.create([obj.pose for obj in self._objs], device=self.device)
 
     @pose.setter
-    def pose(self, arg1: Union[Pose, sapien.Pose, Array]) -> None:
+    def pose(self, arg1: Pose | sapien.Pose | Array) -> None:
         if self.scene.gpu_sim_enabled:
             assert (
                 self.px_body_type != "static"
@@ -402,5 +402,5 @@ class Actor(PhysxRigidDynamicComponentStruct[sapien.Entity]):
                     for i, obj in enumerate(self._objs):
                         obj.pose = arg1
 
-    def set_pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
+    def set_pose(self, arg1: Pose | sapien.Pose) -> None:
         self.pose = arg1

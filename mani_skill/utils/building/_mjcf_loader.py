@@ -43,7 +43,7 @@ from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
-from typing import Any, Literal, Tuple, Union
+from typing import Any, Literal, Tuple
 from xml.etree.ElementTree import Element
 
 import defusedxml.ElementTree as ET
@@ -99,7 +99,7 @@ def _str_to_float(string: str, delimiter=" "):
     return res
 
 
-def _merge_attrib(default_attrib: dict, incoming_attribs: Union[list[dict], dict]):
+def _merge_attrib(default_attrib: dict, incoming_attribs: list[dict] | dict):
     def helper_merge(a: dict, b: dict, path=[]):
         for key in b:
             if key in a:
@@ -220,7 +220,7 @@ class MJCFLoader:
         return Pose(origin)
 
     def _build_geom(
-        self, geom: Element, builder: Union[LinkBuilder, ActorBuilder], defaults
+        self, geom: Element, builder: LinkBuilder | ActorBuilder, defaults
     ):
         geom_defaults = defaults
         if "class" in geom.attrib:

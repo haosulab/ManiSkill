@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import sapien.physx as physx
@@ -34,9 +34,9 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     active_index: torch.Tensor
     """index of this joint amongst the active joints"""
 
-    articulation: Optional[Articulation] = None
-    child_link: Optional[Link] = None
-    parent_link: Optional[Link] = None
+    articulation: Articulation | None = None
+    child_link: Link | None = None
+    parent_link: Link | None = None
     name: str = None
 
     _physx_articulations: list[physx.PhysxArticulation] = None

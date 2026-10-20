@@ -2,7 +2,7 @@
 
 import logging
 from copy import deepcopy
-from typing import Optional
+
 
 import numpy as np
 import torch
@@ -154,7 +154,7 @@ class RoboCasaSceneBuilder(SceneBuilder):
         self.scene_data = []  # maps scene_idx to {"fixtures", "fxtr_placements"}
         super().__init__(*args, **kwargs)
 
-    def build(self, build_config_idxs: Optional[list[int]] = None):
+    def build(self, build_config_idxs: list[int] | None = None):
         if self.env.agent is not None:
             self.robot_poses = self.env.agent.robot.initial_pose
         else:

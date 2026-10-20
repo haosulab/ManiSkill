@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import sapien
@@ -60,7 +60,7 @@ class AntRobot(BaseAgent):
         )
 
     def _load_articulation(
-        self, initial_pose: Optional[Union[sapien.Pose, Pose]] = None
+        self, initial_pose: sapien.Pose | Pose | None = None
     ):
         """
         Load the robot articulation
@@ -78,7 +78,7 @@ class AntRobot(BaseAgent):
 
 
 class AntEnv(BaseEnv):
-    agent: Union[AntRobot]
+    agent: AntRobot
     SUPPORTED_REWARD_MODES = ("normalized_dense", "dense", "none")
 
     def __init__(self, *args, robot_uids=AntRobot, move_speed=0, **kwargs):

@@ -2,7 +2,7 @@ import copy
 import gc
 import os
 from functools import cached_property
-from typing import Any, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Sequence, Tuple, cast
 
 import dacite
 import gymnasium as gym
@@ -61,7 +61,7 @@ class BaseEnv(gym.Env):
 
         render_mode: render mode registered in @SUPPORTED_RENDER_MODES.
 
-        shader_dir (Optional[str]): shader directory. Defaults to None.
+        shader_dir (str | None): shader directory. Defaults to None.
             Setting this will override the shader used for all cameras in the environment. This is legacy behavior kept for backwards compatibility.
             The proper way to change the shaders used for cameras is to either change the environment code or pass in sensor_configs/human_render_camera_configs with the desired shaders.
 
@@ -80,9 +80,9 @@ class BaseEnv(gym.Env):
 
         viewer_camera_configs (dict): configurations of the viewer camera in the GUI to override any environment defaults. Similar usage as @sensor_configs.
 
-        robot_uids (Union[str, BaseAgent, list[Union[str, BaseAgent]]]): list of robots to instantiate and control in the environment.
+        robot_uids (str | BaseAgent | list[str | BaseAgent]): list of robots to instantiate and control in the environment.
 
-        sim_config (Union[SimConfig, dict]): Configurations for simulation if used that override the environment defaults. If given
+        sim_config (SimConfig | dict): Configurations for simulation if used that override the environment defaults. If given
             a dictionary, it can just override specific attributes e.g. ``sim_config=dict(scene_config=dict(solver_iterations=25))``. If
             passing in a SimConfig object, while typed, will override every attribute including the task defaults. Some environments
             define their own recommended default sim configurations via the ``self._default_sim_config`` attribute that generally should not be
@@ -118,7 +118,7 @@ class BaseEnv(gym.Env):
     """
 
     # fmt: off
-    SUPPORTED_ROBOTS: Optional[list[Union[str, Tuple[str]]]] = None
+    SUPPORTED_ROBOTS: list[str | Tuple[str]] | None = None
     """Override this to enforce which robots or tuples of robots together are supported in the task. During env creation,
     setting robot_uids auto loads all desired robots into the scene, but not all tasks are designed to support some robot setups"""
     SUPPORTED_OBS_MODES = ("state", "state_dict", "none", "sensor_data", "any_textures", "pointcloud")
@@ -180,29 +180,29 @@ class BaseEnv(gym.Env):
     _sim_device: sapien.Device
     """the sapien device object the simulation runs on"""
 
-    _render_device: Optional[sapien.Device]
+    _render_device: sapien.Device | None
     """the sapien device object the renderer runs on"""
 
-    _viewer: Union[sapien.utils.Viewer, None] = None
+    _viewer: sapien.utils.Viewer | None = None
 
-    _sample_video_link: Optional[str] = None
+    _sample_video_link: str | None = None
     """a link to a sample video of the task. This is mostly used for automatic documentation generation"""
 
     def __init__(
         self,
         num_envs: int = 1,
-        obs_mode: Optional[str] = None,
-        reward_mode: Optional[str] = None,
-        control_mode: Optional[str] = None,
-        render_mode: Optional[str] = None,
-        shader_dir: Optional[str] = None,
+        obs_mode: str | None = None,
+        reward_mode: str | None = None,
+        control_mode: str | None = None,
+        render_mode: str | None = None,
+        shader_dir: str | None = None,
         enable_shadow: bool = False,
         sensor_configs: dict = dict(),
         human_render_camera_configs: dict = dict(),
         viewer_camera_configs: dict = dict(),
-        robot_uids: Optional[Union[str, BaseAgent, list[Union[str, BaseAgent]]]] = None,
-        sim_config: Union[SimConfig, dict] = dict(),
-        reconfiguration_freq: Optional[int] = None,
+        robot_uids: str | BaseAgent | list[str | BaseAgent] | None = None,
+        sim_config: SimConfig | dict = dict(),
+        reconfiguration_freq: int | None = None,
         sim_backend: str = "auto",
         render_backend: str = "gpu",
         parallel_in_single_scene: bool = False,
@@ -386,7 +386,7 @@ class BaseEnv(gym.Env):
     @property
     def _default_sim_config(self):
         return SimConfig()
-    def _load_agent(self, options: dict, initial_agent_poses: Optional[Union[sapien.Pose, Pose]] = None, build_separate: bool = False):
+    def _load_agent(self, options: dict, initial_agent_poses: sapien.Pose | Pose | None = None, build_separate: bool = False):
         """
         loads the agent/controllable articulations into the environment. The default function provides a convenient way to setup the agent/robot by a robot_uid
         (stored in self.robot_uids) without requiring the user to have to write the robot building and controller code themselves. For more
@@ -394,7 +394,7 @@ class BaseEnv(gym.Env):
 
         Args:
             options (dict): The options for the environment.
-            initial_agent_poses (Optional[Union[sapien.Pose, Pose]]): The initial poses of the agent/robot. Providing these poses and ensuring they are picked such that
+            initial_agent_poses (sapien.Pose | Pose | None): The initial poses of the agent/robot. Providing these poses and ensuring they are picked such that
                 they do not collide with objects if spawned there is highly recommended to ensure more stable simulation (the agent pose can be changed later during episode initialization).
             build_separate (bool): Whether to build the agent/robot separately. If True, the agent/robot will be built separately for each parallel environment and then merged
                 together to be accessible under one view/object. This is useful for randomizing physical and visual properties of the agent/robot which is only permitted for
@@ -439,18 +439,14 @@ class BaseEnv(gym.Env):
     @property
     def _default_sensor_configs(
         self,
-    ) -> Union[
-        BaseSensorConfig, Sequence[BaseSensorConfig], dict[str, BaseSensorConfig]
-    ]:
+    ) -> BaseSensorConfig | Sequence[BaseSensorConfig] | dict[str, BaseSensorConfig]:
         """Add default (non-agent) sensors to the environment by returning sensor configurations. These can be overriden by the user at
         env creation time"""
         return []
     @property
     def _default_human_render_camera_configs(
         self,
-    ) -> Union[
-        CameraConfig, Sequence[CameraConfig], dict[str, CameraConfig]
-    ]:
+    ) -> CameraConfig | Sequence[CameraConfig] | dict[str, CameraConfig]:
         """Add default cameras for rendering when using render_mode='rgb_array'. These can be overriden by the user at env creation time """
         return []
 
@@ -499,7 +495,7 @@ class BaseEnv(gym.Env):
         """The current observation mode. This affects the observation returned by env.get_obs()"""
         return self._obs_mode
 
-    def get_obs(self, info: Optional[dict] = None, unflattened: bool = False):
+    def get_obs(self, info: dict | None = None, unflattened: bool = False):
         """
         Return the current observation of the environment. User may call this directly to get the current observation
         as opposed to taking a step with actions in the environment.
@@ -858,7 +854,7 @@ class BaseEnv(gym.Env):
     # -------------------------------------------------------------------------- #
     # Reset
     # -------------------------------------------------------------------------- #
-    def reset(self, seed: Union[None, int, list[int]] = None, options: Union[None, dict] = None) -> tuple[Any, dict]:
+    def reset(self, seed: None | int | list[int] = None, options: None | dict = None) -> tuple[Any, dict]:
         """Reset the ManiSkill environment with given seed(s) and options. Typically seed is either None (for unseeded reset) or an int (seeded reset).
         For GPU parallelized environments you can also pass a list of seeds for each parallel environment to seed each one separately.
 
@@ -981,7 +977,7 @@ class BaseEnv(gym.Env):
         self._last_obs = obs
         return obs, info
 
-    def _set_main_rng(self, seed: Optional[Union[int, list[int], np.ndarray]]):
+    def _set_main_rng(self, seed: int | list[int] | np.ndarray | None):
         """Set the main random generator which is only used to set the seed of the episode RNG to improve reproducibility.
 
         Note that while _set_main_rng and _set_episode_rng are setting a seed and numpy random state, when using GPU sim
@@ -1004,7 +1000,7 @@ class BaseEnv(gym.Env):
             self._main_seed = np.concatenate((self._main_seed, np.random.RandomState(self._main_seed[0]).randint(2**31, size=(self.num_envs - 1,))))
         self._batched_main_rng = BatchedRNG.from_seeds(self._main_seed, backend=self._batched_rng_backend)
 
-    def _set_episode_rng(self, seed: Union[None, list[int], np.ndarray[Any], int], env_idx: torch.Tensor):
+    def _set_episode_rng(self, seed: None | list[int] | np.ndarray[Any] | int, env_idx: torch.Tensor):
         """Set the random generator for current episode."""
         if seed is not None or self._enhanced_determinism:
             env_idx_np = common.to_numpy(env_idx)
@@ -1047,7 +1043,7 @@ class BaseEnv(gym.Env):
     # Step
     # -------------------------------------------------------------------------- #
 
-    def step(self, action: Union[None, np.ndarray, torch.Tensor, dict]):
+    def step(self, action: None | np.ndarray | torch.Tensor | dict):
         """
         Take a step through the environment with an action. Actions are automatically clipped to the action space.
 
@@ -1079,11 +1075,11 @@ class BaseEnv(gym.Env):
         )
 
     def _step_action(
-        self, action: Union[None, Array, dict[str, Union[np.ndarray, torch.Tensor]]]
-    ) -> Union[None, torch.Tensor, dict[str, torch.Tensor]]:
+        self, action: None | Array | dict[str, np.ndarray | torch.Tensor]
+    ) -> None | torch.Tensor | dict[str, torch.Tensor]:
         set_action = False
         action_is_unbatched = False
-        action_tensor: Union[torch.Tensor, dict[str, torch.Tensor]] = None  # pyright: ignore[reportAssignmentType]
+        action_tensor: torch.Tensor | dict[str, torch.Tensor] = None  # pyright: ignore[reportAssignmentType]
         if action is None:  # simulation without action
             pass
         elif isinstance(action, np.ndarray) or isinstance(action, torch.Tensor):
@@ -1273,9 +1269,9 @@ class BaseEnv(gym.Env):
                 res[link._objs[0].entity.per_scene_id] = link
         return res
 
-    def add_to_state_dict_registry(self, object: Union[Actor, Articulation]):
+    def add_to_state_dict_registry(self, object: Actor | Articulation):
         self.scene.add_to_state_dict_registry(object)
-    def remove_from_state_dict_registry(self, object: Union[Actor, Articulation]):
+    def remove_from_state_dict_registry(self, object: Actor | Articulation):
         self.scene.remove_from_state_dict_registry(object)
 
     def get_state_dict(self):
@@ -1299,7 +1295,7 @@ class BaseEnv(gym.Env):
         """
         return common.flatten_state_dict(self.get_state_dict(), use_torch=True)
 
-    def set_state_dict(self, state: dict, env_idx: Optional[torch.Tensor] = None):
+    def set_state_dict(self, state: dict, env_idx: torch.Tensor | None = None):
         """
         Set environment state with a state dictionary. Override to include task information (e.g., goal)
 
@@ -1313,7 +1309,7 @@ class BaseEnv(gym.Env):
             self.scene.px.gpu_update_articulation_kinematics()  # pyright: ignore[reportAttributeAccessIssue]
             self.scene._gpu_fetch_all()
 
-    def set_state(self, state: torch.Tensor, env_idx: Optional[torch.Tensor] = None):
+    def set_state(self, state: torch.Tensor, env_idx: torch.Tensor | None = None):
         """
         Set environment state with a flat state vector. Internally this reconstructs the state dictionary and calls `env.set_state_dict`
 
@@ -1376,7 +1372,7 @@ class BaseEnv(gym.Env):
             obj.hide_visual()
         return self._viewer
 
-    def render_rgb_array(self, camera_name: Optional[str] = None):
+    def render_rgb_array(self, camera_name: str | None = None):
         """Returns an RGB array / image of size (num_envs, H, W, 3) of the current state of the environment.
         This is captured by any of the registered human render cameras. If a camera_name is given, only data from that camera is returned.
         Otherwise all camera data is captured and returned as a single batched image. Any objects registered in the _hidden_objects list will be shown"""
