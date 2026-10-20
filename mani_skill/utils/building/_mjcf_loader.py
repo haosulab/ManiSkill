@@ -721,18 +721,53 @@ class MJCFLoader:
         for child in body.findall("body"):
             self._parse_body(child, link_builder, defaults, builder)
 
-    def _parse_constraint(self, constraint: Element):
-        joint_elems = []
-        for joint in constraint.findall("joint"):
-            joint_elems.append(joint)
-        return MimicJointRecord(
-            joint_elems[0].attrib["joint"],
-            joint_elems[1].attrib["joint"],
-            1,
-            0
-            # joint.mimic.multiplier,
-            # joint.mimic.offset,
-        )
+    def _parse_fixed_tendon(self, tendon: Element) -> Union[MimicJointRecord, None]:
+        """Parses a MJCF fixed tendon, i.e. ``<tendon><fixed>...`` where the scalar
+        product of joint coefficients is constrained to be zero.
+
+        With exactly two joints, ``c1 * q1 + c2 * q2 = 0`` is equivalent to
+        ``q1 = -(c2 / c1) * q2``, which maps to a SAPIEN mimic joint record.
+        """
+        joint_elems = tendon.findall("joint")
+        if len(joint_elems) != 2:
+            if not WARNED_ONCE["mjcf_fixed_tendon_multi_joint"]:
+                logger.warn(
+                    f"Skipping MJCF fixed tendon '{tendon.attrib.get('name', '')}' with {len(joint_elems)} joints. Only tendons with exactly 2 joints can be converted to a mimic joint."
+                )
+                WARNED_ONCE["mjcf_fixed_tendon_multi_joint"] = True
+            return None
+        joint1 = joint_elems[0].attrib["joint"]
+        joint2 = joint_elems[1].attrib["joint"]
+        c1 = float(joint_elems[0].attrib.get("coef", 1))
+        c2 = float(joint_elems[1].attrib.get("coef", 1))
+        if c1 == 0:
+            if not WARNED_ONCE["mjcf_fixed_tendon_zero_coef"]:
+                logger.warn(
+                    f"Skipping MJCF fixed tendon '{tendon.attrib.get('name', '')}' with zero coefficient on the first joint."
+                )
+                WARNED_ONCE["mjcf_fixed_tendon_zero_coef"] = True
+            return None
+        # q1 = -(c2 / c1) * q2
+        return MimicJointRecord(joint1, joint2, -c2 / c1, 0)
+
+    def _parse_equality_joint(self, constraint: Element) -> Union[MimicJointRecord, None]:
+        """Parses a MJCF joint equality constraint, i.e. ``<equality><joint ...>``.
+
+        MuJoCo constrains ``q1 = a0 + a1 * q2`` where ``q1`` is ``joint1``, ``q2`` is
+        ``joint2`` and ``a0, a1, ...`` are the ``polycoef`` attributes (higher order
+        terms are ignored here). This maps directly to a SAPIEN mimic joint record.
+        """
+        joint1 = constraint.attrib.get("joint1")
+        joint2 = constraint.attrib.get("joint2")
+        if joint1 is None or joint2 is None:
+            if not WARNED_ONCE["mjcf_equality_joint_missing_names"]:
+                logger.warn(
+                    "Skipping MJCF joint equality constraint missing joint1 or joint2 attributes."
+                )
+                WARNED_ONCE["mjcf_equality_joint_missing_names"] = True
+            return None
+        polycoef = _parse_vec(constraint.attrib, "polycoef", [0, 1, 0, 0, 0])
+        return MimicJointRecord(joint1, joint2, polycoef[1], polycoef[0])
 
     def _parse_mjcf(
         self, mjcf_string: str
@@ -867,12 +902,46 @@ class MJCFLoader:
             pass
 
         ### Parse equality constraints ###
-        # tendon = xml.find("tendon")
-        # if tendon is not None:
-        #     # TODO (stao): unclear if this actually works
-        #     for constraint in tendon.findall("fixed"):
-        #         record = self._parse_constraint(constraint)
-        #         builder.mimic_joint_records.append(record)
+        equality = xml.find("equality")
+        if equality is not None:
+            for constraint in equality:
+                if constraint.tag == "joint":
+                    record = self._parse_equality_joint(constraint)
+                elif constraint.tag == "connect":
+                    if not WARNED_ONCE["mjcf_equality_connect"]:
+                        logger.warn(
+                            "MJCF equality constraints of type 'connect' are not supported by this loader and are skipped."
+                        )
+                        WARNED_ONCE["mjcf_equality_connect"] = True
+                    record = None
+                elif constraint.tag == "weld":
+                    if not WARNED_ONCE["mjcf_equality_weld"]:
+                        logger.warn(
+                            "MJCF equality constraints of type 'weld' are not supported by this loader and are skipped."
+                        )
+                        WARNED_ONCE["mjcf_equality_weld"] = True
+                    record = None
+                else:
+                    record = None
+                if record is not None:
+                    for b in articulation_builders:
+                        b.mimic_joint_records.append(record)
+
+        ### Parse tendons ###
+        tendon = xml.find("tendon")
+        if tendon is not None:
+            supported = {elem.tag for elem in tendon}
+            unsupported = supported - {"fixed"}
+            if unsupported and not WARNED_ONCE["mjcf_tendon_unsupported_types"]:
+                logger.warn(
+                    f"MJCF tendons of type(s) {sorted(unsupported)} are not supported by this loader and are skipped. Only fixed tendons are supported."
+                )
+                WARNED_ONCE["mjcf_tendon_unsupported_types"] = True
+            for fixed in tendon.findall("fixed"):
+                record = self._parse_fixed_tendon(fixed)
+                if record is not None:
+                    for b in articulation_builders:
+                        b.mimic_joint_records.append(record)
 
         if not self._mjcf_options["contact"]:
             # means to disable all contacts
