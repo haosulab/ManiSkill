@@ -823,7 +823,14 @@ class BaseEnv(gym.Env):
             else:
                 articulation = None
             if isinstance(sensor_config, StereoDepthCameraConfig):
-                raise NotImplementedError("StereoDepthCamera is not implemented in this version at the moment.")
+                from mani_skill.sensors.depth_camera import StereoDepthCamera  # fmt: skip
+                sensor_cls = StereoDepthCamera
+                self._sensors[uid] = sensor_cls(
+                    sensor_config,
+                    self.scene,
+                    articulation=articulation,
+                )
+                continue
             elif isinstance(sensor_config, CameraConfig):
                 sensor_cls = Camera
                 self._sensors[uid] = sensor_cls(
