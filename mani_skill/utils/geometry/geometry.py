@@ -4,6 +4,7 @@ import sapien.physx as physx
 import torch
 from scipy.spatial.transform import Rotation
 
+from mani_skill.utils.geometry.bounding_box import BoundingBox
 from mani_skill.utils.geometry.bounding_cylinder import aabc
 
 
@@ -69,51 +70,33 @@ def angle_distance(q0: sapien.Pose, q1: sapien.Pose):
 
 
 def get_axis_aligned_bbox_for_articulation(art: physx.PhysxArticulation):
-    mins = np.array([np.inf, np.inf, np.inf])
-    maxs = -mins
-    for link in art.get_links():
-        lp = link.pose
-        for s in link.get_collision_shapes():
-            p = lp * s.get_local_pose()
-            T = p.to_transformation_matrix()
-            assert isinstance(s, physx.PhysxCollisionShapeConvexMesh)
-            vertices = s.vertices * s.scale
-            vertices = vertices @ T[:3, :3].T + T[:3, 3]
-            mins = np.minimum(mins, vertices.min(0))
-            maxs = np.maximum(maxs, vertices.max(0))
-    return mins, maxs
+    """Returns the (mins, maxs) of the axis aligned bounding box of an articulation in the world frame.
+
+    Kept as a thin delegate around the object oriented
+    :class:`mani_skill.utils.geometry.bounding_box.BoundingBox` API.
+    """
+    bbox = BoundingBox.from_articulation(art)
+    return bbox.mins, bbox.maxs
 
 
 def get_axis_aligned_bbox_for_actor(actor: sapien.Entity):
-    mins = np.ones(3) * np.inf
-    maxs = -mins
+    """Returns the (mins, maxs) of the axis aligned bounding box of an actor in the world frame.
 
-    for shape in actor.find_component_by_type(
-        physx.PhysxRigidDynamicComponent
-    ).get_collision_shapes():  # this is CollisionShape
-        assert isinstance(shape, physx.PhysxCollisionShapeConvexMesh)
-        scaled_vertices = shape.vertices * shape.scale
-        local_pose = shape.get_local_pose()
-        mat = (actor.get_pose() * local_pose).to_transformation_matrix()
-        world_vertices = scaled_vertices @ (mat[:3, :3].T) + mat[:3, 3]
-        mins = np.minimum(mins, world_vertices.min(0))
-        maxs = np.maximum(maxs, world_vertices.max(0))
-
-    return mins, maxs
+    Kept as a thin delegate around the object oriented
+    :class:`mani_skill.utils.geometry.bounding_box.BoundingBox` API.
+    """
+    bbox = BoundingBox.from_actor(actor)
+    return bbox.mins, bbox.maxs
 
 
 def get_local_axis_aligned_bbox_for_link(link: physx.PhysxArticulationLinkComponent):
-    mins = np.array([np.inf, np.inf, np.inf])
-    maxs = -mins
-    for s in link.get_collision_shapes():
-        assert isinstance(s, physx.PhysxCollisionShapeConvexMesh)
-        p = s.get_local_pose()
-        T = p.to_transformation_matrix()
-        vertices = s.vertices * s.scale
-        vertices = vertices @ T[:3, :3].T + T[:3, 3]
-        mins = np.minimum(mins, vertices.min(0))
-        maxs = np.maximum(maxs, vertices.max(0))
-    return mins, maxs
+    """Returns the (mins, maxs) of the axis aligned bounding box of a link in the link's local frame.
+
+    Kept as a thin delegate around the object oriented
+    :class:`mani_skill.utils.geometry.bounding_box.BoundingBox` API.
+    """
+    bbox = BoundingBox.from_link(link)
+    return bbox.mins, bbox.maxs
 
 
 def get_local_aabc_for_actor(actor: sapien.Entity):
