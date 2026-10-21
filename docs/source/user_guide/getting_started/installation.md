@@ -13,6 +13,21 @@ We also provide a more frequently updated nightly version updated daily whenever
 pip install mani_skill-nightly torch
 ```
 
+For GB10 based systems (e.g. NVIDIA DGX Spark, Jetson Thor), which run Linux on aarch64 with a Blackwell GPU (compute capability `sm_121`), the default PyPI `torch` wheel does not include CUDA kernels for `sm_121`, so GPU code will fail with errors like `CUDA error: no kernel image is available for execution on the device`. Install a CUDA 13.0 (or newer) aarch64 build of torch from the official PyTorch index **before** installing ManiSkill:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu130
+pip install mani_skill
+```
+
+Then verify your torch build supports your GPU:
+
+```bash
+python -c "import torch; print(torch.cuda.get_arch_list())"
+```
+
+The output should include `sm_121` (or the compatible `sm_120`). See the [troubleshooting section](#gb10-dgx-spark-jetson-thor) below for details.
+
 For the majority of MacOS users there is a bit more setup needed for installing the Vulkan driver which is required, please see the [MacOS Installation](./macos_install.md) page for details.
 
 :::{note}
@@ -209,6 +224,26 @@ If `libGLX_nvidia.so` is not found, then it is likely that you have installed an
 #### MacOS
 
 See the [MacOS Installation](./macos_install.md) page for more details.
+
+### GB10 (DGX Spark / Jetson Thor)
+
+If you are on a GB10 machine (DGX Spark, Jetson Thor) and see
+
+```text
+CUDA error: no kernel image is available for execution on the device
+```
+
+your `torch` was built without `sm_121` (Blackwell, compute capability 12.1) CUDA kernels. This happens with the default PyPI wheel on aarch64: pip resolves it to a build that does not cover `sm_121`. Install a CUDA 13.0+ build of torch from the official PyTorch index instead (see the instructions at the [top of this page](#gb10-based-systems)):
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu130 --force-reinstall
+```
+
+and confirm `sm_121` appears in
+
+```bash
+python -c "import torch; print(torch.cuda.get_arch_list())"
+```
 
 ### Uninstallation
 

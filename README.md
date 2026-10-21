@@ -36,6 +36,8 @@ pip install --upgrade mani_skill
 pip install torch
 ```
 
+On GB10 systems (DGX Spark / Jetson Thor, aarch64 + `sm_121`), use a CUDA 13.0+ aarch64 torch build instead: `pip install torch --index-url https://download.pytorch.org/whl/cu130`. See the [installation docs](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#gb10-dgx-spark-jetson-thor) for details.
+
 Finally you also need to set up Vulkan with [instructions here](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan)
 
 For more details about installation (e.g. from source, or doing troubleshooting) see [the documentation](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html
