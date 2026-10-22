@@ -20,6 +20,18 @@ import torch
 from lxml import etree as ET  # pyright: ignore[reportAttributeAccessIssue]
 from sapien.wrapper.pinocchio_model import PinocchioModel
 
+if PinocchioModel is None:
+    # SAPIEN sets PinocchioModel to None (instead of raising at import time) when the
+    # optional pinocchio package is missing on this platform (e.g. MacOS). IK-based
+    # controllers (pd_ee_delta_pos / pd_ee_delta_pose) cannot work without it.
+    raise ImportError(
+        "pinocchio is not installed. IK-based controllers (pd_ee_delta_pos / "
+        "pd_ee_delta_pose) require the optional pinocchio package, which is not "
+        "installed by pip install mani_skill. Install it with "
+        "`conda install -c conda-forge pinocchio` or `pip install pin`. See the "
+        "installation docs for details."
+    )
+
 from mani_skill.utils import common
 from mani_skill.utils.structs.articulation import Articulation
 from mani_skill.utils.structs.articulation_joint import ArticulationJoint
