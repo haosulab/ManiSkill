@@ -1,4 +1,3 @@
-import mplib
 import numpy as np
 import sapien
 

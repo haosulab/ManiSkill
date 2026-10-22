@@ -102,6 +102,10 @@ def main(argv):
             "warp_maniskill.warp": ["native/*", "native/nanovdb/*"],
         },
         extras_require={
+            # cross-platform motion planning backend for platforms where mplib
+            # is unavailable (macOS / Windows); used automatically as a fallback
+            # by the example motion planning solvers.
+            "pyroki": ["pyroki @ git+https://github.com/chungmin99/pyroki"],
             "dev": [
                 "pytest",
                 "black",
