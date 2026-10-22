@@ -21,6 +21,22 @@ pip install mani_skill-nightly
 
 After this you need to install Vulkan which is described in the next section.
 
+## Pinocchio (for IK-based controllers)
+
+The `pd_ee_delta_pos` and `pd_ee_delta_pose` controllers require the [pinocchio](https://github.com/stack-of-tasks/pinocchio) package, which is **not** installed by `pip install mani_skill`. Without it, environments using these controllers fail with `Can't create pinocchio model`. On MacOS, install it via conda-forge:
+
+```
+conda install -c conda-forge pinocchio
+```
+
+or via pip using the `pin` package (which ships the pinocchio bindings):
+
+```
+pip install pin
+```
+
+Note that the package is named `pin` on PyPI; `pip install pinocchio` installs an unrelated package and will not work.
+
 ## Vulkan Installation
 
 First download the vulkan SDK installer from the following link: [https://sdk.lunarg.com/sdk/download/1.3.290.0/mac/vulkansdk-macos-1.3.290.0.dmg](https://sdk.lunarg.com/sdk/download/1.3.290.0/mac/vulkansdk-macos-1.3.290.0.dmg)

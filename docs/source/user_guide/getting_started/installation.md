@@ -208,7 +208,7 @@ If `libGLX_nvidia.so` is not found, then it is likely that you have installed an
 
 #### MacOS
 
-See the [MacOS Installation](./macos_install.md) page for more details.
+See the [MacOS Installation](./macos_install.md) page for more details. If you plan to use IK-based controllers (`pd_ee_delta_pos` / `pd_ee_delta_pose`), you also need to install the optional pinocchio dependency, see [Pinocchio (for IK-based controllers)](./macos_install.md#pinocchio-for-ik-based-controllers).
 
 ### Uninstallation
 
