@@ -1,6 +1,5 @@
 import numpy as np
 import sapien
-import mplib
 from mani_skill.examples.motionplanning.two_finger_gripper.motionplanner import TwoFingerGripperMotionPlanningSolver
 from mani_skill.envs.sapien_env import BaseEnv
 

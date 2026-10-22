@@ -1,7 +1,28 @@
-import mplib
 import numpy as np
 import sapien
 import trimesh
+
+try:
+    import mplib
+
+    _HAS_MPLIB = True
+except ImportError:
+    # mplib does not build on macOS / Windows; the Pyroki backend below is
+    # used as a cross-platform fallback in that case.
+    _HAS_MPLIB = False
+
+from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.envs.sapien_env import BaseEnv
+from mani_skill.utils.structs.pose import to_sapien_pose
+
+try:
+    from mani_skill.examples.motionplanning.base_motionplanner.pyroki_planner import (
+        PyrokiPlanner,
+    )
+
+    _HAS_PYROKI = True
+except ImportError:
+    _HAS_PYROKI = False
 
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.envs.sapien_env import BaseEnv
@@ -56,13 +77,25 @@ class BaseMotionPlanningSolver:
         move_group = self.MOVE_GROUP if hasattr(self, "MOVE_GROUP") else "eef"
         link_names = [link.get_name() for link in self.robot.get_links()]
         joint_names = [joint.get_name() for joint in self.robot.get_active_joints()]
-        planner = mplib.Planner(
-            urdf=self.env_agent.urdf_path,
-            srdf=self.env_agent.urdf_path.replace(".urdf", ".srdf"),
-            user_link_names=link_names,
-            user_joint_names=joint_names,
-            move_group=move_group,
-        )
+        if _HAS_MPLIB:
+            planner = mplib.Planner(
+                urdf=self.env_agent.urdf_path,
+                srdf=self.env_agent.urdf_path.replace(".urdf", ".srdf"),
+                user_link_names=link_names,
+                user_joint_names=joint_names,
+                move_group=move_group,
+            )
+        elif _HAS_PYROKI:
+            print("mplib is not available; falling back to the Pyroki motion planning backend (no obstacle-aware planning).")
+            planner = PyrokiPlanner(
+                urdf_path=self.env_agent.urdf_path,
+                move_group=move_group,
+                joint_names=joint_names,
+            )
+        else:
+            raise ImportError(
+                "No motion planning backend available. Install mplib (Linux) or pyroki (pip install git+https://github.com/chungmin99/pyroki) for the cross-platform backend."
+            )
         planner.set_base_pose(np.hstack([self.base_pose.p, self.base_pose.q]))
         planner.joint_vel_limits = np.asarray(planner.joint_vel_limits) * self.joint_vel_limits
         planner.joint_acc_limits = np.asarray(planner.joint_acc_limits) * self.joint_acc_limits

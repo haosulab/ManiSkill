@@ -4,6 +4,10 @@ ManiSkill provides simple tools to use motion planning to generate robot traject
 
 For an in-depth tutorial on how to use more advanced features of mplib check out their documentation here: https://motion-planning-lib.readthedocs.io/latest/. Otherwise this section will cover some example code you can use and modify to generate motion planned demonstrations. The example code here is written for the Panda arm but can be modified to work for other robots.
 
+:::{note}
+mplib only builds on Linux. On other platforms (e.g. macOS), the motion planning solvers automatically fall back to a cross-platform backend built on [PyRoki](https://github.com/chungmin99/pyroki) (install it with `pip install git+https://github.com/chungmin99/pyroki`). The fallback solves IK-based plans without obstacle-awareness, so some tasks may have a lower success rate than with mplib on Linux.
+:::
+
 ## Motion Planning with Panda Arm
 
 We provide some built-in motion planning solutions for some tasks using the Panda arm at https://github.com/mani-skill/ManiSkill/tree/main/mani_skill/examples/motionplanning/panda. You can run a quick demo below, which will save trajectory data as .h5 files to `demos/motionplanning/<env_id>` and optionally save videos and/or visualize with a GUI.
